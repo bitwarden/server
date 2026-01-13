@@ -695,9 +695,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore")]
     [Authorize<ManageUsersRequirement>]
-    public async Task RestoreAsync(Guid orgId, Guid id)
+    public async Task RestoreAsync(Guid orgId, Guid id, string defaultUserCollectionName = null)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId));
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, defaultUserCollectionName));
     }
 
     [HttpPatch("{id}/restore")]
@@ -712,7 +712,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
+        return await RestoreOrRevokeUsersAsync(orgId, model,
+            (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds,
+                restoringUserId, _userService, model.DefaultUserCollectionName));
     }
 
     [HttpPatch("restore")]
