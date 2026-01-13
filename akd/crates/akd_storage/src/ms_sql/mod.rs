@@ -17,8 +17,8 @@ use ms_database::{IntoRow, MsSqlConnectionManager, Pool, PooledConnection};
 use tracing::{debug, error, info, instrument, trace, warn};
 
 use migrations::{
-    MIGRATIONS, TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_MIGRATIONS, TABLE_VALUES,
-    TABLE_VRF_KEYS,
+    MIGRATIONS, TABLE_AZKS, TABLE_HISTORY_TREE_NODES, TABLE_MIGRATIONS, TABLE_PUBLISH_QUEUE,
+    TABLE_VALUES, TABLE_VRF_KEYS,
 };
 use tables::{
     akd_storable_for_ms_sql::{AkdStorableForMsSql, Statement},
@@ -27,7 +27,14 @@ use tables::{
 };
 
 use crate::{
-    ms_sql::tables::vrf_key,
+    ms_sql::tables::{
+        akd_storable_for_ms_sql::QueryStatement,
+        publish_queue::{
+            bulk_delete_rows, bulk_delete_statement, enqueue_statement, peek_statement,
+        },
+        vrf_key,
+    },
+    publish_queue::{PublishQueue, PublishQueueError, PublishQueueItem},
     vrf_key_config::VrfKeyConfig,
     vrf_key_database::{VrfKeyRetrievalError, VrfKeyStorageError, VrfKeyTableData},
 };
@@ -124,6 +131,7 @@ impl MsSql {
             DROP TABLE IF EXISTS {TABLE_HISTORY_TREE_NODES};
             DROP TABLE IF EXISTS {TABLE_VALUES};
             DROP TABLE IF EXISTS {TABLE_VRF_KEYS};
+            DROP TABLE IF EXISTS {TABLE_PUBLISH_QUEUE};
             DROP TABLE IF EXISTS {TABLE_MIGRATIONS};"#
         );
 
@@ -170,9 +178,7 @@ impl MsSql {
         debug!("Statement executed successfully");
         Ok(())
     }
-}
 
-impl MsSql {
     pub async fn get_existing_vrf_root_key_hash(
         &self,
     ) -> Result<Option<Vec<u8>>, VrfKeyStorageError> {
@@ -209,7 +215,7 @@ impl MsSql {
     }
 
     #[instrument(skip(self, config), level = "debug")]
-    pub async fn get_vrf_key(
+    pub(crate) async fn get_vrf_key(
         &self,
         config: &VrfKeyConfig,
     ) -> Result<VrfKeyTableData, VrfKeyRetrievalError> {
@@ -253,7 +259,7 @@ impl MsSql {
     }
 
     #[instrument(skip(self, table_data), level = "debug")]
-    pub async fn store_vrf_key(
+    pub(crate) async fn store_vrf_key(
         &self,
         table_data: &VrfKeyTableData,
     ) -> Result<(), VrfKeyStorageError> {
@@ -739,6 +745,156 @@ impl Database for MsSql {
                 conn.simple_query("ROLLBACK").await.map_err(|e| {
                     StorageError::Transaction(format!("Failed to rollback transaction: {e}"))
                 })?;
+                Err(e)
+            }
+        }
+    }
+}
+
+#[async_trait]
+impl PublishQueue for MsSql {
+    #[instrument(skip(self, raw_label, raw_value), level = "debug")]
+    async fn enqueue(
+        &self,
+        raw_label: Vec<u8>,
+        raw_value: Vec<u8>,
+    ) -> Result<(), PublishQueueError> {
+        debug!("Enqueuing item to publish queue");
+
+        let statement = enqueue_statement(raw_label, raw_value);
+        self.execute_statement(&statement)
+            .await
+            .map_err(|_| PublishQueueError)
+    }
+
+    #[instrument(skip(self), level = "debug")]
+    async fn peek(&self, limit: isize) -> Result<Vec<PublishQueueItem>, PublishQueueError> {
+        if limit <= 0 {
+            debug!("Peek called with non-positive limit, returning empty vector");
+            return Ok(vec![]);
+        }
+
+        debug!(limit, "Peeking items from publish queue");
+
+        let statement = peek_statement(limit);
+        let mut conn = self.get_connection().await.map_err(|_| {
+            error!("Failed to get DB connection for peek");
+            PublishQueueError
+        })?;
+
+        let query_stream = conn
+            .query(statement.sql(), &statement.params())
+            .await
+            .map_err(|e| {
+                error!(error = %e, "Failed to execute peek query");
+                PublishQueueError
+            })?;
+
+        let mut queued_items = Vec::new();
+        {
+            let rows = query_stream.into_first_result().await.map_err(|e| {
+                error!(error = %e, "Failed to fetch rows for peek");
+                PublishQueueError
+            })?;
+            for row in rows {
+                let item = statement.parse(&row).map_err(|e| {
+                    error!(error = %e, "Failed to parse publish queue item");
+                    PublishQueueError
+                })?;
+                queued_items.push(item);
+            }
+        }
+        debug!(
+            item_count = queued_items.len(),
+            "Peeked items from publish queue"
+        );
+        Ok(queued_items)
+    }
+
+    #[instrument(skip(self), level = "debug")]
+    async fn remove(&self, ids: Vec<uuid::Uuid>) -> Result<(), PublishQueueError> {
+        if ids.is_empty() {
+            debug!("No IDs provided for removal, skipping operation");
+            return Ok(());
+        }
+
+        debug!(id_count = ids.len(), "Removing items from publish queue");
+
+        let temp_table = TempTable::PublishQueueIds;
+        let create_temp_table = temp_table.create();
+        let temp_table_name = &temp_table.to_string();
+
+        let mut conn = self.get_connection().await.map_err(|_| {
+            error!("Failed to get DB connection for remove");
+            PublishQueueError
+        })?;
+
+        debug!("Beginning transaction for remove");
+        conn.simple_query("BEGIN TRANSACTION").await.map_err(|e| {
+            error!(error = %e, "Failed to begin transaction");
+            PublishQueueError
+        })?;
+
+        let result = async {
+            debug!("creating temp table for IDs");
+            conn.simple_query(&create_temp_table).await.map_err(|e| {
+                error!(error = %e, "Failed to create temp table");
+                PublishQueueError
+            })?;
+            let mut bulk = conn.bulk_insert(temp_table_name).await.map_err(|e| {
+                error!(error = %e, "Failed to start bulk insert");
+                PublishQueueError
+            })?;
+            for row in bulk_delete_rows(&ids)? {
+                bulk.send(row).await.map_err(|e| {
+                    error!(error = %e, "Failed to add row to bulk insert");
+                    PublishQueueError
+                })?;
+            }
+            bulk.finalize().await.map_err(|e| {
+                error!(error = %e, "Failed to finalize bulk insert");
+                PublishQueueError
+            })?;
+
+            debug!("Deleting rows from publish queue");
+            let delete_statement = bulk_delete_statement(temp_table_name);
+            conn.simple_query(&delete_statement.sql())
+                .await
+                .map_err(|e| {
+                    error!(error = %e, "Failed to execute delete statement");
+                    PublishQueueError
+                })?;
+
+            debug!("Dropping temp table");
+            let drop_temp_table = temp_table.drop();
+            conn.simple_query(&drop_temp_table).await.map_err(|e| {
+                error!(error = %e, "Failed to drop temp table");
+                PublishQueueError
+            })?;
+
+            Ok(())
+        };
+
+        match result.await {
+            Ok(_) => {
+                debug!("Committing transaction for delete");
+                conn.simple_query("COMMIT").await.map_err(|e| {
+                    error!(error = %e, "Failed to commit transaction");
+                    PublishQueueError
+                })?;
+                info!(
+                    id_count = ids.len(),
+                    "Successfully removed items from publish queue"
+                );
+                Ok(())
+            }
+            Err(e) => {
+                warn!(error = %e, "Remove failed, rolling back transaction");
+                conn.simple_query("ROLLBACK").await.map_err(|e| {
+                    error!(error = %e, "Failed to roll back transaction");
+                    PublishQueueError
+                })?;
+                error!(error = %e, "Remove rolled back");
                 Err(e)
             }
         }

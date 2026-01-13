@@ -7,6 +7,7 @@ pub(crate) enum TempTable {
     HistoryTreeNodes,
     Values,
     RawLabelSearch,
+    PublishQueueIds,
 }
 
 impl std::fmt::Display for TempTable {
@@ -17,6 +18,7 @@ impl std::fmt::Display for TempTable {
             TempTable::HistoryTreeNodes => write!(f, "{TEMP_HISTORY_TREE_NODES_TABLE}"),
             TempTable::Values => write!(f, "{TEMP_VALUES_TABLE}"),
             TempTable::RawLabelSearch => write!(f, "{TEMP_SEARCH_LABELS_TABLE}"),
+            TempTable::PublishQueueIds => write!(f, "{TEMP_PUBLISH_QUEUE_IDS_TABLE}"),
         }
     }
 }
@@ -113,7 +115,7 @@ impl TempTable {
                     );
                     "#
                 ),
-            }
+            },
             TempTable::RawLabelSearch => format!(
                 r#"
                 CREATE TABLE {TEMP_SEARCH_LABELS_TABLE} (
@@ -121,7 +123,14 @@ impl TempTable {
                     PRIMARY KEY (raw_label)
                 );
                 "#
-            )
+            ),
+            TempTable::PublishQueueIds => format!(
+                r#"
+                CREATE TABLE {TEMP_PUBLISH_QUEUE_IDS_TABLE} (
+                    id UNIQUEIDENTIFIER NOT NULL PRIMARY KEY
+                );
+                "#
+            ),
         }
     }
 }
@@ -141,3 +150,4 @@ pub(crate) const TEMP_SEARCH_LABELS_TABLE: &str = "#akd_temp_search_labels";
 pub(crate) const TEMP_AZKS_TABLE: &str = "#akd_temp_azks";
 pub(crate) const TEMP_HISTORY_TREE_NODES_TABLE: &str = "#akd_temp_history_tree_nodes";
 pub(crate) const TEMP_VALUES_TABLE: &str = "#akd_temp_values";
+pub(crate) const TEMP_PUBLISH_QUEUE_IDS_TABLE: &str = "#akd_temp_publish_queue_ids";

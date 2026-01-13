@@ -11,7 +11,7 @@ use crate::ms_sql::{
     tables::akd_storable_for_ms_sql::QueryStatement,
 };
 
-pub fn get_all(raw_label: &AkdLabel) -> QueryStatement<ValueState> {
+pub fn get_all(raw_label: &AkdLabel) -> QueryStatement<ValueState, StorageError> {
     debug!("Building get_all query for label (label not logged for privacy)");
     let mut params = SqlParams::new();
     // the raw vector is the key for value storage
@@ -34,7 +34,7 @@ pub fn get_all(raw_label: &AkdLabel) -> QueryStatement<ValueState> {
 pub fn get_by_flag(
     raw_label: &AkdLabel,
     flag: ValueStateRetrievalFlag,
-) -> QueryStatement<ValueState> {
+) -> QueryStatement<ValueState, StorageError> {
     debug!(?flag, "Building get_by_flag query with flag");
     let mut params = SqlParams::new();
     params.add("raw_label", Box::new(raw_label.0.clone()));
@@ -102,7 +102,7 @@ pub fn get_by_flag(
 pub fn get_versions_by_flag(
     temp_table_name: &str,
     flag: ValueStateRetrievalFlag,
-) -> QueryStatement<LabelVersion> {
+) -> QueryStatement<LabelVersion, StorageError> {
     let mut params = SqlParams::new();
 
     let (filter, epoch_col) = match flag {

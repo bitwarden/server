@@ -70,18 +70,14 @@ impl Statement {
     }
 }
 
-pub(crate) struct QueryStatement<Out> {
+pub(crate) struct QueryStatement<Out, TError> {
     sql: String,
     params: SqlParams,
-    parser: fn(&Row) -> Result<Out, StorageError>,
+    parser: fn(&Row) -> Result<Out, TError>,
 }
 
-impl<Out> QueryStatement<Out> {
-    pub fn new(
-        sql: String,
-        params: SqlParams,
-        parser: fn(&Row) -> Result<Out, StorageError>,
-    ) -> Self {
+impl<Out, TError> QueryStatement<Out, TError> {
+    pub fn new(sql: String, params: SqlParams, parser: fn(&Row) -> Result<Out, TError>) -> Self {
         Self {
             sql,
             params,
@@ -97,7 +93,7 @@ impl<Out> QueryStatement<Out> {
         self.params.values()
     }
 
-    pub fn parse(&self, row: &Row) -> Result<Out, StorageError> {
+    pub fn parse(&self, row: &Row) -> Result<Out, TError> {
         (self.parser)(row)
     }
 }

@@ -1,5 +1,5 @@
-use akd::errors::StorageError;
-use tracing::debug;
+use thiserror::Error;
+use tracing::{debug, error};
 
 use crate::{
     ms_sql::{
@@ -11,7 +11,11 @@ use crate::{
     vrf_key_database::VrfKeyTableData,
 };
 
-pub fn get_first_root_key_hash() -> QueryStatement<Vec<u8>> {
+#[derive(Debug, Error)]
+#[error("VRF Key Storage Error: {0}")]
+pub struct VrfKeyStorageError(String);
+
+pub fn get_first_root_key_hash() -> QueryStatement<Vec<u8>, VrfKeyStorageError> {
     debug!("Building has_vrf_key statement");
     let sql = format!(
         r#"
@@ -21,16 +25,17 @@ pub fn get_first_root_key_hash() -> QueryStatement<Vec<u8>> {
         TABLE_VRF_KEYS
     );
     QueryStatement::new(sql, SqlParams::new(), |row: &ms_database::Row| {
-        let hash: &[u8] = row
-            .get("root_key_hash")
-            .ok_or_else(|| StorageError::Other("root_key_hash is NULL or missing".to_string()))?;
+        let hash: &[u8] = row.get("root_key_hash").ok_or_else(|| {
+            error!("root_key_hash is NULL or missing");
+            VrfKeyStorageError("root_key_hash is NULL or missing".to_string())
+        })?;
         Ok(hash.to_vec())
     })
 }
 
 pub fn get_statement(
     config: &VrfKeyConfig,
-) -> Result<QueryStatement<VrfKeyTableData>, VrfRootKeyError> {
+) -> Result<QueryStatement<VrfKeyTableData, VrfKeyStorageError>, VrfRootKeyError> {
     debug!("Building get_statement for vrf key");
     let mut params = SqlParams::new();
     params.add("root_key_type", Box::new(config.root_key_type() as i16));
@@ -55,19 +60,23 @@ pub fn get_statement(
     Ok(QueryStatement::new(sql, params, from_row))
 }
 
-pub fn from_row(row: &ms_database::Row) -> Result<VrfKeyTableData, StorageError> {
-    let root_key_hash: &[u8] = row
-        .get("root_key_hash")
-        .ok_or_else(|| StorageError::Other("Missing root_key_hash column".to_string()))?;
-    let root_key_type: i16 = row
-        .get("root_key_type")
-        .ok_or_else(|| StorageError::Other("root_key_type is NULL or missing".to_string()))?;
+pub fn from_row(row: &ms_database::Row) -> Result<VrfKeyTableData, VrfKeyStorageError> {
+    let root_key_hash: &[u8] = row.get("root_key_hash").ok_or_else(|| {
+        error!("root_key_hash is NULL or missing");
+        VrfKeyStorageError("root_key_hash is NULL or missing".to_string())
+    })?;
+    let root_key_type: i16 = row.get("root_key_type").ok_or_else(|| {
+        error!("root_key_type is NULL of missing");
+        VrfKeyStorageError("root_key_type is NULL or missing".to_string())
+    })?;
     let enc_sym_key: Option<&[u8]> = row.get("enc_sym_key");
-    let sym_enc_vrf_key: &[u8] = row
-        .get("sym_enc_vrf_key")
-        .ok_or_else(|| StorageError::Other("sym_enc_vrf_key is NULL or missing".to_string()))?;
+    let sym_enc_vrf_key: &[u8] = row.get("sym_enc_vrf_key").ok_or_else(|| {
+        error!("sym_enc_vrf_key is NULL or missing");
+        VrfKeyStorageError("sym_enc_vrf_key is NULL or missing".to_string())
+    })?;
     let sym_enc_vrf_key_nonce: &[u8] = row.get("sym_enc_vrf_key_nonce").ok_or_else(|| {
-        StorageError::Other("sym_enc_vrf_key_nonce is NULL or missing".to_string())
+        error!("sym_enc_vrf_key_nonce is NULL or missing");
+        VrfKeyStorageError("sym_enc_vrf_key_nonce is NULL or missing".to_string())
     })?;
 
     Ok(VrfKeyTableData {

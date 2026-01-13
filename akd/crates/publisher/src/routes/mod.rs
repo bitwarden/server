@@ -1,4 +1,4 @@
-use akd_storage::AkdDatabase;
+use akd_storage::{AkdDatabase, PublishQueueType};
 use axum::routing::{get, post};
 use common::BitAkdDirectory;
 
@@ -9,6 +9,7 @@ mod publish;
 pub struct AppState {
     pub directory: BitAkdDirectory,
     pub db: AkdDatabase,
+    pub publish_queue: PublishQueueType,
 }
 
 pub fn api_routes() -> axum::Router<AppState> {

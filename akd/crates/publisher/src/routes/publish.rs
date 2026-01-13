@@ -1,4 +1,5 @@
 use super::AppState;
+use akd_storage::PublishQueue;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
@@ -16,7 +17,7 @@ pub struct PublishResponse {
 
 #[instrument(skip_all)]
 pub async fn publish_handler(
-    State(AppState { directory, .. }): State<AppState>,
+    State(AppState { publish_queue, .. }): State<AppState>,
     Json(request): Json<PublishRequest>,
 ) -> impl IntoResponse {
     info!("Handling publish request");
@@ -25,6 +26,13 @@ pub async fn publish_handler(
     let akd_value: Vec<u8> = request.akd_value_b64.into_bytes();
 
     //TODO: enqueue publish operation to to_publish queue
+    if let Err(e) = publish_queue.enqueue(akd_label, akd_value).await {
+        error!("Failed to enqueue publish request: {:?}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(PublishResponse { success: false }),
+        );
+    }
 
-    Json(PublishResponse { success: true })
+    (StatusCode::OK, Json(PublishResponse { success: true }))
 }
