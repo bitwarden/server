@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public interface IPolicyQuery
 {
