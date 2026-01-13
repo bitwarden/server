@@ -13,8 +13,8 @@ BEGIN
 
     INSERT INTO #Temp
     SELECT
-        [Id],
-        [UserId]
+        ucd.[Id],
+        ucd.[UserId]
     FROM
         [dbo].[UserCipherDetails](@UserId) ucd
         INNER JOIN @Ids ids ON ids.Id = ucd.[Id]
