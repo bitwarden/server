@@ -41,6 +41,7 @@ public class TwoFactorController : Controller
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IStartTwoFactorWebAuthnRegistrationCommand _startTwoFactorWebAuthnRegistrationCommand;
+    private readonly ICompleteTwoFactorWebAuthnRegistrationCommand _completeTwoFactorWebAuthnRegistrationCommand;
 
     public TwoFactorController(
         IUserService userService,
@@ -53,7 +54,8 @@ public class TwoFactorController : Controller
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector,
         ITwoFactorEmailService twoFactorEmailService,
-        IStartTwoFactorWebAuthnRegistrationCommand startTwoFactorWebAuthnRegistrationCommand)
+        IStartTwoFactorWebAuthnRegistrationCommand startTwoFactorWebAuthnRegistrationCommand,
+        ICompleteTwoFactorWebAuthnRegistrationCommand completeTwoFactorWebAuthnRegistrationCommand)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -66,6 +68,7 @@ public class TwoFactorController : Controller
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
         _twoFactorEmailService = twoFactorEmailService;
         _startTwoFactorWebAuthnRegistrationCommand = startTwoFactorWebAuthnRegistrationCommand;
+        _completeTwoFactorWebAuthnRegistrationCommand = completeTwoFactorWebAuthnRegistrationCommand;
     }
 
     [HttpGet("")]
@@ -295,7 +298,7 @@ public class TwoFactorController : Controller
     {
         var user = await CheckAsync(model, false);
 
-        var success = await _userService.CompleteWebAuthRegistrationAsync(
+        var success = await _completeTwoFactorWebAuthnRegistrationCommand.CompleteTwoFactorWebAuthnRegistrationAsync(
             user, model.Id.Value, model.Name, model.DeviceResponse);
         if (!success)
         {

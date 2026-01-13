@@ -12,7 +12,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
@@ -33,7 +32,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Fido2NetLib;
-using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -342,56 +340,6 @@ public class UserService : UserManager<User>, IUserService
         }
 
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
-    }
-
-    public async Task<bool> CompleteWebAuthRegistrationAsync(User user, int id, string name, AuthenticatorAttestationRawResponse attestationResponse)
-    {
-        var keyId = $"Key{id}";
-
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
-        {
-            return false;
-        }
-
-        // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
-        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
-            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Count only saved credentials ("Key{id}") toward the limit.
-        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
-            maximumAllowedCredentialCount)
-        {
-            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
-        }
-
-        var options = CredentialCreateOptions.FromJson((string)pendingValue);
-
-        // Callback to ensure credential ID is unique. Always return true since we don't care if another
-        // account uses the same 2FA key.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
-
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-
-        provider.MetaData.Remove("pending");
-        provider.MetaData[keyId] = new TwoFactorProvider.WebAuthnData
-        {
-            Name = name,
-            Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
-            PublicKey = success.Result.PublicKey,
-            UserHandle = success.Result.User.Id,
-            SignatureCounter = success.Result.Counter,
-            CredType = success.Result.CredType,
-            RegDate = DateTime.Now,
-            AaGuid = success.Result.Aaguid
-        };
-
-        var providers = user.GetTwoFactorProviders();
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-
-        return true;
     }
 
     public async Task<bool> DeleteWebAuthnKeyAsync(User user, int id)

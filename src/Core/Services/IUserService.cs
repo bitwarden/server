@@ -8,7 +8,6 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Services;
@@ -25,7 +24,6 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
-    Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task InitiateEmailChangeAsync(User user, string newEmail);
