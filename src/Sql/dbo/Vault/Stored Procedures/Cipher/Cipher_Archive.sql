@@ -19,7 +19,7 @@ BEGIN
         [dbo].[UserCipherDetails](@UserId) ucd
         INNER JOIN @Ids ids ON ids.Id = ucd.[Id]
     WHERE
-        ucd.[ArchivedDate] IS NOT NULL
+        ucd.[ArchivedDate] IS NULL
 
     DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
     UPDATE
