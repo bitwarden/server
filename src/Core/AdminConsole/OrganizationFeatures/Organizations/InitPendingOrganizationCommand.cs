@@ -226,10 +226,15 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             return validationError;
         }
 
-        await InitializeOrganizationAsync(org, publicKey, privateKey);
-        await ConfirmOrganizationUserAsync(orgUser, user, userKey);
-        await VerifyUserEmailAsync(user);
-        await CreateDefaultCollectionAsync(org, orgUser, collectionName);
+        await _organizationRepository.InitializePendingOrganizationAsync(
+            organizationId,
+            publicKey,
+            privateKey,
+            organizationUserId,
+            user.Id,
+            userKey,
+            collectionName);
+
         await SendNotificationsAsync(org, orgUser, user, organizationId);
 
         return new None();
@@ -303,49 +308,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         }
 
         return null;
-    }
-
-    private async Task InitializeOrganizationAsync(Organization org, string publicKey, string privateKey)
-    {
-        org.Enabled = true;
-        org.Status = OrganizationStatusType.Created;
-        org.PublicKey = publicKey;
-        org.PrivateKey = privateKey;
-        await _organizationService.UpdateAsync(org);
-    }
-
-    private async Task ConfirmOrganizationUserAsync(OrganizationUser orgUser, User user, string userKey)
-    {
-        orgUser.Status = OrganizationUserStatusType.Confirmed;
-        orgUser.UserId = user.Id;
-        orgUser.Key = userKey;
-        orgUser.Email = null;
-        await _organizationUserRepository.ReplaceAsync(orgUser);
-    }
-
-    private async Task VerifyUserEmailAsync(User user)
-    {
-        if (user.EmailVerified == false)
-        {
-            user.EmailVerified = true;
-            await _userRepository.ReplaceAsync(user);
-        }
-    }
-
-    private async Task CreateDefaultCollectionAsync(Organization org, OrganizationUser orgUser, string collectionName)
-    {
-        if (!string.IsNullOrWhiteSpace(collectionName))
-        {
-            List<CollectionAccessSelection> defaultOwnerAccess =
-                [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
-
-            var defaultCollection = new Collection
-            {
-                Name = collectionName,
-                OrganizationId = org.Id
-            };
-            await _collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
-        }
     }
 
     private async Task SendNotificationsAsync(Organization org, OrganizationUser orgUser, User user, Guid organizationId)
