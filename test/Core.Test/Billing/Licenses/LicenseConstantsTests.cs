@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Organizations.Models;
 using Xunit;

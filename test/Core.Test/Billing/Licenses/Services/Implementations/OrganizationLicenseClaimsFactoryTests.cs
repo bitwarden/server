@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Models;
