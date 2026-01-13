@@ -222,7 +222,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmailv2", model);
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         // TODO - PM-25380 change to string constant
         message.Category = "SendEmailOtp";
