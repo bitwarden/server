@@ -283,7 +283,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
             OrganizationId = policyUpdate.OrganizationId,
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Invited,
-            UserId = null, // Invited users have null UserId
+            UserId = null,
             Email = "invited@example.com"
         };
 
@@ -308,14 +308,14 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         Guid confirmedUserId,
         SutProvider<AutomaticUserConfirmationPolicyEventHandler> sutProvider)
     {
-        // Arrange - Mix of invited users (null UserId) and confirmed users
+        // Arrange
         var invitedUser = new OrganizationUserUserDetails
         {
             Id = Guid.NewGuid(),
             OrganizationId = policyUpdate.OrganizationId,
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Invited,
-            UserId = null, // Invited users have null UserId
+            UserId = null,
             Email = "invited@example.com"
         };
 
@@ -347,7 +347,6 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
 
-        // Verify that GetManyByManyUsersAsync was called only with non-null UserIds
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 1 && ids.First() == confirmedUserId));
