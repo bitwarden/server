@@ -1166,7 +1166,7 @@ public class BaseRequestValidatorTests
     /// </summary>
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_RedirectOnSsoRequired_Enabled_PropagatesCustomResponse(
+    public async Task ValidateAsync_SsoRequired_PropagatesCustomResponse(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext]
         CustomValidatorRequestContext requestContext,
