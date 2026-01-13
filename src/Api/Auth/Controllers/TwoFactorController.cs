@@ -11,6 +11,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -39,6 +40,7 @@ public class TwoFactorController : Controller
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
+    private readonly IStartTwoFactorWebAuthnRegistrationCommand _startTwoFactorWebAuthnRegistrationCommand;
 
     public TwoFactorController(
         IUserService userService,
@@ -50,7 +52,8 @@ public class TwoFactorController : Controller
         IDuoUniversalTokenService duoUniversalConfigService,
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector,
-        ITwoFactorEmailService twoFactorEmailService)
+        ITwoFactorEmailService twoFactorEmailService,
+        IStartTwoFactorWebAuthnRegistrationCommand startTwoFactorWebAuthnRegistrationCommand)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -62,6 +65,7 @@ public class TwoFactorController : Controller
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
         _twoFactorEmailService = twoFactorEmailService;
+        _startTwoFactorWebAuthnRegistrationCommand = startTwoFactorWebAuthnRegistrationCommand;
     }
 
     [HttpGet("")]
@@ -282,7 +286,7 @@ public class TwoFactorController : Controller
     public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
     {
         var user = await CheckAsync(model, false, true);
-        var reg = await _userService.StartWebAuthnRegistrationAsync(user);
+        var reg = await _startTwoFactorWebAuthnRegistrationCommand.StartTwoFactorWebAuthnRegistrationAsync(user);
         return reg;
     }
 

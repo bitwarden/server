@@ -24,7 +24,6 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
-    Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
     Task SendEmailVerificationAsync(User user);
