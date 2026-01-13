@@ -31,8 +31,9 @@ BEGIN
             CONVERT(NVARCHAR(30), @UtcNow, 127)
         ),
         [RevisionDate] = @UtcNow
-    WHERE
-        [Id] IN (SELECT [Id] FROM #Temp)
+    FROM [dbo].[Cipher] AS c
+    INNER JOIN #Temp AS t
+        ON t.[Id] = c.[Id];
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
