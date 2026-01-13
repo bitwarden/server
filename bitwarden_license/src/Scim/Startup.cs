@@ -44,6 +44,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
