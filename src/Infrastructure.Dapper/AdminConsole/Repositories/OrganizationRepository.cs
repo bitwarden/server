@@ -263,7 +263,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         Guid organizationUserId,
         Guid userId,
         string userKey,
-        string? collectionName)
+        string collectionName)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();

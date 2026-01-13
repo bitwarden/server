@@ -82,5 +82,5 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
         Guid organizationUserId,
         Guid userId,
         string userKey,
-        string? collectionName);
+        string collectionName);
 }
