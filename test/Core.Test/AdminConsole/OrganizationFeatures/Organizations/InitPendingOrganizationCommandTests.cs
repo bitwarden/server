@@ -26,7 +26,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 [SutProviderCustomize]
 public class InitPendingOrganizationCommandTests
 {
-
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
@@ -208,27 +207,67 @@ public class InitPendingOrganizationCommandTests
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+            user, orgId, orgUserId, publicKey, privateKey, null, token, userKey);
 
         // Assert
         Assert.True(result.IsSuccess);
-        Assert.True(org.Enabled);
-        Assert.Equal(OrganizationStatusType.Created, org.Status);
-        Assert.Equal(publicKey, org.PublicKey);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.Status);
-        Assert.Equal(user.Id, orgUser.UserId);
-        Assert.Equal(userKey, orgUser.Key);
-        Assert.Null(orgUser.Email);
-
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
-            .UpdateAsync(org);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgId);
+        await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
-            .ReplaceAsync(orgUser);
+            .InitializePendingOrganizationAsync(
+                orgId, publicKey, privateKey, orgUserId, user.Id, userKey, null);
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithCollectionName_CreatesDefaultCollection(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        string collectionName, SutProvider<InitPendingOrganizationCommand> sutProvider,
+        Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Id = orgId;
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
+
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new List<PolicyDetails>());
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, collectionName, token, userKey);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(orgId);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .InitializePendingOrganizationAsync(
+                orgId, publicKey, privateKey, orgUserId, user.Id, userKey, collectionName);
     }
 
     [Theory, BitAutoData]
@@ -388,50 +427,6 @@ public class InitPendingOrganizationCommandTests
         // Assert
         Assert.True(result.IsError);
         Assert.IsType<EmailMismatchError>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task InitPendingOrganizationVNextAsync_WithCollectionName_CreatesDefaultCollection(
-        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
-        string collectionName, SutProvider<InitPendingOrganizationCommand> sutProvider,
-        Organization org, OrganizationUser orgUser)
-    {
-        // Arrange
-        orgUser.Email = user.Email;
-        orgUser.OrganizationId = orgId;
-        var token = CreateToken(orgUser, orgUserId, sutProvider);
-        org.Id = orgId;
-        org.Enabled = false;
-        org.Status = OrganizationStatusType.Pending;
-        org.PrivateKey = null;
-        org.PublicKey = null;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(orgId)
-            .Returns(org);
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(true);
-
-        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
-        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new List<PolicyDetails>());
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
-            .Returns(autoConfirmReq);
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(twoFactorReq);
-
-        // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, collectionName, token, userKey);
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(
-            Arg.Is<Collection>(c => c.Name == collectionName && c.OrganizationId == orgId),
-            Arg.Is<List<CollectionAccessSelection>>(l => l == null),
-            Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)));
     }
 
     [Theory, BitAutoData]
