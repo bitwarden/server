@@ -3,13 +3,17 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using CollectionWithGroupsAndUsers = Bit.Infrastructure.Dapper.Repositories.CollectionRepository.CollectionWithGroupsAndUsers;
 
 #nullable enable
 
@@ -250,5 +254,135 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
             new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task InitializePendingOrganizationAsync(
+        Guid organizationId,
+        string publicKey,
+        string privateKey,
+        Guid organizationUserId,
+        Guid userId,
+        string userKey,
+        string? collectionName)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            // 1. Update Organization
+            var organization = (await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadById]",
+                new { Id = organizationId },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction)).SingleOrDefault();
+
+            if (organization == null)
+            {
+                throw new InvalidOperationException($"Organization with ID {organizationId} not found.");
+            }
+
+            organization.Enabled = true;
+            organization.Status = OrganizationStatusType.Created;
+            organization.PublicKey = publicKey;
+            organization.PrivateKey = privateKey;
+            organization.RevisionDate = DateTime.UtcNow;
+
+            await connection.ExecuteAsync(
+                "[dbo].[Organization_Update]",
+                organization,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            // 2. Update OrganizationUser
+            var organizationUser = (await connection.QueryAsync<OrganizationUser>(
+                "[dbo].[OrganizationUser_ReadById]",
+                new { Id = organizationUserId },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction)).SingleOrDefault();
+
+            if (organizationUser == null)
+            {
+                throw new InvalidOperationException($"OrganizationUser with ID {organizationUserId} not found.");
+            }
+
+            organizationUser.Status = OrganizationUserStatusType.Confirmed;
+            organizationUser.UserId = userId;
+            organizationUser.Key = userKey;
+            organizationUser.Email = null;
+
+            await connection.ExecuteAsync(
+                "[dbo].[OrganizationUser_Update]",
+                organizationUser,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            // 3. Update User (verify email if needed)
+            var user = (await connection.QueryAsync<User>(
+                "[dbo].[User_ReadById]",
+                new { Id = userId },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction)).SingleOrDefault();
+
+            if (user == null)
+            {
+                throw new InvalidOperationException($"User with ID {userId} not found.");
+            }
+
+            if (user.EmailVerified == false)
+            {
+                user.EmailVerified = true;
+                user.RevisionDate = DateTime.UtcNow;
+
+                await connection.ExecuteAsync(
+                    "[dbo].[User_Update]",
+                    user,
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+
+            // 4. Create default collection if name provided
+            if (!string.IsNullOrWhiteSpace(collectionName))
+            {
+                var collection = new Collection
+                {
+                    Id = CoreHelpers.GenerateComb(),
+                    Name = collectionName,
+                    OrganizationId = organizationId,
+                    CreationDate = DateTime.UtcNow,
+                    RevisionDate = DateTime.UtcNow
+                };
+
+                var collectionUsers = new[]
+                {
+                    new CollectionAccessSelection
+                    {
+                        Id = organizationUserId,
+                        HidePasswords = false,
+                        ReadOnly = false,
+                        Manage = true
+                    }
+                };
+
+                var collectionWithAccess = new CollectionWithGroupsAndUsers(
+                    collection,
+                    Enumerable.Empty<CollectionAccessSelection>(),
+                    collectionUsers);
+
+                await connection.ExecuteAsync(
+                    "[dbo].[Collection_CreateWithGroupsAndUsers]",
+                    collectionWithAccess,
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

@@ -62,4 +62,25 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="requestDate">When the action was performed</param>
     /// <returns></returns>
     Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
+
+    /// <summary>
+    /// Initializes a pending organization by enabling it, setting keys, confirming the first owner,
+    /// and optionally creating a default collection. All operations are performed atomically.
+    /// </summary>
+    /// <param name="organizationId">The ID of the organization to initialize</param>
+    /// <param name="publicKey">Organization public key</param>
+    /// <param name="privateKey">Organization private key</param>
+    /// <param name="organizationUserId">The ID of the organization user to confirm</param>
+    /// <param name="userId">The ID of the user to verify</param>
+    /// <param name="userKey">The user's encrypted key</param>
+    /// <param name="collectionName">Optional name for the default collection</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    Task InitializePendingOrganizationAsync(
+        Guid organizationId,
+        string publicKey,
+        string privateKey,
+        Guid organizationUserId,
+        Guid userId,
+        string userKey,
+        string? collectionName);
 }

@@ -10,6 +10,8 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Models;
 using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -438,5 +440,103 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+    }
+
+    public async Task InitializePendingOrganizationAsync(
+        Guid organizationId,
+        string publicKey,
+        string privateKey,
+        Guid organizationUserId,
+        Guid userId,
+        string userKey,
+        string collectionName)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            // 1. Update Organization
+            var organization = await dbContext.Organizations.FindAsync(organizationId);
+            if (organization == null)
+            {
+                throw new InvalidOperationException($"Organization with ID {organizationId} not found.");
+            }
+
+            organization.Enabled = true;
+            organization.Status = OrganizationStatusType.Created;
+            organization.PublicKey = publicKey;
+            organization.PrivateKey = privateKey;
+            organization.RevisionDate = DateTime.UtcNow;
+
+            await dbContext.SaveChangesAsync();
+
+            // 2. Update OrganizationUser
+            var organizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUserId);
+            if (organizationUser == null)
+            {
+                throw new InvalidOperationException($"OrganizationUser with ID {organizationUserId} not found.");
+            }
+
+            organizationUser.Status = OrganizationUserStatusType.Confirmed;
+            organizationUser.UserId = userId;
+            organizationUser.Key = userKey;
+            organizationUser.Email = null;
+
+            await dbContext.SaveChangesAsync();
+
+            // 3. Update User (verify email if needed)
+            var user = await dbContext.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new InvalidOperationException($"User with ID {userId} not found.");
+            }
+
+            if (user.EmailVerified == false)
+            {
+                user.EmailVerified = true;
+                user.RevisionDate = DateTime.UtcNow;
+
+                await dbContext.SaveChangesAsync();
+            }
+
+            // 4. Create default collection if name provided
+            if (!string.IsNullOrWhiteSpace(collectionName))
+            {
+                var collection = new Collection
+                {
+                    Id = CoreHelpers.GenerateComb(),
+                    Name = collectionName,
+                    OrganizationId = organizationId,
+                    CreationDate = DateTime.UtcNow,
+                    RevisionDate = DateTime.UtcNow
+                };
+
+                await dbContext.Collections.AddAsync(collection);
+                await dbContext.SaveChangesAsync();
+
+                // Create CollectionUser association with Manage permissions
+                var collectionUser = new CollectionUser
+                {
+                    CollectionId = collection.Id,
+                    OrganizationUserId = organizationUserId,
+                    HidePasswords = false,
+                    ReadOnly = false,
+                    Manage = true
+                };
+
+                await dbContext.CollectionUsers.AddAsync(collectionUser);
+                await dbContext.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
