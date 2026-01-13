@@ -166,7 +166,7 @@ public static class FeatureFlagKeys
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
-    public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
+    public const string PrefetchPasswordPrelt ogin = "pm-23801-prefetch-password-prelogin";
 
     /* Autofill Team */
     public const string SSHAgent = "ssh-agent";
@@ -204,7 +204,7 @@ public static class FeatureFlagKeys
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
-    public const string SdkKeyRotation = "pm-27632-sdk-key-rotation";
+    public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
