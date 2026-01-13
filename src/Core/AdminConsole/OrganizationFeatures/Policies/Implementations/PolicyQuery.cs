@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
 {
-    public async Task<Policy> GetByOrganizationIdAndType(Guid organizationId, PolicyType policyType)
+    public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType policyType)
         => await policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType)
            ?? new Policy { OrganizationId = organizationId, Type = policyType };
 }

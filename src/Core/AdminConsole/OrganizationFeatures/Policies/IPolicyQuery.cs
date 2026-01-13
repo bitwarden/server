@@ -5,5 +5,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public interface IPolicyQuery
 {
-    Task<Policy> GetByOrganizationIdAndType(Guid organizationId, PolicyType policyType);
+    Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType policyType);
 }
