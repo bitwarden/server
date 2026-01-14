@@ -13,6 +13,11 @@
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <PropertyGroup Label="Server SDK Settings">
+    <BitIncludeAuthentication>false</BitIncludeAuthentication>
+    <BitIncludeFeatures>false</BitIncludeFeatures>
+    <BitIncludeCaching>false</BitIncludeCaching>
+  </PropertyGroup>
 
   <PropertyGroup>
 
