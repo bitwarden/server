@@ -471,8 +471,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             organization.PrivateKey = privateKey;
             organization.RevisionDate = DateTime.UtcNow;
 
-            await dbContext.SaveChangesAsync();
-
             // 2. Update OrganizationUser
             var organizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUserId);
             if (organizationUser == null)
@@ -485,8 +483,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             organizationUser.Key = userKey;
             organizationUser.Email = null;
 
-            await dbContext.SaveChangesAsync();
-
             // 3. Update User (verify email if needed)
             var user = await dbContext.Users.FindAsync(userId);
             if (user == null)
@@ -498,8 +494,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             {
                 user.EmailVerified = true;
                 user.RevisionDate = DateTime.UtcNow;
-
-                await dbContext.SaveChangesAsync();
             }
 
             // 4. Create default collection if name provided
@@ -515,7 +509,6 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 };
 
                 await dbContext.Collections.AddAsync(collection);
-                await dbContext.SaveChangesAsync();
 
                 // Create CollectionUser association with Manage permissions
                 var collectionUser = new CollectionUser
@@ -528,9 +521,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 };
 
                 await dbContext.CollectionUsers.AddAsync(collectionUser);
-                await dbContext.SaveChangesAsync();
             }
 
+            await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
         catch (Exception ex)
