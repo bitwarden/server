@@ -1,1 +1,1 @@
-[assembly: CaptureTrace]
+﻿[assembly: CaptureTrace]
