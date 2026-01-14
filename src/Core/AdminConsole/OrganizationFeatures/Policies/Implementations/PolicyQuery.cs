@@ -1,12 +1,21 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
 {
-    public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType policyType)
-        => await policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType)
-           ?? new Policy { OrganizationId = organizationId, Type = policyType };
+    public async Task<PolicyData> RunAsync(Guid organizationId, PolicyType policyType)
+    {
+        var dbPolicy = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType);
+        return new PolicyData
+        {
+            OrganizationId = dbPolicy?.OrganizationId ?? organizationId,
+            Data = dbPolicy?.Data,
+            Type = dbPolicy?.Type ?? policyType,
+            Enabled = dbPolicy?.Enabled ?? false
+        };
+    }
 }
