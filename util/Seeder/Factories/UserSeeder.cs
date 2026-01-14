@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using System.Globalization;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
@@ -77,7 +78,7 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
             { expectedUserData.Email, MangleEmail(expectedUserData.Email) },
             { expectedUserData.Id.ToString(), user.Id.ToString() },
             { expectedUserData.Kdf.ToString(), user.Kdf.ToString() },
-            { expectedUserData.KdfIterations.ToString(), user.KdfIterations.ToString() }
+            { expectedUserData.KdfIterations.ToString(CultureInfo.InvariantCulture), user.KdfIterations.ToString(CultureInfo.InvariantCulture) }
         };
         if (expectedUserData.Key != null)
         {
