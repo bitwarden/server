@@ -12,7 +12,7 @@ public class MangleId
     public MangleId()
     {
         // Generate a short random string (6 char) to use as the mangle ID
-        Value = Random.Shared.NextInt64().ToString("x").Substring(0, 8);
+        Value = Random.Shared.NextInt64().ToString("x", System.Globalization.CultureInfo.InvariantCulture).Substring(0, 8);
     }
 
     public override string ToString() => Value;

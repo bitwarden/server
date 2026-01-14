@@ -77,7 +77,7 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
             { expectedUserData.Email, MangleEmail(expectedUserData.Email) },
             { expectedUserData.Id.ToString(), user.Id.ToString() },
             { expectedUserData.Kdf.ToString(), user.Kdf.ToString() },
-            { expectedUserData.KdfIterations.ToString(), user.KdfIterations.ToString() }
+            { expectedUserData.KdfIterations.ToString(System.Globalization.CultureInfo.InvariantCulture), user.KdfIterations.ToString(System.Globalization.CultureInfo.InvariantCulture) }
         };
         if (expectedUserData.Key != null)
         {
