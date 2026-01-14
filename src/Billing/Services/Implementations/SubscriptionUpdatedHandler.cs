@@ -162,11 +162,20 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active:
                 {
-                    if (userId.HasValue)
+                if (userId.HasValue)
+                {
+                    // When a Premium user subscription becomes active, proactively clean up any
+                    // other active premium subscriptions left over from previous failed attempts.
+                    // This prevents users from being double-charged and avoids duplicate
+                    // subscriptions lingering on the account.
+                    if (await IsPremiumSubscriptionAsync(subscription))
                     {
-                        await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                        await CancelOtherPremiumSubscriptionsAsync(subscription.CustomerId, subscription.Id);
                     }
-                    break;
+
+                    await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                }
+                break;
                 }
         }
 
@@ -208,6 +217,53 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         var premiumPlans = await _pricingClient.ListPremiumPlans();
         var premiumPriceIds = premiumPlans.SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId }).ToHashSet();
         return subscription.Items.Any(i => premiumPriceIds.Contains(i.Price.Id));
+    }
+
+    /// <summary>
+    /// Cancels any other premium subscriptions for the given customer, leaving the current
+    /// subscription as the single source of truth. This is used when a new subscription
+    /// successfully becomes active after previous failed attempts, to prevent duplicate
+    /// subscriptions and overcharging.
+    /// </summary>
+    /// <param name="customerId">The Stripe customer ID whose subscriptions should be cleaned up.</param>
+    /// <param name="currentSubscriptionId">The active subscription that should be kept.</param>
+    private async Task CancelOtherPremiumSubscriptionsAsync(string customerId, string currentSubscriptionId)
+    {
+        if (string.IsNullOrEmpty(customerId))
+        {
+            return;
+        }
+
+        var subscriptionOptions = new SubscriptionListOptions
+        {
+            Customer = customerId,
+            Status = "all"
+        };
+
+        var subscriptions = await _stripeFacade.ListSubscriptions(subscriptionOptions);
+
+        foreach (var sub in subscriptions.Where(s => s.Id != currentSubscriptionId))
+            {
+                // Only cancel subscriptions that are premium and in a status where cancellation
+                // makes sense (they are or were granting access / being billed).
+                if (sub.Status is StripeSubscriptionStatus.Active
+                    or StripeSubscriptionStatus.Trialing
+                    or StripeSubscriptionStatus.PastDue
+                    or StripeSubscriptionStatus.Incomplete
+                    or StripeSubscriptionStatus.Unpaid
+                    or StripeSubscriptionStatus.IncompleteExpired)
+                {
+                    if (await IsPremiumSubscriptionAsync(sub))
+                    {
+                        _logger.LogInformation(
+                            "Cancelling duplicate premium subscription {SubscriptionId} for customer {CustomerId} while keeping {CurrentSubscriptionId}",
+                            sub.Id, customerId, currentSubscriptionId);
+
+                        await CancelSubscription(sub.Id);
+                        await VoidOpenInvoices(sub.Id);
+                    }
+                }
+            }
     }
 
     /// <summary>

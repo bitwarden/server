@@ -312,6 +312,9 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Pricing.Premium.Plan premiumPlan,
         int? storage)
     {
+        // Proactively cancel any existing incomplete/unpaid Premium subscriptions before creating a new one.
+        // This prevents duplicate subscriptions when users retry after failed payment attempts.
+        await CancelExistingIncompletePremiumSubscriptionsAsync(customer.Id, premiumPlan);
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
@@ -367,5 +370,63 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         await braintreeService.PayInvoice(new UserId(userId), invoice);
 
         return subscription;
+    }
+
+    /// <summary>
+    /// Cancels any existing incomplete or unpaid Premium subscriptions for the customer to prevent duplicates.
+    /// This is called proactively before creating a new subscription to handle cases where a user retries
+    /// the subscription flow after a failed payment, ensuring they don't accumulate multiple subscriptions.
+    /// </summary>
+    /// <param name="customerId">The Stripe customer ID to check for existing subscriptions.</param>
+    /// <param name="premiumPlan">The premium plan containing the price IDs to identify Premium subscriptions.</param>
+    private async Task CancelExistingIncompletePremiumSubscriptionsAsync(string customerId, Pricing.Premium.Plan premiumPlan)
+    {
+        try
+        {
+            var subscriptionOptions = new SubscriptionListOptions
+            {
+                Customer = customerId,
+                Status = "all" // Get all statuses so we can filter to incomplete/unpaid
+            };
+
+            var subscriptions = await stripeAdapter.ListSubscriptionsAsync(subscriptionOptions);
+
+            var premiumPriceIds = new HashSet<string> { premiumPlan.Seat.StripePriceId, premiumPlan.Storage.StripePriceId };
+
+            foreach (var subscription in subscriptions)
+            {
+                // Only cancel subscriptions that are:
+                // 1. Premium subscriptions (matching price IDs)
+                // 2. In a problematic state (incomplete, unpaid, incomplete_expired)
+                var isPremiumSubscription = subscription.Items.Any(item => premiumPriceIds.Contains(item.Price.Id));
+                var isProblematicStatus = subscription.Status is SubscriptionStatus.Incomplete
+                    or SubscriptionStatus.Unpaid
+                    or SubscriptionStatus.IncompleteExpired;
+
+                if (isPremiumSubscription && isProblematicStatus)
+                {
+                    _logger.LogInformation(
+                        "Proactively cancelling existing {Status} Premium subscription {SubscriptionId} for customer {CustomerId} before creating new subscription",
+                        subscription.Status, subscription.Id, customerId);
+
+                    await stripeAdapter.CancelSubscriptionAsync(subscription.Id, new SubscriptionCancelOptions());
+
+                    // Void any open invoices to prevent confusion
+                    if (subscription.LatestInvoiceId != null)
+                    {
+                        var invoice = await stripeAdapter.GetInvoiceAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+                        if (invoice?.Status == "open")
+                        {
+                            await stripeAdapter.VoidInvoiceAsync(invoice.Id);
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cancelling existing incomplete Premium subscriptions for customer {CustomerId}", customerId);
+            // Don't throw - we still want to allow the new subscription to be created
+        }
     }
 }
