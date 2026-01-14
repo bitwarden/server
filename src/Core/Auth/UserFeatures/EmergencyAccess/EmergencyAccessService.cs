@@ -78,7 +78,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             Email = emergencyContactEmail.ToLowerInvariant(),
             Status = EmergencyAccessStatusType.Invited,
             Type = accessType,
-            WaitTimeDays = waitTime,
+            WaitTimeDays = (short)waitTime,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };
