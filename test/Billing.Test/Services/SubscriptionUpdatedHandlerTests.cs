@@ -1132,6 +1132,183 @@ public class SubscriptionUpdatedHandlerTests
             .ListInvoices(Arg.Any<InvoiceListOptions>());
     }
 
+    [Fact]
+    public async Task HandleAsync_UnpaidUserSubscription_WithOtherActiveSubscription_DoesNotDisablePremium()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userEmail = "test@example.com";
+        var failedSubscriptionId = "sub_failed";
+        var activeSubscriptionId = "sub_active";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        var customerId = "cus_123";
+
+        var failedSubscription = new Subscription
+        {
+            Id = failedSubscriptionId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId }
+                    }
+                ]
+            }
+        };
+
+        var activeSubscription = new Subscription
+        {
+            Id = activeSubscriptionId,
+            Status = StripeSubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId }
+                    }
+                ]
+            }
+        };
+
+        var parsedEvent = new Event { Data = new EventData() };
+
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(failedSubscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
+        var user = new Core.Entities.User { Id = userId, Email = userEmail };
+        _userService.GetUserByIdAsync(userId).Returns(user);
+
+        var customer = new Customer { Id = customerId, Email = userEmail };
+        _stripeFacade.ListCustomers(Arg.Is<CustomerListOptions>(o => o.Email == userEmail))
+            .Returns(new StripeList<Customer> { Data = new List<Customer> { customer } });
+
+        _stripeFacade.ListSubscriptions(Arg.Is<SubscriptionListOptions>(o => o.Customer == customerId && o.Status == "active"))
+            .Returns(new StripeList<Subscription> { Data = new List<Subscription> { activeSubscription } });
+
+        _stripeFacade.ListInvoices(Arg.Any<InvoiceListOptions>())
+            .Returns(new StripeList<Invoice> { Data = new List<Invoice>() });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - Premium should NOT be disabled because user has another active subscription
+        await _userService.DidNotReceive()
+            .DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        // But the failed subscription should still be canceled
+        await _stripeFacade.Received(1)
+            .CancelSubscription(failedSubscriptionId, Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_IncompleteUserSubscription_WithOtherActiveSubscription_DoesNotDisablePremium()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userEmail = "test@example.com";
+        var incompleteSubscriptionId = "sub_incomplete";
+        var activeSubscriptionId = "sub_active";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+        var customerId = "cus_123";
+
+        var incompleteSubscription = new Subscription
+        {
+            Id = incompleteSubscriptionId,
+            Status = StripeSubscriptionStatus.Incomplete,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            LatestInvoice = new Invoice { Id = "inv_123", Status = StripeInvoiceStatus.Open },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId }
+                    }
+                ]
+            }
+        };
+
+        var activeSubscription = new Subscription
+        {
+            Id = activeSubscriptionId,
+            Status = StripeSubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId }
+                    }
+                ]
+            }
+        };
+
+        var parsedEvent = new Event { Data = new EventData() };
+
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(incompleteSubscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
+        var user = new Core.Entities.User { Id = userId, Email = userEmail };
+        _userService.GetUserByIdAsync(userId).Returns(user);
+
+        var customer = new Customer { Id = customerId, Email = userEmail };
+        _stripeFacade.ListCustomers(Arg.Is<CustomerListOptions>(o => o.Email == userEmail))
+            .Returns(new StripeList<Customer> { Data = new List<Customer> { customer } });
+
+        _stripeFacade.ListSubscriptions(Arg.Is<SubscriptionListOptions>(o => o.Customer == customerId && o.Status == "active"))
+            .Returns(new StripeList<Subscription> { Data = new List<Subscription> { activeSubscription } });
+
+        _stripeFacade.ListInvoices(Arg.Any<InvoiceListOptions>())
+            .Returns(new StripeList<Invoice> { Data = new List<Invoice> { new Invoice { Id = "inv_123", Status = StripeInvoiceStatus.Open } } });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - Premium should NOT be disabled because user has another active subscription
+        await _userService.DidNotReceive()
+            .DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
+        // But the incomplete subscription should still be canceled
+        await _stripeFacade.Received(1)
+            .CancelSubscription(incompleteSubscriptionId, Arg.Any<SubscriptionCancelOptions>());
+    }
+
     public static IEnumerable<object[]> GetNonActiveSubscriptions()
     {
         return new List<object[]>

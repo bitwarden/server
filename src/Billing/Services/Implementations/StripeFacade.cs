@@ -56,6 +56,12 @@ public class StripeFacade : IStripeFacade
         CancellationToken cancellationToken = default) =>
         await _customerService.UpdateAsync(customerId, customerUpdateOptions, requestOptions, cancellationToken);
 
+    public async Task<StripeList<Customer>> ListCustomers(
+        CustomerListOptions options = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _customerService.ListAsync(options, requestOptions, cancellationToken);
+
     public async Task<Invoice> GetInvoice(
         string invoiceId,
         InvoiceGetOptions invoiceGetOptions = null,
