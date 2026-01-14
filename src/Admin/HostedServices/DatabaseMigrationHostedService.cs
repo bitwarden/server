@@ -1,5 +1,5 @@
-﻿using Bit.Core.Utilities;
-using Microsoft.Data.SqlClient;
+﻿using System.Data.Common;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices;
 
@@ -30,7 +30,7 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
                 // TODO: Maybe flip a flag somewhere to indicate migration is complete??
                 break;
             }
-            catch (SqlException e)
+            catch (DbException e)
             {
                 if (i >= maxMigrationAttempts)
                 {
