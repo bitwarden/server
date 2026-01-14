@@ -56,6 +56,7 @@ using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
 using LaunchDarkly.Sdk.Server;
@@ -115,6 +116,40 @@ public static class ServiceCollectionExtensions
         }
 
         return provider;
+    }
+
+    /// <summary>
+    /// Registers test PlayId tracking services for test data management and cleanup.
+    /// This infrastructure is isolated to test environments and enables tracking of test-generated entities.
+    /// </summary>
+    public static void AddTestPlayIdTracking(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            var (provider, _) = GetDatabaseProvider(globalSettings);
+
+            // Include PlayIdService for tracking Play Ids in repositories
+            // We need the http context accessor to use the Singleton version, which pulls from the scoped version
+            services.AddHttpContextAccessor();
+
+            services.AddSingleton<IPlayItemService, PlayItemService>();
+            services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
+            services.AddScoped<PlayIdService>();
+
+            // Replace standard repositories with PlayId tracking decorators
+            if (provider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddPlayIdTrackingDapperRepositories();
+            }
+            else
+            {
+                services.AddPlayIdTrackingEFRepositories();
+            }
+        }
+        else
+        {
+            services.AddSingleton<IPlayIdService, NeverPlayIdServices>();
+        }
     }
 
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
@@ -522,6 +557,10 @@ public static class ServiceCollectionExtensions
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            app.UseMiddleware<PlayIdMiddleware>();
+        }
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
@@ -661,8 +700,9 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses a memory
-    /// cache if self hosted or no Redis connection string is available in GlobalSettings.
+    ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses Redis
+    /// if a connection string is available in GlobalSettings, a database-backed distributed cache if
+    /// self-hosted or a distributed memory cache as a final fallback.
     /// </summary>
     public static void AddDistributedCache(
         this IServiceCollection services,
@@ -677,19 +717,26 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
-            if (databaseProvider == SupportedDatabaseProviders.SqlServer)
+            if (globalSettings.SelfHosted)
             {
-                services.AddDistributedSqlServerCache(o =>
+                var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
+                if (databaseProvider == SupportedDatabaseProviders.SqlServer)
                 {
-                    o.ConnectionString = databaseConnectionString;
-                    o.SchemaName = "dbo";
-                    o.TableName = "Cache";
-                });
+                    services.AddDistributedSqlServerCache(o =>
+                    {
+                        o.ConnectionString = databaseConnectionString;
+                        o.SchemaName = "dbo";
+                        o.TableName = "Cache";
+                    });
+                }
+                else
+                {
+                    services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+                }
             }
             else
             {
-                services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+                services.AddDistributedMemoryCache();
             }
         }
 

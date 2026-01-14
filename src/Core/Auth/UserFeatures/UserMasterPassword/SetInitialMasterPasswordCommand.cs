@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+﻿using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -6,98 +7,74 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
 public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
 {
-    private readonly ILogger<SetInitialMasterPasswordCommand> _logger;
-    private readonly IdentityErrorDescriber _identityErrorDescriber;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
-    private readonly IEventService _eventService;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IEventService _eventService;
 
-
-    public SetInitialMasterPasswordCommand(
-        ILogger<SetInitialMasterPasswordCommand> logger,
-        IdentityErrorDescriber identityErrorDescriber,
-        IUserService userService,
-        IUserRepository userRepository,
-        IEventService eventService,
-        IAcceptOrgUserCommand acceptOrgUserCommand,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
+    public SetInitialMasterPasswordCommand(IUserService userService, IUserRepository userRepository,
+        IAcceptOrgUserCommand acceptOrgUserCommand, IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository, IPasswordHasher<User> passwordHasher,
+        IEventService eventService)
     {
-        _logger = logger;
-        _identityErrorDescriber = identityErrorDescriber;
         _userService = userService;
         _userRepository = userRepository;
-        _eventService = eventService;
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
+        _passwordHasher = passwordHasher;
+        _eventService = eventService;
     }
 
-    public async Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
-        string orgSsoIdentifier)
+    public async Task SetInitialMasterPasswordAsync(User user,
+        SetInitialMasterPasswordDataModel masterPasswordDataModel)
     {
-        if (user == null)
+        if (user.Key != null)
         {
-            throw new ArgumentNullException(nameof(user));
+            throw new BadRequestException("User already has a master password set.");
         }
 
-        if (!string.IsNullOrWhiteSpace(user.MasterPassword))
+        if (masterPasswordDataModel.AccountKeys == null)
         {
-            _logger.LogWarning("Change password failed for user {userId} - already has password.", user.Id);
-            return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
+            throw new BadRequestException("Account keys are required.");
         }
 
-        var result = await _userService.UpdatePasswordHash(user, masterPassword, validatePassword: true, refreshStamp: false);
-        if (!result.Succeeded)
-        {
-            return result;
-        }
+        // Prevent a de-synced salt value from creating an un-decryptable unlock method
+        masterPasswordDataModel.MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
+        masterPasswordDataModel.MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
 
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-
-
-        if (string.IsNullOrWhiteSpace(orgSsoIdentifier))
-        {
-            throw new BadRequestException("Organization SSO Identifier required.");
-        }
-
-        var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
-
+        var org = await _organizationRepository.GetByIdentifierAsync(masterPasswordDataModel.OrgSsoIdentifier);
         if (org == null)
         {
-            throw new BadRequestException("Organization invalid.");
+            throw new BadRequestException("Organization SSO identifier is invalid.");
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
-
         if (orgUser == null)
         {
             throw new BadRequestException("User not found within organization.");
         }
 
-        // TDE users who go from a user without admin acct recovery permission to having it will be
-        // required to set a MP for the first time and we don't want to re-execute the accept logic
-        // as they are already confirmed.
-        // TLDR: only accept post SSO user if they are invited
-        if (orgUser.Status == OrganizationUserStatusType.Invited)
-        {
-            await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
-        }
+        // Hash the provided user master password authentication hash on the server side
+        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
+            masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
 
-        return IdentityResult.Success;
+        var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,
+            masterPasswordDataModel.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
+            masterPasswordDataModel.MasterPasswordHint);
+        await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, masterPasswordDataModel.AccountKeys,
+            [setMasterPasswordTask]);
+
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+
+        await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
     }
-
 }
