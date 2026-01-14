@@ -361,7 +361,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
         {
-            AutoAdvance = false
+            AutoAdvance = false,
+            Expand = ["customer"]
         });
 
         await braintreeService.PayInvoice(new UserId(userId), invoice);
