@@ -67,7 +67,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         {
             Policy = new PolicyRequestModel
             {
-                Type = policyType,
                 Enabled = true,
             },
             Metadata = new Dictionary<string, object>
@@ -148,7 +147,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         {
             Policy = new PolicyRequestModel
             {
-                Type = policyType,
                 Enabled = true,
                 Data = new Dictionary<string, object>
                 {
@@ -218,7 +216,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var policyType = PolicyType.MasterPassword;
         var request = new PolicyRequestModel
         {
-            Type = policyType,
             Enabled = true,
             Data = new Dictionary<string, object>
             {
@@ -244,7 +241,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var policyType = PolicyType.SendOptions;
         var request = new PolicyRequestModel
         {
-            Type = policyType,
             Enabled = true,
             Data = new Dictionary<string, object>
             {
@@ -267,7 +263,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var policyType = PolicyType.ResetPassword;
         var request = new PolicyRequestModel
         {
-            Type = policyType,
             Enabled = true,
             Data = new Dictionary<string, object>
             {
@@ -292,7 +287,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         {
             Policy = new PolicyRequestModel
             {
-                Type = policyType,
                 Enabled = true,
                 Data = new Dictionary<string, object>
                 {
@@ -321,7 +315,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         {
             Policy = new PolicyRequestModel
             {
-                Type = policyType,
                 Enabled = true,
                 Data = new Dictionary<string, object>
                 {
@@ -347,7 +340,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         {
             Policy = new PolicyRequestModel
             {
-                Type = policyType,
                 Enabled = true,
                 Data = new Dictionary<string, object>
                 {
@@ -371,7 +363,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var policyType = PolicyType.SingleOrg;
         var request = new PolicyRequestModel
         {
-            Type = policyType,
             Enabled = true,
             Data = null
         };
@@ -393,7 +384,6 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         {
             Policy = new PolicyRequestModel
             {
-                Type = policyType,
                 Enabled = true,
                 Data = null
             },

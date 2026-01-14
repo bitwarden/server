@@ -1,9 +1,12 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -33,7 +36,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly ICollectionRepository _collectionRepository;
-
+    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
+    private readonly ISendOrganizationConfirmationCommand _sendOrganizationConfirmationCommand;
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -47,7 +51,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator, ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -62,8 +67,9 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _collectionRepository = collectionRepository;
+        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
+        _sendOrganizationConfirmationCommand = sendOrganizationConfirmationCommand;
     }
-
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, string defaultUserCollectionName = null)
     {
@@ -127,6 +133,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
+
         var users = await _userRepository.GetManyAsync(validSelectedUserIds);
         var usersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(validSelectedUserIds);
 
@@ -165,7 +172,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                 orgUser.Email = null;
 
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-                await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+                await SendOrganizationConfirmedEmailAsync(organization, user.Email, orgUser.AccessSecretsManager);
                 succeededUsers.Add(orgUser);
                 result.Add(Tuple.Create(orgUser, ""));
             }
@@ -188,6 +195,25 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
 
         var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+                    new AutomaticUserConfirmationPolicyEnforcementRequest(
+                        organizationId,
+                        userOrgs,
+                        user)))
+                .Match(
+                    error => new BadRequestException(error.Message),
+                    _ => null
+                );
+
+            if (error is not null)
+            {
+                throw error;
+            }
+        }
+
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
         var otherSingleOrgPolicies =
             singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
@@ -256,19 +282,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
     private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, string defaultUserCollectionName)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
-        {
-            return;
-        }
-
         // Skip if no collection name provided (backwards compatibility)
         if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
         {
             return;
         }
 
-        var organizationDataOwnershipPolicy =
-            await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
+        var organizationDataOwnershipPolicy = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
         if (!organizationDataOwnershipPolicy.RequiresDefaultCollectionOnConfirm(organizationUser.OrganizationId))
         {
             return;
@@ -300,19 +320,14 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private async Task CreateManyDefaultCollectionsAsync(Guid organizationId,
         IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.CreateDefaultLocation))
-        {
-            return;
-        }
-
         // Skip if no collection name provided (backwards compatibility)
         if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
         {
             return;
         }
 
-        var policyEligibleOrganizationUserIds =
-            await _policyRequirementQuery.GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+        var policyEligibleOrganizationUserIds = await _policyRequirementQuery
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
 
         var eligibleOrganizationUserIds = confirmedOrganizationUsers
             .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
@@ -325,5 +340,24 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
 
         await _collectionRepository.UpsertDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
+    }
+
+    /// <summary>
+    /// Sends the organization confirmed email using either the new mailer pattern or the legacy mail service,
+    /// depending on the feature flag.
+    /// </summary>
+    /// <param name="organization">The organization the user was confirmed to.</param>
+    /// <param name="userEmail">The email address of the confirmed user.</param>
+    /// <param name="accessSecretsManager">Whether the user has access to Secrets Manager.</param>
+    internal async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
+        {
+            await _sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
+        }
+        else
+        {
+            await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
+        }
     }
 }

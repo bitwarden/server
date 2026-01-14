@@ -12,6 +12,12 @@ public static class StripeConstants
         public const string UnrecognizedLocation = "unrecognized_location";
     }
 
+    public static class BillingReasons
+    {
+        public const string SubscriptionCreate = "subscription_create";
+        public const string SubscriptionCycle = "subscription_cycle";
+    }
+
     public static class CollectionMethod
     {
         public const string ChargeAutomatically = "charge_automatically";
@@ -22,6 +28,8 @@ public static class StripeConstants
     {
         public const string LegacyMSPDiscount = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
+        public const string Milestone2SubscriptionDiscount = "milestone-2c";
+        public const string Milestone3SubscriptionDiscount = "milestone-3";
 
         public static class MSPDiscounts
         {
@@ -34,6 +42,7 @@ public static class StripeConstants
     public static class ErrorCodes
     {
         public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
+        public const string InvoiceUpcomingNone = "invoice_upcoming_none";
         public const string PaymentMethodMicroDepositVerificationAttemptsExceeded = "payment_method_microdeposit_verification_attempts_exceeded";
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
@@ -57,12 +66,19 @@ public static class StripeConstants
     public static class MetadataKeys
     {
         public const string BraintreeCustomerId = "btCustomerId";
+        public const string BraintreeTransactionId = "btTransactionId";
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
+        public const string PayPalTransactionId = "btPayPalTransactionId";
+        public const string PreviousAdditionalStorage = "previous_additional_storage";
+        public const string PreviousPeriodEndDate = "previous_period_end_date";
+        public const string PreviousPremiumPriceId = "previous_premium_price_id";
+        public const string PreviousPremiumUserId = "previous_premium_user_id";
         public const string ProviderId = "providerId";
         public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
+        public const string StorageReconciled2025 = "storage_reconciled_2025";
     }
 
     public static class PaymentBehavior

@@ -17,4 +17,5 @@ public interface IOrganizationDomainRepository : IRepository<OrganizationDomain,
     Task<OrganizationDomain?> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName);
     Task<ICollection<OrganizationDomain>> GetExpiredOrganizationDomainsAsync();
     Task<bool> DeleteExpiredAsync(int expirationPeriod);
+    Task<bool> HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(string domainName, Guid? excludeOrganizationId = null);
 }

@@ -92,7 +92,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
             .GetManyBySponsoringOrganizationAsync(policyUpdate.OrganizationId)
             .Returns(organizationSponsorships);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy);
 
@@ -120,7 +120,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
             .GetManyBySponsoringOrganizationAsync(policyUpdate.OrganizationId)
             .Returns(organizationSponsorships);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy);
 

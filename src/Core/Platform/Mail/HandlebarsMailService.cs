@@ -78,7 +78,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendRegistrationVerificationEmailAsync(string email, string token)
+    public async Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing)
     {
         var message = CreateDefaultMessage("Verify Your Email", email);
         var model = new RegisterVerifyEmail
@@ -86,7 +86,8 @@ public class HandlebarsMailService : IMailService
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
-            SiteName = _globalSettings.SiteName
+            SiteName = _globalSettings.SiteName,
+            FromMarketing = WebUtility.UrlEncode(fromMarketing),
         };
         await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -424,6 +425,8 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    // TODO: DO NOT move to IMailer implementation: PM-27852
+    [Obsolete("Use SendIndividualUserWelcomeEmailAsync instead")]
     public async Task SendWelcomeEmailAsync(User user)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
@@ -433,6 +436,50 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "Welcome", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    // TODO: Move to IMailer implementation: PM-27852
+    public async Task SendIndividualUserWelcomeEmailAsync(User user)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
+        var model = new BaseMailModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-individual-user", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    // TODO: Move to IMailer implementation: PM-27852
+    public async Task SendOrganizationUserWelcomeEmailAsync(User user, string organizationName)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
+        var model = new OrganizationWelcomeEmailViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-org-user", model);
+        message.Category = "Welcome";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    // TODO: Move to IMailer implementation: PM-27852
+    public async Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName)
+    {
+        var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
+        var model = new OrganizationWelcomeEmailViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(familyOrganizationName, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "MJML.Auth.Onboarding.welcome-family-user", model);
         message.Category = "Welcome";
         await _mailDeliveryService.SendEmailAsync(message);
     }

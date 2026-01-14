@@ -1,18 +1,24 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Mailer;
+using Bit.Core.Settings;
 using Bit.Core.Test.Platform.Mailer.TestMail;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Platform.Mailer;
+
 public class MailerTest
 {
     [Fact]
     public async Task SendEmailAsync()
     {
+        var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();
+        var globalSettings = new GlobalSettings { SelfHosted = false };
         var deliveryService = Substitute.For<IMailDeliveryService>();
-        var mailer = new Core.Platform.Mail.Mailer.Mailer(new HandlebarMailRenderer(), deliveryService);
+
+        var mailer = new Core.Platform.Mail.Mailer.Mailer(new HandlebarMailRenderer(logger, globalSettings), deliveryService);
 
         var mail = new TestMail.TestMail()
         {

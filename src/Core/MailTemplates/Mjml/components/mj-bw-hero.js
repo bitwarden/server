@@ -18,27 +18,19 @@ class MjBwHero extends BodyComponent {
 
   static defaultAttributes = {};
 
+  componentHeadStyle = breakpoint => {
+    return `
+      @media only screen and (max-width:${breakpoint}) {
+        .mj-bw-hero-responsive-img {
+          display: none !important;
+        }
+      }
+    `
+  }
+
   render() {
-    if (this.getAttribute("button-text") && this.getAttribute("button-url")) {
-      return this.renderMJML(`
-      <mj-section
-        full-width="full-width"
-        background-color="#175ddc"
-        border-radius="4px 4px 0px 0px"
-      >
-        <mj-column width="70%">
-          <mj-image
-            align="left"
-            src="https://bitwarden.com/images/logo-horizontal-white.png"
-            width="150px"
-            height="30px"
-          ></mj-image>
-          <mj-text color="#fff" padding-top="0" padding-bottom="0">
-            <h1 style="font-weight: normal; font-size: 24px; line-height: 32px">
-              ${this.getAttribute("title")}
-            </h1>
-          </mj-text>
-          <mj-button
+    const buttonElement = this.getAttribute("button-text") && this.getAttribute("button-url") ?
+      `<mj-button
             href="${this.getAttribute("button-url")}"
             background-color="#fff"
             color="#1A41AC"
@@ -47,22 +39,16 @@ class MjBwHero extends BodyComponent {
           >
               ${this.getAttribute("button-text")}
             </mj-button
-          >
-        </mj-column>
-        <mj-column width="30%" vertical-align="bottom">
-          <mj-image
-            src="${this.getAttribute("img-src")}"
-            alt=""
-            width="140px"
-            height="140px"
-            padding="0px"
-            css-class="hide-small-img"
-          />
-        </mj-column>
-      </mj-section>
-    `);
-    } else {
-      return this.renderMJML(`
+          >` : "";
+    const subTitleElement = this.getAttribute("sub-title") ?
+      `<mj-text color="#fff" padding-top="0" padding-bottom="0">
+            <h2 style="font-weight: normal; font-size: 16px; line-height: 0px">
+              ${this.getAttribute("sub-title")}
+            </h2>
+          </mj-text>` : "";
+
+    return this.renderMJML(
+      `
       <mj-section
         full-width="full-width"
         background-color="#175ddc"
@@ -79,21 +65,25 @@ class MjBwHero extends BodyComponent {
             <h1 style="font-weight: normal; font-size: 24px; line-height: 32px">
               ${this.getAttribute("title")}
             </h1>
-          </mj-text>
+            ` +
+        subTitleElement +
+        `
+          </mj-text>` +
+        buttonElement +
+        `
         </mj-column>
         <mj-column width="30%" vertical-align="bottom">
           <mj-image
             src="${this.getAttribute("img-src")}"
             alt=""
-            width="140px"
-            height="140px"
+            width="155px"
             padding="0px"
-            css-class="hide-small-img"
-          />
+            css-class="mj-bw-hero-responsive-img"
+            />
         </mj-column>
       </mj-section>
-    `);
-    }
+    `,
+    );
   }
 }
 

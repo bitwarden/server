@@ -24,11 +24,11 @@ public class SavePolicyRequestTests
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
         var testData = new Dictionary<string, object> { { "test", "value" } };
+        var policyType = PolicyType.TwoFactorAuthentication;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.TwoFactorAuthentication,
                 Enabled = true,
                 Data = testData
             },
@@ -36,7 +36,7 @@ public class SavePolicyRequestTests
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         Assert.Equal(PolicyType.TwoFactorAuthentication, result.PolicyUpdate.Type);
@@ -63,17 +63,17 @@ public class SavePolicyRequestTests
         currentContext.UserId.Returns(userId);
         currentContext.OrganizationOwner(organizationId).Returns(false);
 
+        var policyType = PolicyType.SingleOrg;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.SingleOrg,
                 Enabled = false
             }
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         Assert.Null(result.PolicyUpdate.Data);
@@ -93,17 +93,17 @@ public class SavePolicyRequestTests
         currentContext.UserId.Returns(userId);
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
+        var policyType = PolicyType.SingleOrg;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.SingleOrg,
                 Enabled = false
             }
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         Assert.Null(result.PolicyUpdate.Data);
@@ -124,11 +124,11 @@ public class SavePolicyRequestTests
         currentContext.UserId.Returns(userId);
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
+        var policyType = PolicyType.OrganizationDataOwnership;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.OrganizationDataOwnership,
                 Enabled = true
             },
             Metadata = new Dictionary<string, object>
@@ -138,7 +138,7 @@ public class SavePolicyRequestTests
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         Assert.IsType<OrganizationModelOwnershipPolicyModel>(result.Metadata);
@@ -156,17 +156,17 @@ public class SavePolicyRequestTests
         currentContext.UserId.Returns(userId);
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
+        var policyType = PolicyType.OrganizationDataOwnership;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.OrganizationDataOwnership,
                 Enabled = true
             }
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         Assert.NotNull(result);
@@ -193,12 +193,11 @@ public class SavePolicyRequestTests
         currentContext.UserId.Returns(userId);
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
-
+        var policyType = PolicyType.ResetPassword;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.ResetPassword,
                 Enabled = true,
                 Data = _complexData
             },
@@ -206,7 +205,7 @@ public class SavePolicyRequestTests
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         var deserializedData = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(result.PolicyUpdate.Data);
@@ -234,11 +233,11 @@ public class SavePolicyRequestTests
         currentContext.UserId.Returns(userId);
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
+        var policyType = PolicyType.MaximumVaultTimeout;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.MaximumVaultTimeout,
                 Enabled = true
             },
             Metadata = new Dictionary<string, object>
@@ -248,7 +247,7 @@ public class SavePolicyRequestTests
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         Assert.NotNull(result);
@@ -266,19 +265,18 @@ public class SavePolicyRequestTests
         currentContext.OrganizationOwner(organizationId).Returns(true);
 
         var errorDictionary = BuildErrorDictionary();
-
+        var policyType = PolicyType.OrganizationDataOwnership;
         var model = new SavePolicyRequest
         {
             Policy = new PolicyRequestModel
             {
-                Type = PolicyType.OrganizationDataOwnership,
                 Enabled = true
             },
             Metadata = errorDictionary
         };
 
         // Act
-        var result = await model.ToSavePolicyModelAsync(organizationId, currentContext);
+        var result = await model.ToSavePolicyModelAsync(organizationId, policyType, currentContext);
 
         // Assert
         Assert.NotNull(result);

@@ -35,7 +35,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         // This allows us to use the official registration flow
         SubstituteService<IMailService>(service =>
         {
-            service.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>())
+            service.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                 .ReturnsForAnyArgs(Task.CompletedTask)
                 .AndDoes(call =>
                 {
@@ -189,7 +189,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     /// Registers a new user to the Identity Application Factory based on the RegisterFinishRequestModel
     /// </summary>
     /// <param name="requestModel">RegisterFinishRequestModel needed to seed data to the test user</param>
-    /// <param name="marketingEmails">optional parameter that is tracked during the inital steps of registration.</param>
+    /// <param name="marketingEmails">optional parameter that is tracked during the initial steps of registration.</param>
     /// <returns>returns the newly created user</returns>
     public async Task<User> RegisterNewIdentityFactoryUserAsync(
         RegisterFinishRequestModel requestModel,

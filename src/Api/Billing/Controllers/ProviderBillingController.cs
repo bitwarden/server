@@ -1,7 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
@@ -9,7 +8,6 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
@@ -34,6 +32,7 @@ public class ProviderBillingController(
     IStripeAdapter stripeAdapter,
     IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
+    // TODO: Migrate to Query / ProviderBillingVNextController
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
     {
@@ -44,7 +43,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+        var invoices = await stripeAdapter.ListInvoicesAsync(new StripeInvoiceListOptions
         {
             Customer = provider.GatewayCustomerId
         });
@@ -54,6 +53,7 @@ public class ProviderBillingController(
         return TypedResults.Ok(response);
     }
 
+    // TODO: Migrate to Query / ProviderBillingVNextController
     [HttpGet("invoices/{invoiceId}")]
     public async Task<IResult> GenerateClientInvoiceReportAsync([FromRoute] Guid providerId, string invoiceId)
     {
@@ -76,51 +76,7 @@ public class ProviderBillingController(
             "text/csv");
     }
 
-    [HttpPut("payment-method")]
-    public async Task<IResult> UpdatePaymentMethodAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] UpdatePaymentMethodRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
-        var taxInformation = requestBody.TaxInformation.ToDomain();
-
-        await providerBillingService.UpdatePaymentMethod(
-            provider,
-            tokenizedPaymentSource,
-            taxInformation);
-
-        return TypedResults.Ok();
-    }
-
-    [HttpPost("payment-method/verify-bank-account")]
-    public async Task<IResult> VerifyBankAccountAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] VerifyBankAccountRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
-        {
-            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
-        }
-
-        await subscriberService.VerifyBankAccount(provider, requestBody.DescriptorCode);
-
-        return TypedResults.Ok();
-    }
-
+    // TODO: Migrate to Query / ProviderBillingVNextController
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
@@ -131,7 +87,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId,
+        var subscription = await stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId,
             new SubscriptionGetOptions { Expand = ["customer.tax_ids", "discounts", "test_clock"] });
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
@@ -140,7 +96,7 @@ public class ProviderBillingController(
         {
             var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
             var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, plan.Type);
-            var price = await stripeAdapter.PriceGetAsync(priceId);
+            var price = await stripeAdapter.GetPriceAsync(priceId);
 
             var unitAmount = price.UnitAmountDecimal.HasValue
                 ? price.UnitAmountDecimal.Value / 100M
@@ -171,54 +127,5 @@ public class ProviderBillingController(
             paymentSource);
 
         return TypedResults.Ok(response);
-    }
-
-    [HttpGet("tax-information")]
-    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid providerId)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        var taxInformation = await subscriberService.GetTaxInformation(provider);
-
-        var response = TaxInformationResponse.From(taxInformation);
-
-        return TypedResults.Ok(response);
-    }
-
-    [HttpPut("tax-information")]
-    public async Task<IResult> UpdateTaxInformationAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] TaxInformationRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        if (requestBody is not { Country: not null, PostalCode: not null })
-        {
-            return Error.BadRequest("Country and postal code are required to update your tax information.");
-        }
-
-        var taxInformation = new TaxInformation(
-            requestBody.Country,
-            requestBody.PostalCode,
-            requestBody.TaxId,
-            requestBody.TaxIdType,
-            requestBody.Line1,
-            requestBody.Line2,
-            requestBody.City,
-            requestBody.State);
-
-        await subscriberService.UpdateTaxInformation(provider, taxInformation);
-
-        return TypedResults.Ok();
     }
 }

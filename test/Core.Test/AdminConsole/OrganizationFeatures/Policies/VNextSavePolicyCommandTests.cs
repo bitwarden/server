@@ -33,7 +33,7 @@ public class VNextSavePolicyCommandTests
             fakePolicyValidationEvent
         ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var newPolicy = new Policy
         {
@@ -77,7 +77,7 @@ public class VNextSavePolicyCommandTests
             fakePolicyValidationEvent
         ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IPolicyRepository>()
@@ -117,7 +117,7 @@ public class VNextSavePolicyCommandTests
     {
         // Arrange
         var sutProvider = SutProviderFactory();
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
@@ -137,7 +137,7 @@ public class VNextSavePolicyCommandTests
     {
         // Arrange
         var sutProvider = SutProviderFactory();
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
@@ -167,7 +167,7 @@ public class VNextSavePolicyCommandTests
                 new FakeSingleOrgDependencyEvent()
             ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var requireSsoPolicy = new Policy
         {
@@ -202,7 +202,7 @@ public class VNextSavePolicyCommandTests
                 new FakeSingleOrgDependencyEvent()
             ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var requireSsoPolicy = new Policy
         {
@@ -237,7 +237,7 @@ public class VNextSavePolicyCommandTests
                 new FakeSingleOrgDependencyEvent()
             ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var requireSsoPolicy = new Policy
         {
@@ -271,7 +271,7 @@ public class VNextSavePolicyCommandTests
                 new FakeSingleOrgDependencyEvent()
             ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         ArrangeOrganization(sutProvider, policyUpdate);
         sutProvider.GetDependency<IPolicyRepository>()
@@ -302,7 +302,7 @@ public class VNextSavePolicyCommandTests
                 new FakeVaultTimeoutDependencyEvent()
             ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         ArrangeOrganization(sutProvider, policyUpdate);
         sutProvider.GetDependency<IPolicyRepository>()
@@ -331,7 +331,7 @@ public class VNextSavePolicyCommandTests
                 new FakeSingleOrgDependencyEvent()
             ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         ArrangeOrganization(sutProvider, policyUpdate);
         sutProvider.GetDependency<IPolicyRepository>()
@@ -356,7 +356,7 @@ public class VNextSavePolicyCommandTests
             fakePolicyValidationEvent
         ]);
 
-        var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
 
         var singleOrgPolicy = new Policy
         {
