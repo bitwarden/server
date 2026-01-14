@@ -7,26 +7,29 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var builder = CreateWebHostBuilder(args);
-        var host = builder.Build();
-        host.Run();
-    }
-
-    public static IWebHostBuilder CreateWebHostBuilder(string[] args)
-    {
         var config = new ConfigurationBuilder()
             .AddCommandLine(args)
             .Build();
 
-        var builder = new WebHostBuilder()
-            .UseConfiguration(config)
-            .UseKestrel()
-            .UseStartup<Startup>()
-            .ConfigureLogging((hostingContext, logging) =>
+        var builder = new HostBuilder()
+            .ConfigureWebHost(builder =>
             {
-                logging.AddConsole().AddDebug();
+                builder.UseConfiguration(config);
+                builder.UseKestrel();
+                builder.UseStartup<Startup>();
+                builder.ConfigureKestrel((_,_) => {});
+
+                var webRoot = config.GetValue<string>("webRoot");
+                if (string.IsNullOrWhiteSpace(webRoot))
+                {
+                    builder.UseWebRoot(webRoot);
+                }
             })
-            .ConfigureKestrel((context, options) => { });
+            .ConfigureLogging(logging =>
+            {
+                logging.AddConsole()
+                    .AddDebug();
+            });
 
         var contentRoot = config.GetValue<string>("contentRoot");
         if (!string.IsNullOrWhiteSpace(contentRoot))
@@ -38,12 +41,7 @@ public class Program
             builder.UseContentRoot(Directory.GetCurrentDirectory());
         }
 
-        var webRoot = config.GetValue<string>("webRoot");
-        if (string.IsNullOrWhiteSpace(webRoot))
-        {
-            builder.UseWebRoot(webRoot);
-        }
-
-        return builder;
+        var host = builder.Build();
+        host.Run();
     }
 }

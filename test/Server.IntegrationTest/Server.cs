@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 
 namespace Bit.Server.IntegrationTest;
 
@@ -12,34 +12,27 @@ public class Server : WebApplicationFactory<Program>
     public bool? WebVault { get; set; }
     public string? AppIdLocation { get; set; }
 
-    protected override IWebHostBuilder? CreateWebHostBuilder()
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        var args = new List<string>
+        base.ConfigureWebHost(builder);
+
+        var config = new Dictionary<string, string?>
         {
-            "/contentRoot",
-            ContentRoot ?? "",
-            "/webRoot",
-            WebRoot ?? "",
-            "/serveUnknown",
-            ServeUnknown.ToString().ToLowerInvariant(),
+            {"contentRoot", ContentRoot},
+            {"webRoot", WebRoot},
+            {"serveUnknown", ServeUnknown.ToString().ToLowerInvariant()},
         };
 
         if (WebVault.HasValue)
         {
-            args.Add("/webVault");
-            args.Add(WebVault.Value.ToString().ToLowerInvariant());
+            config["webVault"] = WebVault.Value.ToString().ToLowerInvariant();
         }
 
         if (!string.IsNullOrEmpty(AppIdLocation))
         {
-            args.Add("/appIdLocation");
-            args.Add(AppIdLocation);
+            config["appIdLocation"] = AppIdLocation;
         }
 
-        var builder = WebHostBuilderFactory.CreateFromTypesAssemblyEntryPoint<Program>([.. args])
-            ?? throw new InvalidProgramException("Could not create builder from assembly.");
-
-        builder.UseSetting("TEST_CONTENTROOT_SERVER", ContentRoot);
-        return builder;
+        builder.UseConfiguration(new ConfigurationBuilder().AddInMemoryCollection(config).Build());
     }
 }
