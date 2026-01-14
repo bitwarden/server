@@ -159,8 +159,6 @@ public static class FeatureFlagKeys
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
-    public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
-        "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
@@ -204,6 +202,8 @@ public static class FeatureFlagKeys
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
+    public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
+    public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";

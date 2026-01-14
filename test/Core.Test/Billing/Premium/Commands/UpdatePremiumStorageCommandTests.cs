@@ -18,13 +18,11 @@ public class UpdatePremiumStorageCommandTests
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
-    private readonly PremiumPlan _premiumPlan;
     private readonly UpdatePremiumStorageCommand _command;
 
     public UpdatePremiumStorageCommandTests()
     {
-        // Setup default premium plan with standard pricing
-        _premiumPlan = new PremiumPlan
+        var premiumPlan = new PremiumPlan
         {
             Name = "Premium",
             Available = true,
@@ -32,7 +30,7 @@ public class UpdatePremiumStorageCommandTests
             Seat = new PremiumPurchasable { Price = 10M, StripePriceId = "price_premium", Provided = 1 },
             Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "price_storage", Provided = 1 }
         };
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { _premiumPlan });
+        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
 
         _command = new UpdatePremiumStorageCommand(
             _stripeAdapter,
@@ -43,18 +41,19 @@ public class UpdatePremiumStorageCommandTests
 
     private Subscription CreateMockSubscription(string subscriptionId, int? storageQuantity = null)
     {
-        var items = new List<SubscriptionItem>();
-
-        // Always add the seat item
-        items.Add(new SubscriptionItem
+        var items = new List<SubscriptionItem>
         {
-            Id = "si_seat",
-            Price = new Price { Id = "price_premium" },
-            Quantity = 1
-        });
+            // Always add the seat item
+            new()
+            {
+                Id = "si_seat",
+                Price = new Price { Id = "price_premium" },
+                Quantity = 1
+            }
+        };
 
         // Add storage item if quantity is provided
-        if (storageQuantity.HasValue && storageQuantity.Value > 0)
+        if (storageQuantity is > 0)
         {
             items.Add(new SubscriptionItem
             {
@@ -142,7 +141,7 @@ public class UpdatePremiumStorageCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("No access to storage.", badRequest.Response);
+        Assert.Equal("User has no access to storage.", badRequest.Response);
     }
 
     [Theory, BitAutoData]
@@ -216,7 +215,7 @@ public class UpdatePremiumStorageCommandTests
                 opts.Items.Count == 1 &&
                 opts.Items[0].Id == "si_storage" &&
                 opts.Items[0].Quantity == 9 &&
-                opts.ProrationBehavior == "create_prorations"));
+                opts.ProrationBehavior == "always_invoice"));
 
         // Verify user was saved
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
@@ -233,7 +232,7 @@ public class UpdatePremiumStorageCommandTests
         user.Storage = 500L * 1024 * 1024;
         user.GatewaySubscriptionId = "sub_123";
 
-        var subscription = CreateMockSubscription("sub_123", null);
+        var subscription = CreateMockSubscription("sub_123");
         _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
 
         // Act
