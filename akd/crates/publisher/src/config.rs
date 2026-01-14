@@ -9,18 +9,35 @@ const DEFAULT_EPOCH_DURATION_MS: u64 = 30000; // 30 seconds
 pub struct ApplicationConfig {
     pub storage: AkdStorageConfig,
     pub publisher: PublisherConfig,
+    /// The unique Bitwarden installation ID using this AKD publisher instance.
+    /// This value is used to namespace AKD data to a given installation.
     pub installation_id: Uuid,
+    /// The address the web server will bind to. Defaults to "127.0.0.1:3000".
+    #[serde(default = "default_web_server_bind_address")]
+    web_server_bind_address: String,
     // web_server: WebServerConfig,
+}
+
+fn default_web_server_bind_address() -> String {
+    "127.0.0.1:3000".to_string()
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PublisherConfig {
+    /// The duration of each publishing epoch in milliseconds. Defaults to 30 seconds.
     #[serde(default = "default_epoch_duration_ms")]
-    epoch_duration_ms: u64,
+    pub epoch_duration_ms: u64,
+    /// The limit to the number of AKD values to update in a single epoch. Defaults to no limit.
+    #[serde(default = "default_epoch_update_limit")]
+    pub epoch_update_limit: Option<isize>,
 }
 
 fn default_epoch_duration_ms() -> u64 {
     DEFAULT_EPOCH_DURATION_MS
+}
+
+fn default_epoch_update_limit() -> Option<isize> {
+    None
 }
 
 impl ApplicationConfig {
@@ -64,6 +81,14 @@ impl ApplicationConfig {
             .map_err(|e| ConfigError::Message(format!("{e}")))?;
         self.publisher.validate()?;
         Ok(())
+    }
+
+    /// Get the web server bind address as a SocketAddr
+    /// Panics if the address is invalid
+    pub fn socket_address(&self) -> std::net::SocketAddr {
+        self.web_server_bind_address
+            .parse()
+            .expect("Invalid web server bind address")
     }
 }
 

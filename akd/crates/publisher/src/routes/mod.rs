@@ -1,14 +1,11 @@
-use akd_storage::{AkdDatabase, PublishQueueType};
+use akd_storage::PublishQueueType;
 use axum::routing::{get, post};
-use common::BitAkdDirectory;
 
 mod health;
 mod publish;
 
 #[derive(Clone)]
 pub(crate) struct AppState {
-    pub directory: BitAkdDirectory,
-    pub db: AkdDatabase,
     pub publish_queue: PublishQueueType,
 }
 

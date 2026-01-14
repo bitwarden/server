@@ -25,16 +25,17 @@ use tables::{
     temp_table::TempTable,
     values,
 };
+use uuid::Uuid;
 
 use crate::{
     ms_sql::tables::{
-        akd_storable_for_ms_sql::QueryStatement,
         publish_queue::{
-            bulk_delete_rows, bulk_delete_statement, enqueue_statement, peek_statement,
+            bulk_delete_rows, bulk_delete_statement, enqueue_statement, peek_no_limit_statement,
+            peek_statement,
         },
         vrf_key,
     },
-    publish_queue::{PublishQueue, PublishQueueError, PublishQueueItem},
+    publish_queue::{PublishQueue, PublishQueueError},
     vrf_key_config::VrfKeyConfig,
     vrf_key_database::{VrfKeyRetrievalError, VrfKeyStorageError, VrfKeyTableData},
 };
@@ -753,30 +754,36 @@ impl Database for MsSql {
 
 #[async_trait]
 impl PublishQueue for MsSql {
-    #[instrument(skip(self, raw_label, raw_value), level = "debug")]
-    async fn enqueue(
-        &self,
-        raw_label: Vec<u8>,
-        raw_value: Vec<u8>,
-    ) -> Result<(), PublishQueueError> {
+    #[instrument(skip(self, label, value), level = "debug")]
+    async fn enqueue(&self, label: AkdLabel, value: AkdValue) -> Result<(), PublishQueueError> {
         debug!("Enqueuing item to publish queue");
 
-        let statement = enqueue_statement(raw_label, raw_value);
+        let statement = enqueue_statement(label, value);
         self.execute_statement(&statement)
             .await
             .map_err(|_| PublishQueueError)
     }
 
     #[instrument(skip(self), level = "debug")]
-    async fn peek(&self, limit: isize) -> Result<Vec<PublishQueueItem>, PublishQueueError> {
-        if limit <= 0 {
-            debug!("Peek called with non-positive limit, returning empty vector");
-            return Ok(vec![]);
-        }
+    async fn peek(
+        &self,
+        limit: Option<isize>,
+    ) -> Result<Vec<(Uuid, (AkdLabel, AkdValue))>, PublishQueueError> {
+        let statement = match limit {
+            Some(limit) if limit <= 0 => {
+                warn!("Peek called with non-positive limit, returning empty vector");
+                return Ok(vec![]);
+            }
+            Some(limit) => {
+                debug!(limit, "Peeking items from publish queue");
+                peek_statement(limit)
+            }
+            None => {
+                debug!("Peeking items from publish queue with no limit");
+                peek_no_limit_statement()
+            }
+        };
 
-        debug!(limit, "Peeking items from publish queue");
-
-        let statement = peek_statement(limit);
         let mut conn = self.get_connection().await.map_err(|_| {
             error!("Failed to get DB connection for peek");
             PublishQueueError
@@ -804,6 +811,7 @@ impl PublishQueue for MsSql {
                 queued_items.push(item);
             }
         }
+
         debug!(
             item_count = queued_items.len(),
             "Peeked items from publish queue"

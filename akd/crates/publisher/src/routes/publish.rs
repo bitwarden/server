@@ -1,4 +1,5 @@
 use super::AppState;
+use akd::{AkdLabel, AkdValue};
 use akd_storage::PublishQueue;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
@@ -22,8 +23,8 @@ pub async fn publish_handler(
 ) -> impl IntoResponse {
     info!("Handling publish request");
 
-    let akd_label: Vec<u8> = request.akd_label_b64.into_bytes();
-    let akd_value: Vec<u8> = request.akd_value_b64.into_bytes();
+    let akd_label: AkdLabel = AkdLabel(request.akd_label_b64.into_bytes());
+    let akd_value: AkdValue = AkdValue(request.akd_value_b64.into_bytes());
 
     //TODO: enqueue publish operation to to_publish queue
     if let Err(e) = publish_queue.enqueue(akd_label, akd_value).await {

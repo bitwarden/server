@@ -1,6 +1,6 @@
 use axum::Json;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info, instrument};
+use tracing::{info, instrument};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ServerHealth {

@@ -1,18 +1,11 @@
+use akd::{AkdLabel, AkdValue};
 use async_trait::async_trait;
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::{
-    db_config::DatabaseType,
-    ms_sql::MsSql,
-    publish_queue_config::{PublishQueueConfig, PublishQueueProvider},
-    AkdDatabase,
+    db_config::DatabaseType, ms_sql::MsSql, publish_queue_config::PublishQueueConfig, AkdDatabase,
 };
-
-pub(crate) struct PublishQueueItem {
-    pub id: uuid::Uuid,
-    pub raw_label: Vec<u8>,
-    pub raw_value: Vec<u8>,
-}
 
 #[derive(Debug, Error)]
 #[error("Publish queue error")]
@@ -20,12 +13,16 @@ pub struct PublishQueueError;
 
 #[async_trait]
 pub trait PublishQueue {
+    // TODO: should this method ensure that a given label is not already present in the queue? How to handle that?
     async fn enqueue(
         &self,
-        raw_label: Vec<u8>,
-        raw_value: Vec<u8>,
+        raw_label: AkdLabel,
+        raw_value: AkdValue,
     ) -> Result<(), PublishQueueError>;
-    async fn peek(&self, limit: isize) -> Result<Vec<PublishQueueItem>, PublishQueueError>;
+    async fn peek(
+        &self,
+        limit: Option<isize>,
+    ) -> Result<Vec<(Uuid, (AkdLabel, AkdValue))>, PublishQueueError>;
     async fn remove(&self, ids: Vec<uuid::Uuid>) -> Result<(), PublishQueueError>;
 }
 
@@ -36,8 +33,8 @@ pub enum PublishQueueType {
 
 impl PublishQueueType {
     pub fn new(config: &PublishQueueConfig, db: &AkdDatabase) -> PublishQueueType {
-        match &config.provider {
-            PublishQueueProvider::DbBacked => db.into(),
+        match config {
+            PublishQueueConfig::DbBacked => db.into(),
         }
     }
 }
@@ -54,32 +51,26 @@ impl From<&AkdDatabase> for PublishQueueType {
 impl PublishQueue for PublishQueueType {
     async fn enqueue(
         &self,
-        _raw_label: Vec<u8>,
-        _raw_value: Vec<u8>,
+        raw_label: AkdLabel,
+        raw_value: AkdValue,
     ) -> Result<(), PublishQueueError> {
         match self {
-            PublishQueueType::MsSql(_ms_sql) => {
-                // Implement enqueue logic for MsSql
-                Ok(())
-            }
+            PublishQueueType::MsSql(ms_sql) => ms_sql.enqueue(raw_label, raw_value).await,
         }
     }
 
-    async fn peek(&self, _max: isize) -> Result<Vec<PublishQueueItem>, PublishQueueError> {
+    async fn peek(
+        &self,
+        limit: Option<isize>,
+    ) -> Result<Vec<(Uuid, (AkdLabel, AkdValue))>, PublishQueueError> {
         match self {
-            PublishQueueType::MsSql(_ms_sql) => {
-                // Implement peek logic for MsSql
-                Ok(vec![])
-            }
+            PublishQueueType::MsSql(ms_sql) => ms_sql.peek(limit).await,
         }
     }
 
-    async fn remove(&self, _ids: Vec<uuid::Uuid>) -> Result<(), PublishQueueError> {
+    async fn remove(&self, ids: Vec<uuid::Uuid>) -> Result<(), PublishQueueError> {
         match self {
-            PublishQueueType::MsSql(_ms_sql) => {
-                // Implement remove logic for MsSql
-                Ok(())
-            }
+            PublishQueueType::MsSql(ms_sql) => ms_sql.remove(ids).await,
         }
     }
 }
