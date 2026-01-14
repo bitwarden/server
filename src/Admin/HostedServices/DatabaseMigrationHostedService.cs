@@ -40,7 +40,7 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
                 else
                 {
                     _logger.LogError(e,
-                        "Database unavailable for migration. Trying again (attempt #{0})...", i + 1);
+                        "Database unavailable for migration. Trying again (attempt #{AttemptNumber})...", i + 1);
                     await Task.Delay(20000, cancellationToken);
                 }
             }
