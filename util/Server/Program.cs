@@ -17,7 +17,7 @@ public class Program
                 builder.UseConfiguration(config);
                 builder.UseKestrel();
                 builder.UseStartup<Startup>();
-                builder.ConfigureKestrel((_,_) => {});
+                builder.ConfigureKestrel((_, _) => { });
 
                 var webRoot = config.GetValue<string>("webRoot");
                 if (string.IsNullOrWhiteSpace(webRoot))
