@@ -357,7 +357,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return false;
         }
 
-        var masterPasswordPolicy = await _policyQuery.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        var masterPasswordPolicy = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
         var useMasterPasswordPolicy = masterPasswordPolicy.Enabled &&
                                       masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
 

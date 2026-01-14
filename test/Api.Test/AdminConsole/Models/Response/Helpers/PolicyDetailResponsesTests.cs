@@ -1,7 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using NSubstitute;
 using Xunit;
@@ -19,7 +19,7 @@ public class PolicyDetailResponsesTests
     {
         var fixture = new Fixture();
 
-        var policy = fixture.Build<Policy>()
+        var policy = fixture.Build<PolicyData>()
             .Without(p => p.Data)
             .With(p => p.Type, PolicyType.SingleOrg)
             .With(p => p.Enabled, policyEnabled)
@@ -39,7 +39,7 @@ public class PolicyDetailResponsesTests
     {
         var fixture = new Fixture();
 
-        var policy = fixture.Build<Policy>()
+        var policy = fixture.Build<PolicyData>()
             .Without(p => p.Data)
             .With(p => p.Type, PolicyType.TwoFactorAuthentication)
             .Create();
@@ -58,7 +58,7 @@ public class PolicyDetailResponsesTests
     {
         var fixture = new Fixture();
 
-        var policy = fixture.Build<Policy>()
+        var policy = fixture.Build<PolicyData>()
             .Without(p => p.Data)
             .With(p => p.Type, PolicyType.SingleOrg)
             .Create();

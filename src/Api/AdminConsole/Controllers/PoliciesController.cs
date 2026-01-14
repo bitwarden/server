@@ -81,7 +81,7 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var policy = await _policyQuery.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
+        var policy = await _policyQuery.RunAsync(orgId, (PolicyType)type);
         if (policy.Type is PolicyType.SingleOrg)
         {
             return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
