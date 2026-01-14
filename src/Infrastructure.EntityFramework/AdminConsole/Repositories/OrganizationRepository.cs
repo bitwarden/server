@@ -533,8 +533,11 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
             await transaction.CommitAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex,
+                "Failed to initialize pending organization {OrganizationId}. Rolling back transaction.",
+                organizationId);
             await transaction.RollbackAsync();
             throw;
         }
