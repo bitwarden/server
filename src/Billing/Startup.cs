@@ -48,6 +48,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // PayPal IPN Client
         services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();

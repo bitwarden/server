@@ -266,7 +266,10 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _subscriberService.Received(1).CreateBraintreeCustomer(user, paymentMethod.Token);
         await _stripeAdapter.Received(1).UpdateInvoiceAsync(mockSubscription.LatestInvoiceId,
-            Arg.Is<InvoiceUpdateOptions>(opts => opts.AutoAdvance == false));
+            Arg.Is<InvoiceUpdateOptions>(opts =>
+                opts.AutoAdvance == false &&
+                opts.Expand != null &&
+                opts.Expand.Contains("customer")));
         await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
@@ -502,7 +505,10 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(user.Premium);
         Assert.Equal(mockSubscription.GetCurrentPeriodEnd(), user.PremiumExpirationDate);
         await _stripeAdapter.Received(1).UpdateInvoiceAsync(mockSubscription.LatestInvoiceId,
-            Arg.Is<InvoiceUpdateOptions>(opts => opts.AutoAdvance == false));
+            Arg.Is<InvoiceUpdateOptions>(opts =>
+                opts.AutoAdvance == false &&
+                opts.Expand != null &&
+                opts.Expand.Contains("customer")));
         await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
     }
 
@@ -612,7 +618,10 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.False(user.Premium);
         Assert.Null(user.PremiumExpirationDate);
         await _stripeAdapter.Received(1).UpdateInvoiceAsync(mockSubscription.LatestInvoiceId,
-            Arg.Is<InvoiceUpdateOptions>(opts => opts.AutoAdvance == false));
+            Arg.Is<InvoiceUpdateOptions>(opts =>
+                opts.AutoAdvance == false &&
+                opts.Expand != null &&
+                opts.Expand.Contains("customer")));
         await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
     }
 
