@@ -1,11 +1,9 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Services;
