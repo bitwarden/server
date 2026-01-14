@@ -141,6 +141,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeederApi", "util\SeederApi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeederApi.IntegrationTest", "test\SeederApi.IntegrationTest\SeederApi.IntegrationTest.csproj", "{A2E067EF-609C-4D13-895A-E054C61D48BB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SSO.Test", "bitwarden_license\test\SSO.Test\SSO.Test.csproj", "{7D98784C-C253-43FB-9873-25B65C6250D6}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sso.IntegrationTest", "bitwarden_license\test\Sso.IntegrationTest\Sso.IntegrationTest.csproj", "{FFB09376-595B-6F93-36F0-70CAE90AFECB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.IntegrationTest", "test\Server.IntegrationTest\Server.IntegrationTest.csproj", "{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}"
