@@ -1,7 +1,12 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
-use crate::ms_sql::MsSql;
+use crate::{
+    db_config::DatabaseType,
+    ms_sql::MsSql,
+    publish_queue_config::{PublishQueueConfig, PublishQueueProvider},
+    AkdDatabase,
+};
 
 pub(crate) struct PublishQueueItem {
     pub id: uuid::Uuid,
@@ -27,6 +32,22 @@ pub trait PublishQueue {
 #[derive(Debug, Clone)]
 pub enum PublishQueueType {
     MsSql(MsSql),
+}
+
+impl PublishQueueType {
+    pub fn new(config: &PublishQueueConfig, db: &AkdDatabase) -> PublishQueueType {
+        match &config.provider {
+            PublishQueueProvider::DbBacked => db.into(),
+        }
+    }
+}
+
+impl From<&AkdDatabase> for PublishQueueType {
+    fn from(db: &AkdDatabase) -> Self {
+        match db.db() {
+            DatabaseType::MsSql(ms_sql) => PublishQueueType::MsSql(ms_sql.clone()),
+        }
+    }
 }
 
 #[async_trait]

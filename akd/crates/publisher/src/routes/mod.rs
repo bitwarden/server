@@ -6,7 +6,7 @@ mod health;
 mod publish;
 
 #[derive(Clone)]
-pub struct AppState {
+pub(crate) struct AppState {
     pub directory: BitAkdDirectory,
     pub db: AkdDatabase,
     pub publish_queue: PublishQueueType,

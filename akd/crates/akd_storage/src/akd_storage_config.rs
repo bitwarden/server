@@ -5,7 +5,10 @@ use serde::Deserialize;
 use thiserror::Error;
 use tracing::error;
 
-use crate::{db_config::DbConfig, vrf_key_config::VrfKeyConfig, AkdDatabase, VrfKeyDatabase};
+use crate::{
+    db_config::DbConfig, publish_queue_config::PublishQueueConfig, vrf_key_config::VrfKeyConfig,
+    AkdDatabase, PublishQueueType, VrfKeyDatabase,
+};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AkdStorageConfig {
@@ -20,6 +23,7 @@ pub struct AkdStorageConfig {
     #[serde(default = "default_cache_clean_ms")]
     pub cache_clean_ms: usize,
     pub vrf_key_config: VrfKeyConfig,
+    pub publish_queue_config: PublishQueueConfig,
 }
 
 #[derive(Debug, Error)]
@@ -44,6 +48,7 @@ impl AkdStorageConfig {
         (
             Directory<TDirectoryConfig, AkdDatabase, VrfKeyDatabase>,
             AkdDatabase,
+            PublishQueueType,
         ),
         AkdStorageInitializationError,
     > {
@@ -54,6 +59,8 @@ impl AkdStorageConfig {
             AkdStorageInitializationError
         })?;
 
+        let publish_queue = PublishQueueType::new(&self.publish_queue_config, &db);
+
         let directory = Directory::new(storage_manager, vrf_storage)
             .await
             .map_err(|err| {
@@ -61,7 +68,7 @@ impl AkdStorageConfig {
                 AkdStorageInitializationError
             })?;
 
-        Ok((directory, db))
+        Ok((directory, db, publish_queue))
     }
 
     async fn initialize_storage(

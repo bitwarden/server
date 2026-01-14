@@ -169,8 +169,12 @@ async fn main() -> Result<()> {
         vrf_key_config: akd_storage::vrf_key_config::VrfKeyConfig::B64EncodedSymmetricKey {
             key: "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=".to_string(),
         },
+        publish_queue_config: akd_storage::publish_queue_config::PublishQueueConfig {
+            provider: akd_storage::publish_queue_config::PublishQueueProvider::DbBacked,
+            epoch_update_limit: None,
+        },
     };
-    let (mut directory, db) = config
+    let (mut directory, db, _) = config
         .initialize_directory::<TC>()
         .await
         .context("Failed to initialize AKD directory")?;

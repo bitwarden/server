@@ -3,6 +3,7 @@ pub mod akd_storage_config;
 pub mod db_config;
 pub mod ms_sql;
 mod publish_queue;
+pub mod publish_queue_config;
 pub mod vrf_key_config;
 pub mod vrf_key_database;
 

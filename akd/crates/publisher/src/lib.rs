@@ -15,7 +15,7 @@ pub struct AppHandles {
 
 #[instrument(skip_all, name = "publisher_start")]
 pub async fn start(config: ApplicationConfig, shutdown_rx: &Receiver<()>) -> Result<AppHandles> {
-    let (directory, db) = config
+    let (directory, db, publish_queue) = config
         .storage
         .initialize_directory::<BitwardenV1Configuration>()
         .await?;
