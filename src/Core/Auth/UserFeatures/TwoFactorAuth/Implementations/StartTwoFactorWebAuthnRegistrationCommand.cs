@@ -10,14 +10,14 @@ using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 
-internal class StartTwoFactorTwoFactorWebAuthnRegistrationCommand : IStartTwoFactorWebAuthnRegistrationCommand
+public class StartTwoFactorWebAuthnRegistrationCommand : IStartTwoFactorWebAuthnRegistrationCommand
 {
     private readonly IFido2 _fido2;
     private readonly IGlobalSettings _globalSettings;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IUserService _userService;
 
-    public StartTwoFactorTwoFactorWebAuthnRegistrationCommand(
+    public StartTwoFactorWebAuthnRegistrationCommand(
         IFido2 fido2,
         IGlobalSettings globalSettings,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
@@ -31,24 +31,11 @@ internal class StartTwoFactorTwoFactorWebAuthnRegistrationCommand : IStartTwoFac
 
     public async Task<CredentialCreateOptions> StartTwoFactorWebAuthnRegistrationAsync(User user)
     {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-        }
+        var providers = user.GetTwoFactorProviders() ?? new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
 
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider == null)
-        {
-            provider = new TwoFactorProvider
-            {
-                Enabled = false
-            };
-        }
-        if (provider.MetaData == null)
-        {
-            provider.MetaData = new Dictionary<string, object>();
-        }
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn) ??
+                       new TwoFactorProvider { Enabled = false };
+        provider.MetaData ??= new Dictionary<string, object>();
 
         // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
         var userHasPremiumAccess = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id);
@@ -63,12 +50,7 @@ internal class StartTwoFactorTwoFactorWebAuthnRegistrationCommand : IStartTwoFac
             throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
 
-        var fidoUser = new Fido2User
-        {
-            DisplayName = user.Name,
-            Name = user.Email,
-            Id = user.Id.ToByteArray(),
-        };
+        var fidoUser = new Fido2User { DisplayName = user.Name, Name = user.Email, Id = user.Id.ToByteArray(), };
 
         var excludeCredentials = provider.MetaData
             .Where(k => k.Key.StartsWith("Key"))
@@ -81,7 +63,8 @@ internal class StartTwoFactorTwoFactorWebAuthnRegistrationCommand : IStartTwoFac
             RequireResidentKey = false,
             UserVerification = UserVerificationRequirement.Discouraged
         };
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection, AttestationConveyancePreference.None);
+        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
+            AttestationConveyancePreference.None);
 
         provider.MetaData["pending"] = options.ToJson();
         providers[TwoFactorProviderType.WebAuthn] = provider;

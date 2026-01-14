@@ -74,7 +74,7 @@ public static class UserServiceCollectionExtensions
             .AddScoped<ICompleteTwoFactorWebAuthnRegistrationCommand, CompleteTwoFactorWebAuthnRegistrationCommand>();
         services
             .AddScoped<IStartTwoFactorWebAuthnRegistrationCommand,
-                StartTwoFactorTwoFactorWebAuthnRegistrationCommand>();
+                StartTwoFactorWebAuthnRegistrationCommand>();
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
     }
 

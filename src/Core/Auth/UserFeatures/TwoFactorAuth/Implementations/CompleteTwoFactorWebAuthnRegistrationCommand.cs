@@ -10,7 +10,7 @@ using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 
-internal class CompleteTwoFactorWebAuthnRegistrationCommand : ICompleteTwoFactorWebAuthnRegistrationCommand
+public class CompleteTwoFactorWebAuthnRegistrationCommand : ICompleteTwoFactorWebAuthnRegistrationCommand
 {
     private readonly IFido2 _fido2;
     private readonly IGlobalSettings _globalSettings;
