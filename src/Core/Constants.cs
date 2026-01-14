@@ -230,7 +230,6 @@ public static class FeatureFlagKeys
     /// Enable this flag to share the send view used by the web and browser clients
     /// on the desktop client.
     /// </summary>
-    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
