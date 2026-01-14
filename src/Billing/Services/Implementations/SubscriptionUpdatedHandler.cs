@@ -115,12 +115,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         await VoidOpenInvoices(subscription.Id);
                     }
 
-                    // Only disable premium if the user doesn't have other active premium subscriptions
-                    // This prevents incorrectly disabling premium when webhook events arrive out of order
-                    if (!await HasOtherActivePremiumSubscriptionsAsync(userId.Value, subscription.Id))
-                    {
-                        await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-                    }
+                    await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
 
                     break;
                 }
@@ -134,12 +129,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         await CancelSubscription(subscription.Id);
                         await VoidOpenInvoices(subscription.Id);
 
-                        // Only disable premium if the user doesn't have other active premium subscriptions
-                        // This prevents incorrectly disabling premium when webhook events arrive out of order
-                        if (!await HasOtherActivePremiumSubscriptionsAsync(userId.Value, subscription.Id))
-                        {
-                            await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-                        }
+                        await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
                     }
 
                     break;
@@ -173,11 +163,20 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active:
                 {
-                    if (userId.HasValue)
+                if (userId.HasValue)
+                {
+                    // When a Premium user subscription becomes active, proactively clean up any
+                    // other active premium subscriptions left over from previous failed attempts.
+                    // This prevents users from being double-charged and avoids duplicate
+                    // subscriptions lingering on the account.
+                    if (await IsPremiumSubscriptionAsync(subscription))
                     {
-                        await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                        await CancelOtherPremiumSubscriptionsAsync(userId.Value, subscription.Id);
                     }
-                    break;
+
+                    await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                }
+                break;
                 }
         }
 
@@ -219,64 +218,65 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         var premiumPlans = await _pricingClient.ListPremiumPlans();
         var premiumPriceIds = premiumPlans.SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId }).ToHashSet();
 
-        // Add hardcoded fallbacks for safety to ensure all premium plan variants are covered
-        premiumPriceIds.Add(IStripeEventUtilityService.PremiumPlanId);
-        premiumPriceIds.Add(IStripeEventUtilityService.PremiumPlanIdAppStore);
-
         return subscription.Items.Any(i => premiumPriceIds.Contains(i.Price.Id));
     }
 
     /// <summary>
-    /// Checks if a user has other active premium subscriptions besides the current one being processed.
-    /// This prevents incorrectly disabling premium when a user has multiple subscriptions due to payment retry scenarios.
+    /// Cancels any other premium subscriptions for the given user, leaving the current
+    /// subscription as the single source of truth. This is used when a new subscription
+    /// successfully becomes active after previous failed attempts, to prevent duplicate
+    /// subscriptions and overcharging.
     /// </summary>
-    /// <param name="userId">The user ID to check</param>
-    /// <param name="currentSubscriptionId">The current subscription being processed (to exclude from the check)</param>
-    /// <returns>True if the user has other active premium subscriptions, false otherwise</returns>
-    private async Task<bool> HasOtherActivePremiumSubscriptionsAsync(Guid userId, string currentSubscriptionId)
+    /// <param name="userId">The user ID whose subscriptions should be cleaned up.</param>
+    /// <param name="currentSubscriptionId">The active subscription that should be kept.</param>
+    private async Task CancelOtherPremiumSubscriptionsAsync(Guid userId, string currentSubscriptionId)
     {
         var user = await _userService.GetUserByIdAsync(userId);
         if (user == null || string.IsNullOrEmpty(user.Email))
         {
-            return false;
+            return;
         }
 
-        // Find the customer by email
         var customerOptions = new CustomerListOptions
         {
             Email = user.Email,
-            Limit = 1
+            Limit = 100
         };
+
         var customers = await _stripeFacade.ListCustomers(customerOptions);
-        var customer = customers.FirstOrDefault();
 
-        if (customer == null)
+        foreach (var customer in customers)
         {
-            return false;
-        }
-
-        // List all active subscriptions for this customer
-        var subscriptionOptions = new SubscriptionListOptions
-        {
-            Customer = customer.Id,
-            Status = "active"
-        };
-
-        var activeSubscriptions = await _stripeFacade.ListSubscriptions(subscriptionOptions);
-
-        // Check if any other subscription (not the current one) is a premium subscription
-        foreach (var sub in activeSubscriptions.Where(s => s.Id != currentSubscriptionId))
-        {
-            if (await IsPremiumSubscriptionAsync(sub))
+            var subscriptionOptions = new SubscriptionListOptions
             {
-                _logger.LogInformation(
-                    "User {UserId} has another active premium subscription {SubscriptionId} while processing {CurrentSubscriptionId}",
-                    userId, sub.Id, currentSubscriptionId);
-                return true;
+                Customer = customer.Id
+            };
+
+            var subscriptions = await _stripeFacade.ListSubscriptions(subscriptionOptions);
+
+            foreach (var sub in subscriptions.Where(s => s.Id != currentSubscriptionId))
+            {
+                // Only cancel subscriptions that are premium and in a status where cancellation
+                // makes sense (they are or were granting access / being billed).
+                if (sub.Status is StripeSubscriptionStatus.Active
+                    or StripeSubscriptionStatus.Trialing
+                    or StripeSubscriptionStatus.PastDue
+                    or StripeSubscriptionStatus.Incomplete
+                    or StripeSubscriptionStatus.Unpaid
+                    or StripeSubscriptionStatus.IncompleteExpired)
+                {
+                    if (await IsPremiumSubscriptionAsync(sub))
+                    {
+                        _logger.LogInformation(
+                            "Cancelling duplicate premium subscription {SubscriptionId} for user {UserId} while keeping {CurrentSubscriptionId}",
+                            sub.Id, userId, currentSubscriptionId);
+
+                        await CancelSubscription(sub.Id);
+                        await VoidOpenInvoices(sub.Id);
+                    }
+                }
             }
         }
-
-        return false;
     }
 
     /// <summary>
