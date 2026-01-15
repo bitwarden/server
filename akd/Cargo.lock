@@ -519,6 +519,7 @@ dependencies = [
  "blake3",
  "config",
  "serde",
+ "tracing",
  "uuid",
 ]
 
@@ -2249,11 +2250,15 @@ version = "0.1.0"
 dependencies = [
  "akd",
  "akd_storage",
+ "anyhow",
  "bitwarden-akd-configuration",
  "common",
+ "config",
+ "serde",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

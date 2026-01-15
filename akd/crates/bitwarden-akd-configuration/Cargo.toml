@@ -11,6 +11,7 @@ akd.workspace = true
 blake3.workspace = true
 config = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
 uuid = { version = "1.18.1", features = ["serde"] }
 
 [lints]
@@ -18,4 +19,5 @@ workspace = true
 
 [features]
 config = ["dep:config", "dep:serde"]
-default = ["config"]
+tracing = ["dep:tracing"]
+default = ["tracing"]

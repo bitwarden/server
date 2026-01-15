@@ -50,19 +50,31 @@ impl BitwardenV1Configuration {
     ///
     /// # Panics
     /// Panics if called more than once.
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(level = "info", name = "BitwardenV1Configuration::init")
+    )]
     pub fn init(installation_context: Uuid) {
         let installation_context = [BITWARDEN_V1, installation_context.as_bytes()].concat();
         INSTALLATION_CONTEXT
             .set(installation_context)
             .expect("BitwardenV1Configuration already initialized");
+        #[cfg(feature = "tracing")]
+        tracing::info!("BitwardenV1Configuration initialization successful");
     }
 
     /// Get the installation context. Panics if not initialized.
     /// # Panics
     /// Panics if `BitwardenV1Configuration::init()` has not been called.
     fn get_context() -> &'static [u8] {
-        INSTALLATION_CONTEXT
-            .get()
+        let maybe_installation_context = INSTALLATION_CONTEXT.get();
+
+        #[cfg(feature = "tracing")]
+        if maybe_installation_context.is_none() {
+            tracing::error!("BitwardenV1Configuration::init() must be called before use");
+        }
+
+        maybe_installation_context
             .expect("BitwardenV1Configuration::init() must be called before use")
     }
 
