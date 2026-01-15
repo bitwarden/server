@@ -264,4 +264,126 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             new Permissions { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true },
             orgUser.GetPermissions());
     }
+
+    [Fact]
+    public async Task PutRevoke_Member_Success()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var updatedUser = await _factory.GetService<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(OrganizationUserStatusType.Revoked, updatedUser.Status);
+    }
+
+    [Fact]
+    public async Task PutRevoke_AlreadyRevoked_ReturnsBadRequest()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var revokeResponse = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+        Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
+
+        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Equal("Already revoked.", error?.Message);
+    }
+
+    [Fact]
+    public async Task PutRevoke_NotFound_ReturnsNotFound()
+    {
+        var response = await _client.PutAsync($"/public/members/{Guid.NewGuid()}/revoke", null);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutRevoke_DifferentOrganization_ReturnsNotFound()
+    {
+        // Create a different organization
+        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
+            ownerEmail: ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
+
+        // Create a user in the other organization
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, otherOrganization.Id, OrganizationUserType.User);
+
+        // Re-authenticate with the original organization
+        await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
+
+        // Try to revoke the user from the other organization
+        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutRestore_Member_Success()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var revokeResponse = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+        Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
+
+        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/restore", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var updatedUser = await _factory.GetService<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, updatedUser.Status);
+    }
+
+    [Fact]
+    public async Task PutRestore_AlreadyActive_ReturnsBadRequest()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/restore", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Equal("Already active.", error?.Message);
+    }
+
+    [Fact]
+    public async Task PutRestore_NotFound_ReturnsNotFound()
+    {
+        var response = await _client.PutAsync($"/public/members/{Guid.NewGuid()}/restore", null);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutRestore_DifferentOrganization_ReturnsNotFound()
+    {
+        // Create a different organization
+        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
+            ownerEmail: ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
+
+        // Create a user in the other organization
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, otherOrganization.Id, OrganizationUserType.User);
+
+        // Re-authenticate with the original organization
+        await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
+
+        // Try to restore the user from the other organization
+        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/restore", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
