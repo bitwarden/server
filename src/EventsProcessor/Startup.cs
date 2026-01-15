@@ -30,6 +30,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Add event integration services
         services.AddDistributedCache(globalSettings);

@@ -142,8 +142,7 @@ public static class FeatureFlagKeys
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
-    public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
-    public const string PremiumAccessQuery = "pm-21411-premium-access-query";
+    public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -159,13 +158,13 @@ public static class FeatureFlagKeys
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
-    public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
-        "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
+    public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
+    public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
 
     /* Autofill Team */
     public const string SSHAgent = "ssh-agent";
@@ -203,6 +202,8 @@ public static class FeatureFlagKeys
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
+    public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
+    public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -229,22 +230,11 @@ public static class FeatureFlagKeys
     /// Enable this flag to share the send view used by the web and browser clients
     /// on the desktop client.
     /// </summary>
-    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
-
-    /// <summary>
-    /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
-    /// this flag is disabled, the `GET sends` endpoint omits email/OTP authenticated sends.
-    /// </summary>
-    /// <remarks>
-    /// This flag is server-side only, and only inhibits the endpoint returning all sends.
-    /// Email/OTP sends can still be created and downloaded through other endpoints.
-    /// </remarks>
-    public const string PM19051_ListEmailOtpSends = "tools-send-email-otp-listing";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -268,6 +258,9 @@ public static class FeatureFlagKeys
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
+
+    /* Secrets Manager Team */
+    public const string SM1719_RemoveSecretsManagerAds = "sm-1719-remove-secrets-manager-ads";
 
     public static List<string> GetAllKeys()
     {
