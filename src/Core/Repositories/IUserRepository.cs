@@ -72,6 +72,26 @@ public interface IUserRepository : IRepository<User, Guid>
         UserAccountKeysData accountKeysData,
         IEnumerable<UpdateUserData>? updateUserDataActions = null);
     Task DeleteManyAsync(IEnumerable<User> users);
+
+    UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey);
+
+    /// <summary>
+    /// Sets the master password and KDF for a user.
+    /// </summary>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="masterPasswordUnlockData">Data for unlocking with the master password.</param>
+    /// <param name="serverSideHashedMasterPasswordAuthenticationHash">Server side hash of the user master authentication password hash</param>
+    /// <param name="masterPasswordHint">Optional hint for the master password.</param>
+    /// <returns>A task to complete the operation.</returns>
+    UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+        string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint);
+
+    /// <summary>
+    /// Updates multiple user data properties in a single transaction.
+    /// </summary>
+    /// <param name="updateUserDataActions">Actions to update user data.</param>
+    /// <returns>On success</returns>
+    Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions);
 }
 
 public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,

@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core;
 using Bit.Core.Billing.Premium.Models;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
@@ -477,6 +479,80 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
+    }
+
+    public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
+    {
+        return async (_, _) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.Key = keyConnectorWrappedUserKey;
+            // Key Connector does not use KDF, so we set some defaults
+            userEntity.Kdf = KdfType.Argon2id;
+            userEntity.KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default;
+            userEntity.KdfMemory = AuthConstants.ARGON2_MEMORY.Default;
+            userEntity.KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+            userEntity.UsesKeyConnector = true;
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+        string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
+    {
+        return async (_, _) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.MasterPassword = serverSideHashedMasterPasswordAuthenticationHash;
+            userEntity.MasterPasswordHint = masterPasswordHint;
+            userEntity.Key = masterPasswordUnlockData.MasterKeyWrappedUserKey;
+            userEntity.Kdf = masterPasswordUnlockData.Kdf.KdfType;
+            userEntity.KdfIterations = masterPasswordUnlockData.Kdf.Iterations;
+            userEntity.KdfMemory = masterPasswordUnlockData.Kdf.Memory;
+            userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    public async Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        foreach (var action in updateUserDataActions)
+        {
+            await action();
+        }
+
+        await transaction.CommitAsync();
     }
 
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)

@@ -1,13 +1,59 @@
-﻿using Bit.Core.Enums;
-using Bit.Infrastructure.EntityFramework.Models;
+﻿using System.Globalization;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Utilities;
 using Bit.RustSDK;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Factories;
 
-public class UserSeeder
+public struct UserData
 {
-    public static User CreateUser(string email)
+    public string Email;
+    public Guid Id;
+    public string? Key;
+    public string? PublicKey;
+    public string? PrivateKey;
+    public string? ApiKey;
+    public KdfType Kdf;
+    public int KdfIterations;
+}
+
+public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Entities.User> passwordHasher, MangleId mangleId)
+{
+    private string MangleEmail(string email)
+    {
+        return $"{mangleId}+{email}";
+    }
+
+    public User CreateUser(string email, bool emailVerified = false, bool premium = false)
+    {
+        email = MangleEmail(email);
+        var keys = sdkService.GenerateUserKeys(email, "asdfasdfasdf");
+
+        var user = new User
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Email = email,
+            EmailVerified = emailVerified,
+            MasterPassword = null,
+            SecurityStamp = "4830e359-e150-4eae-be2a-996c81c5e609",
+            Key = keys.EncryptedUserKey,
+            PublicKey = keys.PublicKey,
+            PrivateKey = keys.PrivateKey,
+            Premium = premium,
+            ApiKey = "7gp59kKHt9kMlks0BuNC4IjNXYkljR",
+
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 5_000,
+        };
+
+        user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
+
+        return user;
+    }
+
+    public static User CreateUserNoMangle(string email)
     {
         return new User
         {
@@ -25,28 +71,35 @@ public class UserSeeder
         };
     }
 
-    public static (User user, string userKey) CreateSdkUser(IPasswordHasher<Bit.Core.Entities.User> passwordHasher, string email)
+    public Dictionary<string, string?> GetMangleMap(User user, UserData expectedUserData)
     {
-        var nativeService = RustSdkServiceFactory.CreateSingleton();
-        var keys = nativeService.GenerateUserKeys(email, "asdfasdfasdf");
-
-        var user = new User
+        var mangleMap = new Dictionary<string, string?>
         {
-            Id = Guid.NewGuid(),
-            Email = email,
-            MasterPassword = null,
-            SecurityStamp = "4830e359-e150-4eae-be2a-996c81c5e609",
-            Key = keys.EncryptedUserKey,
-            PublicKey = keys.PublicKey,
-            PrivateKey = keys.PrivateKey,
-            ApiKey = "7gp59kKHt9kMlks0BuNC4IjNXYkljR",
-
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 5_000,
+            { expectedUserData.Email, MangleEmail(expectedUserData.Email) },
+            { expectedUserData.Id.ToString(), user.Id.ToString() },
+            { expectedUserData.Kdf.ToString(), user.Kdf.ToString() },
+            { expectedUserData.KdfIterations.ToString(CultureInfo.InvariantCulture), user.KdfIterations.ToString(CultureInfo.InvariantCulture) }
         };
+        if (expectedUserData.Key != null)
+        {
+            mangleMap[expectedUserData.Key] = user.Key;
+        }
 
-        user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
+        if (expectedUserData.PublicKey != null)
+        {
+            mangleMap[expectedUserData.PublicKey] = user.PublicKey;
+        }
 
-        return (user, keys.Key);
+        if (expectedUserData.PrivateKey != null)
+        {
+            mangleMap[expectedUserData.PrivateKey] = user.PrivateKey;
+        }
+
+        if (expectedUserData.ApiKey != null)
+        {
+            mangleMap[expectedUserData.ApiKey] = user.ApiKey;
+        }
+
+        return mangleMap;
     }
 }
