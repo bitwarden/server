@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
@@ -74,6 +77,9 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
         upgrade.AdditionalSmSeats = 10;
@@ -116,6 +122,9 @@ public class UpgradeOrganizationPlanCommandTests
         organizationUpgrade.Plan = planType;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organizationUpgrade.Plan).Returns(MockPlans.Get(organizationUpgrade.Plan));
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
             {
@@ -143,13 +152,17 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
         upgrade.Plan = planType;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(MockPlans.Get(upgrade.Plan));
 
         var plan = MockPlans.Get(upgrade.Plan);
 
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         upgrade.AdditionalSeats = 15;
@@ -191,6 +204,10 @@ public class UpgradeOrganizationPlanCommandTests
         organization.SmSeats = 2;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
+
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
@@ -225,6 +242,10 @@ public class UpgradeOrganizationPlanCommandTests
         organization.SmSeats = 1;
         organization.SmServiceAccounts = currentServiceAccounts;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -262,6 +283,9 @@ public class UpgradeOrganizationPlanCommandTests
             publicKey: newPublicKey);
         upgrade.AdditionalSeats = 10;
 
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
@@ -304,6 +328,9 @@ public class UpgradeOrganizationPlanCommandTests
         upgrade.Keys = null;
         upgrade.AdditionalSeats = 10;
 
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
@@ -343,6 +370,9 @@ public class UpgradeOrganizationPlanCommandTests
 
         organization.PublicKey = existingPublicKey;
         organization.PrivateKey = existingPrivateKey;
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
+            .Returns(new PolicyData { Enabled = false });
 
         upgrade.Plan = PlanType.TeamsAnnually;
         upgrade.Keys = new PublicKeyEncryptionKeyPairData(

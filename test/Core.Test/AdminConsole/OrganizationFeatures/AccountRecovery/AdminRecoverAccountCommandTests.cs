@@ -1,8 +1,9 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -87,15 +88,9 @@ public class AdminRecoverAccountCommandTests
         Assert.Equal("Organization does not allow password reset.", exception.Message);
     }
 
-    public static IEnumerable<object[]> InvalidPolicies => new object[][]
-    {
-        [new Policy { Type = PolicyType.ResetPassword, Enabled = false }], [null]
-    };
-
     [Theory]
-    [BitMemberAutoData(nameof(InvalidPolicies))]
+    [BitAutoData]
     public async Task RecoverAccountAsync_InvalidPolicy_ThrowsBadRequest(
-        Policy resetPasswordPolicy,
         string newMasterPassword,
         string key,
         Organization organization,
@@ -103,9 +98,9 @@ public class AdminRecoverAccountCommandTests
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword)
-            .Returns(resetPasswordPolicy);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyData { OrganizationId = organization.Id, Type = PolicyType.ResetPassword, Enabled = false });
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -240,10 +235,9 @@ public class AdminRecoverAccountCommandTests
 
     private static void SetupValidPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)
     {
-        var policy = new Policy { Type = PolicyType.ResetPassword, Enabled = true };
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword)
-            .Returns(policy);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyData { OrganizationId = organization.Id, Type = PolicyType.ResetPassword, Enabled = true });
     }
 
     private static void SetupValidOrganizationUser(OrganizationUser organizationUser, Guid orgId)

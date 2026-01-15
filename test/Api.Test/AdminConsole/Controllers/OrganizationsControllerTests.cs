@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -202,7 +203,7 @@ public class OrganizationsControllerTests
         Organization organization,
         OrganizationUser organizationUser)
     {
-        var policy = new Policy
+        var policyData = new PolicyData
         {
             Type = PolicyType.ResetPassword,
             Enabled = true,
@@ -214,14 +215,14 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(false);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
-        sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword).Returns(policy);
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(organization.Id, PolicyType.ResetPassword).Returns(policyData);
 
         var result = await sutProvider.Sut.GetAutoEnrollStatus(organization.Id.ToString());
 
         await sutProvider.GetDependency<IUserService>().Received(1).GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>());
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdentifierAsync(organization.Id.ToString());
         await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(0).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-        await sutProvider.GetDependency<IPolicyRepository>().Received(1).GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+        await sutProvider.GetDependency<IPolicyQuery>().Received(1).RunAsync(organization.Id, PolicyType.ResetPassword);
 
         Assert.True(result.ResetPasswordEnabled);
     }

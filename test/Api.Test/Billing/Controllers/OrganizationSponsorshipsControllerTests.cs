@@ -1,6 +1,9 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -91,6 +94,9 @@ public class OrganizationSponsorshipsControllerTests
             user.Email).Returns((true, sponsorship));
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.SponsoredOrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(model.SponsoredOrganizationId).Returns(sponsoringOrganization);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.FreeFamiliesSponsorshipPolicy)
+            .Returns(new PolicyData { Enabled = false });
 
         await sutProvider.Sut.RedeemSponsorship(sponsorshipToken, model);
 
@@ -108,7 +114,9 @@ public class OrganizationSponsorshipsControllerTests
             .Returns(user);
         sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
             .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email).Returns((true, sponsorship));
-
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.FreeFamiliesSponsorshipPolicy)
+            .Returns(new PolicyData { Enabled = false });
         await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
 
         await sutProvider.GetDependency<IValidateRedemptionTokenCommand>().Received(1)

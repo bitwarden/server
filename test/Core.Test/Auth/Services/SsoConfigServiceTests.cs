@@ -2,9 +2,9 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -180,6 +180,9 @@ public class SsoConfigServiceTests
             RevisionDate = utcNow.AddDays(-10),
         };
 
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(
+            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(new PolicyData { Enabled = false });
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
 
@@ -208,11 +211,10 @@ public class SsoConfigServiceTests
             RevisionDate = utcNow.AddDays(-10),
         };
 
-        sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(new Policy
-            {
-                Enabled = true
-            });
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(
+            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(new PolicyData { Enabled = true });
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(
+            Arg.Any<Guid>(), PolicyType.RequireSso).Returns(new PolicyData { Enabled = false });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -242,11 +244,8 @@ public class SsoConfigServiceTests
             RevisionDate = utcNow.AddDays(-10),
         };
 
-        sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new Policy
-            {
-                Enabled = true
-            });
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new PolicyData { Enabled = true });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -277,11 +276,8 @@ public class SsoConfigServiceTests
             RevisionDate = utcNow.AddDays(-10),
         };
 
-        sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new Policy
-            {
-                Enabled = true,
-            });
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new PolicyData { Enabled = true });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -312,11 +308,8 @@ public class SsoConfigServiceTests
             RevisionDate = utcNow.AddDays(-10),
         };
 
-        sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new Policy
-            {
-                Enabled = true,
-            });
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new PolicyData { Enabled = true });
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 

@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
 public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepository,
-    IPolicyRepository policyRepository,
+    IPolicyQuery policyQuery,
     IUserRepository userRepository,
     IMailService mailService,
     IEventService eventService,
@@ -30,9 +30,8 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         }
 
         // Enterprise policy must be enabled
-        var resetPasswordPolicy =
-            await policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+        var resetPasswordPolicyData = await policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicyData.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }

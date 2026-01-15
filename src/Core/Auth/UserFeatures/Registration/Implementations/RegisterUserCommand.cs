@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -27,7 +27,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IFeatureService _featureService;
 
@@ -50,7 +50,7 @@ public class RegisterUserCommand : IRegisterUserCommand
             IGlobalSettings globalSettings,
             IOrganizationUserRepository organizationUserRepository,
             IOrganizationRepository organizationRepository,
-            IPolicyRepository policyRepository,
+            IPolicyQuery policyQuery,
             IOrganizationDomainRepository organizationDomainRepository,
             IFeatureService featureService,
             IDataProtectionProvider dataProtectionProvider,
@@ -65,7 +65,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _organizationDomainRepository = organizationDomainRepository;
         _featureService = featureService;
 
@@ -246,9 +246,9 @@ public class RegisterUserCommand : IRegisterUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
         if (orgUser != null)
         {
-            var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgUser.OrganizationId,
+            var twoFactorPolicyData = await _policyQuery.RunAsync(orgUser.OrganizationId,
                 PolicyType.TwoFactorAuthentication);
-            if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+            if (twoFactorPolicyData.Enabled)
             {
                 user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
                 {

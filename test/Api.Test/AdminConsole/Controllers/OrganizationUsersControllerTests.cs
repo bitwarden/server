@@ -143,7 +143,7 @@ public class OrganizationUsersControllerTests
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = true });
 
-        var policy = new Policy
+        var policy = new PolicyData
         {
             Enabled = true,
             Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, }),
@@ -151,9 +151,8 @@ public class OrganizationUsersControllerTests
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
 
-
-        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
-        policyRepository.GetByOrganizationIdTypeAsync(orgId,
+        var policyQuery = sutProvider.GetDependency<IPolicyQuery>();
+        policyQuery.RunAsync(orgId,
             PolicyType.ResetPassword).Returns(policy);
 
         // Act
@@ -167,7 +166,7 @@ public class OrganizationUsersControllerTests
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
         await applicationCacheService.Received(1).GetOrganizationAbilityAsync(orgId);
-        await policyRepository.Received(1).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        await policyQuery.Received(1).RunAsync(orgId, PolicyType.ResetPassword);
 
     }
 
@@ -180,7 +179,7 @@ public class OrganizationUsersControllerTests
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = false });
 
-        var policy = new Policy
+        var policy = new PolicyData
         {
             Enabled = true,
             Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, }),
@@ -188,8 +187,8 @@ public class OrganizationUsersControllerTests
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
 
-        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
-        policyRepository.GetByOrganizationIdTypeAsync(orgId,
+        var policyQuery = sutProvider.GetDependency<IPolicyQuery>();
+        policyQuery.RunAsync(orgId,
             PolicyType.ResetPassword).Returns(policy);
 
         // Act
@@ -202,7 +201,7 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IOrganizationService>().Received(0)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
-        await policyRepository.Received(0).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        await policyQuery.Received(0).RunAsync(orgId, PolicyType.ResetPassword);
         await applicationCacheService.Received(1).GetOrganizationAbilityAsync(orgId);
     }
 
@@ -383,7 +382,7 @@ public class OrganizationUsersControllerTests
 
         var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
 
-        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
+        var policyQuery = sutProvider.GetDependency<IPolicyQuery>();
 
         var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnrollOrganizations = [orgId] };
 
@@ -400,7 +399,7 @@ public class OrganizationUsersControllerTests
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
         await applicationCacheService.Received(0).GetOrganizationAbilityAsync(orgId);
-        await policyRepository.Received(0).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        await policyQuery.Received(0).RunAsync(orgId, PolicyType.ResetPassword);
         await policyRequirementQuery.Received(1).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
         Assert.True(policyRequirement.AutoEnrollEnabled(orgId));
     }
@@ -425,7 +424,7 @@ public class OrganizationUsersControllerTests
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
 
-        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
+        var policyQuery = sutProvider.GetDependency<IPolicyQuery>();
 
         var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
 
@@ -445,7 +444,7 @@ public class OrganizationUsersControllerTests
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
         await applicationCacheService.Received(0).GetOrganizationAbilityAsync(orgId);
-        await policyRepository.Received(0).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        await policyQuery.Received(0).RunAsync(orgId, PolicyType.ResetPassword);
         await policyRequirementQuery.Received(1).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
 
         Assert.Equal("Master Password reset is required, but not provided.", exception.Message);

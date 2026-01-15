@@ -2,7 +2,7 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -45,7 +45,7 @@ public class AccountController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IUserService _userService;
     private readonly II18nService _i18nService;
     private readonly UserManager<User> _userManager;
@@ -67,7 +67,7 @@ public class AccountController : Controller
         ISsoConfigRepository ssoConfigRepository,
         ISsoUserRepository ssoUserRepository,
         IUserRepository userRepository,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IUserService userService,
         II18nService i18nService,
         UserManager<User> userManager,
@@ -88,7 +88,7 @@ public class AccountController : Controller
         _userRepository = userRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _ssoUserRepository = ssoUserRepository;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _userService = userService;
         _i18nService = i18nService;
         _userManager = userManager;
@@ -687,9 +687,8 @@ public class AccountController : Controller
         await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(newUser, organization);
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
-        var twoFactorPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.TwoFactorAuthentication);
-        if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+        var twoFactorPolicyData = await _policyQuery.RunAsync(organization.Id, PolicyType.TwoFactorAuthentication);
+        if (twoFactorPolicyData.Enabled)
         {
             newUser.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
             {
