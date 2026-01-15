@@ -1,11 +1,8 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Bit.Core.Tools.Enums;
+﻿namespace Bit.Core.Tools.Enums;
 
 /// <summary>
 /// Specifies the authentication method required to access a Send.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AuthType : byte
 {
     /// <summary>

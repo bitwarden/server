@@ -1,4 +1,5 @@
-﻿using Bit.Core.Tools.Models.Data;
+﻿using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 
@@ -37,8 +38,8 @@ public class SendAuthenticationQuery : ISendAuthenticationQuery
         {
             null => NEVER_AUTHENTICATE,
             var s when s.AccessCount >= s.MaxAccessCount => NEVER_AUTHENTICATE,
-            var s when s.Emails is not null => emailOtp(s.Emails),
-            var s when s.Password is not null => new ResourcePassword(s.Password),
+            var s when s.AuthType == AuthType.Email && s.Emails is not null => emailOtp(s.Emails),
+            var s when s.AuthType == AuthType.Password && s.Password is not null => new ResourcePassword(s.Password),
             _ => NOT_AUTHENTICATED
         };
 

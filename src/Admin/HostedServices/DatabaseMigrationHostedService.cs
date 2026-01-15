@@ -1,5 +1,5 @@
-﻿using Bit.Core.Utilities;
-using Microsoft.Data.SqlClient;
+﻿using System.Data.Common;
+using Bit.Core.Utilities;
 
 namespace Bit.Admin.HostedServices;
 
@@ -30,7 +30,7 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
                 // TODO: Maybe flip a flag somewhere to indicate migration is complete??
                 break;
             }
-            catch (SqlException e)
+            catch (DbException e)
             {
                 if (i >= maxMigrationAttempts)
                 {
@@ -40,7 +40,7 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
                 else
                 {
                     _logger.LogError(e,
-                        "Database unavailable for migration. Trying again (attempt #{0})...", i + 1);
+                        "Database unavailable for migration. Trying again (attempt #{AttemptNumber})...", i + 1);
                     await Task.Delay(20000, cancellationToken);
                 }
             }

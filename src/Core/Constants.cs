@@ -142,8 +142,7 @@ public static class FeatureFlagKeys
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
-    public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
-    public const string PremiumAccessQuery = "pm-21411-premium-access-query";
+    public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -230,22 +229,11 @@ public static class FeatureFlagKeys
     /// Enable this flag to share the send view used by the web and browser clients
     /// on the desktop client.
     /// </summary>
-    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
-
-    /// <summary>
-    /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
-    /// this flag is disabled, the `GET sends` endpoint omits email/OTP authenticated sends.
-    /// </summary>
-    /// <remarks>
-    /// This flag is server-side only, and only inhibits the endpoint returning all sends.
-    /// Email/OTP sends can still be created and downloaded through other endpoints.
-    /// </remarks>
-    public const string PM19051_ListEmailOtpSends = "tools-send-email-otp-listing";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
