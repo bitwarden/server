@@ -115,7 +115,7 @@ jobs:
       - name: Cleanup old dev-sha tagged images
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Keep dev-sha images for 30 days (only applies to main branch commit-specific tags)
+          # Keep dev-sha images for MAX__AGE_DAYS (only applies to main branch commit-specific tags)
           MAX_AGE_DAYS: 30
         run: |
           set -e
@@ -124,7 +124,7 @@ jobs:
 
           echo "Processing cleanup for old dev-sha images of: ${IMAGE_NAME}"
 
-          # Calculate cutoff date (30 days ago)
+          # Calculate cutoff date
           CUTOFF_DATE=$(date -u -d "${MAX_AGE_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${MAX_AGE_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
           echo "Cutoff date: ${CUTOFF_DATE}"
 

@@ -204,7 +204,7 @@ jobs:
           (github.ref == 'refs/heads/main' ||
            github.ref == 'refs/heads/rc' ||
            github.ref == 'refs/heads/hotfix-rc')
-        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
+        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
 
       - name: Sign image with Cosign
         if: |
@@ -254,7 +254,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+        uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
 
       - name: Make Docker stubs
         if: |
@@ -367,7 +367,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+        uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
 
       - name: Publish project
         run: |
