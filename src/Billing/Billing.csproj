@@ -3,12 +3,13 @@
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Label="Server SDK settings">
     <!-- These features will be gradually turned on -->
     <BitIncludeFeatures>false</BitIncludeFeatures>
-    <BitIncludeTelemetry>false</BitIncludeTelemetry>
     <BitIncludeAuthentication>false</BitIncludeAuthentication>
   </PropertyGroup>
 
