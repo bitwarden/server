@@ -49,7 +49,7 @@ public class SendOrganizationInvitesCommandTests
         // Return null policy to mimic new org that's never turned on the require sso policy
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(organization.Id, PolicyType.RequireSso)
-            .Returns(new PolicyData { Enabled = false});
+            .Returns(new PolicyData { Enabled = false });
 
         // Mock tokenable factory to return a token that expires in 5 days
         sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
