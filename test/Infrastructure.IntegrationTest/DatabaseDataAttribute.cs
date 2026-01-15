@@ -128,7 +128,6 @@ public class DatabaseDataAttribute : DataAttribute
 
     private void AddDapperServices(IServiceCollection services, Database database)
     {
-        services.AddDapperRepositories(SelfHosted);
         var globalSettings = new GlobalSettings
         {
             DatabaseProvider = "sqlServer",
@@ -141,6 +140,7 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             }
         };
+        services.AddDapperRepositories(SelfHosted);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
         services.AddSingleton(database);
@@ -160,7 +160,6 @@ public class DatabaseDataAttribute : DataAttribute
     private void AddEfServices(IServiceCollection services, Database database)
     {
         services.SetupEntityFramework(database.ConnectionString, database.Type);
-        services.AddPasswordManagerEFRepositories(SelfHosted);
 
         var globalSettings = new GlobalSettings
         {
@@ -169,6 +168,7 @@ public class DatabaseDataAttribute : DataAttribute
                 UserRequestExpiration = TimeSpan.FromMinutes(15),
             },
         };
+        services.AddPasswordManagerEFRepositories(SelfHosted);
         services.AddSingleton(globalSettings);
         services.AddSingleton<IGlobalSettings>(globalSettings);
 
