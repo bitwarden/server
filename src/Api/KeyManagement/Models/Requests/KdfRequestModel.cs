@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.Utilities;
 
-namespace Bit.Core.KeyManagement.Models.Api.Request;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
-public class KdfRequestModel : IValidatableObject
+public class KdfRequestModel
 {
     [Required]
     public required KdfType KdfType { get; init; }
@@ -23,11 +22,5 @@ public class KdfRequestModel : IValidatableObject
             Memory = Memory,
             Parallelism = Parallelism
         };
-    }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        // Generic per-request KDF validation for any request model embedding KdfRequestModel
-        return KdfSettingsValidator.Validate(ToData());
     }
 }
