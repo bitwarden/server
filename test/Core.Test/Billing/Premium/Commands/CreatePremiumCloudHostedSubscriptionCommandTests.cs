@@ -869,8 +869,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         };
 
         // Mock ListSubscriptionsAsync to return the existing subscription
-        _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts => 
-            opts.Status == "active" && opts.Customer == null))
+        _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts =>
+                opts.Status == "active" && opts.Customer == null))
             .Returns(new List<StripeSubscription> { existingSubscription });
 
         // Mock GetCustomerAsync to return the customer with matching email
@@ -918,8 +918,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         };
 
         // Mock ListSubscriptionsAsync to return the existing subscription for the customer
-        _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts => 
-            opts.Status == "active" && opts.Customer == user.GatewayCustomerId))
+        _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts =>
+                opts.Status == "active" && opts.Customer == user.GatewayCustomerId))
             .Returns(new List<StripeSubscription> { existingSubscription });
 
         // Act
