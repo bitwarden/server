@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -29,6 +30,7 @@ public interface IUpdatePremiumStorageCommand
 }
 
 public class UpdatePremiumStorageCommand(
+    IBraintreeService braintreeService,
     IStripeAdapter stripeAdapter,
     IUserService userService,
     IPricingClient pricingClient,
@@ -49,7 +51,10 @@ public class UpdatePremiumStorageCommand(
 
         // Fetch all premium plans and the user's subscription to find which plan they're on
         var premiumPlans = await pricingClient.ListPremiumPlans();
-        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["customer"]
+        });
 
         // Find the password manager subscription item (seat, not storage) and match it to a plan
         var passwordManagerItem = subscription.Items.Data.FirstOrDefault(i =>
@@ -127,13 +132,40 @@ public class UpdatePremiumStorageCommand(
             });
         }
 
-        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
-        {
-            Items = subscriptionItemOptions,
-            ProrationBehavior = ProrationBehavior.AlwaysInvoice
-        };
+        var usingPayPal = subscription.Customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
 
-        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, subscriptionUpdateOptions);
+        if (usingPayPal)
+        {
+            var options = new SubscriptionUpdateOptions
+            {
+                Items = subscriptionItemOptions, ProrationBehavior = ProrationBehavior.CreateProrations
+            };
+
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+
+            var draftInvoice = await stripeAdapter.CreateInvoiceAsync(new InvoiceCreateOptions
+            {
+                Customer = subscription.CustomerId,
+                Subscription = subscription.Id,
+                AutoAdvance = false,
+                CollectionMethod = CollectionMethod.ChargeAutomatically
+            });
+
+            var finalizedInvoice = await stripeAdapter.FinalizeInvoiceAsync(draftInvoice.Id,
+                new InvoiceFinalizeOptions { AutoAdvance = false, Expand = ["customer"] });
+
+            await braintreeService.PayInvoice(new UserId(user.Id), finalizedInvoice);
+        }
+        else
+        {
+            var options = new SubscriptionUpdateOptions
+            {
+                Items = subscriptionItemOptions,
+                ProrationBehavior = ProrationBehavior.AlwaysInvoice
+            };
+
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+        }
 
         // Update the user's max storage
         user.MaxStorageGb = maxStorageGb;
