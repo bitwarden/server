@@ -61,6 +61,18 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Individual tests can override this if they need to test duplicate subscription scenarios
         _stripeAdapter.ListSubscriptionsAsync(Arg.Any<SubscriptionListOptions>()).Returns(new List<Stripe.Subscription>());
 
+        // Mock GetCustomerAsync to return a customer with email when needed for email-based duplicate checks
+        // Individual tests can override this if they need specific customer behavior
+        _stripeAdapter.GetCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerGetOptions>())
+            .Returns(callInfo =>
+            {
+                var customerId = callInfo.Arg<string>();
+                var customer = Substitute.For<StripeCustomer>();
+                customer.Id = customerId;
+                customer.Email = "test@example.com"; // Default email for tests
+                return Task.FromResult(customer);
+            });
+
         // Mock CancelSubscriptionAsync to avoid issues if duplicate cleanup logic is triggered
         _stripeAdapter.CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>()).Returns(Task.FromResult(new Stripe.Subscription()));
 
@@ -817,6 +829,164 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         Assert.Equal((short)3, user.MaxStorageGb); // 1 (provided) + 2 (additional) = 3
+        await _userService.Received(1).SaveUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserWithoutGatewayCustomerId_ExistingSubscriptionByEmail_ReturnsBadRequest(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        // Setup an existing Premium subscription for a customer with the same email
+        var existingCustomer = Substitute.For<StripeCustomer>();
+        existingCustomer.Id = "existing_cust_123";
+        existingCustomer.Email = "test@example.com";
+
+        var existingSubscription = Substitute.For<StripeSubscription>();
+        existingSubscription.Id = "existing_sub_123";
+        existingSubscription.Status = "active";
+        // Set Customer as the Customer object (expanded) so we can check email directly
+        existingSubscription.Customer = existingCustomer;
+        existingSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    Price = new Price { Id = StripeConstants.Prices.PremiumAnnually }
+                }
+            ]
+        };
+
+        // Mock ListSubscriptionsAsync to return the existing subscription
+        _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts => 
+            opts.Status == "active" && opts.Customer == null))
+            .Returns(new List<StripeSubscription> { existingSubscription });
+
+        // Mock GetCustomerAsync to return the customer with matching email
+        _stripeAdapter.GetCustomerAsync(existingCustomer.Id, Arg.Any<CustomerGetOptions>())
+            .Returns(existingCustomer);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Contains("already have an active Premium subscription", badRequest.Response);
+        await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserWithGatewayCustomerId_ExistingSubscription_ReturnsBadRequest(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = "existing_cust_123";
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var existingSubscription = Substitute.For<StripeSubscription>();
+        existingSubscription.Id = "existing_sub_123";
+        existingSubscription.Status = "active";
+        existingSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    Price = new Price { Id = StripeConstants.Prices.PremiumAnnually }
+                }
+            ]
+        };
+
+        // Mock ListSubscriptionsAsync to return the existing subscription for the customer
+        _stripeAdapter.ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts => 
+            opts.Status == "active" && opts.Customer == user.GatewayCustomerId))
+            .Returns(new List<StripeSubscription> { existingSubscription });
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Contains("already have an active Premium subscription", badRequest.Response);
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserWithoutGatewayCustomerId_NoExistingSubscription_Success(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "cust_123";
+        mockCustomer.Email = "test@example.com";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = "sub_123";
+        mockSubscription.Status = "active";
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
+
+        var mockInvoice = Substitute.For<Invoice>();
+
+        // Mock ListSubscriptionsAsync to return empty list (no existing subscriptions)
+        // This will be called twice: once for email check, once for customer ID check
+        _stripeAdapter.ListSubscriptionsAsync(Arg.Any<SubscriptionListOptions>()).Returns(new List<StripeSubscription>());
+
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
+        _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.True(user.Premium);
+        await _stripeAdapter.Received(1).CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
         await _userService.Received(1).SaveUserAsync(user);
     }
 

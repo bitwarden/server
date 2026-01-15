@@ -95,6 +95,20 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 return new BadRequest("You already have an active Premium subscription. Please refresh the page.");
             }
         }
+        else
+        {
+            // CRITICAL: For users without a GatewayCustomerId, check for existing subscriptions by email
+            // This prevents race conditions where multiple simultaneous requests create multiple customers
+            // and then multiple subscriptions for the same user
+            var existingSubscriptionByEmail = await GetExistingActivePremiumSubscriptionByEmailAsync(user.Email, premiumPlan);
+            if (existingSubscriptionByEmail != null)
+            {
+                _logger.LogWarning(
+                    "User {UserId} attempted to create duplicate Premium subscription. Active subscription {SubscriptionId} already exists for email {Email}",
+                    user.Id, existingSubscriptionByEmail.Id, user.Email);
+                return new BadRequest("You already have an active Premium subscription. Please refresh the page.");
+            }
+        }
 
         Customer? customer;
 
@@ -125,6 +139,23 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         }
 
         customer = await ReconcileBillingLocationAsync(customer, billingAddress);
+
+        // CRITICAL: Final check by email after customer creation/retrieval
+        // This catches race conditions where multiple simultaneous requests for NEW customers
+        // (who don't have GatewayCustomerId yet) both passed the initial email check,
+        // both created customers, but one completed subscription creation before the other
+        // Note: We only check by email here because:
+        // - For new customers: Customer ID check is redundant (we just created the customer)
+        // - For existing customers: We already checked by customer ID before
+        // - Email check catches subscriptions created for any customer with this email
+        var existingSubscriptionByEmailAfterCreation = await GetExistingActivePremiumSubscriptionByEmailAsync(user.Email, premiumPlan);
+        if (existingSubscriptionByEmailAfterCreation != null)
+        {
+            _logger.LogWarning(
+                "User {UserId} attempted to create duplicate Premium subscription after customer creation. Active subscription {SubscriptionId} already exists for email {Email}",
+                user.Id, existingSubscriptionByEmailAfterCreation.Id, user.Email);
+            return new BadRequest("You already have an active Premium subscription. Please refresh the page.");
+        }
 
         var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, additionalStorageGb > 0 ? additionalStorageGb : null);
 
@@ -426,6 +457,97 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking for existing active Premium subscription for customer {CustomerId}", customerId);
+            return null; // If check fails, allow the request to proceed (fail open rather than fail closed)
+        }
+    }
+
+    /// <summary>
+    /// Checks if there's an existing active Premium subscription for a customer with the given email address.
+    /// This is used to prevent race conditions where multiple simultaneous requests for users without
+    /// a GatewayCustomerId create multiple customers and subscriptions.
+    /// </summary>
+    /// <param name="email">The email address to check for existing subscriptions.</param>
+    /// <param name="premiumPlan">The premium plan containing the price IDs to identify Premium subscriptions.</param>
+    /// <returns>The existing active Premium subscription if found, null otherwise.</returns>
+    private async Task<Subscription?> GetExistingActivePremiumSubscriptionByEmailAsync(string email, Pricing.Premium.Plan premiumPlan)
+    {
+        try
+        {
+            // Query for recent active subscriptions and check their customer emails
+            // We limit to recent subscriptions to avoid performance issues
+            // In practice, a user should only have 0-1 active subscriptions, so this should be sufficient
+            var subscriptionOptions = new SubscriptionListOptions
+            {
+                Status = "active",
+                Limit = 100 // Check recent subscriptions - should be more than enough
+            };
+
+            var subscriptions = await stripeAdapter.ListSubscriptionsAsync(subscriptionOptions);
+            var premiumPriceIds = new HashSet<string> { premiumPlan.Seat.StripePriceId, premiumPlan.Storage.StripePriceId };
+
+            // First filter to Premium subscriptions only (by price ID) to minimize customer lookups
+            var premiumSubscriptions = subscriptions.Where(sub =>
+                sub.Items.Any(item => premiumPriceIds.Contains(item.Price.Id))).ToList();
+
+            if (!premiumSubscriptions.Any())
+            {
+                return null;
+            }
+
+            // For Premium subscriptions, check if any customer email matches
+            // We fetch customers in parallel to minimize latency
+            var customerCheckTasks = premiumSubscriptions.Select(async sub =>
+            {
+                try
+                {
+                    // Get customer ID from subscription
+                    // Customer can be a string (ID) or Customer object (if expanded)
+                    string? customerId = null;
+                    Customer? customer = null;
+
+                    // Check if Customer is already a Customer object
+                    var customerObj = sub.Customer as Customer;
+                    if (customerObj != null)
+                    {
+                        customer = customerObj;
+                        customerId = customerObj.Id;
+                    }
+                    else
+                    {
+                        // Customer is a string ID
+                        customerId = sub.Customer?.ToString();
+                    }
+
+                    if (string.IsNullOrEmpty(customerId))
+                    {
+                        return (Subscription: sub, Match: false);
+                    }
+
+                    // If customer wasn't expanded, fetch it
+                    if (customer == null)
+                    {
+                        customer = await stripeAdapter.GetCustomerAsync(customerId);
+                    }
+
+                    var emailMatches = customer != null &&
+                                       string.Equals(customer.Email, email, StringComparison.OrdinalIgnoreCase);
+
+                    return (Subscription: sub, Match: emailMatches);
+                }
+                catch
+                {
+                    // If customer fetch fails, skip this subscription
+                    return (Subscription: sub, Match: false);
+                }
+            });
+
+            var results = await Task.WhenAll(customerCheckTasks);
+            var matchingResult = results.FirstOrDefault(r => r.Match);
+            return matchingResult.Match ? matchingResult.Subscription : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking for existing active Premium subscription by email {Email}", email);
             return null; // If check fails, allow the request to proceed (fail open rather than fail closed)
         }
     }

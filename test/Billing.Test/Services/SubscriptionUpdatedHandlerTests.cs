@@ -549,20 +549,6 @@ public class SubscriptionUpdatedHandlerTests
         // Arrange
         var userId = Guid.NewGuid();
         var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
-        var subscription = new Subscription
-        {
-            Status = StripeSubscriptionStatus.Active,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
-                ]
-            },
-            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } }
-        };
-
-        var parsedEvent = new Event { Data = new EventData() };
 
         var premiumPlan = new PremiumPlan
         {
@@ -572,6 +558,26 @@ public class SubscriptionUpdatedHandlerTests
             Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
             Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
         };
+
+        var subscription = new Subscription
+        {
+            Status = StripeSubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Price = new Price { Id = premiumPlan.Seat.StripePriceId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } }
+        };
+
+        var parsedEvent = new Event { Data = new EventData() };
+
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
 
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
