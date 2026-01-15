@@ -38,7 +38,6 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
-    private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
     private readonly IUpdatePaymentMethodCommand _updatePaymentMethodCommand = Substitute.For<IUpdatePaymentMethodCommand>();
     private readonly CreatePremiumCloudHostedSubscriptionCommand _command;
 
@@ -70,7 +69,6 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             _pushNotificationService,
             Substitute.For<ILogger<CreatePremiumCloudHostedSubscriptionCommand>>(),
             _pricingClient,
-            _hasPaymentMethodQuery,
             _updatePaymentMethodCommand);
     }
 
@@ -366,8 +364,6 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         var mockInvoice = Substitute.For<Invoice>();
 
-        // Mock that the user has a payment method (this is the key difference from the credit purchase case)
-        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(true);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
@@ -423,8 +419,6 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             Expiration = "12/2025"
         };
 
-        // Mock that the user does NOT have a payment method (simulating credit purchase scenario)
-        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(false);
         _updatePaymentMethodCommand.Run(Arg.Any<User>(), Arg.Any<TokenizedPaymentMethod>(), Arg.Any<BillingAddress>())
             .Returns(mockMaskedPaymentMethod);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
