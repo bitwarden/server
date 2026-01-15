@@ -17,6 +17,7 @@ public interface IStripeAdapter
     Task<CustomerBalanceTransaction> CreateCustomerBalanceTransactionAsync(string customerId,
         CustomerBalanceTransactionCreateOptions options);
     Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions subscriptionCreateOptions);
+    Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions subscriptionCreateOptions, RequestOptions requestOptions);
     Task<Subscription> GetSubscriptionAsync(string id, SubscriptionGetOptions options = null);
     Task<List<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options);
     Task<StripeList<Registration>> ListTaxRegistrationsAsync(RegistrationListOptions options = null);

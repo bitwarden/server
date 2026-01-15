@@ -81,6 +81,9 @@ public class StripeAdapter : IStripeAdapter
     public Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions options) =>
         _subscriptionService.CreateAsync(options);
 
+    public Task<Subscription> CreateSubscriptionAsync(SubscriptionCreateOptions options, RequestOptions requestOptions) =>
+        _subscriptionService.CreateAsync(options, requestOptions);
+
     public Task<Subscription> GetSubscriptionAsync(string id, SubscriptionGetOptions options = null) =>
         _subscriptionService.GetAsync(id, options);
 

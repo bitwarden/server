@@ -84,6 +84,20 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
+        // CRITICAL: Check Stripe directly for existing active Premium subscriptions to prevent race conditions
+        // This protects against simultaneous requests creating duplicate subscriptions
+        if (!string.IsNullOrEmpty(user.GatewayCustomerId))
+        {
+            var existingActiveSubscription = await GetExistingActivePremiumSubscriptionAsync(user.GatewayCustomerId, premiumPlan);
+            if (existingActiveSubscription != null)
+            {
+                _logger.LogWarning(
+                    "User {UserId} attempted to create duplicate Premium subscription. Active subscription {SubscriptionId} already exists",
+                    user.Id, existingActiveSubscription.Id);
+                return new BadRequest("You already have an active Premium subscription. Please refresh the page.");
+            }
+        }
+
         Customer? customer;
 
         /*
@@ -312,9 +326,9 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Pricing.Premium.Plan premiumPlan,
         int? storage)
     {
-        // Proactively cancel any existing incomplete/unpaid Premium subscriptions before creating a new one.
-        // This prevents duplicate subscriptions when users retry after failed payment attempts.
-        await CancelExistingIncompletePremiumSubscriptionsAsync(customer.Id, premiumPlan);
+        // Proactively cancel any existing problematic Premium subscriptions (incomplete/unpaid).
+        // This cleans up failed payment attempts before creating a new subscription.
+        await CancelExistingDuplicatePremiumSubscriptionsAsync(customer.Id, premiumPlan);
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
@@ -355,7 +369,17 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             OffSession = true
         };
 
-        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
+        // Use idempotency key to ensure that simultaneous requests don't create duplicate subscriptions
+        // Key uses 10-second time buckets, allowing genuine retries while preventing race conditions
+        // This allows users to change their mind (e.g., different storage) after ~10 seconds
+        var timestampBucket = DateTime.UtcNow.Ticks / (10 * TimeSpan.TicksPerSecond);
+        var idempotencyKey = $"premium-sub-{userId}-{timestampBucket}";
+        var requestOptions = new RequestOptions
+        {
+            IdempotencyKey = idempotencyKey
+        };
+
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions, requestOptions);
 
         if (!usingPayPal)
         {
@@ -373,20 +397,55 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     }
 
     /// <summary>
-    /// Cancels any existing incomplete or unpaid Premium subscriptions for the customer to prevent duplicates.
-    /// This is called proactively before creating a new subscription to handle cases where a user retries
-    /// the subscription flow after a failed payment, ensuring they don't accumulate multiple subscriptions.
+    /// Checks if the customer already has an active Premium subscription.
+    /// This is used as a gate check to prevent race conditions where multiple simultaneous
+    /// requests could create duplicate subscriptions.
     /// </summary>
-    /// <param name="customerId">The Stripe customer ID to check for existing subscriptions.</param>
+    /// <param name="customerId">The Stripe customer ID to check.</param>
     /// <param name="premiumPlan">The premium plan containing the price IDs to identify Premium subscriptions.</param>
-    private async Task CancelExistingIncompletePremiumSubscriptionsAsync(string customerId, Pricing.Premium.Plan premiumPlan)
+    /// <returns>The existing active Premium subscription if found, null otherwise.</returns>
+    private async Task<Subscription?> GetExistingActivePremiumSubscriptionAsync(string customerId, Pricing.Premium.Plan premiumPlan)
     {
         try
         {
             var subscriptionOptions = new SubscriptionListOptions
             {
                 Customer = customerId,
-                Status = "all" // Get all statuses so we can filter to incomplete/unpaid
+                Status = "active",
+                Limit = 10 // Should only have 0-1, but check a few just in case
+            };
+
+            var subscriptions = await stripeAdapter.ListSubscriptionsAsync(subscriptionOptions);
+            var premiumPriceIds = new HashSet<string> { premiumPlan.Seat.StripePriceId, premiumPlan.Storage.StripePriceId };
+
+            return subscriptions.FirstOrDefault(sub =>
+                sub.Items.Any(item => premiumPriceIds.Contains(item.Price.Id)));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking for existing active Premium subscription for customer {CustomerId}", customerId);
+            return null; // If check fails, allow the request to proceed (fail open rather than fail closed)
+        }
+    }
+
+    /// <summary>
+    /// Cancels any existing problematic Premium subscriptions for the customer to prevent duplicates.
+    /// This is called proactively before creating a new subscription to handle failed payment scenarios
+    /// where incomplete/unpaid subscriptions remain on the account.
+    /// Note: This does NOT cancel active subscriptions to avoid race conditions between concurrent requests.
+    /// Layer 1 (gate check) prevents creating when an active subscription exists, and Layer 4 (webhooks)
+    /// handles cleanup of any edge cases.
+    /// </summary>
+    /// <param name="customerId">The Stripe customer ID to check for existing subscriptions.</param>
+    /// <param name="premiumPlan">The premium plan containing the price IDs to identify Premium subscriptions.</param>
+    private async Task CancelExistingDuplicatePremiumSubscriptionsAsync(string customerId, Pricing.Premium.Plan premiumPlan)
+    {
+        try
+        {
+            var subscriptionOptions = new SubscriptionListOptions
+            {
+                Customer = customerId,
+                Status = "all" // Get all statuses so we can filter problematic ones and recent active subscriptions
             };
 
             var subscriptions = await stripeAdapter.ListSubscriptionsAsync(subscriptionOptions);
@@ -398,7 +457,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 // Only cancel subscriptions that are:
                 // 1. Premium subscriptions (matching price IDs)
                 // 2. In a problematic state (incomplete, unpaid, incomplete_expired)
+                // Note: We don't cancel recently created active subscriptions here to avoid race conditions
+                // between concurrent requests. Layer 1 gate check prevents creating when active exists,
+                // and Layer 4 (webhooks) handles cleanup of any edge cases.
                 var isPremiumSubscription = subscription.Items.Any(item => premiumPriceIds.Contains(item.Price.Id));
+
                 var isProblematicStatus = subscription.Status is SubscriptionStatus.Incomplete
                     or SubscriptionStatus.Unpaid
                     or SubscriptionStatus.IncompleteExpired;
@@ -425,7 +488,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error cancelling existing incomplete Premium subscriptions for customer {CustomerId}", customerId);
+            _logger.LogError(ex, "Error cancelling existing duplicate Premium subscriptions for customer {CustomerId}", customerId);
             // Don't throw - we still want to allow the new subscription to be created
         }
     }
