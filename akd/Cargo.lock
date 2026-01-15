@@ -62,6 +62,7 @@ dependencies = [
  "hex",
  "log",
  "protobuf",
+ "serde",
  "tokio",
 ]
 
@@ -79,6 +80,8 @@ dependencies = [
  "protobuf",
  "protobuf-codegen",
  "protobuf-parse",
+ "serde",
+ "serde_bytes",
  "tokio",
  "zeroize",
 ]
@@ -953,6 +956,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
  "pkcs8",
+ "serde",
  "signature",
 ]
 
@@ -2255,6 +2259,7 @@ dependencies = [
  "anyhow",
  "axum",
  "bitwarden-akd-configuration",
+ "bitwarden-encoding",
  "chrono",
  "common",
  "config",
@@ -2529,6 +2534,16 @@ dependencies = [
  "serde",
  "serde_core",
  "typeid",
+]
+
+[[package]]
+name = "serde_bytes"
+version = "0.11.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5d440709e79d88e51ac01c4b72fc6cb7314017bb7da9eeff678aa94c10e3ea8"
+dependencies = [
+ "serde",
+ "serde_core",
 ]
 
 [[package]]

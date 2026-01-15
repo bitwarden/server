@@ -91,7 +91,7 @@ impl VrfKeyConfig {
         Ok(blake3::hash(&root_key_bytes).as_bytes().to_vec())
     }
 
-    pub fn root_key_type(&self) -> VrfRootKeyType {
+    pub(crate) fn root_key_type(&self) -> VrfRootKeyType {
         match self {
             #[cfg(test)]
             VrfKeyConfig::ConstantVrfKey => VrfRootKeyType::None,

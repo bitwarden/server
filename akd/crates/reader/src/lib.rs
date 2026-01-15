@@ -1,5 +1,5 @@
 use akd::directory::ReadOnlyDirectory;
-use akd_storage::{AkdDatabase, ReadOnlyPublishQueueType, VrfKeyDatabase};
+use akd_storage::{AkdDatabase, VrfKeyDatabase};
 use anyhow::{Context, Result};
 use axum::Router;
 use bitwarden_akd_configuration::BitwardenV1Configuration;
@@ -10,12 +10,14 @@ mod config;
 mod routes;
 
 pub use crate::config::ApplicationConfig;
+pub use routes::response_types;
 
 #[derive(Clone)]
 struct AppState {
     // Add any shared state here, e.g., database connections
     directory: ReadOnlyDirectory<BitwardenV1Configuration, AkdDatabase, VrfKeyDatabase>,
-    publish_queue: ReadOnlyPublishQueueType,
+    // TODO: use this to allow for unique failures for lookup and key history requests that have pending updates
+    // publish_queue: ReadOnlyPublishQueueType,
 }
 
 #[instrument(skip_all, name = "reader_start")]
@@ -23,7 +25,7 @@ pub async fn start(
     config: ApplicationConfig,
     shutdown_rx: &Receiver<()>,
 ) -> Result<tokio::task::JoinHandle<Result<()>>> {
-    let (directory, _, publish_queue) = config
+    let (directory, _, _) = config
         .storage
         .initialize_readonly_directory::<BitwardenV1Configuration>()
         .await
@@ -34,14 +36,14 @@ pub async fn start(
     let handle = tokio::spawn(async move {
         let app_state = AppState {
             directory: directory,
-            publish_queue: publish_queue,
+            // publish_queue: publish_queue,
         };
 
         let app = Router::new()
             .merge(crate::routes::api_routes())
             .with_state(app_state);
 
-        let listener = TcpListener::bind((&config.socket_address()))
+        let listener = TcpListener::bind(&config.socket_address())
             .await
             .context("Socket bind failed")?;
         info!(
