@@ -20,8 +20,10 @@ public class CipherFieldModel
     }
 
     public FieldType Type { get; set; }
+    [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
+    [EncryptedString]
     [EncryptedStringLength(5000)]
     public string Value { get; set; }
     public int? LinkedId { get; set; }
