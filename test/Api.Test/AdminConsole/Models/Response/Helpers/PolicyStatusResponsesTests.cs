@@ -29,7 +29,7 @@ public class PolicyStatusResponsesTests
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
             .Returns(true);
 
-        var result = await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
+        var result = await policy.GetSingleOrgPolicyStatusResponseAsync(querySub);
 
         Assert.Equal(expectedCanToggle, result.CanToggleState);
     }
@@ -48,7 +48,7 @@ public class PolicyStatusResponsesTests
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
             .Returns(true);
 
-        var action = async () => await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
+        var action = async () => await policy.GetSingleOrgPolicyStatusResponseAsync(querySub);
 
         await Assert.ThrowsAsync<ArgumentException>("policy", action);
     }
@@ -67,7 +67,7 @@ public class PolicyStatusResponsesTests
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
             .Returns(false);
 
-        var result = await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
+        var result = await policy.GetSingleOrgPolicyStatusResponseAsync(querySub);
 
         Assert.True(result.CanToggleState);
     }

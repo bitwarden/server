@@ -83,7 +83,7 @@ public class PoliciesController : Controller
         var policy = await _policyQuery.RunAsync(orgId, type);
         if (policy.Type is PolicyType.SingleOrg)
         {
-            return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
+            return await policy.GetSingleOrgPolicyStatusResponseAsync(_organizationHasVerifiedDomainsQuery);
         }
 
         return new PolicyStatusResponseModel(policy);
