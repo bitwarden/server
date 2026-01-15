@@ -113,6 +113,7 @@ dependencies = [
  "akd_storage",
  "anyhow",
  "async-trait",
+ "bitwarden-akd-configuration",
  "clap",
  "hex",
  "owo-colors",
@@ -120,6 +121,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

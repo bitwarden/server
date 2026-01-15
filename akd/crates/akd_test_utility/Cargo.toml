@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 akd = { workspace = true }
-akd_storage = { workspace = true}
+akd_storage = { workspace = true }
 anyhow = "1"
 async-trait = { workspace = true }
 clap = { version = "4", features = ["derive"] }
@@ -21,7 +21,13 @@ owo-colors = "4"
 rand = "0.8"
 tokio.workspace = true
 tracing.workspace = true
-tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "ansi"] }
+tracing-subscriber = { workspace = true, features = [
+  "env-filter",
+  "fmt",
+  "ansi",
+] }
+bitwarden-akd-configuration = { workspace = true }
+uuid = { workspace = true }
 
 [lints]
 workspace = true

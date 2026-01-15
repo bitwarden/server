@@ -18,7 +18,8 @@ use tracing_subscriber::Layer;
 mod commands;
 mod directory_host;
 
-type TC = akd::ExperimentalConfiguration<akd::ExampleLabel>;
+// type TC = akd::ExperimentalConfiguration<akd::ExampleLabel>;
+type TC = bitwarden_akd_configuration::BitwardenV1Configuration;
 
 #[derive(ValueEnum, Clone, Debug)]
 enum LogLevel {
@@ -73,6 +74,10 @@ struct CliArgs {
     #[clap(long = "connection-string", short = 'c')]
     connection_string: Option<String>,
 
+    /// Installation context UUID (also reads from AKD_INSTALLATION_CONTEXT env var)
+    #[clap(long = "installation-context", short = 'i')]
+    installation_context: Option<String>,
+
     /// Log level
     #[clap(
         value_enum,
@@ -115,8 +120,21 @@ async fn main() -> Result<()> {
         .or_else(|| std::env::var("AKD_MSSQL_CONNECTION_STRING").ok())
         .context("Connection string required via --connection-string or AKD_MSSQL_CONNECTION_STRING env var")?;
 
+    // Get installation context from CLI or env var
+    let installation_context_str = args
+        .installation_context
+        .clone()
+        .or_else(|| std::env::var("AKD_INSTALLATION_CONTEXT").ok())
+        .context("Installation context UUID required via --installation-context or AKD_INSTALLATION_CONTEXT env var")?;
+
+    // Parse installation context as UUID
+    let installation_context = uuid::Uuid::parse_str(&installation_context_str)
+        .context("Installation context must be a valid UUID")?;
+
     // Initialize logging
     let mut layers = Vec::new();
+
+    bitwarden_akd_configuration::BitwardenV1Configuration::init(installation_context);
 
     // If a log file is specified, only log to file
     // Otherwise, log to console
