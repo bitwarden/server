@@ -6,7 +6,7 @@ use chacha20poly1305::{
 };
 use rsa::{pkcs1::DecodeRsaPrivateKey, Pkcs1v15Encrypt};
 use thiserror::Error;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 use crate::{db_config::DatabaseType, vrf_key_config::VrfKeyConfig};
 
@@ -46,6 +46,7 @@ pub struct VrfKeyDatabase {
 }
 
 impl VrfKeyDatabase {
+    #[instrument(skip(db, config), level = "info", name = "vrf_key_database_new")]
     pub async fn new(
         db: DatabaseType,
         config: VrfKeyConfig,
@@ -178,6 +179,7 @@ impl From<VrfRootKeyType> for i16 {
 pub(crate) struct VrfKey(pub Vec<u8>);
 
 impl VrfKeyTableData {
+    #[instrument(skip_all, level = "info", name = "vrf_key_table_data_new")]
     pub async fn new(config: &VrfKeyConfig) -> Result<(Self, VrfKey), VrfKeyCreationError> {
         info!("Generating new VRF key and table data");
         // handle constant key case separately to avoid unnecessary key generation / parsing

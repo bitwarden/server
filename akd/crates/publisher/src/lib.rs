@@ -65,33 +65,7 @@ async fn start_publisher(
     let mut next_epoch = tokio::time::Instant::now()
         + std::time::Duration::from_millis(config.publisher.epoch_duration_ms as u64);
     loop {
-        trace!("Processing publish queue for epoch");
-
-        // Pull items from publish queue
-        let (ids, items) = publish_queue
-            .peek(config.publisher.epoch_update_limit)
-            .await?
-            .into_iter()
-            .fold((vec![], vec![]), |mut acc, i| {
-                acc.0.push(i.0);
-                acc.1.push(i.1);
-                acc
-            });
-
-        let result: Result<()> = {
-            // Apply items to directory
-            directory
-                .publish(items)
-                .await
-                .context("AKD publish failed")?;
-
-            // Remove processed items from publish queue
-            publish_queue
-                .remove(ids)
-                .await
-                .context("Failed to remove processed publish queue items")?;
-            Ok(())
-        };
+        let result = check_publish_queue(&directory, &publish_queue, config).await;
 
         if let Err(e) = result {
             error!(%e, "Error processing publish queue items");
@@ -119,6 +93,46 @@ async fn start_publisher(
         };
     }
 
+    Ok(())
+}
+
+#[instrument(skip_all, level = "info")]
+async fn check_publish_queue(
+    directory: &BitAkdDirectory,
+    publish_queue: &PublishQueueType,
+    config: &ApplicationConfig,
+) -> Result<()> {
+    trace!("Processing publish queue for epoch");
+
+    // Pull items from publish queue
+    let items = publish_queue
+        .peek(config.publisher.epoch_update_limit)
+        .await
+        .context("Failed to peek publish queue")?;
+
+    if items.is_empty() {
+        info!("No items in publish queue to process");
+        return Ok(());
+    }
+
+    trace!(num_items = items.len(), "Publishing items to AKD");
+    let (ids, items) = items.into_iter().fold((vec![], vec![]), |mut acc, i| {
+        acc.0.push(i.0);
+        acc.1.push(i.1);
+        acc
+    });
+
+    // Apply items to directory
+    directory
+        .publish(items)
+        .await
+        .context("AKD publish failed")?;
+
+    // Remove processed items from publish queue
+    publish_queue
+        .remove(ids)
+        .await
+        .context("Failed to remove processed publish queue items")?;
     Ok(())
 }
 

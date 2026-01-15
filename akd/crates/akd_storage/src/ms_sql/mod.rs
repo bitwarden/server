@@ -81,7 +81,12 @@ impl MsSql {
         MsSqlBuilder::new(connection_string)
     }
 
-    #[instrument(skip(connection_string), fields(pool_size))]
+    #[instrument(
+        skip(connection_string),
+        fields(pool_size),
+        name = "ms_sql_new",
+        level = "info"
+    )]
     pub async fn new(connection_string: String, pool_size: u32) -> Result<Self, StorageError> {
         info!(pool_size, "Creating MS SQL storage");
         let connection_manager = MsSqlConnectionManager::new(connection_string);

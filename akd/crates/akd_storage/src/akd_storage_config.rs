@@ -3,7 +3,7 @@ use std::time::Duration;
 use akd::{directory::ReadOnlyDirectory, storage::StorageManager, Directory};
 use serde::Deserialize;
 use thiserror::Error;
-use tracing::error;
+use tracing::{error, instrument};
 
 use crate::{
     db_config::DbConfig, publish_queue_config::PublishQueueConfig, vrf_key_config::VrfKeyConfig,
@@ -42,6 +42,7 @@ impl AkdStorageConfig {
         Ok(())
     }
 
+    #[instrument(skip(self), level = "info")]
     pub async fn initialize_directory<TDirectoryConfig: akd::Configuration>(
         &self,
     ) -> Result<
