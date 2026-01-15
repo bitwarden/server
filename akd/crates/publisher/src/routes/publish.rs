@@ -26,7 +26,6 @@ pub async fn publish_handler(
     let akd_label: AkdLabel = AkdLabel(request.akd_label_b64.into_bytes());
     let akd_value: AkdValue = AkdValue(request.akd_value_b64.into_bytes());
 
-    //TODO: enqueue publish operation to to_publish queue
     if let Err(e) = publish_queue.enqueue(akd_label, akd_value).await {
         error!("Failed to enqueue publish request: {:?}", e);
         return (
