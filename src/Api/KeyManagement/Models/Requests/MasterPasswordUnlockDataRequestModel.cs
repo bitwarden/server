@@ -2,12 +2,8 @@
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.KeyManagement.Models.Api.Request;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
-/// <summary>
-/// Use this datatype when interfacing with requests to create a separation of concern.
-/// See <see cref="MasterPasswordUnlockData"/> to use for commands, queries, services.
-/// </summary>
 public class MasterPasswordUnlockDataRequestModel
 {
     public required KdfRequestModel Kdf { get; init; }

@@ -3,13 +3,10 @@
 
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Services;
 using Bit.Identity;
 using Bit.Test.Common.Helpers;
@@ -26,7 +23,6 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     public const string DefaultDeviceIdentifier = "92b9d953-b9b6-4eaf-9d3e-11d57144dfeb";
     public const string DefaultUserEmail = "DefaultEmail@bitwarden.com";
     public const string DefaultUserPasswordHash = "default_password_hash";
-    private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     /// <summary>
     /// A dictionary to store registration tokens for email verification. We cannot substitute the IMailService more than once, so
@@ -199,68 +195,6 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         RegisterFinishRequestModel requestModel,
         bool marketingEmails = true)
     {
-        // Ensure required fields for registration finish are present.
-        // Prefer legacy-path defaults (root fields) to minimize changes to tests.
-        // PM-28143 - When MasterPasswordAuthenticationData is required, delete all handling of MasterPasswordHash.
-        requestModel.MasterPasswordHash ??= DefaultUserPasswordHash;
-        // PM-28143 - When KDF is sourced exclusively from MasterPasswordUnlockData, delete the root Kdf defaults below.
-        requestModel.Kdf ??= KdfType.PBKDF2_SHA256;
-        requestModel.KdfIterations ??= AuthConstants.PBKDF2_ITERATIONS.Default;
-        // Ensure a symmetric key is provided when no unlock data is present
-        // PM-28143 - When MasterPasswordUnlockData is required, delete the UserSymmetricKey fallback block below.
-        if (requestModel.MasterPasswordUnlock == null && string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey))
-        {
-            requestModel.UserSymmetricKey = "user_symmetric_key";
-        }
-
-        // Align unlock/auth data KDF with root KDF so login uses the provided master password hash.
-        // PM-28143 - After removing root Kdf fields, build KDF exclusively from MasterPasswordUnlockData.Kdf and delete this alignment section.
-        var effectiveKdfType = requestModel.Kdf ?? KdfType.PBKDF2_SHA256;
-        var effectiveIterations = requestModel.KdfIterations ?? AuthConstants.PBKDF2_ITERATIONS.Default;
-        int? effectiveMemory = null;
-        int? effectiveParallelism = null;
-        if (effectiveKdfType == KdfType.Argon2id)
-        {
-            effectiveIterations = AuthConstants.ARGON2_ITERATIONS.InsideRange(effectiveIterations)
-                ? effectiveIterations
-                : AuthConstants.ARGON2_ITERATIONS.Default;
-            effectiveMemory = AuthConstants.ARGON2_MEMORY.Default;
-            effectiveParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
-        }
-
-        var alignedKdf = new KdfRequestModel
-        {
-            KdfType = effectiveKdfType,
-            Iterations = effectiveIterations,
-            Memory = effectiveMemory,
-            Parallelism = effectiveParallelism
-        };
-
-        if (requestModel.MasterPasswordUnlock != null)
-        {
-            var unlock = requestModel.MasterPasswordUnlock;
-            // Always force a valid encrypted string for tests to avoid model validation failures.
-            requestModel.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
-            {
-                Kdf = alignedKdf,
-                MasterKeyWrappedUserKey = unlock.MasterKeyWrappedUserKey,
-                Salt = string.IsNullOrWhiteSpace(unlock.Salt) ? requestModel.Email : unlock.Salt
-            };
-        }
-
-        if (requestModel.MasterPasswordAuthentication != null)
-        {
-            // Ensure registration uses the same hash the tests will provide at login.
-            // PM-28143 - When MasterPasswordAuthenticationData is the only source of the auth hash,
-            // stop overriding it from MasterPasswordHash and delete this whole reassignment block.
-            requestModel.MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
-            {
-                Kdf = alignedKdf,
-                MasterPasswordAuthenticationHash = requestModel.MasterPasswordHash,
-                Salt = requestModel.Email
-            };
-        }
-
         var sendVerificationEmailReqModel = new RegisterSendVerificationEmailRequestModel
         {
             Email = requestModel.Email,
@@ -277,11 +211,8 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         requestModel.EmailVerificationToken = RegistrationTokens[requestModel.Email];
 
         var postRegisterFinishHttpContext = await PostRegisterFinishAsync(requestModel);
-        if (postRegisterFinishHttpContext.Response.StatusCode != StatusCodes.Status200OK)
-        {
-            var body = await ReadResponseBodyAsync(postRegisterFinishHttpContext);
-            Assert.Fail($"register/finish failed (status {postRegisterFinishHttpContext.Response.StatusCode}). Body: {body}");
-        }
+
+        Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
 
         var database = GetDatabaseContext();
         var user = await database.Users
@@ -291,32 +222,4 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
         return user;
     }
-
-    private static async Task<string> ReadResponseBodyAsync(HttpContext ctx)
-    {
-        try
-        {
-            if (ctx?.Response?.Body == null)
-            {
-                return "<no body>";
-            }
-            var stream = ctx.Response.Body;
-            if (stream.CanSeek)
-            {
-                stream.Seek(0, SeekOrigin.Begin);
-            }
-            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
-            var text = await reader.ReadToEndAsync();
-            if (stream.CanSeek)
-            {
-                stream.Seek(0, SeekOrigin.Begin);
-            }
-            return string.IsNullOrWhiteSpace(text) ? "<empty body>" : text;
-        }
-        catch (Exception ex)
-        {
-            return $"<error reading body: {ex.Message}>";
-        }
-    }
-
 }

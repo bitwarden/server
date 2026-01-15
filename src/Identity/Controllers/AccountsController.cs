@@ -1,4 +1,8 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics;
+using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -38,7 +42,7 @@ public class AccountsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
-    private readonly byte[]? _defaultKdfHmacKey = null;
+    private readonly byte[] _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
     [
         // The first result (index 0) should always return the "normal" default.
@@ -141,55 +145,40 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-        User user = model.ToUser();
+        var user = model.ToUser();
 
         // Users will either have an emailed token or an email verification token - not both.
-        IdentityResult? identityResult = null;
-
-        // PM-28143 - Just use the MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash
-        string masterPasswordAuthenticationHash = model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash
-                                                  ?? model.MasterPasswordHash!;
+        IdentityResult identityResult = null;
 
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
-                identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
-                    user,
-                    masterPasswordAuthenticationHash,
-                    model.EmailVerificationToken!);
-                return ProcessRegistrationResult(identityResult, user);
+                identityResult =
+                    await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
+                        model.EmailVerificationToken);
 
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.OrganizationInvite:
-                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
-                    user,
-                    masterPasswordAuthenticationHash,
-                    model.OrgInviteToken!,
-                    model.OrganizationUserId);
-                return ProcessRegistrationResult(identityResult, user);
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
+                    model.OrgInviteToken, model.OrganizationUserId);
 
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
-                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
-                    user,
-                    masterPasswordAuthenticationHash,
-                    model.OrgSponsoredFreeFamilyPlanToken!);
-                return ProcessRegistrationResult(identityResult, user);
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.EmergencyAccessInvite:
-                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
-                    user,
-                    masterPasswordAuthenticationHash,
-                    model.AcceptEmergencyAccessInviteToken!,
-                    (Guid)model.AcceptEmergencyAccessId!);
-                return ProcessRegistrationResult(identityResult, user);
+                Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
+                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
+                    model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
+                return ProcessRegistrationResult(identityResult, user);
             case RegisterFinishTokenType.ProviderInvite:
-                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
-                    user,
-                    masterPasswordAuthenticationHash,
-                    model.ProviderInviteToken!,
-                    (Guid)model.ProviderUserId!);
-                return ProcessRegistrationResult(identityResult, user);
+                Debug.Assert(model.ProviderUserId.HasValue);
+                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
+                    model.ProviderInviteToken, model.ProviderUserId.Value);
 
+                return ProcessRegistrationResult(identityResult, user);
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
