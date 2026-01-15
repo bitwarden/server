@@ -412,7 +412,7 @@ public class SubscriberServiceTests
                 organization,
                 new OffboardingSurveyResponse { UserId = Guid.NewGuid() },
                 false));
-        
+
         Assert.Equal("Failed to revert subscription upgrade", exception.Message);
         Assert.NotNull(exception.InnerException);
         Assert.IsType<BillingException>(exception.InnerException);
