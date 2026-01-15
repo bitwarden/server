@@ -106,13 +106,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify source image exists
+        env:
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+        run: |
+          SOURCE_IMAGE="${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}"
+          echo "Verifying source image: ${SOURCE_IMAGE}"
+
+          if ! skopeo inspect "docker://${SOURCE_IMAGE}" > /dev/null 2>&1; then
+            echo "ERROR: Source image ${SOURCE_IMAGE} does not exist or is not accessible"
+            exit 1
+          fi
+
+          echo "Source image verified successfully"
+
       - name: Push release version image
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
+          SOURCE_IMAGE="${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}"
+          TARGET_IMAGE="${_REGISTRY}/${PROJECT_NAME}:${_RELEASE_VERSION}"
+
+          echo "Copying ${SOURCE_IMAGE} to ${TARGET_IMAGE}"
           skopeo copy --all \
-            "docker://${_REGISTRY}/${PROJECT_NAME}:${_BRANCH_NAME}" \
-            "docker://${_REGISTRY}/${PROJECT_NAME}:${_RELEASE_VERSION}"
+            "docker://${SOURCE_IMAGE}" \
+            "docker://${TARGET_IMAGE}"
+
+          echo "Successfully published ${TARGET_IMAGE}"
 
       - name: Log out of GHCR
         run:  docker logout ghcr.io

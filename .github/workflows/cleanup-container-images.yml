@@ -2,15 +2,20 @@ name: Cleanup Container Images
 
 on:
   delete:
+  schedule:
+    # Run daily at 2 AM UTC to clean up old dev-sha tags (main branch commit-specific images)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.ref }}
+  group: ${{ github.workflow }}-${{ github.event.ref || 'scheduled' }}
   cancel-in-progress: false
 
 jobs:
-  cleanup-images:
+  cleanup-branch-images:
     name: Delete branch container images
     if: |
+      github.event_name == 'delete' &&
       github.event.ref != 'rc' &&
       github.event.ref != 'hotfix-rc'
     runs-on: ubuntu-24.04
@@ -47,27 +52,111 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
         run: |
+          set -e
           # Convert image name to lowercase to match GHCR naming
           IMAGE_NAME=$(echo "${{ matrix.image_name }}" | tr '[:upper:]' '[:lower:]')
 
           echo "Processing cleanup for image: ${IMAGE_NAME}:${IMAGE_TAG}"
 
-          # Get the version ID for this specific tag
-          VERSION_ID=$(gh api \
+          # Get the version ID for this specific tag with error handling
+          if ! VERSION_ID=$(gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "/orgs/bitwarden/packages/container/${IMAGE_NAME}/versions" \
-            --jq ".[] | select(.metadata.container.tags[] == \"${IMAGE_TAG}\") | .id" \
-            | head -1)
+            --jq ".[] | select(.metadata.container.tags[]? == \"${IMAGE_TAG}\") | .id" \
+            2>&1 | head -1); then
+            echo "Warning: Failed to query package versions for ${IMAGE_NAME}"
+            exit 0
+          fi
 
-          if [[ -n "${VERSION_ID}" ]]; then
+          if [[ -n "${VERSION_ID}" ]] && [[ "${VERSION_ID}" =~ ^[0-9]+$ ]]; then
             echo "Deleting image ${IMAGE_NAME} with tag: ${IMAGE_TAG} (version ID: ${VERSION_ID})"
-            gh api \
+            if gh api \
               --method DELETE \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/orgs/bitwarden/packages/container/${IMAGE_NAME}/versions/${VERSION_ID}"
-            echo "Successfully deleted image"
+              "/orgs/bitwarden/packages/container/${IMAGE_NAME}/versions/${VERSION_ID}" 2>&1; then
+              echo "Successfully deleted image"
+            else
+              echo "Warning: Failed to delete image ${IMAGE_NAME}:${IMAGE_TAG}"
+            fi
           else
             echo "No image found for ${IMAGE_NAME} with tag: ${IMAGE_TAG}"
           fi
+
+  cleanup-old-dev-images:
+    name: Cleanup old dev-sha images
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image_name: Admin
+          - image_name: Api
+          - image_name: Attachments
+          - image_name: Billing
+          - image_name: Events
+          - image_name: EventsProcessor
+          - image_name: Icons
+          - image_name: Identity
+          - image_name: MsSql
+          - image_name: MsSqlMigratorUtility
+          - image_name: Nginx
+          - image_name: Notifications
+          - image_name: Scim
+          - image_name: Setup
+          - image_name: Sso
+    steps:
+      - name: Cleanup old dev-sha tagged images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Keep dev-sha images for 30 days (only applies to main branch commit-specific tags)
+          MAX_AGE_DAYS: 30
+        run: |
+          set -e
+          # Convert image name to lowercase to match GHCR naming
+          IMAGE_NAME=$(echo "${{ matrix.image_name }}" | tr '[:upper:]' '[:lower:]')
+
+          echo "Processing cleanup for old dev-sha images of: ${IMAGE_NAME}"
+
+          # Calculate cutoff date (30 days ago)
+          CUTOFF_DATE=$(date -u -d "${MAX_AGE_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-${MAX_AGE_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
+          echo "Cutoff date: ${CUTOFF_DATE}"
+
+          # Get all versions with dev-{sha} tags (pattern: dev-<hexadecimal>) that are older than the cutoff
+          # This matches tags like "dev-abc1234" but NOT branch-based tags like "dev-new-feature"
+          OLD_VERSIONS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/orgs/bitwarden/packages/container/${IMAGE_NAME}/versions" \
+            --jq ".[] | select(.metadata.container.tags[]? | test(\"^dev-[0-9a-f]+$\")) | select(.updated_at < \"${CUTOFF_DATE}\") | .id" \
+            2>&1 || echo "")
+
+          if [[ -z "${OLD_VERSIONS}" ]]; then
+            echo "No old dev-sha images found for ${IMAGE_NAME}"
+            exit 0
+          fi
+
+          # Delete old versions
+          DELETED_COUNT=0
+          while IFS= read -r VERSION_ID; do
+            if [[ -n "${VERSION_ID}" ]] && [[ "${VERSION_ID}" =~ ^[0-9]+$ ]]; then
+              echo "Deleting old dev-sha image version ID: ${VERSION_ID}"
+              if gh api \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "/orgs/bitwarden/packages/container/${IMAGE_NAME}/versions/${VERSION_ID}" 2>&1; then
+                ((DELETED_COUNT++))
+              else
+                echo "Warning: Failed to delete version ${VERSION_ID}"
+              fi
+            fi
+          done <<< "${OLD_VERSIONS}"
+
+          echo "Deleted ${DELETED_COUNT} old dev-sha image(s) for ${IMAGE_NAME}"

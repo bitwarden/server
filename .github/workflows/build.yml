@@ -142,7 +142,7 @@ jobs:
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
@@ -176,7 +176,9 @@ jobs:
           echo "### :mega: Docker Image Tag(s): $TAGS" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        # Don't attempt login for fork PRs since they don't have access
+        if: ${{ github.event.pull_request.head.repo.fork != true }}
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -192,23 +194,24 @@ jobs:
             linux/amd64,
             linux/arm/v7,
             linux/arm64
-          push: true
+          # Only push for non-fork PRs (maintains parity with ACR behavior)
+          push: ${{ github.event.pull_request.head.repo.fork != true }}
           tags: ${{ steps.image-tags.outputs.tags }}
 
       - name: Install Cosign
         if: |
-          github.event_name != 'pull_request' && 
+          github.event_name != 'pull_request' &&
           (github.ref == 'refs/heads/main' ||
            github.ref == 'refs/heads/rc' ||
-           github.ref == 'refs/head/hotfix-rc')
+           github.ref == 'refs/heads/hotfix-rc')
         uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
 
       - name: Sign image with Cosign
         if: |
-          github.event_name != 'pull_request' && 
+          github.event_name != 'pull_request' &&
           (github.ref == 'refs/heads/main' ||
            github.ref == 'refs/heads/rc' ||
-           github.ref == 'refs/head/hotfix-rc')
+           github.ref == 'refs/heads/hotfix-rc')
         env:
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
@@ -394,7 +397,6 @@ jobs:
       && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
     runs-on: ubuntu-22.04
     needs: build-artifacts
-    needs: build-artifacts
     permissions:
       id-token: write
     steps:
@@ -444,7 +446,6 @@ jobs:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     needs: build-artifacts
-    needs: build-artifacts
     permissions:
       id-token: write
     steps:
@@ -492,7 +493,6 @@ jobs:
 
   setup-ephemeral-environment:
     name: Setup Ephemeral Environment
-    needs: build-artifacts
     needs: build-artifacts
     if: |
       github.event_name == 'pull_request'
