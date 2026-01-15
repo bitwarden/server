@@ -162,20 +162,20 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active:
                 {
-                if (userId.HasValue)
-                {
-                    // When a Premium user subscription becomes active, proactively clean up any
-                    // other active premium subscriptions left over from previous failed attempts.
-                    // This prevents users from being double-charged and avoids duplicate
-                    // subscriptions lingering on the account.
-                    if (await IsPremiumSubscriptionAsync(subscription))
+                    if (userId.HasValue)
                     {
-                        await CancelOtherPremiumSubscriptionsAsync(subscription.CustomerId, subscription.Id);
-                    }
+                        // When a Premium user subscription becomes active, proactively clean up any
+                        // other active premium subscriptions left over from previous failed attempts.
+                        // This prevents users from being double-charged and avoids duplicate
+                        // subscriptions lingering on the account.
+                        if (await IsPremiumSubscriptionAsync(subscription))
+                        {
+                            await CancelOtherPremiumSubscriptionsAsync(subscription.CustomerId, subscription.Id);
+                        }
 
-                    await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
-                }
-                break;
+                        await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                    }
+                    break;
                 }
         }
 
@@ -243,27 +243,27 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         var subscriptions = await _stripeFacade.ListSubscriptions(subscriptionOptions);
 
         foreach (var sub in subscriptions.Where(s => s.Id != currentSubscriptionId))
+        {
+            // Only cancel subscriptions that are premium and in a status where cancellation
+            // makes sense (they are or were granting access / being billed).
+            if (sub.Status is StripeSubscriptionStatus.Active
+                or StripeSubscriptionStatus.Trialing
+                or StripeSubscriptionStatus.PastDue
+                or StripeSubscriptionStatus.Incomplete
+                or StripeSubscriptionStatus.Unpaid
+                or StripeSubscriptionStatus.IncompleteExpired)
             {
-                // Only cancel subscriptions that are premium and in a status where cancellation
-                // makes sense (they are or were granting access / being billed).
-                if (sub.Status is StripeSubscriptionStatus.Active
-                    or StripeSubscriptionStatus.Trialing
-                    or StripeSubscriptionStatus.PastDue
-                    or StripeSubscriptionStatus.Incomplete
-                    or StripeSubscriptionStatus.Unpaid
-                    or StripeSubscriptionStatus.IncompleteExpired)
+                if (await IsPremiumSubscriptionAsync(sub))
                 {
-                    if (await IsPremiumSubscriptionAsync(sub))
-                    {
-                        _logger.LogInformation(
-                            "Cancelling duplicate premium subscription {SubscriptionId} for customer {CustomerId} while keeping {CurrentSubscriptionId}",
-                            sub.Id, customerId, currentSubscriptionId);
+                    _logger.LogInformation(
+                        "Cancelling duplicate premium subscription {SubscriptionId} for customer {CustomerId} while keeping {CurrentSubscriptionId}",
+                        sub.Id, customerId, currentSubscriptionId);
 
-                        await CancelSubscription(sub.Id);
-                        await VoidOpenInvoices(sub.Id);
-                    }
+                    await CancelSubscription(sub.Id);
+                    await VoidOpenInvoices(sub.Id);
                 }
             }
+        }
     }
 
     /// <summary>
