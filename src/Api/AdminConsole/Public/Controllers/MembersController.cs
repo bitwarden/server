@@ -277,7 +277,7 @@ public class MembersController : Controller
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> PutRevoke(Guid id)
+    public async Task<IActionResult> Revoke(Guid id)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (organizationUser == null || organizationUser.OrganizationId != _currentContext.OrganizationId)
@@ -311,7 +311,7 @@ public class MembersController : Controller
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> PutRestore(Guid id)
+    public async Task<IActionResult> Restore(Guid id)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (organizationUser == null || organizationUser.OrganizationId != _currentContext.OrganizationId)
