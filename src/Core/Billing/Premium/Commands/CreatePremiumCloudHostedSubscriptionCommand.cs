@@ -59,7 +59,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     IPushNotificationService pushNotificationService,
     ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger,
     IPricingClient pricingClient,
-    IHasPaymentMethodQuery hasPaymentMethodQuery,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand)
     : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
@@ -108,18 +107,21 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             customer = await CreateCustomerAsync(user, paymentMethod, billingAddress);
         }
         /*
-         * An existing customer without a payment method starting a new subscription indicates a user who previously
-         * purchased account credit but chose to use a tokenizable payment method to pay for the subscription. In this case,
-         * we need to add the payment method to their customer first. If the incoming payment method is account credit,
-         * we can just go straight to fetching the customer since there's no payment method to apply.
+         * For an existing customer, we need to handle payment method updates properly:
+         * - If a new tokenized payment method is provided (card/PayPal), ALWAYS update it
+         *   This is critical for retry scenarios where the previous payment method failed
+         * - If using account credit, just fetch the customer (no payment method to update)
          */
-        else if (paymentMethod.IsTokenized && !await hasPaymentMethodQuery.Run(user))
+        else if (paymentMethod.IsTokenized)
         {
+            // ALWAYS update payment method when provided, even if customer already has one
+            // This fixes the issue where retrying with a new card would still use the old failing card
             await updatePaymentMethodCommand.Run(user, paymentMethod.AsTokenized, billingAddress);
             customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
         }
         else
         {
+            // Non-tokenized payment (e.g., account credit) - just fetch customer
             customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
         }
 
