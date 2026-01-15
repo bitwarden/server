@@ -136,7 +136,7 @@ public class NginxConfigBuilder
                 // Also based on Mozilla's Intermediate list with one addition, the X25519MLKEM768 curve
                 // for post quantum cryptography, X25519MLKEM768 has been adopted by most browsers at this
                 // time. See https://blog.cloudflare.com/pq-2025/ for an in depth explanation.
-                SslCurves = "X25519:X25519MLKEM768:prime256v1:secp384r1"
+                SslCurves = "X25519:X25519MLKEM768:prime256v1:secp384r1";
             }
         }
 
