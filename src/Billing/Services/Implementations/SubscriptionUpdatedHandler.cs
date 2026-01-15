@@ -162,20 +162,20 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active:
                 {
-                        if (userId.HasValue)
+                    if (userId.HasValue)
+                    {
+                        // When a Premium user subscription becomes active, proactively clean up any
+                        // other active premium subscriptions left over from previous failed attempts.
+                        // This prevents users from being double-charged and avoids duplicate
+                        // subscriptions lingering on the account.
+                        if (await IsPremiumSubscriptionAsync(subscription))
                         {
-                            // When a Premium user subscription becomes active, proactively clean up any
-                            // other active premium subscriptions left over from previous failed attempts.
-                            // This prevents users from being double-charged and avoids duplicate
-                            // subscriptions lingering on the account.
-                            if (await IsPremiumSubscriptionAsync(subscription))
-                            {
-                                await CancelOtherPremiumSubscriptionsAsync(subscription.CustomerId, subscription.Id);
-                            }
-
-                            await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                            await CancelOtherPremiumSubscriptionsAsync(subscription.CustomerId, subscription.Id);
                         }
-                        break;
+
+                        await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                    }
+                    break;
                 }
         }
 
