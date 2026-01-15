@@ -10,7 +10,6 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -74,20 +73,20 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyDetailResponseModel> Get(Guid orgId, int type)
+    public async Task<PolicyStatusResponseModel> Get(Guid orgId, PolicyType type)
     {
         if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
 
-        var policy = await _policyQuery.RunAsync(orgId, (PolicyType)type);
+        var policy = await _policyQuery.RunAsync(orgId, type);
         if (policy.Type is PolicyType.SingleOrg)
         {
             return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
         }
 
-        return new PolicyDetailResponseModel(policy);
+        return new PolicyStatusResponseModel(policy);
     }
 
     [HttpGet("")]

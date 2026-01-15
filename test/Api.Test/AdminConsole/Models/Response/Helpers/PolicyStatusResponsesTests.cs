@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Models.Response.Helpers;
 
-public class PolicyDetailResponsesTests
+public class PolicyStatusResponsesTests
 {
     [Theory]
     [InlineData(true, false)]

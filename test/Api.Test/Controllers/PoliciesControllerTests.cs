@@ -186,7 +186,7 @@ public class PoliciesControllerTests
     [Theory]
     [BitAutoData]
     public async Task Get_WhenUserCanManagePolicies_WithExistingType_ReturnsExistingPolicy(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy, int type)
+        SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy, PolicyType type)
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()
@@ -205,8 +205,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.Get(orgId, type);
 
         // Assert
-        Assert.IsType<PolicyDetailResponseModel>(result);
-        Assert.Equal(policy.Id, result.Id);
+        Assert.IsType<PolicyStatusResponseModel>(result);
         Assert.Equal(policy.Type, result.Type);
         Assert.Equal(policy.Enabled, result.Enabled);
         Assert.Equal(policy.OrganizationId, result.OrganizationId);
@@ -215,7 +214,7 @@ public class PoliciesControllerTests
     [Theory]
     [BitAutoData]
     public async Task Get_WhenUserCanManagePolicies_WithNonExistingType_ReturnsDefaultPolicy(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, int type)
+        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyType type)
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()
@@ -230,7 +229,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.Get(orgId, type);
 
         // Assert
-        Assert.IsType<PolicyDetailResponseModel>(result);
+        Assert.IsType<PolicyStatusResponseModel>(result);
         Assert.Equal(result.Type, (PolicyType)type);
         Assert.False(result.Enabled);
     }
@@ -238,7 +237,7 @@ public class PoliciesControllerTests
     [Theory]
     [BitAutoData]
     public async Task Get_WhenUserCannotManagePolicies_ThrowsNotFoundException(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, int type)
+        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyType type)
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()
