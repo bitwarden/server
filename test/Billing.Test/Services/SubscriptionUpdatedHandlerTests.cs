@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -570,6 +571,8 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
 
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan>());
+
         // Act
         await _sut.HandleAsync(parsedEvent);
 
@@ -1130,6 +1133,193 @@ public class SubscriptionUpdatedHandlerTests
             .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
         await _stripeFacade.DidNotReceive()
             .ListInvoices(Arg.Any<InvoiceListOptions>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_TrialToActive_WithPremiumUpgradeMetadata_CleansUpMetadata()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeSubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Plan = new Plan { Id = "test-plan" } }]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually-2020",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organizationId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = Guid.NewGuid().ToString(),
+                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = DateTime.UtcNow.ToString("O"),
+                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = "5",
+                [StripeConstants.MetadataKeys.PreviousStoragePriceId] = "storage-annually-2020",
+                ["other_metadata"] = "should_remain"
+            }
+        };
+
+        var previousSubscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeSubscriptionStatus.Trialing
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(parsedEvent, true, Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
+
+        var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_test", PlanType = PlanType.EnterpriseAnnually2023 };
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeFacade.Received(1).UpdateSubscription(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UpgradedOrganizationId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumUserId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousStoragePriceId) &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) && // Organization ID preserved
+                opts.Metadata.ContainsKey("other_metadata"))); // Other metadata preserved
+    }
+
+    [Fact]
+    public async Task HandleAsync_TrialToActive_WithoutOrganizationId_SkipsCleanup()
+    {
+        // Arrange - Subscription was already reverted (no OrganizationId)
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeSubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually-2020",
+                [StripeConstants.MetadataKeys.UserId] = Guid.NewGuid().ToString()
+                // No OrganizationId - indicates reversion already happened
+            }
+        };
+
+        var previousSubscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeSubscriptionStatus.Trialing
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        var userId = Guid.NewGuid();
+        _stripeEventService.GetSubscription(parsedEvent, true, Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
+        var user = new Bit.Core.Entities.User { Id = userId, Premium = false };
+        _userService.GetUserByIdAsync(userId).Returns(user);
+
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new PremiumPurchasable { StripePriceId = "premium", Price = 10m },
+            Storage = new PremiumPurchasable { StripePriceId = "storage", Price = 4m }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - cleanup should be skipped because OrganizationId is missing (race condition detected)
+        await _stripeFacade.DidNotReceive().UpdateSubscription(
+            Arg.Any<string>(),
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId)));
+    }
+
+    [Fact]
+    public async Task HandleAsync_TrialToActive_WithoutPremiumUpgradeMetadata_SkipsCleanup()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeSubscriptionStatus.Active,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { Plan = new Plan { Id = "test-plan" } }]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString()
+                // No premium upgrade metadata
+            }
+        };
+
+        var previousSubscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeSubscriptionStatus.Trialing
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(parsedEvent, true, Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
+
+        var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_test", PlanType = PlanType.EnterpriseAnnually2023 };
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert - cleanup should not be called because there's no premium upgrade metadata
+        await _stripeFacade.DidNotReceive().UpdateSubscription(
+            Arg.Any<string>(),
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Metadata != null));
     }
 
     public static IEnumerable<object[]> GetNonActiveSubscriptions()

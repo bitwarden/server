@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
@@ -193,6 +194,580 @@ public class SubscriberServiceTests
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
             .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_WithPremiumUpgradeMetadata_DuringTrial_RevertsToOriginalPremiumPlan(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var userId = Guid.NewGuid();
+        var user = new Bit.Core.Entities.User
+        {
+            Id = userId,
+            Premium = false,
+            GatewaySubscriptionId = null
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Trialing,
+            CustomerId = "cus_test",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new() { Id = "si_org_seat", Price = new Price { Id = "org-seat-price" } }
+                }
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually-2020",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = userId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = DateTime.UtcNow.AddMonths(1).ToString("O"),
+                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = "5",
+                [StripeConstants.MetadataKeys.PreviousStoragePriceId] = "storage-annually-2020",
+                [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString()
+            }
+        };
+
+        var premiumPlan = new Bit.Core.Billing.Pricing.Premium.Plan
+        {
+            Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "premium-annually",
+                Price = 10m,
+                Provided = 1
+            },
+            Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "storage-annually",
+                Price = 4m,
+                Provided = 1
+            },
+            Available = true
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var userRepository = sutProvider.GetDependency<Bit.Core.Repositories.IUserRepository>();
+        var organizationRepository = sutProvider.GetDependency<Bit.Core.Repositories.IOrganizationRepository>();
+        var pricingClient = sutProvider.GetDependency<Bit.Core.Billing.Pricing.IPricingClient>();
+
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        userRepository.GetByIdAsync(userId).Returns(user);
+        pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(
+            organization,
+            new OffboardingSurveyResponse { UserId = Guid.NewGuid() },
+            false);
+
+        // Assert
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>((SubscriptionUpdateOptions opts) =>
+                opts.Items != null &&
+                opts.Items.Count == 3 && // 1 delete + 1 premium seat + 1 storage
+                opts.Items.Count(i => i.Deleted == true) == 1 &&
+                opts.Items.Any(i => i.Price == "premium-annually-2020" && i.Quantity == 1) &&
+                opts.Items.Any(i => i.Price == "storage-annually-2020" && i.Quantity == 5) &&
+                opts.TrialEnd.Value == SubscriptionTrialEnd.Now &&
+                opts.Metadata[StripeConstants.MetadataKeys.UserId] == userId.ToString() &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId)));
+
+        await userRepository.Received(1).ReplaceAsync(Arg.Is<Bit.Core.Entities.User>(u =>
+            u.Id == userId &&
+            u.Premium == true &&
+            u.GatewaySubscriptionId == "sub_test"));
+
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+            o.Id == organization.Id &&
+            o.GatewaySubscriptionId == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_WithPremiumUpgradeMetadata_AfterTrial_DoesNotRevert(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Active, // Already active, not trialing
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually-2020",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = Guid.NewGuid().ToString(),
+                [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString()
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "other",
+            Feedback = "test"
+        };
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse, false);
+
+        // Assert - should fall through to standard cancellation, not reversion
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.CancelAtPeriodEnd == true)); // Standard cancellation
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_WithoutPremiumUpgradeMetadata_UsesStandardCancellation(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString()
+                // No premium upgrade metadata
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "other",
+            Feedback = "test"
+        };
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse, false);
+
+        // Assert - should use standard cancellation
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.CancelAtPeriodEnd == true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_WithPremiumUpgradeMetadata_UserNotFound_ThrowsBillingException(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var userId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Trialing,
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = userId.ToString()
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var userRepository = sutProvider.GetDependency<Bit.Core.Repositories.IUserRepository>();
+
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        userRepository.GetByIdAsync(userId).ReturnsNull();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BillingException>(() =>
+            sutProvider.Sut.CancelSubscription(
+                organization,
+                new OffboardingSurveyResponse { UserId = Guid.NewGuid() },
+                false));
+        
+        Assert.Equal("Failed to revert subscription upgrade", exception.Message);
+        Assert.NotNull(exception.InnerException);
+        Assert.IsType<BillingException>(exception.InnerException);
+        Assert.Equal("Cannot revert subscription - original Premium user not found", exception.InnerException.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_WithPremiumUpgradeMetadata_WrongOrganizationId_DoesNotRevert(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var differentOrgId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = differentOrgId.ToString(), // Wrong org
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = Guid.NewGuid().ToString()
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "other",
+            Feedback = "test"
+        };
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse, false);
+
+        // Assert - should fall through to standard cancellation
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.CancelAtPeriodEnd == true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_DuringReversion_UsesHistoricalSeatPriceFromMetadata(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var userId = Guid.NewGuid();
+        var user = new Bit.Core.Entities.User { Id = userId, Premium = false };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Trialing,
+            CustomerId = "cus_test",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new() { Id = "si_org", Price = new Price { Id = "org-price" } }
+                }
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually-2020", // Historical
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = userId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = "0"
+            }
+        };
+
+        var currentPremiumPlan = new Bit.Core.Billing.Pricing.Premium.Plan
+        {
+            Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "premium-annually", // Current (different from metadata)
+                Price = 10m,
+                Provided = 1
+            },
+            Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "storage-annually",
+                Price = 4m,
+                Provided = 1
+            },
+            Available = true
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var userRepository = sutProvider.GetDependency<Bit.Core.Repositories.IUserRepository>();
+        var pricingClient = sutProvider.GetDependency<Bit.Core.Billing.Pricing.IPricingClient>();
+
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        userRepository.GetByIdAsync(userId).Returns(user);
+        pricingClient.GetAvailablePremiumPlan().Returns(currentPremiumPlan);
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(
+            organization,
+            new OffboardingSurveyResponse { UserId = Guid.NewGuid() },
+            false);
+
+        // Assert - should use historical price, not current
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Any(i => i.Price == "premium-annually-2020"))); // Historical, not "premium-annually"
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_DuringReversion_UsesHistoricalStoragePriceFromMetadata(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var userId = Guid.NewGuid();
+        var user = new Bit.Core.Entities.User { Id = userId, Premium = false };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Trialing,
+            CustomerId = "cus_test",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new() { Id = "si_org", Price = new Price { Id = "org-price" } }
+                }
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = userId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = "3",
+                [StripeConstants.MetadataKeys.PreviousStoragePriceId] = "storage-annually-2020" // Historical
+            }
+        };
+
+        var currentPremiumPlan = new Bit.Core.Billing.Pricing.Premium.Plan
+        {
+            Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "premium-annually",
+                Price = 10m,
+                Provided = 1
+            },
+            Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "storage-annually", // Current (different from metadata)
+                Price = 4m,
+                Provided = 1
+            },
+            Available = true
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var userRepository = sutProvider.GetDependency<Bit.Core.Repositories.IUserRepository>();
+        var pricingClient = sutProvider.GetDependency<Bit.Core.Billing.Pricing.IPricingClient>();
+
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        userRepository.GetByIdAsync(userId).Returns(user);
+        pricingClient.GetAvailablePremiumPlan().Returns(currentPremiumPlan);
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(
+            organization,
+            new OffboardingSurveyResponse { UserId = Guid.NewGuid() },
+            false);
+
+        // Assert - should use historical storage price, not current
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Any(i => i.Price == "storage-annually-2020" && i.Quantity == 3))); // Historical, not "storage-annually"
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_DuringReversion_WithoutStoragePriceId_FallsBackToCurrentPrice(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var userId = Guid.NewGuid();
+        var user = new Bit.Core.Entities.User { Id = userId, Premium = false };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Trialing,
+            CustomerId = "cus_test",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new() { Id = "si_org", Price = new Price { Id = "org-price" } }
+                }
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = userId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = "2"
+                // No PreviousStoragePriceId - should fallback to current
+            }
+        };
+
+        var currentPremiumPlan = new Bit.Core.Billing.Pricing.Premium.Plan
+        {
+            Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "premium-annually",
+                Price = 10m,
+                Provided = 1
+            },
+            Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "storage-annually-current", // Current price
+                Price = 4m,
+                Provided = 1
+            },
+            Available = true
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var userRepository = sutProvider.GetDependency<Bit.Core.Repositories.IUserRepository>();
+        var pricingClient = sutProvider.GetDependency<Bit.Core.Billing.Pricing.IPricingClient>();
+
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        userRepository.GetByIdAsync(userId).Returns(user);
+        pricingClient.GetAvailablePremiumPlan().Returns(currentPremiumPlan);
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(
+            organization,
+            new OffboardingSurveyResponse { UserId = Guid.NewGuid() },
+            false);
+
+        // Assert - should fallback to current storage price
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Any(i => i.Price == "storage-annually-current" && i.Quantity == 2))); // Current price used
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_DuringReversion_RemovesAllPremiumUpgradeMetadata(
+        SutProvider<SubscriberService> sutProvider)
+    {
+        // Arrange
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_test"
+        };
+
+        var userId = Guid.NewGuid();
+        var user = new Bit.Core.Entities.User { Id = userId, Premium = false };
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = StripeConstants.SubscriptionStatus.Trialing,
+            CustomerId = "cus_test",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new() { Id = "si_org", Price = new Price { Id = "org-price" } }
+                }
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually",
+                [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = userId.ToString(),
+                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = DateTime.UtcNow.AddMonths(1).ToString("O"),
+                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = "5",
+                [StripeConstants.MetadataKeys.PreviousStoragePriceId] = "storage-annually",
+                [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString(),
+                ["other_metadata"] = "should_remain"
+            }
+        };
+
+        var premiumPlan = new Bit.Core.Billing.Pricing.Premium.Plan
+        {
+            Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "premium-annually",
+                Price = 10m,
+                Provided = 1
+            },
+            Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
+            {
+                StripePriceId = "storage-annually",
+                Price = 4m,
+                Provided = 1
+            },
+            Available = true
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var userRepository = sutProvider.GetDependency<Bit.Core.Repositories.IUserRepository>();
+        var pricingClient = sutProvider.GetDependency<Bit.Core.Billing.Pricing.IPricingClient>();
+
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        userRepository.GetByIdAsync(userId).Returns(user);
+        pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
+
+        // Act
+        await sutProvider.Sut.CancelSubscription(
+            organization,
+            new OffboardingSurveyResponse { UserId = Guid.NewGuid() },
+            false);
+
+        // Assert - all premium upgrade metadata should be removed
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_test",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UpgradedOrganizationId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumUserId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousStoragePriceId) &&
+                !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UserId) &&
+                opts.Metadata[StripeConstants.MetadataKeys.UserId] == userId.ToString() &&
+                opts.Metadata.ContainsKey("other_metadata"))); // Other metadata preserved
     }
 
     #endregion

@@ -141,6 +141,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                     {
                         await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
                     }
+
+                    // Check if trial just ended and cleanup premium upgrade metadata
+                    await CleanupPremiumUpgradeMetadataAfterTrialAsync(parsedEvent, subscription);
                     break;
                 }
             case StripeSubscriptionStatus.Active when providerId.HasValue:
@@ -205,9 +208,23 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task<bool> IsPremiumSubscriptionAsync(Subscription subscription)
     {
+        if (subscription.Items == null || !subscription.Items.Any())
+        {
+            return false;
+        }
+
         var premiumPlans = await _pricingClient.ListPremiumPlans();
-        var premiumPriceIds = premiumPlans.SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId }).ToHashSet();
-        return subscription.Items.Any(i => premiumPriceIds.Contains(i.Price.Id));
+        if (premiumPlans == null || !premiumPlans.Any())
+        {
+            return false;
+        }
+
+        var premiumPriceIds = premiumPlans
+            .Where(p => p.Seat != null && p.Storage != null)
+            .SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId })
+            .ToHashSet();
+
+        return subscription.Items.Any(i => i.Price != null && premiumPriceIds.Contains(i.Price.Id));
     }
 
     /// <summary>
@@ -390,6 +407,82 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             {
                 throw new Exception("Stripe Test Clock encountered an internal failure");
             }
+        }
+    }
+
+    /// <summary>
+    /// Cleans up premium upgrade metadata after a trial period ends successfully.
+    /// When a Premium-to-Organization upgrade trial ends and converts to active,
+    /// the upgrade is finalized and the reversion metadata is no longer needed.
+    /// </summary>
+    /// <param name="parsedEvent">The Stripe event containing previous subscription state</param>
+    /// <param name="subscription">The current subscription state</param>
+    private async Task CleanupPremiumUpgradeMetadataAfterTrialAsync(Event parsedEvent, Subscription subscription)
+    {
+        // STEP 1: Fastest check first - check if subscription has premium upgrade metadata
+        // This avoids expensive deserialization for subscriptions without this metadata
+        if (subscription.Metadata == null ||
+            !subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId))
+        {
+            return;
+        }
+
+        // STEP 2: Check if PreviousAttributes exists (cheap check)
+        if (parsedEvent.Data.PreviousAttributes == null)
+        {
+            return;
+        }
+
+        // STEP 3: Expensive operation - deserialize PreviousAttributes (only if metadata exists)
+        var previousSubscription = parsedEvent.Data.PreviousAttributes.ToObject<Subscription>() as Subscription;
+
+        // STEP 4: Verify status transition from trialing to active
+        if (previousSubscription?.Status != StripeSubscriptionStatus.Trialing ||
+            subscription.Status != StripeSubscriptionStatus.Active)
+        {
+            return;
+        }
+
+        // STEP 5: Check if subscription still has OrganizationId (race condition check)
+        // If reversion already happened, OrganizationId would be removed and we should skip cleanup
+        if (!subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId))
+        {
+            _logger.LogInformation(
+                "Skipping cleanup for subscription {SubscriptionId} - appears to have been reverted already",
+                subscription.Id);
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation(
+                "Cleaning up premium upgrade metadata for subscription {SubscriptionId} after trial ended",
+                subscription.Id);
+
+            // Remove all premium upgrade metadata keys while preserving other metadata
+            var updatedMetadata = new Dictionary<string, string>(subscription.Metadata);
+            updatedMetadata.Remove(StripeConstants.MetadataKeys.PreviousPremiumPriceId);
+            updatedMetadata.Remove(StripeConstants.MetadataKeys.PreviousPeriodEndDate);
+            updatedMetadata.Remove(StripeConstants.MetadataKeys.UpgradedOrganizationId);
+            updatedMetadata.Remove(StripeConstants.MetadataKeys.PreviousPremiumUserId);
+            updatedMetadata.Remove(StripeConstants.MetadataKeys.PreviousAdditionalStorage);
+            updatedMetadata.Remove(StripeConstants.MetadataKeys.PreviousStoragePriceId);
+
+            await _stripeFacade.UpdateSubscription(subscription.Id, new SubscriptionUpdateOptions
+            {
+                Metadata = updatedMetadata
+            });
+
+            _logger.LogInformation(
+                "Successfully cleaned up premium upgrade metadata for subscription {SubscriptionId}",
+                subscription.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to clean up premium upgrade metadata for subscription {SubscriptionId}",
+                subscription.Id);
+            // Don't throw - this is cleanup and shouldn't fail the webhook
         }
     }
 }
