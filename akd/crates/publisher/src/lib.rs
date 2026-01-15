@@ -1,6 +1,6 @@
 use akd_storage::{PublishQueue, PublishQueueType};
 use anyhow::{Context, Result};
-use axum::Router;
+use axum::{middleware::from_fn_with_state, Router};
 use bitwarden_akd_configuration::BitwardenV1Configuration;
 use common::BitAkdDirectory;
 use tokio::{net::TcpListener, sync::broadcast::Receiver};
@@ -10,6 +10,7 @@ mod config;
 mod routes;
 
 pub use crate::config::ApplicationConfig;
+use crate::routes::auth;
 
 pub struct AppHandles {
     pub write_handle: tokio::task::JoinHandle<()>,
@@ -127,9 +128,13 @@ async fn start_web(
     config: &ApplicationConfig,
     mut shutdown_rx: Receiver<()>,
 ) -> Result<()> {
-    let app_state = routes::AppState { publish_queue };
+    let app_state = routes::AppState {
+        publish_queue,
+        app_config: config.clone(),
+    };
     let app = Router::new()
         .merge(routes::api_routes())
+        .route_layer(from_fn_with_state(app_state.clone(), auth))
         .with_state(app_state);
 
     let listener = TcpListener::bind(&config.socket_address())

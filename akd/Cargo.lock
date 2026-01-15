@@ -2147,6 +2147,7 @@ dependencies = [
  "common",
  "config",
  "serde",
+ "subtle",
  "thiserror 2.0.17",
  "tiberius",
  "tokio",

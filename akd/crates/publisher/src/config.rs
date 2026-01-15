@@ -1,10 +1,12 @@
 use akd_storage::akd_storage_config::AkdStorageConfig;
 use config::{Config, ConfigError, Environment, File};
 use serde::Deserialize;
+use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
 const DEFAULT_EPOCH_DURATION_MS: u64 = 30000; // 30 seconds
 
+/// Application configuration for the AKD Publisher
 #[derive(Clone, Debug, Deserialize)]
 pub struct ApplicationConfig {
     pub storage: AkdStorageConfig,
@@ -15,6 +17,12 @@ pub struct ApplicationConfig {
     /// The address the web server will bind to. Defaults to "127.0.0.1:3000".
     #[serde(default = "default_web_server_bind_address")]
     web_server_bind_address: String,
+    /// The API key required to access the web server endpoints.
+    ///
+    /// NOTE: constant-time comparison is used, but mismatched string length cause immediate failure.
+    /// For this reason, timing attacks can be used to at least determine the valid key length and a
+    /// sufficiently long key should be used to mitigate this risk.
+    pub web_server_api_key: String,
     // web_server: WebServerConfig,
 }
 
@@ -22,6 +30,7 @@ fn default_web_server_bind_address() -> String {
     "127.0.0.1:3000".to_string()
 }
 
+/// Configuration for how the AKD updates
 #[derive(Clone, Debug, Deserialize)]
 pub struct PublisherConfig {
     /// The duration of each publishing epoch in milliseconds. Defaults to 30 seconds.
@@ -89,6 +98,13 @@ impl ApplicationConfig {
         self.web_server_bind_address
             .parse()
             .expect("Invalid web server bind address")
+    }
+
+    pub fn api_key_valid(&self, api_key: &str) -> bool {
+        self.web_server_api_key
+            .as_bytes()
+            .ct_eq(api_key.as_bytes())
+            .into()
     }
 }
 
