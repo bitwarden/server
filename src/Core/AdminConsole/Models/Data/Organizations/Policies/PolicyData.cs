@@ -5,10 +5,10 @@ namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public class PolicyData
 {
-    public Guid OrganizationId { get; init; }
-    public PolicyType Type { get; init; }
-    public bool Enabled { get; init; }
-    public string? Data { get; init; }
+    public Guid OrganizationId { get; set; }
+    public PolicyType Type { get; set; }
+    public bool Enabled { get; set; }
+    public string? Data { get; set; }
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
     {
