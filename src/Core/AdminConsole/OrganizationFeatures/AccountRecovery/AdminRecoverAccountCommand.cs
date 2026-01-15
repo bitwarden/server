@@ -30,8 +30,8 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         }
 
         // Enterprise policy must be enabled
-        var resetPasswordPolicyData = await policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
-        if (!resetPasswordPolicyData.Enabled)
+        var resetPasswordPolicy = await policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }

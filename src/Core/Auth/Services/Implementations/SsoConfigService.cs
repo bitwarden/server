@@ -114,14 +114,14 @@ public class SsoConfigService : ISsoConfigService
             throw new BadRequestException("Organization cannot use Key Connector.");
         }
 
-        var singleOrgPolicyData = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.SingleOrg);
-        if (!singleOrgPolicyData.Enabled)
+        var singleOrgPolicy = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.SingleOrg);
+        if (!singleOrgPolicy.Enabled)
         {
             throw new BadRequestException("Key Connector requires the Single Organization policy to be enabled.");
         }
 
-        var ssoPolicyData = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.RequireSso);
-        if (!ssoPolicyData.Enabled)
+        var ssoPolicy = await _policyQuery.RunAsync(config.OrganizationId, PolicyType.RequireSso);
+        if (!ssoPolicy.Enabled)
         {
             throw new BadRequestException("Key Connector requires the Single Sign-On Authentication policy to be enabled.");
         }

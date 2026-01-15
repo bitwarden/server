@@ -81,10 +81,10 @@ public class OrganizationSponsorshipsController : Controller
     public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
     {
         var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
-        var freeFamiliesSponsorshipPolicyData = await _policyQuery.RunAsync(sponsoringOrgId,
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(sponsoringOrgId,
             PolicyType.FreeFamiliesSponsorshipPolicy);
 
-        if (freeFamiliesSponsorshipPolicyData.Enabled)
+        if (freeFamiliesSponsorshipPolicy.Enabled)
         {
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
@@ -108,10 +108,10 @@ public class OrganizationSponsorshipsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task ResendSponsorshipOffer(Guid sponsoringOrgId, [FromQuery] string sponsoredFriendlyName)
     {
-        var freeFamiliesSponsorshipPolicyData = await _policyQuery.RunAsync(sponsoringOrgId,
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(sponsoringOrgId,
             PolicyType.FreeFamiliesSponsorshipPolicy);
 
-        if (freeFamiliesSponsorshipPolicyData.Enabled)
+        if (freeFamiliesSponsorshipPolicy.Enabled)
         {
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
@@ -165,10 +165,10 @@ public class OrganizationSponsorshipsController : Controller
             throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
         }
 
-        var freeFamiliesSponsorshipPolicyData = await _policyQuery.RunAsync(
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(
             model.SponsoredOrganizationId, PolicyType.FreeFamiliesSponsorshipPolicy);
 
-        if (freeFamiliesSponsorshipPolicyData.Enabled)
+        if (freeFamiliesSponsorshipPolicy.Enabled)
         {
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }

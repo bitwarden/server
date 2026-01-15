@@ -246,9 +246,9 @@ public class RegisterUserCommand : IRegisterUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId.Value);
         if (orgUser != null)
         {
-            var twoFactorPolicyData = await _policyQuery.RunAsync(orgUser.OrganizationId,
+            var twoFactorPolicy = await _policyQuery.RunAsync(orgUser.OrganizationId,
                 PolicyType.TwoFactorAuthentication);
-            if (twoFactorPolicyData.Enabled)
+            if (twoFactorPolicy.Enabled)
             {
                 user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
                 {

@@ -722,8 +722,8 @@ public class UserService : UserManager<User>, IUserService
         }
 
         // Enterprise policy must be enabled
-        var resetPasswordPolicyData = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
-        if (!resetPasswordPolicyData.Enabled)
+        var resetPasswordPolicy = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }

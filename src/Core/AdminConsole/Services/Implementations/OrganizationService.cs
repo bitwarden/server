@@ -862,8 +862,8 @@ public class OrganizationService : IOrganizationService
         }
 
         // Make sure the organization has the policy enabled
-        var resetPasswordPolicyData = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
-        if (!resetPasswordPolicyData.Enabled)
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }
@@ -881,9 +881,9 @@ public class OrganizationService : IOrganizationService
         }
         else
         {
-            if (resetPasswordKey == null && resetPasswordPolicyData.Data != null)
+            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
             {
-                var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicyData.Data,
+                var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
                     JsonHelpers.IgnoreCase);
 
                 if (data?.AutoEnrollEnabled ?? false)

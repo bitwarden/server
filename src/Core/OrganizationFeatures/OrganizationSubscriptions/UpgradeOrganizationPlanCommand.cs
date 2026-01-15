@@ -188,8 +188,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (!newPlan.HasResetPassword && organization.UseResetPassword)
         {
-            var resetPasswordPolicyData = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
-            if (resetPasswordPolicyData.Enabled)
+            var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+            if (resetPasswordPolicy.Enabled)
             {
                 throw new BadRequestException("Your new plan does not allow the Password Reset feature. " +
                                               "Disable your Password Reset policy.");

@@ -203,7 +203,7 @@ public class OrganizationsControllerTests
         Organization organization,
         OrganizationUser organizationUser)
     {
-        var policyData = new PolicyData
+        var policy = new PolicyData
         {
             Type = PolicyType.ResetPassword,
             Enabled = true,
@@ -215,7 +215,7 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(false);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
-        sutProvider.GetDependency<IPolicyQuery>().RunAsync(organization.Id, PolicyType.ResetPassword).Returns(policyData);
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(organization.Id, PolicyType.ResetPassword).Returns(policy);
 
         var result = await sutProvider.Sut.GetAutoEnrollStatus(organization.Id.ToString());
 

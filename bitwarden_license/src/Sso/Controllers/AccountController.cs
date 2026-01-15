@@ -687,8 +687,8 @@ public class AccountController : Controller
         await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(newUser, organization);
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
-        var twoFactorPolicyData = await _policyQuery.RunAsync(organization.Id, PolicyType.TwoFactorAuthentication);
-        if (twoFactorPolicyData.Enabled)
+        var twoFactorPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.TwoFactorAuthentication);
+        if (twoFactorPolicy.Enabled)
         {
             newUser.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
             {
