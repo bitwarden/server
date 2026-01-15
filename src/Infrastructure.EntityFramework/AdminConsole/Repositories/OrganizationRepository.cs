@@ -20,7 +20,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,
@@ -114,6 +114,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseOrganizationDomains = e.UseOrganizationDomains,
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
+                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
                 UsePhishingBlocker = e.UsePhishingBlocker
             }).ToListAsync();
         }

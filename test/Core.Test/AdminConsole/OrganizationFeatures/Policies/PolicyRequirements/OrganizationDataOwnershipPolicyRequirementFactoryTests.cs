@@ -37,6 +37,73 @@ public class OrganizationDataOwnershipPolicyRequirementFactoryTests
     }
 
     [Theory, BitAutoData]
+    public void EligibleForSelfRevoke_WithConfirmedUser_ReturnsTrue(
+        Guid organizationId,
+        [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails[] policies,
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        // Arrange
+        policies[0].OrganizationId = organizationId;
+        var requirement = sutProvider.Sut.Create(policies);
+
+        // Act
+        var result = requirement.EligibleForSelfRevoke(organizationId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public void EligibleForSelfRevoke_WithInvitedUser_ReturnsFalse(
+        Guid organizationId,
+        [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Invited)] PolicyDetails[] policies,
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        // Arrange
+        policies[0].OrganizationId = organizationId;
+        var requirement = sutProvider.Sut.Create(policies);
+
+        // Act
+        var result = requirement.EligibleForSelfRevoke(organizationId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public void EligibleForSelfRevoke_WithNoPolicies_ReturnsFalse(
+        Guid organizationId,
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        // Arrange
+        var requirement = sutProvider.Sut.Create([]);
+
+        // Act
+        var result = requirement.EligibleForSelfRevoke(organizationId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public void EligibleForSelfRevoke_WithDifferentOrganization_ReturnsFalse(
+        Guid organizationId,
+        Guid differentOrganizationId,
+        [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails[] policies,
+        SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)
+    {
+        // Arrange
+        policies[0].OrganizationId = differentOrganizationId;
+        var requirement = sutProvider.Sut.Create(policies);
+
+        // Act
+        var result = requirement.EligibleForSelfRevoke(organizationId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
     public void GetDefaultCollectionRequestOnPolicyEnable_WithConfirmedUser_ReturnsTrue(
     [PolicyDetails(PolicyType.OrganizationDataOwnership, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails[] policies,
     SutProvider<OrganizationDataOwnershipPolicyRequirementFactory> sutProvider)

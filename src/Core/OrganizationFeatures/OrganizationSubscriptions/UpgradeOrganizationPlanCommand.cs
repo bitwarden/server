@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -256,26 +257,19 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.SelfHost = newPlan.HasSelfHost;
         organization.UsePolicies = newPlan.HasPolicies;
         organization.MaxStorageGb = (short)(newPlan.PasswordManager.BaseStorageGb + upgrade.AdditionalStorageGb);
-        organization.UseGroups = newPlan.HasGroups;
-        organization.UseDirectory = newPlan.HasDirectory;
-        organization.UseEvents = newPlan.HasEvents;
-        organization.UseTotp = newPlan.HasTotp;
-        organization.Use2fa = newPlan.Has2fa;
-        organization.UseApi = newPlan.HasApi;
         organization.UseSso = newPlan.HasSso;
         organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;
         organization.UseKeyConnector = newPlan.HasKeyConnector ? organization.UseKeyConnector : false;
         organization.UseScim = newPlan.HasScim;
         organization.UseResetPassword = newPlan.HasResetPassword;
-        organization.SelfHost = newPlan.HasSelfHost;
         organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
         organization.UseCustomPermissions = newPlan.HasCustomPermissions;
         organization.Plan = newPlan.Name;
         organization.Enabled = success;
-        organization.PublicKey = upgrade.PublicKey;
-        organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
         organization.UseSecretsManager = upgrade.UseSecretsManager;
+
+        organization.BackfillPublicPrivateKeys(upgrade.Keys);
 
         if (upgrade.UseSecretsManager)
         {
