@@ -564,6 +564,16 @@ public class SubscriptionUpdatedHandlerTests
 
         var parsedEvent = new Event { Data = new EventData() };
 
+        var premiumPlan = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            LegacyYear = null,
+            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
+            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
+        };
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 

@@ -57,6 +57,13 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         };
         _pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
 
+        // Mock ListSubscriptionsAsync to return empty list by default (no existing subscriptions)
+        // Individual tests can override this if they need to test duplicate subscription scenarios
+        _stripeAdapter.ListSubscriptionsAsync(Arg.Any<SubscriptionListOptions>()).Returns(new List<Stripe.Subscription>());
+
+        // Mock CancelSubscriptionAsync to avoid issues if duplicate cleanup logic is triggered
+        _stripeAdapter.CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>()).Returns(Task.FromResult(new Stripe.Subscription()));
+
         _command = new CreatePremiumCloudHostedSubscriptionCommand(
             _braintreeGateway,
             _braintreeService,
@@ -148,7 +155,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _stripeAdapter.ListSetupIntentsAsync(Arg.Any<SetupIntentListOptions>()).Returns(Task.FromResult(new List<SetupIntent> { mockSetupIntent }));
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
@@ -159,7 +166,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         await _stripeAdapter.Received(1).CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
-        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
     }
@@ -202,7 +209,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
@@ -212,7 +219,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         await _stripeAdapter.Received(1).CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
-        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
     }
@@ -249,7 +256,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
@@ -260,7 +267,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         await _stripeAdapter.Received(1).CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
-        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
         await _subscriberService.Received(1).CreateBraintreeCustomer(user, paymentMethod.Token);
         await _stripeAdapter.Received(1).UpdateInvoiceAsync(mockSubscription.LatestInvoiceId,
             Arg.Is<InvoiceUpdateOptions>(opts =>
@@ -311,7 +318,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
@@ -362,9 +369,17 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         };
 
         var mockInvoice = Substitute.For<Invoice>();
+        MaskedPaymentMethod mockMaskedPaymentMethod = new MaskedCard
+        {
+            Brand = "visa",
+            Last4 = "1234",
+            Expiration = "12/2025"
+        };
 
+        _updatePaymentMethodCommand.Run(Arg.Any<User>(), Arg.Any<TokenizedPaymentMethod>(), Arg.Any<BillingAddress>())
+            .Returns(mockMaskedPaymentMethod);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
@@ -374,7 +389,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT0);
         await _subscriberService.Received(1).GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>());
         await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
-        await _updatePaymentMethodCommand.DidNotReceive().Run(Arg.Any<User>(), Arg.Any<TokenizedPaymentMethod>(), Arg.Any<BillingAddress>());
+        await _updatePaymentMethodCommand.Received(1).Run(Arg.Any<User>(), Arg.Any<TokenizedPaymentMethod>(), Arg.Any<BillingAddress>());
     }
 
     [Theory, BitAutoData]
@@ -421,7 +436,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _updatePaymentMethodCommand.Run(Arg.Any<User>(), Arg.Any<TokenizedPaymentMethod>(), Arg.Any<BillingAddress>())
             .Returns(mockMaskedPaymentMethod);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
@@ -436,7 +451,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Verify no new customer was created
         await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
         // Verify subscription was created
-        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
         // Verify user was updated correctly
         Assert.True(user.Premium);
         await _userService.Received(1).SaveUserAsync(user);
@@ -486,7 +501,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
@@ -543,7 +558,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
@@ -599,7 +614,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
@@ -656,7 +671,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
@@ -707,7 +722,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockInvoice = Substitute.For<Invoice>();
 
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
@@ -743,7 +758,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.IsType<BillingException>(result.AsT3.Exception);
         // Verify no customer was created or subscription attempted
         await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
-        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
     }
 
@@ -794,7 +809,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         };
 
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>(), Arg.Any<RequestOptions>()).Returns(mockSubscription);
 
         // Act
         var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage);
