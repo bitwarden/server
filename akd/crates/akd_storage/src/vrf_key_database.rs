@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock};
+
 use akd::ecvrf::{VRFKeyStorage, VrfError};
 use async_trait::async_trait;
 use chacha20poly1305::{
@@ -42,7 +44,7 @@ pub struct VrfKeyConfigError;
 pub struct VrfKeyDatabase {
     db: DatabaseType,
     vrf_key_config: VrfKeyConfig,
-    cached_vrf_key: Option<Vec<u8>>,
+    cached_vrf_key: Arc<RwLock<Option<Vec<u8>>>>,
 }
 
 impl VrfKeyDatabase {
@@ -54,7 +56,7 @@ impl VrfKeyDatabase {
         let new_key_database = VrfKeyDatabase {
             db: db.clone(),
             vrf_key_config: config.clone(),
-            cached_vrf_key: None,
+            cached_vrf_key: Arc::new(RwLock::new(None)),
         };
 
         let expected_key_hash = config.root_key_hash().map_err(|_| {
@@ -100,11 +102,11 @@ impl VrfKeyDatabase {
 #[async_trait]
 impl VRFKeyStorage for VrfKeyDatabase {
     async fn retrieve(&self) -> Result<Vec<u8>, VrfError> {
-        if let Some(cached_key) = &self.cached_vrf_key {
+        if let Some(cached_key) = self.cached_vrf_key.read().expect("cache poisoned").as_ref() {
             return Ok(cached_key.clone());
         }
 
-        match &self.get_vrf_key().await {
+        let result = match &self.get_vrf_key().await {
             Ok(table_data) => table_data
                 .to_vrf_key(&self.vrf_key_config)
                 .await
@@ -132,7 +134,15 @@ impl VRFKeyStorage for VrfKeyDatabase {
                 error!(%err, "Key retrieval error");
                 Err(VrfError::SigningKey("Key retrieval error".to_string()))
             }
+        };
+
+        if result.is_ok() {
+            // update cached key
+            let mut write_guard = self.cached_vrf_key.write().expect("cache poisoned");
+            *write_guard = Some(result.as_ref().unwrap().clone());
         }
+
+        result
     }
 }
 
