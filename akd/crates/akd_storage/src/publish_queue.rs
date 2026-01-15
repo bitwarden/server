@@ -26,6 +26,11 @@ pub trait PublishQueue {
     async fn remove(&self, ids: Vec<uuid::Uuid>) -> Result<(), PublishQueueError>;
 }
 
+#[async_trait]
+pub trait ReadOnlyPublishQueue {
+    async fn label_pending_publish(&self, label: &AkdLabel) -> Result<bool, PublishQueueError>;
+}
+
 #[derive(Debug, Clone)]
 pub enum PublishQueueType {
     MsSql(MsSql),
@@ -71,6 +76,15 @@ impl PublishQueue for PublishQueueType {
     async fn remove(&self, ids: Vec<uuid::Uuid>) -> Result<(), PublishQueueError> {
         match self {
             PublishQueueType::MsSql(ms_sql) => ms_sql.remove(ids).await,
+        }
+    }
+}
+
+#[async_trait]
+impl ReadOnlyPublishQueue for PublishQueueType {
+    async fn label_pending_publish(&self, label: &AkdLabel) -> Result<bool, PublishQueueError> {
+        match self {
+            PublishQueueType::MsSql(ms_sql) => ms_sql.label_pending_publish(label).await,
         }
     }
 }

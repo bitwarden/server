@@ -110,23 +110,28 @@ pub fn bulk_delete_statement(temp_table_name: &str) -> Statement {
     Statement::new(sql, SqlParams::new())
 }
 
-// pub fn delete_statement(ids: Vec<uuid::Uuid>) -> Statement {
-//     debug!("Building delete_statement for publish queue");
-//     let mut params = SqlParams::new();
-//     let mut id_placeholders = Vec::new();
+pub fn label_pending_publish_statement(
+    label: &AkdLabel,
+) -> QueryStatement<bool, PublishQueueError> {
+    debug!("Building label_pending_publish_statement for publish queue");
+    let mut params = SqlParams::new();
+    params.add("raw_label", Box::new(label.0.clone()));
 
-//     for (i, id) in ids.iter().enumerate() {
-//         let param_name = format!("id_{}", i);
-//         params.add(&param_name, Box::new(*id));
-//         id_placeholders.push(params.key_for(&param_name).expect("id was added to params"));
-//     }
-
-//     let sql = format!(
-//         r#"
-//         DELETE FROM {}
-//         WHERE id IN ({})"#,
-//         TABLE_PUBLISH_QUEUE,
-//         id_placeholders.join(", ")
-//     );
-//     Statement::new(sql, params)
-// }
+    let sql = format!(
+        r#"
+        SELECT COUNT(1) AS label_count
+        FROM {}
+        WHERE raw_label = {}"#,
+        TABLE_PUBLISH_QUEUE,
+        params
+            .key_for("raw_label")
+            .expect("raw_label was added to the params list"),
+    );
+    QueryStatement::new(sql, params, |row: &ms_database::Row| {
+        let count: i64 = row.get("label_count").ok_or_else(|| {
+            error!("label_count is NULL or missing in publish queue row");
+            PublishQueueError
+        })?;
+        Ok(count > 0)
+    })
+}

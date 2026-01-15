@@ -30,14 +30,15 @@ use uuid::Uuid;
 use crate::{
     ms_sql::tables::{
         publish_queue::{
-            bulk_delete_rows, bulk_delete_statement, enqueue_statement, peek_no_limit_statement,
-            peek_statement,
+            bulk_delete_rows, bulk_delete_statement, enqueue_statement,
+            label_pending_publish_statement, peek_no_limit_statement, peek_statement,
         },
         vrf_key,
     },
     publish_queue::{PublishQueue, PublishQueueError},
     vrf_key_config::VrfKeyConfig,
     vrf_key_database::{VrfKeyRetrievalError, VrfKeyStorageError, VrfKeyTableData},
+    ReadOnlyPublishQueue,
 };
 
 const DEFAULT_POOL_SIZE: u32 = 100;
@@ -905,6 +906,47 @@ impl PublishQueue for MsSql {
                 error!(error = %e, "Remove rolled back");
                 Err(e)
             }
+        }
+    }
+}
+
+#[async_trait]
+impl ReadOnlyPublishQueue for MsSql {
+    #[instrument(skip(self), level = "debug")]
+    async fn label_pending_publish(&self, label: &AkdLabel) -> Result<bool, PublishQueueError> {
+        debug!("Checking if label is pending publish");
+
+        let mut conn = self.get_connection().await.map_err(|_| {
+            error!("Failed to get DB connection for label_pending_publish");
+            PublishQueueError
+        })?;
+
+        let statement = label_pending_publish_statement(label);
+        trace!(sql = statement.sql(), "Query SQL");
+
+        let query_stream = conn
+            .query(statement.sql(), &statement.params())
+            .await
+            .map_err(|e| {
+                error!(error = %e, "Failed to execute label pending publish query");
+                PublishQueueError
+            })?;
+
+        let row = query_stream.into_row().await.map_err(|e| {
+            error!(error = %e, "Failed to fetch row for label pending publish");
+            PublishQueueError
+        })?;
+
+        if let Some(row) = row {
+            let is_pending = statement.parse(&row).map_err(|e| {
+                error!(error = %e, "Failed to parse label pending publish result");
+                PublishQueueError
+            })?;
+            debug!(is_pending, "Label pending publish check complete");
+            Ok(is_pending)
+        } else {
+            debug!("Label not found in publish queue");
+            Ok(false)
         }
     }
 }

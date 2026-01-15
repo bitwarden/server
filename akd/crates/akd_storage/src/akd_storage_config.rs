@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use akd::{storage::StorageManager, Directory};
+use akd::{directory::ReadOnlyDirectory, storage::StorageManager, Directory};
 use serde::Deserialize;
 use thiserror::Error;
 use tracing::error;
@@ -65,6 +65,35 @@ impl AkdStorageConfig {
             .await
             .map_err(|err| {
                 error!(%err, "Failed to initialize Directory");
+                AkdStorageInitializationError
+            })?;
+
+        Ok((directory, db, publish_queue))
+    }
+
+    pub async fn initialize_readonly_directory<TDirectoryConfig: akd::Configuration>(
+        &self,
+    ) -> Result<
+        (
+            ReadOnlyDirectory<TDirectoryConfig, AkdDatabase, VrfKeyDatabase>,
+            AkdDatabase,
+            PublishQueueType,
+        ),
+        AkdStorageInitializationError,
+    > {
+        let (storage_manager, db) = self.initialize_storage().await?;
+
+        let vrf_storage = db.vrf_key_database().await.map_err(|err| {
+            error!(%err, "Failed to initialize VRF key database");
+            AkdStorageInitializationError
+        })?;
+
+        let publish_queue = PublishQueueType::new(&self.publish_queue_config, &db);
+
+        let directory = ReadOnlyDirectory::new(storage_manager, vrf_storage)
+            .await
+            .map_err(|err| {
+                error!(%err, "Failed to initialize ReadOnlyDirectory");
                 AkdStorageInitializationError
             })?;
 
