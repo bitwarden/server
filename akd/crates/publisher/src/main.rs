@@ -2,16 +2,20 @@
 //! Write permissions are needed to the underlying data stores.
 //! There should only be one instance of this running at a time for a given AKD.
 
-use publisher::start;
 use tracing::info;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::EnvFilter;
 
+use publisher::start;
 use publisher::ApplicationConfig;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
-        .init();
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     // Load configuration
     let config = ApplicationConfig::load()
