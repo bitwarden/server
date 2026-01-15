@@ -4,15 +4,14 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
+using static Bit.Core.Billing.Constants.StripeConstants;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
-using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Test.Billing.Premium.Commands;
 

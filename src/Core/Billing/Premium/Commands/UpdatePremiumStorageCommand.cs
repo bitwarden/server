@@ -138,7 +138,8 @@ public class UpdatePremiumStorageCommand(
         {
             var options = new SubscriptionUpdateOptions
             {
-                Items = subscriptionItemOptions, ProrationBehavior = ProrationBehavior.CreateProrations
+                Items = subscriptionItemOptions,
+                ProrationBehavior = ProrationBehavior.CreateProrations
             };
 
             await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
