@@ -1,20 +1,63 @@
-use akd::{directory::ReadOnlyDirectory, storage::StorageManager};
-use akd_storage::{AkdDatabase, VrfKeyDatabase};
+use akd::directory::ReadOnlyDirectory;
+use akd_storage::{AkdDatabase, ReadOnlyPublishQueueType, VrfKeyDatabase};
+use anyhow::{Context, Result};
+use axum::Router;
 use bitwarden_akd_configuration::BitwardenV1Configuration;
-use tracing::instrument;
+use tokio::{net::TcpListener, sync::broadcast::Receiver};
+use tracing::{info, instrument};
 
+mod config;
+mod routes;
+
+pub use crate::config::ApplicationConfig;
+
+#[derive(Clone)]
 struct AppState {
     // Add any shared state here, e.g., database connections
-    _directory: ReadOnlyDirectory<BitwardenV1Configuration, AkdDatabase, VrfKeyDatabase>,
+    directory: ReadOnlyDirectory<BitwardenV1Configuration, AkdDatabase, VrfKeyDatabase>,
+    publish_queue: ReadOnlyPublishQueueType,
 }
 
 #[instrument(skip_all, name = "reader_start")]
-pub async fn start(db: AkdDatabase, vrf: VrfKeyDatabase) {
-    let storage_manager = StorageManager::new_no_cache(db);
-    let _app = AppState {
-        _directory: ReadOnlyDirectory::new(storage_manager, vrf)
+pub async fn start(
+    config: ApplicationConfig,
+    shutdown_rx: &Receiver<()>,
+) -> Result<tokio::task::JoinHandle<Result<()>>> {
+    let (directory, _, publish_queue) = config
+        .storage
+        .initialize_readonly_directory::<BitwardenV1Configuration>()
+        .await
+        .context("Failed to initialize ReadOnlyDirectory")?;
+
+    let mut shutdown_rx = shutdown_rx.resubscribe();
+
+    let handle = tokio::spawn(async move {
+        let app_state = AppState {
+            directory: directory,
+            publish_queue: publish_queue,
+        };
+
+        let app = Router::new()
+            .merge(crate::routes::api_routes())
+            .with_state(app_state);
+
+        let listener = TcpListener::bind((&config.socket_address()))
             .await
-            .expect("Failed to create ReadOnlyDirectory"),
-    };
-    println!("Reader started");
+            .context("Socket bind failed")?;
+        info!(
+            socket_address = %config.socket_address(),
+            "Reader web server listening"
+        );
+
+        axum::serve(listener, app.into_make_service())
+            .with_graceful_shutdown(async move {
+                shutdown_rx.recv().await.ok();
+            })
+            .await
+            .context("Web server failed")?;
+
+        Ok(())
+    });
+
+    Ok(handle)
 }

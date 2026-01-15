@@ -80,11 +80,32 @@ impl PublishQueue for PublishQueueType {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum ReadOnlyPublishQueueType {
+    MsSql(MsSql),
+}
+
+impl ReadOnlyPublishQueueType {
+    pub fn new(config: &PublishQueueConfig, db: &AkdDatabase) -> ReadOnlyPublishQueueType {
+        match config {
+            PublishQueueConfig::DbBacked => db.into(),
+        }
+    }
+}
+
+impl From<&AkdDatabase> for ReadOnlyPublishQueueType {
+    fn from(db: &AkdDatabase) -> Self {
+        match db.db() {
+            DatabaseType::MsSql(ms_sql) => ReadOnlyPublishQueueType::MsSql(ms_sql.clone()),
+        }
+    }
+}
+
 #[async_trait]
-impl ReadOnlyPublishQueue for PublishQueueType {
+impl ReadOnlyPublishQueue for ReadOnlyPublishQueueType {
     async fn label_pending_publish(&self, label: &AkdLabel) -> Result<bool, PublishQueueError> {
         match self {
-            PublishQueueType::MsSql(ms_sql) => ms_sql.label_pending_publish(label).await,
+            ReadOnlyPublishQueueType::MsSql(ms_sql) => ms_sql.label_pending_publish(label).await,
         }
     }
 }

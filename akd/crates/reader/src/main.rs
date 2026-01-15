@@ -1,39 +1,51 @@
 //! The Reader crate is responsible for handling read requests to the AKD. It requires only read permissions to the
 //! underlying data stores, and can be horizontally scaled as needed.
 
-use akd_storage::db_config::DbConfig;
-use common::VrfStorageType;
-use reader::start;
+use anyhow::Context;
+use anyhow::Result;
+use tracing::error;
 use tracing::info;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::EnvFilter;
+
+use reader::start;
+use reader::ApplicationConfig;
 
 #[tokio::main]
-async fn main() {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
-        .init();
+async fn main() -> Result<()> {
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
 
-    // Read connection string from env var
-    let connection_string = std::env::var("AKD_MSSQL_CONNECTION_STRING")
-        .expect("AKD_MSSQL_CONNECTION_STRING must be set.");
-    let db_config = DbConfig::MsSql {
-        connection_string,
-        pool_size: 10,
-    };
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
-    let db = db_config
-        .connect()
+    // Load configuration
+    let config = ApplicationConfig::load().context("Failed to load configuration")?;
+
+    // Initialize Bitwarden AKD configuration
+    bitwarden_akd_configuration::BitwardenV1Configuration::init(config.installation_id);
+
+    let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+
+    let mut web_handle = start(config, &shutdown_rx)
         .await
-        .expect("Failed to connect to database");
-    let vrf = VrfStorageType::HardCodedAkdVRF;
+        .context("Failed to start reader")?;
 
-    let web_server_handle = tokio::spawn(async move {
-        start(db, vrf).await;
-    });
-
-    // Wait for both services to complete
+    // wait for shutdown signal
     tokio::select! {
-        _ = web_server_handle => {
-            info!("Web service completed");
+        _ = tokio::signal::ctrl_c() => {
+            info!("Received Ctrl+C, shutting down");
+            shutdown_tx.send(()).ok();
+        }
+        _ = &mut web_handle => {
+            error!("Web service completed unexpectedly");
         }
     }
+
+    web_handle
+        .await
+        .expect("Failed to join web service task")
+        .expect("Web service task failed");
+
+    Ok(())
 }

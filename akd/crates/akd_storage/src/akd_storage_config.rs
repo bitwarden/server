@@ -7,7 +7,7 @@ use tracing::{error, instrument};
 
 use crate::{
     db_config::DbConfig, publish_queue_config::PublishQueueConfig, vrf_key_config::VrfKeyConfig,
-    AkdDatabase, PublishQueueType, VrfKeyDatabase,
+    AkdDatabase, PublishQueueType, ReadOnlyPublishQueueType, VrfKeyDatabase,
 };
 
 #[derive(Debug, Clone, Deserialize)]
@@ -78,7 +78,7 @@ impl AkdStorageConfig {
         (
             ReadOnlyDirectory<TDirectoryConfig, AkdDatabase, VrfKeyDatabase>,
             AkdDatabase,
-            PublishQueueType,
+            ReadOnlyPublishQueueType,
         ),
         AkdStorageInitializationError,
     > {
@@ -89,7 +89,7 @@ impl AkdStorageConfig {
             AkdStorageInitializationError
         })?;
 
-        let publish_queue = PublishQueueType::new(&self.publish_queue_config, &db);
+        let publish_queue = ReadOnlyPublishQueueType::new(&self.publish_queue_config, &db);
 
         let directory = ReadOnlyDirectory::new(storage_manager, vrf_storage)
             .await

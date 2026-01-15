@@ -9,11 +9,17 @@ keywords.workspace = true
 [dependencies]
 tokio = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 akd = { workspace = true }
-akd_storage = { workspace = true}
-bitwarden-akd-configuration = { workspace = true}
-common = { workspace = true}
+akd_storage = { workspace = true }
+anyhow = { workspace = true }
+bitwarden-akd-configuration = { workspace = true }
+common = { workspace = true }
+serde = { workspace = true }
+config = { workspace = true }
+uuid = { workspace = true }
+axum = { workspace = true }
+chrono = { workspace = true }
 
 [lints]
 workspace = true
