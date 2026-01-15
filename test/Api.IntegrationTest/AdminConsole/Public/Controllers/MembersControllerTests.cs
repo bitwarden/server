@@ -271,7 +271,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
 
-        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -287,10 +287,10 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
 
-        var revokeResponse = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+        var revokeResponse = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
         Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
 
-        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
@@ -300,7 +300,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task PutRevoke_NotFound_ReturnsNotFound()
     {
-        var response = await _client.PutAsync($"/public/members/{Guid.NewGuid()}/revoke", null);
+        var response = await _client.PostAsync($"/public/members/{Guid.NewGuid()}/revoke", null);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -321,7 +321,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
 
         // Try to revoke the user from the other organization
-        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -332,10 +332,10 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
 
-        var revokeResponse = await _client.PutAsync($"/public/members/{orgUser.Id}/revoke", null);
+        var revokeResponse = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
         Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
 
-        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/restore", null);
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/restore", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -351,7 +351,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
 
-        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/restore", null);
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/restore", null);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
@@ -361,7 +361,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task PutRestore_NotFound_ReturnsNotFound()
     {
-        var response = await _client.PutAsync($"/public/members/{Guid.NewGuid()}/restore", null);
+        var response = await _client.PostAsync($"/public/members/{Guid.NewGuid()}/restore", null);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -382,7 +382,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
 
         // Try to restore the user from the other organization
-        var response = await _client.PutAsync($"/public/members/{orgUser.Id}/restore", null);
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/restore", null);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

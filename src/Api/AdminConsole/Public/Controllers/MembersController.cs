@@ -273,7 +273,7 @@ public class MembersController : Controller
     /// Revoke a member's access to an organization.
     /// </summary>
     /// <param name="id">The ID of the member to be revoked.</param>
-    [HttpPut("{id}/revoke")]
+    [HttpPost("{id}/revoke")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -307,7 +307,7 @@ public class MembersController : Controller
     /// Restores a previously revoked member of the organization.
     /// </remarks>
     /// <param name="id">The identifier of the member to be restored.</param>
-    [HttpPut("{id}/restore")]
+    [HttpPost("{id}/restore")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
