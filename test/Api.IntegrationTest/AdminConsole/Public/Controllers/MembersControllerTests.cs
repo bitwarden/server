@@ -329,20 +329,32 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task Restore_Member_Success()
     {
-        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
-            _factory, _organization.Id, OrganizationUserType.User);
+        // Invite a user to revoke
+        var email = $"integration-test{Guid.NewGuid()}@example.com";
+        var inviteRequest = new MemberCreateRequestModel
+        {
+            Email = email,
+            Type = OrganizationUserType.User,
+        };
 
-        var revokeResponse = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
+        var inviteResponse = await _client.PostAsync("/public/members", JsonContent.Create(inviteRequest));
+        Assert.Equal(HttpStatusCode.OK, inviteResponse.StatusCode);
+        var invitedMember = await inviteResponse.Content.ReadFromJsonAsync<MemberResponseModel>();
+        Assert.NotNull(invitedMember);
+
+        // Revoke the invited user
+        var revokeResponse = await _client.PostAsync($"/public/members/{invitedMember.Id}/revoke", null);
         Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
 
-        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/restore", null);
-
+        // Restore the user
+        var response = await _client.PostAsync($"/public/members/{invitedMember.Id}/restore", null);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
+        // Verify user is restored to Invited state
         var updatedUser = await _factory.GetService<IOrganizationUserRepository>()
-            .GetByIdAsync(orgUser.Id);
+            .GetByIdAsync(invitedMember.Id);
         Assert.NotNull(updatedUser);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, updatedUser.Status);
+        Assert.Equal(OrganizationUserStatusType.Invited, updatedUser.Status);
     }
 
     [Fact]
