@@ -13,7 +13,6 @@ public class StorageUpdateRequest : IValidatableObject
     /// Must be between 0 and the maximum allowed (minus base storage).
     /// </summary>
     [Required]
-    [Range(0, 99)]
     public short AdditionalStorageGb { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -22,14 +21,14 @@ public class StorageUpdateRequest : IValidatableObject
         {
             yield return new ValidationResult(
                 "Additional storage cannot be negative.",
-                new[] { nameof(AdditionalStorageGb) });
+                [nameof(AdditionalStorageGb)]);
         }
 
         if (AdditionalStorageGb > 99)
         {
             yield return new ValidationResult(
                 "Maximum additional storage is 99 GB.",
-                new[] { nameof(AdditionalStorageGb) });
+                [nameof(AdditionalStorageGb)]);
         }
     }
 }

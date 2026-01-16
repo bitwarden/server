@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29102.190
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36705.20 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src - AGPL", "src - AGPL", "{DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}"
 EndProject
@@ -11,19 +11,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{DD5BD056-4
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{458155D3-BCBC-481D-B37A-40D2ED10F0A4}"
 	ProjectSection(SolutionItems) = preProject
+		.dockerignore = .dockerignore
+		.editorconfig = .editorconfig
+		.gitignore = .gitignore
+		CONTRIBUTING.md = CONTRIBUTING.md
 		Directory.Build.props = Directory.Build.props
 		global.json = global.json
-		.gitignore = .gitignore
-		README.md = README.md
-		.editorconfig = .editorconfig
-		TRADEMARK_GUIDELINES.md = TRADEMARK_GUIDELINES.md
-		SECURITY.md = SECURITY.md
-		LICENSE_FAQ.md = LICENSE_FAQ.md
-		LICENSE_BITWARDEN.txt = LICENSE_BITWARDEN.txt
-		LICENSE_AGPL.txt = LICENSE_AGPL.txt
 		LICENSE.txt = LICENSE.txt
-		CONTRIBUTING.md = CONTRIBUTING.md
-		.dockerignore = .dockerignore
+		LICENSE_AGPL.txt = LICENSE_AGPL.txt
+		LICENSE_BITWARDEN.txt = LICENSE_BITWARDEN.txt
+		LICENSE_FAQ.md = LICENSE_FAQ.md
+		README.md = README.md
+		SECURITY.md = SECURITY.md
+		TRADEMARK_GUIDELINES.md = TRADEMARK_GUIDELINES.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "src\Core\Core.csproj", "{3973D21B-A692-4B60-9B70-3631C057423A}"
@@ -134,9 +134,18 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbSeederUtility", "util\DbSeederUtility\DbSeederUtility.csproj", "{17A89266-260A-4A03-81AE-C0468C6EE06E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RustSdk", "util\RustSdk\RustSdk.csproj", "{D1513D90-E4F5-44A9-9121-5E46E3E4A3F7}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedWeb.Test", "test\SharedWeb.Test\SharedWeb.Test.csproj", "{AD59537D-5259-4B7A-948F-0CF58E80B359}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeederApi", "util\SeederApi\SeederApi.csproj", "{9F08DFBB-482B-4C9D-A5F4-6BDA6EC2E68F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeederApi.IntegrationTest", "test\SeederApi.IntegrationTest\SeederApi.IntegrationTest.csproj", "{A2E067EF-609C-4D13-895A-E054C61D48BB}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SSO.Test", "bitwarden_license\test\SSO.Test\SSO.Test.csproj", "{7D98784C-C253-43FB-9873-25B65C6250D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sso.IntegrationTest", "bitwarden_license\test\Sso.IntegrationTest\Sso.IntegrationTest.csproj", "{FFB09376-595B-6F93-36F0-70CAE90AFECB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.IntegrationTest", "test\Server.IntegrationTest\Server.IntegrationTest.csproj", "{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -350,10 +359,26 @@ Global
 		{AD59537D-5259-4B7A-948F-0CF58E80B359}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD59537D-5259-4B7A-948F-0CF58E80B359}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AD59537D-5259-4B7A-948F-0CF58E80B359}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F08DFBB-482B-4C9D-A5F4-6BDA6EC2E68F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F08DFBB-482B-4C9D-A5F4-6BDA6EC2E68F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F08DFBB-482B-4C9D-A5F4-6BDA6EC2E68F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F08DFBB-482B-4C9D-A5F4-6BDA6EC2E68F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2E067EF-609C-4D13-895A-E054C61D48BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2E067EF-609C-4D13-895A-E054C61D48BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2E067EF-609C-4D13-895A-E054C61D48BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2E067EF-609C-4D13-895A-E054C61D48BB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7D98784C-C253-43FB-9873-25B65C6250D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7D98784C-C253-43FB-9873-25B65C6250D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D98784C-C253-43FB-9873-25B65C6250D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D98784C-C253-43FB-9873-25B65C6250D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFB09376-595B-6F93-36F0-70CAE90AFECB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFB09376-595B-6F93-36F0-70CAE90AFECB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFB09376-595B-6F93-36F0-70CAE90AFECB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFB09376-595B-6F93-36F0-70CAE90AFECB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -410,7 +435,11 @@ Global
 		{17A89266-260A-4A03-81AE-C0468C6EE06E} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{D1513D90-E4F5-44A9-9121-5E46E3E4A3F7} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{AD59537D-5259-4B7A-948F-0CF58E80B359} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
+		{9F08DFBB-482B-4C9D-A5F4-6BDA6EC2E68F} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
+		{A2E067EF-609C-4D13-895A-E054C61D48BB} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{7D98784C-C253-43FB-9873-25B65C6250D6} = {287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}
+		{FFB09376-595B-6F93-36F0-70CAE90AFECB} = {287CFF34-BBDB-4BC4-AF88-1E19A5A4679B}
+		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}

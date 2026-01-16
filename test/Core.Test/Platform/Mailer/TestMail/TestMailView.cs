@@ -9,5 +9,5 @@ public class TestMailView : BaseMailView
 
 public class TestMail : BaseMail<TestMailView>
 {
-    public override string Subject { get; } = "Test Email";
+    public override string Subject { get; set; } = "Test Email";
 }

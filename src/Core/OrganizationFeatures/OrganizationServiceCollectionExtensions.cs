@@ -23,7 +23,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -44,7 +46,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
 using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
@@ -139,6 +140,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
+        services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
         services.AddScoped<IAdminRecoverAccountCommand, AdminRecoverAccountCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
@@ -150,6 +152,8 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<V2_RevokeUsersCommand.IRevokeOrganizationUserCommand, V2_RevokeUsersCommand.RevokeOrganizationUserCommand>();
         services.AddScoped<V2_RevokeUsersCommand.IRevokeOrganizationUserValidator, V2_RevokeUsersCommand.RevokeOrganizationUsersValidator>();
+
+        services.AddScoped<ISelfRevokeOrganizationUserCommand, SelfRevokeOrganizationUserCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)

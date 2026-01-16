@@ -12,7 +12,6 @@ namespace Bit.Core.Test.Tools.Services;
 public class SendOwnerQueryTests
 {
     private readonly ISendRepository _sendRepository;
-    private readonly IFeatureService _featureService;
     private readonly IUserService _userService;
     private readonly SendOwnerQuery _sendOwnerQuery;
     private readonly Guid _currentUserId = Guid.NewGuid();
@@ -21,11 +20,10 @@ public class SendOwnerQueryTests
     public SendOwnerQueryTests()
     {
         _sendRepository = Substitute.For<ISendRepository>();
-        _featureService = Substitute.For<IFeatureService>();
         _userService = Substitute.For<IUserService>();
         _user = new ClaimsPrincipal();
         _userService.GetProperUserId(_user).Returns(_currentUserId);
-        _sendOwnerQuery = new SendOwnerQuery(_sendRepository, _featureService, _userService);
+        _sendOwnerQuery = new SendOwnerQuery(_sendRepository, _userService);
     }
 
     [Fact]
@@ -84,7 +82,7 @@ public class SendOwnerQueryTests
     }
 
     [Fact]
-    public async Task GetOwned_WithFeatureFlagEnabled_ReturnsAllSends()
+    public async Task GetOwned_ReturnsAllSendsIncludingEmailOTP()
     {
         // Arrange
         var sends = new List<Send>
@@ -94,7 +92,6 @@ public class SendOwnerQueryTests
             CreateSend(Guid.NewGuid(), _currentUserId, emails: "other@example.com")
         };
         _sendRepository.GetManyByUserIdAsync(_currentUserId).Returns(sends);
-        _featureService.IsEnabled(FeatureFlagKeys.PM19051_ListEmailOtpSends).Returns(true);
 
         // Act
         var result = await _sendOwnerQuery.GetOwned(_user);
@@ -105,28 +102,6 @@ public class SendOwnerQueryTests
         Assert.Contains(sends[1], result);
         Assert.Contains(sends[2], result);
         await _sendRepository.Received(1).GetManyByUserIdAsync(_currentUserId);
-        _featureService.Received(1).IsEnabled(FeatureFlagKeys.PM19051_ListEmailOtpSends);
-    }
-
-    [Fact]
-    public async Task GetOwned_WithFeatureFlagDisabled_FiltersOutEmailOtpSends()
-    {
-        // Arrange
-        var sendWithoutEmails = CreateSend(Guid.NewGuid(), _currentUserId, emails: null);
-        var sendWithEmails = CreateSend(Guid.NewGuid(), _currentUserId, emails: "test@example.com");
-        var sends = new List<Send> { sendWithoutEmails, sendWithEmails };
-        _sendRepository.GetManyByUserIdAsync(_currentUserId).Returns(sends);
-        _featureService.IsEnabled(FeatureFlagKeys.PM19051_ListEmailOtpSends).Returns(false);
-
-        // Act
-        var result = await _sendOwnerQuery.GetOwned(_user);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Contains(sendWithoutEmails, result);
-        Assert.DoesNotContain(sendWithEmails, result);
-        await _sendRepository.Received(1).GetManyByUserIdAsync(_currentUserId);
-        _featureService.Received(1).IsEnabled(FeatureFlagKeys.PM19051_ListEmailOtpSends);
     }
 
     [Fact]
@@ -147,7 +122,6 @@ public class SendOwnerQueryTests
         // Arrange
         var emptySends = new List<Send>();
         _sendRepository.GetManyByUserIdAsync(_currentUserId).Returns(emptySends);
-        _featureService.IsEnabled(FeatureFlagKeys.PM19051_ListEmailOtpSends).Returns(true);
 
         // Act
         var result = await _sendOwnerQuery.GetOwned(_user);

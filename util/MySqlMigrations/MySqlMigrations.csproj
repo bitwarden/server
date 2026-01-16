@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <UserSecretsId>9f1cd3e0-70f2-4921-8068-b2538fd7c3f7</UserSecretsId>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

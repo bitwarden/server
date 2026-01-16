@@ -38,7 +38,9 @@ public class AccountsController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
+    private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
@@ -54,6 +56,8 @@ public class AccountsController : Controller
         IUserService userService,
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
+        ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
+        ITdeSetPasswordCommand tdeSetPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
@@ -69,6 +73,8 @@ public class AccountsController : Controller
         _userService = userService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
+        _tdeSetPasswordCommand = tdeSetPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
@@ -208,7 +214,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("set-password")]
-    public async Task PostSetPasswordAsync([FromBody] SetPasswordRequestModel model)
+    public async Task PostSetPasswordAsync([FromBody] SetInitialPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -216,33 +222,48 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        try
+        if (model.IsV2Request())
         {
-            user = model.ToUser(user);
+            if (model.IsTdeSetPasswordRequest())
+            {
+                await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
+            }
+            else
+            {
+                await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, model.ToData());
+            }
         }
-        catch (Exception e)
+        else
         {
-            ModelState.AddModelError(string.Empty, e.Message);
+            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+            try
+            {
+                user = model.ToUser(user);
+            }
+            catch (Exception e)
+            {
+                ModelState.AddModelError(string.Empty, e.Message);
+                throw new BadRequestException(ModelState);
+            }
+
+            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                user,
+                model.MasterPasswordHash,
+                model.Key,
+                model.OrgIdentifier);
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
             throw new BadRequestException(ModelState);
         }
-
-        var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
-            user,
-            model.MasterPasswordHash,
-            model.Key,
-            model.OrgIdentifier);
-
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]

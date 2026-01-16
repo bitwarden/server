@@ -3,6 +3,8 @@
   <PropertyGroup>
     <UserSecretsId>bitwarden-Icons</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1304;CA1305</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Icons' " />

@@ -53,5 +53,7 @@ public interface IProfileOrganizationDetails
     bool UseAdminSponsoredFamilies { get; set; }
     bool UseOrganizationDomains { get; set; }
     bool UseAutomaticUserConfirmation { get; set; }
+    bool UseDisableSMAdsForUsers { get; set; }
+
     bool UsePhishingBlocker { get; set; }
 }

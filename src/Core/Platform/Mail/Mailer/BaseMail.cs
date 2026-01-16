@@ -19,7 +19,7 @@ public abstract class BaseMail<TView> where TView : BaseMailView
     /// <summary>
     /// The subject of the email.
     /// </summary>
-    public abstract string Subject { get; }
+    public abstract string Subject { get; set; }
 
     /// <summary>
     /// An optional category for processing at the upstream email delivery service.

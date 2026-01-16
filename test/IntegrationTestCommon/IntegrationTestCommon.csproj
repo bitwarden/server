@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
   </ItemGroup>
-    
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />

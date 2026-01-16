@@ -13,23 +13,27 @@ BEGIN
 
     INSERT INTO #Temp
     SELECT
-        [Id],
-        [UserId]
+        ucd.[Id],
+        ucd.[UserId]
     FROM
-        [dbo].[UserCipherDetails](@UserId)
+        [dbo].[UserCipherDetails](@UserId) ucd
+        INNER JOIN @Ids ids ON ids.Id = ucd.[Id]
     WHERE
-        [Edit] = 1
-      AND [ArchivedDate] IS NOT NULL
-      AND [Id] IN (SELECT * FROM @Ids)
+        ucd.[ArchivedDate] IS NOT NULL
 
     DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
     UPDATE
         [dbo].[Cipher]
     SET
-        [ArchivedDate] = NULL,
+        [Archives] = JSON_MODIFY(
+            COALESCE([Archives], N'{}'),
+            CONCAT('$."', @UserId, '"'),
+            NULL
+        ),
         [RevisionDate] = @UtcNow
-    WHERE
-        [Id] IN (SELECT [Id] FROM #Temp)
+    FROM [dbo].[Cipher] AS c
+    INNER JOIN #Temp AS t
+        ON t.[Id] = c.[Id];
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 

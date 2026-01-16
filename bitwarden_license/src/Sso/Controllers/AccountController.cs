@@ -462,6 +462,7 @@ public class AccountController : Controller
         // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
         var provider = result.Properties.Items["scheme"];
+        //Todo: Validate provider is a valid GUID with TryParse instead. When this is invalid it throws an exception
         var orgId = new Guid(provider);
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
         if (ssoConfig == null || !ssoConfig.Enabled)
@@ -615,7 +616,7 @@ public class AccountController : Controller
 
             // Since we're in the auto-provisioning logic, this means that the user exists, but they have not
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
-            // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
+            // We've verified that the user is Accepted or Confirmed, so we can create an SsoUser link and proceed
             // with authentication.
             await CreateSsoUserRecordAsync(providerUserId, guaranteedExistingUser.Id, organization.Id, guaranteedOrgUser);
 
@@ -680,22 +681,10 @@ public class AccountController : Controller
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
 
-        /*
-            The feature flag is checked here so that we can send the new MJML welcome email templates.
-            The other organization invites flows have an OrganizationUser allowing the RegisterUserCommand the ability
-            to fetch the Organization. The old method RegisterUser(User) here does not have that context, so we need
-            to use a new method RegisterSSOAutoProvisionedUserAsync(User, Organization) to send the correct email.
-            [PM-28057]: Prefer RegisterSSOAutoProvisionedUserAsync for SSO auto-provisioned users.
-            TODO: Remove Feature flag: PM-28221
-        */
-        if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
-        {
-            await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(newUser, organization);
-        }
-        else
-        {
-            await _registerUserCommand.RegisterUser(newUser);
-        }
+        // Always use RegisterSSOAutoProvisionedUserAsync to ensure organization context is available
+        // for domain validation (BlockClaimedDomainAccountCreation policy) and welcome emails.
+        // The feature flag logic for welcome email templates is handled internally by RegisterUserCommand.
+        await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(newUser, organization);
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
         var twoFactorPolicy =
