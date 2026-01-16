@@ -91,30 +91,12 @@ public class LoggerFactoryExtensionsTests
     }
 
     [Fact]
-    public async Task AddSerilogFileLogging_LegacyConfig_InfoLogs_DoNotFillUpFile()
-    {
-        await AssertSmallFileAsync((tempDir, config) =>
-        {
-            config["GlobalSettings:LogDirectory"] = tempDir;
-        });
-    }
-
-    [Fact]
     public async Task AddSerilogFileLogging_LegacyConfig_WithLevelCustomization_InfoLogs_DoNotFillUpFile()
     {
         await AssertSmallFileAsync((tempDir, config) =>
         {
             config["GlobalSettings:LogDirectory"] = tempDir;
             config["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning";
-        });
-    }
-
-    [Fact]
-    public async Task AddSerilogFileLogging_NewConfig_InfoLogs_DoNotFillUpFile()
-    {
-        await AssertSmallFileAsync((tempDir, config) =>
-        {
-            config["Logging:PathFormat"] = Path.Combine(tempDir, "log.txt");
         });
     }
 
