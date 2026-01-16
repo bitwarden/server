@@ -11,6 +11,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
@@ -33,6 +34,7 @@ public class SendOrganizationInvitesCommandTests
         Organization organization,
         SsoConfig ssoConfig,
         OrganizationUser invite,
+        [Policy(PolicyType.RequireSso, false)] PolicyData policy,
         SutProvider<SendOrganizationInvitesCommand> sutProvider)
     {
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
@@ -49,7 +51,7 @@ public class SendOrganizationInvitesCommandTests
         // Return null policy to mimic new org that's never turned on the require sso policy
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(organization.Id, PolicyType.RequireSso)
-            .Returns(new PolicyData { Enabled = false });
+            .Returns(policy);
 
         // Mock tokenable factory to return a token that expires in 5 days
         sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()

@@ -9,12 +9,6 @@ public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
     public async Task<PolicyData> RunAsync(Guid organizationId, PolicyType policyType)
     {
         var dbPolicy = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType);
-        return new PolicyData
-        {
-            OrganizationId = dbPolicy?.OrganizationId ?? organizationId,
-            Data = dbPolicy?.Data,
-            Type = dbPolicy?.Type ?? policyType,
-            Enabled = dbPolicy?.Enabled ?? false
-        };
+        return new PolicyData(organizationId, policyType, dbPolicy);
     }
 }

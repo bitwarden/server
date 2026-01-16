@@ -1,5 +1,4 @@
-﻿using AutoFixture;
-using Bit.Api.AdminConsole.Models.Response.Helpers;
+﻿using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -17,13 +16,7 @@ public class PolicyStatusResponsesTests
         bool policyEnabled,
         bool expectedCanToggle)
     {
-        var fixture = new Fixture();
-
-        var policy = fixture.Build<PolicyData>()
-            .Without(p => p.Data)
-            .With(p => p.Type, PolicyType.SingleOrg)
-            .With(p => p.Enabled, policyEnabled)
-            .Create();
+        var policy = new PolicyData(Guid.NewGuid(), PolicyType.SingleOrg) { Enabled = policyEnabled };
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
@@ -37,12 +30,7 @@ public class PolicyStatusResponsesTests
     [Fact]
     public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsNotSingleOrgType_ThenShouldThrowArgumentException()
     {
-        var fixture = new Fixture();
-
-        var policy = fixture.Build<PolicyData>()
-            .Without(p => p.Data)
-            .With(p => p.Type, PolicyType.TwoFactorAuthentication)
-            .Create();
+        var policy = new PolicyData(Guid.NewGuid(), PolicyType.TwoFactorAuthentication);
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
@@ -56,12 +44,7 @@ public class PolicyStatusResponsesTests
     [Fact]
     public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsSingleOrgTypeAndDoesNotHaveVerifiedDomains_ThenShouldBeAbleToToggle()
     {
-        var fixture = new Fixture();
-
-        var policy = fixture.Build<PolicyData>()
-            .Without(p => p.Data)
-            .With(p => p.Type, PolicyType.SingleOrg)
-            .Create();
+        var policy = new PolicyData(Guid.NewGuid(), PolicyType.SingleOrg);
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)

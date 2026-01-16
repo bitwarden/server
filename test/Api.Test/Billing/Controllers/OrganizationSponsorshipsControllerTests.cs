@@ -13,6 +13,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -85,7 +86,9 @@ public class OrganizationSponsorshipsControllerTests
     [BitAutoData]
     public async Task RedeemSponsorship_NotSponsoredOrgOwner_Success(string sponsorshipToken, User user,
         OrganizationSponsorship sponsorship, Organization sponsoringOrganization,
-        OrganizationSponsorshipRedeemRequestModel model, SutProvider<OrganizationSponsorshipsController> sutProvider)
+        OrganizationSponsorshipRedeemRequestModel model,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyData policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
@@ -96,7 +99,7 @@ public class OrganizationSponsorshipsControllerTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(model.SponsoredOrganizationId).Returns(sponsoringOrganization);
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(Arg.Any<Guid>(), PolicyType.FreeFamiliesSponsorshipPolicy)
-            .Returns(new PolicyData { Enabled = false });
+            .Returns(policy);
 
         await sutProvider.Sut.RedeemSponsorship(sponsorshipToken, model);
 
@@ -107,7 +110,9 @@ public class OrganizationSponsorshipsControllerTests
     [Theory]
     [BitAutoData]
     public async Task PreValidateSponsorshipToken_ValidatesToken_Success(string sponsorshipToken, User user,
-        OrganizationSponsorship sponsorship, SutProvider<OrganizationSponsorshipsController> sutProvider)
+        OrganizationSponsorship sponsorship,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyData policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
@@ -116,7 +121,7 @@ public class OrganizationSponsorshipsControllerTests
             .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email).Returns((true, sponsorship));
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(Arg.Any<Guid>(), PolicyType.FreeFamiliesSponsorshipPolicy)
-            .Returns(new PolicyData { Enabled = false });
+            .Returns(policy);
         await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
 
         await sutProvider.GetDependency<IValidateRedemptionTokenCommand>().Received(1)

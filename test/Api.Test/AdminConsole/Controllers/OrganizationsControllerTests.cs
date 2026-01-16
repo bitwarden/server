@@ -26,6 +26,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Test.Common.AutoFixture;
@@ -201,16 +202,9 @@ public class OrganizationsControllerTests
         SutProvider<OrganizationsController> sutProvider,
         User user,
         Organization organization,
-        OrganizationUser organizationUser)
+        OrganizationUser organizationUser,
+        [Policy(PolicyType.ResetPassword, data: "{\"AutoEnrollEnabled\": true}")] PolicyData policy)
     {
-        var policy = new PolicyData
-        {
-            Type = PolicyType.ResetPassword,
-            Enabled = true,
-            Data = "{\"AutoEnrollEnabled\": true}",
-            OrganizationId = organization.Id
-        };
-
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(false);

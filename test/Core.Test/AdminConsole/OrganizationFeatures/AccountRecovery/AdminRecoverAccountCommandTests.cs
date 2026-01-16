@@ -10,6 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -30,11 +31,12 @@ public class AdminRecoverAccountCommandTests
         Organization organization,
         OrganizationUser organizationUser,
         User user,
+        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
         SetupValidOrganizationUser(organizationUser, organization.Id);
         SetupValidUser(sutProvider, user, organizationUser);
         SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
@@ -94,13 +96,12 @@ public class AdminRecoverAccountCommandTests
         string newMasterPassword,
         string key,
         Organization organization,
+        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
-        sutProvider.GetDependency<IPolicyQuery>()
-            .RunAsync(organization.Id, PolicyType.ResetPassword)
-            .Returns(new PolicyData { OrganizationId = organization.Id, Type = PolicyType.ResetPassword, Enabled = false });
+        SetupValidPolicy(sutProvider, organization, policy);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -166,11 +167,12 @@ public class AdminRecoverAccountCommandTests
         Organization organization,
         string newMasterPassword,
         string key,
+        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -185,11 +187,12 @@ public class AdminRecoverAccountCommandTests
         string key,
         Organization organization,
         OrganizationUser organizationUser,
+        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
         SetupValidOrganizationUser(organizationUser, organization.Id);
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(organizationUser.UserId!.Value)
@@ -208,11 +211,12 @@ public class AdminRecoverAccountCommandTests
         Organization organization,
         OrganizationUser organizationUser,
         User user,
+        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
         SetupValidOrganization(sutProvider, organization);
-        SetupValidPolicy(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
         SetupValidOrganizationUser(organizationUser, organization.Id);
         user.UsesKeyConnector = true;
         sutProvider.GetDependency<IUserService>()
@@ -233,11 +237,11 @@ public class AdminRecoverAccountCommandTests
             .Returns(organization);
     }
 
-    private static void SetupValidPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)
+    private static void SetupValidPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization, PolicyData policy)
     {
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(organization.Id, PolicyType.ResetPassword)
-            .Returns(new PolicyData { OrganizationId = organization.Id, Type = PolicyType.ResetPassword, Enabled = true });
+            .Returns(policy);
     }
 
     private static void SetupValidOrganizationUser(OrganizationUser organizationUser, Guid orgId)

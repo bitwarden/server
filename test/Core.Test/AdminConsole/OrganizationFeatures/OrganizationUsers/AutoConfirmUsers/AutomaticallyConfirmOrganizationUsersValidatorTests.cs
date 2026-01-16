@@ -500,7 +500,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation, false)] PolicyData policy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -519,7 +520,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
 
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
-            .Returns(new PolicyData { OrganizationId = organization.Id, Type = PolicyType.AutomaticUserConfirmation, Enabled = false });
+            .Returns(policy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())

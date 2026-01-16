@@ -29,6 +29,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -136,17 +137,15 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsEnabledAndResetPolicyIsEnabled_ShouldHandleResetPassword(Guid orgId, Guid orgUserId,
-        OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
+        OrganizationUserAcceptRequestModel model, User user,
+        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = true });
 
-        var policy = new PolicyData
-        {
-            Enabled = true,
-            Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, }),
-        };
+        policy.Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, });
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
 
@@ -172,17 +171,15 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsDisabled_ShouldNotHandleResetPassword(Guid orgId, Guid orgUserId,
-        OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
+        OrganizationUserAcceptRequestModel model, User user,
+        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = false });
 
-        var policy = new PolicyData
-        {
-            Enabled = true,
-            Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, }),
-        };
+        policy.Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, });
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
 

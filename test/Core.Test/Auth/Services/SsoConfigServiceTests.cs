@@ -13,6 +13,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -163,7 +164,8 @@ public class SsoConfigServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_SingleOrgNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
-        Organization organization)
+        Organization organization,
+        [Policy(PolicyType.SingleOrg, false)] PolicyData policy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -181,7 +183,7 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(
-            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(new PolicyData { Enabled = false });
+            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(policy);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -194,7 +196,9 @@ public class SsoConfigServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_SsoPolicyNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
-        Organization organization)
+        Organization organization,
+        [Policy(PolicyType.SingleOrg, true)] PolicyData singleOrgPolicy,
+        [Policy(PolicyType.RequireSso, false)] PolicyData requireSsoPolicy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -212,9 +216,9 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(
-            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(new PolicyData { Enabled = true });
+            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(singleOrgPolicy);
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(
-            Arg.Any<Guid>(), PolicyType.RequireSso).Returns(new PolicyData { Enabled = false });
+            Arg.Any<Guid>(), PolicyType.RequireSso).Returns(requireSsoPolicy);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -227,7 +231,8 @@ public class SsoConfigServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_SsoConfigNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
-        Organization organization)
+        Organization organization,
+        [Policy(PolicyType.SingleOrg, true)] PolicyData policy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -245,7 +250,7 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(
-            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new PolicyData { Enabled = true });
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(policy);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -258,7 +263,8 @@ public class SsoConfigServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_KeyConnectorAbilityNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
-        Organization organization)
+        Organization organization,
+        [Policy(PolicyType.SingleOrg, true)] PolicyData policy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -277,7 +283,7 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(
-            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new PolicyData { Enabled = true });
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(policy);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(ssoConfig, organization));
@@ -290,7 +296,8 @@ public class SsoConfigServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_Success(SutProvider<SsoConfigService> sutProvider,
-        Organization organization)
+        Organization organization,
+        [Policy(PolicyType.SingleOrg, true)] PolicyData policy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -309,7 +316,7 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(
-            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new PolicyData { Enabled = true });
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(policy);
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 

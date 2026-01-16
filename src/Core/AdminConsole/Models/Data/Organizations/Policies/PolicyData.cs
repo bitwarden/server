@@ -1,10 +1,19 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public class PolicyData
 {
+    public PolicyData(Guid organizationId, PolicyType policyType, Policy? policy = null)
+    {
+        OrganizationId = policy?.OrganizationId ?? organizationId;
+        Data = policy?.Data;
+        Type = policy?.Type ?? policyType;
+        Enabled = policy?.Enabled ?? false;
+    }
+
     public Guid OrganizationId { get; set; }
     public PolicyType Type { get; set; }
     public bool Enabled { get; set; }
