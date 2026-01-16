@@ -566,7 +566,6 @@ public class PreviewPremiumUpgradeProrationCommandTests
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
             Arg.Is<InvoiceCreatePreviewOptions>(options =>
                 options.AutomaticTax.Enabled == true &&
-                options.Currency == "usd" &&
                 options.Customer == "cus_123" &&
                 options.Subscription == "sub_123" &&
                 options.CustomerDetails.Address.Country == "US" &&

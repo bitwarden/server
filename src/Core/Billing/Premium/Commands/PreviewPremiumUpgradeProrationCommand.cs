@@ -115,7 +115,6 @@ public class PreviewPremiumUpgradeProrationCommand(
         var options = new InvoiceCreatePreviewOptions
         {
             AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true },
-            Currency = "usd",
             Customer = user.GatewayCustomerId,
             Subscription = user.GatewaySubscriptionId,
             CustomerDetails = new InvoiceCustomerDetailsOptions

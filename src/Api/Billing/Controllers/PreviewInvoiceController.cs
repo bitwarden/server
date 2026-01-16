@@ -58,6 +58,7 @@ public class PreviewInvoiceController(
     }
 
     [HttpPost("premium/subscriptions/upgrade")]
+    [InjectUser]
     public async Task<IResult> PreviewPremiumUpgradeProrationAsync(
         [BindNever] User user,
         [FromBody] PreviewPremiumUpgradeProrationRequest request)
