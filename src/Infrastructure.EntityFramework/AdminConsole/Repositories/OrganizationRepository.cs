@@ -22,7 +22,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,

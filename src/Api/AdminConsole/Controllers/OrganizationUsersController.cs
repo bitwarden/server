@@ -677,11 +677,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.BulkRevokeUsersV2))
-        {
-            return await RestoreOrRevokeUsersAsync(orgId, model, _revokeOrganizationUserCommand.RevokeUsersAsync);
-        }
-
         var currentUserId = _userService.GetProperUserId(User);
         if (currentUserId == null)
         {

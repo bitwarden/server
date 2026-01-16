@@ -1,11 +1,10 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
-using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -794,7 +793,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    public async Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
     {
         organizationUserIds = organizationUserIds.ToList();
         if (!organizationUserIds.Any())
@@ -808,15 +807,15 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(dbContext, organizationId);
         var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
 
-        var (collectionUsers, collections) = BuildDefaultCollectionForUsers(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+        var (collections, collectionUsers) = CollectionUtils.BuildDefaultUserCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
 
-        if (!collectionUsers.Any() || !collections.Any())
+        if (!collections.Any() || !collectionUsers.Any())
         {
             return;
         }
 
-        await dbContext.BulkCopyAsync(collections);
-        await dbContext.BulkCopyAsync(collectionUsers);
+        await dbContext.Collections.AddRangeAsync(Mapper.Map<IEnumerable<Collection>>(collections));
+        await dbContext.CollectionUsers.AddRangeAsync(Mapper.Map<IEnumerable<CollectionUser>>(collectionUsers));
 
         await dbContext.SaveChangesAsync();
     }
@@ -844,37 +843,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         return results.ToHashSet();
     }
 
-    private (List<CollectionUser> collectionUser, List<Collection> collection) BuildDefaultCollectionForUsers(Guid organizationId, IEnumerable<Guid> missingDefaultCollectionUserIds, string defaultCollectionName)
-    {
-        var collectionUsers = new List<CollectionUser>();
-        var collections = new List<Collection>();
-
-        foreach (var orgUserId in missingDefaultCollectionUserIds)
-        {
-            var collectionId = CoreHelpers.GenerateComb();
-
-            collections.Add(new Collection
-            {
-                Id = collectionId,
-                OrganizationId = organizationId,
-                Name = defaultCollectionName,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow,
-                Type = CollectionType.DefaultUserCollection,
-                DefaultUserCollectionEmail = null
-
-            });
-
-            collectionUsers.Add(new CollectionUser
-            {
-                CollectionId = collectionId,
-                OrganizationUserId = orgUserId,
-                ReadOnly = false,
-                HidePasswords = false,
-                Manage = true,
-            });
-        }
-
-        return (collectionUsers, collections);
-    }
+    public Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds,
+        string defaultCollectionName) =>
+        CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
 }
