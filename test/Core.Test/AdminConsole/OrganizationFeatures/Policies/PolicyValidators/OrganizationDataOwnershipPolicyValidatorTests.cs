@@ -38,7 +38,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+            .CreateDefaultCollectionsBulkAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -60,7 +60,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+            .CreateDefaultCollectionsBulkAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -86,7 +86,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await collectionRepository
             .DidNotReceive()
-            .UpsertDefaultCollectionsAsync(
+            .CreateDefaultCollectionsBulkAsync(
                 Arg.Any<Guid>(),
                 Arg.Any<IEnumerable<Guid>>(),
                 Arg.Any<string>());
@@ -172,10 +172,10 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Act
         await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
-        // Assert
+        // Assert - Should call with all user IDs (repository does internal filtering)
         await collectionRepository
             .Received(1)
-            .UpsertDefaultCollectionsAsync(
+            .CreateDefaultCollectionsBulkAsync(
                 policyUpdate.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 3),
                 _defaultUserCollectionName);
@@ -210,7 +210,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .UpsertDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+            .CreateDefaultCollectionsBulkAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     private static IPolicyRepository ArrangePolicyRepository(IEnumerable<OrganizationPolicyDetails> policyDetails)
@@ -251,7 +251,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
-            .UpsertDefaultCollectionsAsync(default, default, default);
+            .CreateDefaultCollectionsBulkAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -273,7 +273,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
-            .UpsertDefaultCollectionsAsync(default, default, default);
+            .CreateDefaultCollectionsBulkAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -299,7 +299,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await collectionRepository
             .DidNotReceiveWithAnyArgs()
-            .UpsertDefaultCollectionsAsync(
+            .CreateDefaultCollectionsBulkAsync(
                 default,
                 default,
                 default);
@@ -336,10 +336,10 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Act
         await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
-        // Assert
+        // Assert - Should call with all user IDs (repository does internal filtering)
         await collectionRepository
             .Received(1)
-            .UpsertDefaultCollectionsAsync(
+            .CreateDefaultCollectionsBulkAsync(
                 policyUpdate.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 3),
                 _defaultUserCollectionName);
@@ -367,6 +367,6 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
-            .UpsertDefaultCollectionsAsync(default, default, default);
+            .CreateDefaultCollectionsBulkAsync(default, default, default);
     }
 }

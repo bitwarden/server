@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Queries;
@@ -47,7 +48,7 @@ public class SendAuthenticationQueryTests
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: emailString, password: null);
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: emailString, password: null, AuthType.Email);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -63,7 +64,7 @@ public class SendAuthenticationQueryTests
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: "test@example.com", password: "hashedpassword");
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: "test@example.com", password: "hashedpassword", AuthType.Email);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -78,7 +79,7 @@ public class SendAuthenticationQueryTests
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: null);
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: null, AuthType.None);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -105,11 +106,11 @@ public class SendAuthenticationQueryTests
     public static IEnumerable<object[]> AuthenticationMethodTestCases()
     {
         yield return new object[] { null, typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emails: null, password: null), typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emails: null, password: null), typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: "test@example.com", password: null), typeof(EmailOtp) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: "hashedpassword"), typeof(ResourcePassword) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: null), typeof(NotAuthenticated) };
+        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
+        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: "test@example.com", password: null, AuthType.Email), typeof(EmailOtp) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: "hashedpassword", AuthType.Password), typeof(ResourcePassword) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: null, AuthType.None), typeof(NotAuthenticated) };
     }
 
     public static IEnumerable<object[]> EmailParsingTestCases()
@@ -121,7 +122,7 @@ public class SendAuthenticationQueryTests
         yield return new object[] { " , test@example.com,  ,other@example.com, ", new[] { "test@example.com", "other@example.com" } };
     }
 
-    private static Send CreateSend(int accessCount, int? maxAccessCount, string? emails, string? password)
+    private static Send CreateSend(int accessCount, int? maxAccessCount, string? emails, string? password, AuthType? authType)
     {
         return new Send
         {
@@ -129,7 +130,8 @@ public class SendAuthenticationQueryTests
             AccessCount = accessCount,
             MaxAccessCount = maxAccessCount,
             Emails = emails,
-            Password = password
+            Password = password,
+            AuthType = authType
         };
     }
 }
