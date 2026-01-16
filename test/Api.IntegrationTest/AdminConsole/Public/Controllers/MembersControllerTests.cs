@@ -266,7 +266,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostRevoke_Member_Success()
+    public async Task Revoke_Member_Success()
     {
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
@@ -282,7 +282,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostRevoke_AlreadyRevoked_ReturnsBadRequest()
+    public async Task Revoke_AlreadyRevoked_ReturnsBadRequest()
     {
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
@@ -298,14 +298,14 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostRevoke_NotFound_ReturnsNotFound()
+    public async Task Revoke_NotFound_ReturnsNotFound()
     {
         var response = await _client.PostAsync($"/public/members/{Guid.NewGuid()}/revoke", null);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task PostRevoke_DifferentOrganization_ReturnsNotFound()
+    public async Task Revoke_DifferentOrganization_ReturnsNotFound()
     {
         // Create a different organization
         var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
@@ -327,7 +327,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostRestore_Member_Success()
+    public async Task Restore_Member_Success()
     {
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
@@ -346,7 +346,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostRestore_AlreadyActive_ReturnsBadRequest()
+    public async Task Restore_AlreadyActive_ReturnsBadRequest()
     {
         var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
@@ -359,14 +359,14 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostRestore_NotFound_ReturnsNotFound()
+    public async Task Restore_NotFound_ReturnsNotFound()
     {
         var response = await _client.PostAsync($"/public/members/{Guid.NewGuid()}/restore", null);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task PostRestore_DifferentOrganization_ReturnsNotFound()
+    public async Task Restore_DifferentOrganization_ReturnsNotFound()
     {
         // Create a different organization
         var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
