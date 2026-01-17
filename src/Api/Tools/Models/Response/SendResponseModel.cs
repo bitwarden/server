@@ -47,6 +47,7 @@ public class SendResponseModel : ResponseModel
         DeletionDate = send.DeletionDate;
         Password = send.Password;
         Emails = send.Emails;
+        EmailHashes = send.EmailHashes;
         Disabled = send.Disabled;
         HideEmail = send.HideEmail.GetValueOrDefault();
 
@@ -153,6 +154,12 @@ public class SendResponseModel : ResponseModel
     /// authentication. Mutually exclusive with <see cref="Password"/>.
     /// </summary>
     public string Emails { get; set; }
+
+    /// <summary>
+    /// Comma-separated list of email **hashes**  that may access the send using OTP
+    /// authentication. Mutually exclusive with <see cref="Password"/>.
+    /// </summary>
+    public string EmailHashes { get; set; }
 
     /// <summary>
     /// When <see langword="true"/>, send access is disabled.
