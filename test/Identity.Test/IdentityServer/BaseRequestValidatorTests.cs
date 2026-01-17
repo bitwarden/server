@@ -18,6 +18,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidationConstants;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Test.Wrappers;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -161,7 +162,11 @@ public class BaseRequestValidatorTests
             .ValidateRequestDeviceAsync(tokenRequest, requestContext)
             .Returns(Task.FromResult(false));
 
-        // 5 -> not legacy user
+        // 5 -> SSO not required
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // 6 -> not legacy user
         _userService.IsLegacyUser(Arg.Any<string>())
             .Returns(false);
 
@@ -203,6 +208,11 @@ public class BaseRequestValidatorTests
         _userService.IsLegacyUser(Arg.Any<string>())
             .Returns(false);
 
+        // 6 -> SSO validation passes
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // 7 -> setup user account keys
         _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
         {
             PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
@@ -262,6 +272,11 @@ public class BaseRequestValidatorTests
         _userService.IsLegacyUser(Arg.Any<string>())
             .Returns(false);
 
+        // 6 -> SSO validation passes
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // 7 -> setup user account keys
         _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
         {
             PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
@@ -326,6 +341,9 @@ public class BaseRequestValidatorTests
                 { "TwoFactorProviders2", new Dictionary<string, object> { { "Email", null } } }
             }));
 
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
         // Act
         await _sut.ValidateAsync(context);
 
@@ -368,6 +386,10 @@ public class BaseRequestValidatorTests
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token")
             .Returns(Task.FromResult(false));
 
+        // 5 -> set up SSO required verification to succeed
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
         // Act
         await _sut.ValidateAsync(context);
 
@@ -396,21 +418,25 @@ public class BaseRequestValidatorTests
         // 1 -> initial validation passes
         _sut.isValid = true;
 
-        // 2 -> set up 2FA as required
+        // 2 -> set up SSO required verification to succeed
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        // 3 -> set up 2FA as required
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
 
-        // 3 -> provide invalid remember token (remember token expired)
+        // 4 -> provide invalid remember token (remember token expired)
         tokenRequest.Raw["TwoFactorToken"] = "expired_remember_token";
         tokenRequest.Raw["TwoFactorProvider"] = "5"; // Remember provider
 
-        // 4 -> set up remember token verification to fail
+        // 5 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token")
             .Returns(Task.FromResult(false));
 
-        // 5 -> set up dummy BuildTwoFactorResultAsync
+        // 6 -> set up dummy BuildTwoFactorResultAsync
         var twoFactorResultDict = new Dictionary<string, object>
         {
             { "TwoFactorProviders", new[] { "0", "1" } },
@@ -453,6 +479,13 @@ public class BaseRequestValidatorTests
         _policyService.AnyPoliciesApplicableToUserAsync(
                 Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
             .Returns(Task.FromResult(true));
+
+
+        _ssoRequestValidator.ValidateAsync(
+                Arg.Any<User>(),
+                Arg.Any<ValidatedTokenRequest>(),
+                Arg.Any<CustomValidatorRequestContext>())
+            .Returns(Task.FromResult(false));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -519,6 +552,10 @@ public class BaseRequestValidatorTests
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = false };
         _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>()).Returns(requirement);
 
+        // SSO validation passes
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
@@ -561,6 +598,11 @@ public class BaseRequestValidatorTests
         _policyService.AnyPoliciesApplicableToUserAsync(
                 Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
             .Returns(Task.FromResult(false));
+
+        // SSO validation passes
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
@@ -602,6 +644,10 @@ public class BaseRequestValidatorTests
         _sut.isValid = true;
 
         context.ValidatedTokenRequest.GrantType = grantType;
+
+        // SSO validation passes
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
 
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
@@ -652,6 +698,8 @@ public class BaseRequestValidatorTests
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
             .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -693,6 +741,10 @@ public class BaseRequestValidatorTests
 
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true;
+
+        // SSO validation passes
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
 
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
@@ -759,6 +811,8 @@ public class BaseRequestValidatorTests
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
             .Returns(Task.FromResult(true));
 
         // Act
@@ -833,6 +887,8 @@ public class BaseRequestValidatorTests
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
             .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -876,6 +932,8 @@ public class BaseRequestValidatorTests
         _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
             .Returns(Task.FromResult(true));
 
         // Act
@@ -921,6 +979,8 @@ public class BaseRequestValidatorTests
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
             .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));  
 
         // Act
         await _sut.ValidateAsync(context);
@@ -989,7 +1049,7 @@ public class BaseRequestValidatorTests
 
         // Recovery succeeds, then SSO blocks with descriptive message
         Assert.Equal(
-            "Two-factor recovery has been performed. SSO authentication is required.",
+            SsoConstants.RequestErrors.SsoRequiredDescription,
             errorResponse.Message);
 
         // Verify recovery was marked
