@@ -177,7 +177,6 @@
       addLabels: ["hold"],
     },
     {
-      // Group npm dependencies for
       groupName: "Admin and SSO npm dependencies",
       matchFileNames: ["src/Admin/package.json", "src/Sso/package.json"],
       matchUpdateTypes: ["minor", "patch"],
