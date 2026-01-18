@@ -480,9 +480,6 @@ public abstract class BaseRequestValidator<T> where T : class
     protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
 
     [Obsolete("Consider using SetValidationErrorResult instead.")]
-    protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
-
-    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
 
     /// <summary>
