@@ -555,7 +555,7 @@ public class BaseRequestValidatorTests
         Assert.True(context.GrantResult.IsError);
         Assert.NotNull(context.GrantResult.CustomResponse);
         var errorResponse = (ErrorResponseModel)context.CustomValidatorRequestContext.CustomResponse[CustomResponseConstants.ResponseKeys.ErrorModel];
-         Assert.Equal(SsoConstants.RequestErrors.SsoRequiredDescription, errorResponse.Message);
+        Assert.Equal(SsoConstants.RequestErrors.SsoRequiredDescription, errorResponse.Message);
     }
 
     [Theory]
@@ -1009,7 +1009,7 @@ public class BaseRequestValidatorTests
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
             .Returns(Task.FromResult(true));
         _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));  
+            .Returns(Task.FromResult(true));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -1236,7 +1236,7 @@ public class BaseRequestValidatorTests
 
         // 8. SSO is not required
         _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));      
+            .Returns(Task.FromResult(true));
 
         // 9. Setup user account keys for successful login response
         _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData

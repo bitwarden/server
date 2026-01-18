@@ -495,41 +495,6 @@ public abstract class BaseRequestValidator<T> where T : class
 
     protected abstract ClaimsPrincipal GetSubject(T context);
 
-    /// <summary>
-    /// Check if the user is required to authenticate via SSO. If the user requires SSO, but they are
-    /// logging in using an API Key (client_credentials) then they are allowed to bypass the SSO requirement.
-    /// If the GrantType is authorization_code or client_credentials we know the user is trying to login
-    /// using the SSO flow so they are allowed to continue.
-    /// </summary>
-    /// <param name="user">user trying to login</param>
-    /// <param name="grantType">magic string identifying the grant type requested</param>
-    /// <returns>true if sso required; false if not required or already in process</returns>
-    [Obsolete(
-        "This method is deprecated and will be removed in future versions, PM-28281. Please use the SsoRequestValidator scheme instead.")]
-    private async Task<bool> RequireSsoLoginAsync(User user, string grantType)
-    {
-        if (grantType == "authorization_code" || grantType == "client_credentials")
-        {
-            // Already using SSO to authenticate, or logging-in via api key to skip SSO requirement
-            // allow to authenticate successfully
-            return false;
-        }
-
-        // Check if user belongs to any organization with an active SSO policy
-        var ssoRequired = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
-            .SsoRequired
-            : await PolicyService.AnyPoliciesApplicableToUserAsync(
-                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (ssoRequired)
-        {
-            return true;
-        }
-
-        // Default - SSO is not required
-        return false;
-    }
-
     private async Task ResetFailedAuthDetailsAsync(User user)
     {
         // Early escape if db hit not necessary
