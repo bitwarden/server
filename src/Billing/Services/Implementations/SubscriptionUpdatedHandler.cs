@@ -294,7 +294,13 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         // Get all plan IDs that include Secrets Manager support to check if the organization has secret manager in the
         // previous and/or current subscriptions.
-        var planIdsOfPlansWithSecretManager = (await _pricingClient.ListPlans())
+        var plans = await _pricingClient.ListPlans();
+        if (plans == null)
+        {
+            return;
+        }
+
+        var planIdsOfPlansWithSecretManager = plans
             .Where(orgPlan => orgPlan.SupportsSecretsManager && orgPlan.SecretsManager.StripeSeatPlanId != null)
             .Select(orgPlan => orgPlan.SecretsManager.StripeSeatPlanId)
             .ToHashSet();
