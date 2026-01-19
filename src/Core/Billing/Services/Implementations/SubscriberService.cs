@@ -87,7 +87,7 @@ public class SubscriberService(
 
         if (cancelImmediately)
         {
-            if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
+            if (subscription.Metadata.ContainsKey("organizationId"))
             {
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
@@ -984,13 +984,18 @@ public class SubscriberService(
     private async Task<bool> TryRevertPremiumUpgradeAsync(Subscription subscription, Organization organization)
     {
         // Extract all metadata once
-        var metadata = subscription.Metadata ?? new Dictionary<string, string>();
+        var metadata = subscription.Metadata;
+
+        // VALIDATION PHASE: Quick checks to determine if reversion is applicable
+        // These checks return false (no error) because they indicate "reversion not needed"
+        // rather than "reversion failed" - the cancellation should proceed normally.
 
         // Check if subscription has the premium upgrade metadata
         if (!metadata.TryGetValue(MetadataKeys.PreviousPremiumPriceId, out var previousPremiumPriceId) ||
             !metadata.TryGetValue(MetadataKeys.UpgradedOrganizationId, out var upgradedOrganizationIdStr) ||
             !metadata.TryGetValue(MetadataKeys.PreviousPremiumUserId, out var previousPremiumUserIdStr))
         {
+            logger.LogDebug("Subscription {SubscriptionId} does not have premium upgrade metadata", subscription.Id);
             return false;
         }
 
@@ -1020,6 +1025,10 @@ public class SubscriberService(
             return false;
         }
 
+        // REVERSION PHASE: At this point we've determined reversion IS applicable and should happen.
+        // Any failures from here on throw exceptions (not return false) because they indicate
+        // a serious error that should fail the cancellation - we don't want to cancel an org
+        // subscription if we can't properly revert it back to the user.
         try
         {
             logger.LogInformation("Reverting Premium-to-Organization upgrade for organization {OrganizationId}", organization.Id);
@@ -1033,14 +1042,16 @@ public class SubscriberService(
             }
 
             // STEP 2: Get the current Premium plan details from pricing client
+            // Note: GetAvailablePremiumPlan() will throw NotFoundException if no Premium plan exists
             var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
-            if (premiumPlan == null || !premiumPlan.Available)
+            if (!premiumPlan.Available)
             {
-                logger.LogError("Cannot revert subscription - Premium plan is not available");
+                logger.LogError("Cannot revert subscription - Premium plan exists but is not available");
                 throw new BillingException("Premium plan is not currently available");
             }
 
             // STEP 3: Parse additional metadata
+            // Restore the user's original Premium expiration date from before they upgraded to Organization
             DateTime? periodEnd = null;
             if (metadata.TryGetValue(MetadataKeys.PreviousPeriodEndDate, out var periodEndStr) &&
                 DateTime.TryParse(periodEndStr, out var parsedPeriodEnd))
@@ -1122,6 +1133,7 @@ public class SubscriberService(
             // STEP 7: Update user's Premium status and storage
             user.Premium = true;
             user.PremiumExpirationDate = periodEnd;
+            user.Gateway = GatewayType.Stripe;
             user.GatewaySubscriptionId = subscription.Id;
             user.GatewayCustomerId = subscription.CustomerId; // Ensure user's customer ID matches subscription
             user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + additionalStorageGb);
@@ -1129,6 +1141,18 @@ public class SubscriberService(
             await userRepository.ReplaceAsync(user);
 
             // STEP 8: Clear organization's subscription reference
+            // NOTE: The organization entity itself is NOT deleted. It remains in the database with:
+            // - GatewaySubscriptionId set to null (no active subscription)
+            // - All existing data (vaults, members, etc.) preserved
+            // - Effectively becomes a "Free" organization (no billing)
+            //
+            // TODO: Discuss with @micahblut about whether we should:
+            // 1. Explicitly transition the organization to a Free plan, or
+            // 2. Delete the organization entirely, or
+            // 3. Leave it as-is (current behavior)
+            //
+            // Current behavior: Organization remains but has no active subscription, making it
+            // effectively unusable for new billing operations but data is preserved.
             organization.GatewaySubscriptionId = null;
             await organizationRepository.ReplaceAsync(organization);
 

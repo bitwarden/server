@@ -421,8 +421,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         // STEP 1: Fastest check first - check if subscription has premium upgrade metadata
         // This avoids expensive deserialization for subscriptions without this metadata
-        if (subscription.Metadata == null ||
-            !subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId))
+        if (!subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId))
         {
             return;
         }
