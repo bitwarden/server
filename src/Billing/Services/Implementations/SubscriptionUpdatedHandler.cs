@@ -308,6 +308,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 previousSubscriptionItem => planIdsOfPlansWithSecretManager.Contains(previousSubscriptionItem.Plan.Id));
 
         var currentSubscriptionHasSecretsManager =
+            subscription.Items is not null &&
             subscription.Items.Any(
                 currentSubscriptionItem => planIdsOfPlansWithSecretManager.Contains(currentSubscriptionItem.Plan.Id));
 

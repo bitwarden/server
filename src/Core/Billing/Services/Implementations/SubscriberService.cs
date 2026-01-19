@@ -990,6 +990,13 @@ public class SubscriberService(
         // These checks return false (no error) because they indicate "reversion not needed"
         // rather than "reversion failed" - the cancellation should proceed normally.
 
+        // Check if metadata exists
+        if (metadata == null)
+        {
+            logger.LogDebug("Subscription {SubscriptionId} has no metadata", subscription.Id);
+            return false;
+        }
+
         // Check if subscription has the premium upgrade metadata
         if (!metadata.TryGetValue(MetadataKeys.PreviousPremiumPriceId, out var previousPremiumPriceId) ||
             !metadata.TryGetValue(MetadataKeys.UpgradedOrganizationId, out var upgradedOrganizationIdStr) ||
