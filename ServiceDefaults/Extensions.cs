@@ -3,10 +3,6 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
 
 namespace Bit.ServiceDefaults;
 
@@ -189,7 +185,15 @@ public static class Extensions
             var useOtlpExporter = !string.IsNullOrWhiteSpace(context.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
             if (useOtlpExporter)
             {
-                services.AddOpenTelemetry().UseOtlpExporter();
+                // Check if OTLP exporter is already configured
+                var otlpExporterAlreadyRegistered = services.Any(sd =>
+                    sd.ServiceType.FullName?.Contains("OtlpExporter") == true ||
+                    sd.ImplementationType?.FullName?.Contains("OtlpExporter") == true);
+
+                if (!otlpExporterAlreadyRegistered)
+                {
+                    services.AddOpenTelemetry().UseOtlpExporter();
+                }
             }
         });
         return hostBuilder;
