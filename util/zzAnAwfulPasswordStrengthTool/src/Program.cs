@@ -8,7 +8,10 @@ var apiKey = app.Configuration["PasswordAnalyzer:ApiKey"];
 app.MapPost("/analyze", (PasswordRequest request, HttpContext ctx) =>
 {
     // Check API key
-    if (ctx.Request.Headers["X-API-Key"] != apiKey)
+    if (!CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.UTF8.GetBytes(ctx.Request.Headers["X-API-Key"].ToString()),
+            System.Text.Encoding.UTF8.GetBytes(apiKey ?? string.Empty)))
+        return Results.Unauthorized();
         return Results.Unauthorized();
 
 
