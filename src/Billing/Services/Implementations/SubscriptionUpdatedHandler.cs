@@ -292,17 +292,24 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             .PreviousAttributes
             .ToObject<Subscription>() as Subscription;
 
+        // Get all plan IDs that include Secrets Manager support to check if the organization has secret manager in the
+        // previous and/or current subscriptions.
+        var planIdsOfPlansWithSecretManager = (await _pricingClient.ListPlans())
+            .Where(orgPlan => orgPlan.SupportsSecretsManager && orgPlan.SecretsManager.StripeSeatPlanId != null)
+            .Select(orgPlan => orgPlan.SecretsManager.StripeSeatPlanId)
+            .ToHashSet();
+
         // This being false doesn't necessarily mean that the organization doesn't subscribe to Secrets Manager.
         // If there are changes to any subscription item, Stripe sends every item in the subscription, both
         // changed and unchanged.
         var previousSubscriptionHasSecretsManager =
             previousSubscription?.Items is not null &&
             previousSubscription.Items.Any(
-                previousSubscriptionItem => previousSubscriptionItem.Plan.Id == plan.SecretsManager.StripeSeatPlanId);
+                previousSubscriptionItem => planIdsOfPlansWithSecretManager.Contains(previousSubscriptionItem.Plan.Id));
 
         var currentSubscriptionHasSecretsManager =
             subscription.Items.Any(
-                currentSubscriptionItem => currentSubscriptionItem.Plan.Id == plan.SecretsManager.StripeSeatPlanId);
+                currentSubscriptionItem => planIdsOfPlansWithSecretManager.Contains(currentSubscriptionItem.Plan.Id));
 
         if (!previousSubscriptionHasSecretsManager || currentSubscriptionHasSecretsManager)
         {
