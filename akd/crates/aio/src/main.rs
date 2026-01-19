@@ -2,41 +2,23 @@
 //! Requires both read and write permissions to the underlying data stores.
 //! There should only be one instance of this running at a time for a given AKD.
 
-use akd_storage::db_config::DbConfig;
-use common::VrfStorageType;
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 #[allow(unreachable_code)]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
-        .init();
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(tracing::level_filters::LevelFilter::INFO.into())
+        .from_env_lossy();
 
-    let connection_string = std::env::var("AKD_MSSQL_CONNECTION_STRING")
-        .expect("AKD_MSSQL_CONNECTION_STRING must be set.");
-    let db_config = DbConfig::MsSql {
-        connection_string,
-        pool_size: 10,
-    };
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
-    let db = db_config
-        .connect()
-        .await
-        .expect("Failed to connect to database");
-    let vrf = VrfStorageType::HardCodedAkdVRF;
-
-    // Start the publisher write job
-    let _write_job_handle = {
-        let db = db.clone();
-        let vrf = vrf.clone();
-        tokio::spawn(async move {
-            publisher::start_write_job(db, vrf).await;
-        })
-    };
-
-    // Create a router with both publisher and reader routes
+    // Load config and convert to publisher and reader configs
     todo!();
 
-    // Start the web server
+    // Start publisher task
+    todo!();
+
+    // Start reader task
     todo!();
 }

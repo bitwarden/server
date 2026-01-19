@@ -237,12 +237,6 @@ impl VrfKeyTableData {
             VrfKeyConfig::B64EncodedSymmetricKey { key: _ } => {
                 let root_key_hash = config.root_key_hash().map_err(|_| VrfKeyCreationError)?;
 
-                error!(
-                    rkh = root_key_hash.len(),
-                    sevk = sym_enc_vrf_key.len(),
-                    sevkn = nonce.len(),
-                    "lengths of stuff!!!!!\n\n\n\n"
-                );
                 Ok((
                     VrfKeyTableData {
                         root_key_hash,

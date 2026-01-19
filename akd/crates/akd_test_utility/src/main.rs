@@ -1,4 +1,3 @@
-use akd::Directory;
 use akd_storage::akd_storage_config::AkdStorageConfig;
 use akd_storage::db_config::{DatabaseType, DbConfig};
 use akd_storage::AkdDatabase;
