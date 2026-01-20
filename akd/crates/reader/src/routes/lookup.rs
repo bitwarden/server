@@ -33,7 +33,7 @@ pub async fn lookup_handler(
     State(AppState { directory, .. }): State<AppState>,
     Json(LookupRequest { label_b64 }): Json<LookupRequest>,
 ) -> (StatusCode, Json<Response<LookupData>>) {
-    info!("Handling get public key request");
+    info!("Handling lookup request");
     let lookup_proof = directory.lookup(label_b64.into()).await;
 
     match lookup_proof {
@@ -45,7 +45,7 @@ pub async fn lookup_handler(
             })),
         ),
         Err(e) => {
-            error!(err = ?e, "Failed to get AKD public key");
+            error!(err = ?e, "Failed to perform lookup");
             (StatusCode::INTERNAL_SERVER_ERROR, Json(Response::fail(e)))
         }
     }

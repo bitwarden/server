@@ -24,7 +24,7 @@ pub async fn batch_lookup_handler(
     State(AppState { directory, .. }): State<AppState>,
     Json(BatchLookupRequest { labels_b64 }): Json<BatchLookupRequest>,
 ) -> (StatusCode, Json<Response<BatchLookupData>>) {
-    info!("Handling get public key request");
+    info!("Handling batch lookup request");
     let labels = labels_b64
         .into_iter()
         .map(|label_b64| label_b64.into())
@@ -40,7 +40,7 @@ pub async fn batch_lookup_handler(
             })),
         ),
         Err(e) => {
-            error!(err = ?e, "Failed to get AKD public key");
+            error!(err = ?e, "Failed to perform batch lookup");
             (StatusCode::INTERNAL_SERVER_ERROR, Json(Response::fail(e)))
         }
     }

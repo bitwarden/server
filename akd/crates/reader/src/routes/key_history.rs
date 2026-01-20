@@ -51,7 +51,7 @@ pub async fn key_history_handler(
         history_params,
     }): Json<KeyHistoryRequest>,
 ) -> (StatusCode, Json<Response<HistoryData>>) {
-    info!("Handling get public key request");
+    info!("Handling get key history request");
     let history_proof = directory.key_history(&label, history_params.into()).await;
 
     match history_proof {
@@ -63,7 +63,7 @@ pub async fn key_history_handler(
             })),
         ),
         Err(e) => {
-            error!(err = ?e, "Failed to get AKD public key");
+            error!(err = ?e, "Failed to get key history");
             (StatusCode::INTERNAL_SERVER_ERROR, Json(Response::fail(e)))
         }
     }
