@@ -237,3 +237,6 @@ bitwarden_license/src/Sso/Sso.zip
 
 # Serena
 .serena/
+
+# ignore any local claude settings
+CLAUDE.local.md
