@@ -24,5 +24,5 @@ public interface IDeleteEmergencyAccessCommand
     /// </summary>
     /// <param name="grantorId">The ID of the grantor user whose emergency access records should be deleted.</param>
     /// <returns>A collection of the deleted emergency access records.</returns>
-    Task<ICollection<EmergencyAccessDetails>> DeleteAllByGrantorIdAsync(Guid grantorId);
+    Task<ICollection<EmergencyAccessDetails>?> DeleteAllByGrantorIdAsync(Guid grantorId);
 }

@@ -24,14 +24,20 @@ public class DeleteEmergencyAccessCommand(
         await _emergencyAccessRepository.DeleteAsync(emergencyAccess);
 
         // Send notification email to grantor
-        await SendEmailAsync(emergencyAccess.GrantorEmail, [emergencyAccess.GranteeName]);
+        await SendEmergencyAccessRemoveGranteesEmailAsync(emergencyAccess.GrantorEmail, [emergencyAccess.GranteeName]);
         return emergencyAccess;
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<EmergencyAccessDetails>> DeleteAllByGrantorIdAsync(Guid grantorId)
+    public async Task<ICollection<EmergencyAccessDetails>?> DeleteAllByGrantorIdAsync(Guid grantorId)
     {
         var emergencyAccessDetails = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(grantorId);
+
+        // if there is nothing return an empty array
+        if (emergencyAccessDetails == null || emergencyAccessDetails.Count == 0)
+        {
+            return emergencyAccessDetails;
+        }
 
         foreach (var details in emergencyAccessDetails)
         {
@@ -40,14 +46,14 @@ public class DeleteEmergencyAccessCommand(
         }
 
         // Send notification email to grantor
-        await SendEmailAsync(
+        await SendEmergencyAccessRemoveGranteesEmailAsync(
             emergencyAccessDetails.FirstOrDefault()?.GrantorEmail ?? string.Empty,
             [.. emergencyAccessDetails.Select(e => e.GranteeName)]);
 
         return emergencyAccessDetails;
     }
 
-    private async Task SendEmailAsync(string grantorEmail, string[] granteeNames)
+    private async Task SendEmergencyAccessRemoveGranteesEmailAsync(string grantorEmail, string[] granteeNames)
     {
         var email = new EmergencyAccessRemoveGranteesMail
         {
