@@ -1,4 +1,6 @@
-﻿namespace Bit.SeederApi;
+﻿using Bit.Core.Utilities;
+
+namespace Bit.SeederApi;
 
 public class Program
 {

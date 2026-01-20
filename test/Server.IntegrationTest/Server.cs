@@ -1,4 +1,8 @@
-﻿namespace Bit.Server.IntegrationTest;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+
+namespace Bit.Server.IntegrationTest;
 
 public class Server : WebApplicationFactory<Program>
 {

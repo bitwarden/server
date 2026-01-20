@@ -1,4 +1,5 @@
-﻿using Bit.IntegrationTestCommon;
+﻿using Bit.Core.Services;
+using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 
 namespace Bit.SeederApi.IntegrationTest;

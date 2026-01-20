@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Bit.SeederApi.Models.Request;
+using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
 

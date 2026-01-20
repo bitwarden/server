@@ -1,4 +1,6 @@
-﻿using Bit.SeederApi.Commands.Interfaces;
+﻿using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.SeederApi.Commands.Interfaces;
 using Bit.SeederApi.Services;
 
 namespace Bit.SeederApi.Commands;

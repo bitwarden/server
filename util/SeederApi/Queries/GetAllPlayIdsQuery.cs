@@ -1,4 +1,5 @@
-﻿using Bit.SeederApi.Queries.Interfaces;
+﻿using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.SeederApi.Queries.Interfaces;
 
 namespace Bit.SeederApi.Queries;
 
