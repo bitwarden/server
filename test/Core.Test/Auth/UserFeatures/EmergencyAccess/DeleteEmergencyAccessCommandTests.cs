@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Commands;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Mail;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -30,6 +32,9 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAsync(default);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
     }
 
     [Theory, BitAutoData]
@@ -60,6 +65,9 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
             .DeleteAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(ea => ea.Id == emergencyAccessId));
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
     }
 
     [Theory, BitAutoData]
@@ -78,6 +86,9 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAsync(default);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
     }
 
     [Theory, BitAutoData]
@@ -108,7 +119,6 @@ public class DeleteEmergencyAccessCommandTests
             Id = Guid.NewGuid(),
             GrantorId = grantorId,
             GranteeId = Guid.NewGuid(),
-            Status = EmergencyAccessStatusType.RecoveryApproved,
             Type = EmergencyAccessType.View
         };
 
@@ -130,6 +140,9 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(3)
             .DeleteAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
     }
 
     [Theory, BitAutoData]
@@ -150,7 +163,7 @@ public class DeleteEmergencyAccessCommandTests
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetManyDetailsByGrantorIdAsync(grantorId)
-            .Returns(new List<EmergencyAccessDetails> { emergencyAccessDetails });
+            .Returns([emergencyAccessDetails]);
 
         var result = await sutProvider.Sut.DeleteAllByGrantorIdAsync(grantorId);
 
@@ -160,5 +173,8 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
             .DeleteAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(ea => ea.Id == emergencyAccessId));
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
     }
 }
