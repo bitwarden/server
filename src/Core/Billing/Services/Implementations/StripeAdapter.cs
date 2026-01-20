@@ -116,6 +116,9 @@ public class StripeAdapter : IStripeAdapter
         return invoices;
     }
 
+    public Task<Invoice> CreateInvoiceAsync(InvoiceCreateOptions options) =>
+        _invoiceService.CreateAsync(options);
+
     public Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options) =>
         _invoiceService.CreatePreviewAsync(options);
 

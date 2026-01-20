@@ -143,14 +143,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
     }
 
     [Obsolete("Consider using SetValidationErrorResult instead.")]
-    protected override void SetSsoResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
-            customResponse);
-    }
-
-    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetErrorResult(ExtensionGrantValidationContext context, Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
