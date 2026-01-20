@@ -18,7 +18,7 @@
                     </mj-text>
                     <mj-text font-size="16px" line-height="24px" padding="10px 15px 15px 15px">
                         As an existing Bitwarden customer, you will receive a one-time {{DiscountAmount}} loyalty discount for this renewal.
-                        This renewal now will be {{DiscountedMonthlyRenewalPrice}}/month, billed annually.
+                        This year's renewal now will be {{DiscountedMonthlyRenewalPrice}}/month, billed annually.
                     </mj-text>
                     <mj-text font-size="16px" line-height="24px" padding="10px 15px">
                         Questions? Contact
