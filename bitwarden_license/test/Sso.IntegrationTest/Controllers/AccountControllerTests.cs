@@ -1,9 +1,21 @@
 ﻿using System.Net;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Testing;
+using NSubstitute;
+using Xunit;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Controllers;

@@ -1,5 +1,16 @@
-﻿using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
+using NSubstitute;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
 
 namespace Bit.Sso.IntegrationTest.Utilities;

@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using Bit.Core;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
