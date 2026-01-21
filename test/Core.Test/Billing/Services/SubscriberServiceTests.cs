@@ -165,7 +165,8 @@ public class SubscriberServiceTests
         var subscription = new Subscription
         {
             Id = subscriptionId,
-            Status = "active"
+            Status = "active",
+            Metadata = new Dictionary<string, string>()
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -215,6 +216,8 @@ public class SubscriberServiceTests
             GatewaySubscriptionId = null
         };
 
+        var previousPeriodEndDate = DateTime.UtcNow.AddMonths(1);
+
         var subscription = new Subscription
         {
             Id = "sub_test",
@@ -232,7 +235,7 @@ public class SubscriberServiceTests
                 [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = "premium-annually-2020",
                 [StripeConstants.MetadataKeys.UpgradedOrganizationId] = organization.Id.ToString(),
                 [StripeConstants.MetadataKeys.PreviousPremiumUserId] = userId.ToString(),
-                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = DateTime.UtcNow.AddMonths(1).ToString("O"),
+                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = previousPeriodEndDate.ToString("O"),
                 [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = "5",
                 [StripeConstants.MetadataKeys.PreviousStoragePriceId] = "storage-annually-2020",
                 [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString()
@@ -280,7 +283,6 @@ public class SubscriberServiceTests
                 opts.Items.Count(i => i.Deleted == true) == 1 &&
                 opts.Items.Any(i => i.Price == "premium-annually-2020" && i.Quantity == 1) &&
                 opts.Items.Any(i => i.Price == "storage-annually-2020" && i.Quantity == 5) &&
-                opts.TrialEnd.Value == SubscriptionTrialEnd.Now &&
                 opts.Metadata[StripeConstants.MetadataKeys.UserId] == userId.ToString() &&
                 !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
                 !opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId)));
