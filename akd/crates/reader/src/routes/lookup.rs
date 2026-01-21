@@ -1,4 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
+use common::AkdLabelB64;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
@@ -7,15 +8,6 @@ use crate::{
     routes::{get_epoch_hash::EpochData, Response},
     AppState,
 };
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AkdLabelB64(pub(crate) bitwarden_encoding::B64);
-
-impl From<AkdLabelB64> for akd::AkdLabel {
-    fn from(label_b64: AkdLabelB64) -> Self {
-        akd::AkdLabel(label_b64.0.into_bytes())
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LookupRequest {

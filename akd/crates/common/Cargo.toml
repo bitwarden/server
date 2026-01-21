@@ -11,6 +11,7 @@ akd.workspace = true
 async-trait = { workspace = true }
 akd_storage = { workspace = true }
 bitwarden-akd-configuration = { workspace = true }
+bitwarden-encoding = { workspace = true }
 config = { workspace = true }
 serde = { workspace = true }
 thiserror.workspace = true

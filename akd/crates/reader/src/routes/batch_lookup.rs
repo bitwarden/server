@@ -1,10 +1,11 @@
 use axum::{extract::State, http::StatusCode, Json};
+use common::AkdLabelB64;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
 use crate::{
     error::ReaderError,
-    routes::{get_epoch_hash::EpochData, lookup::AkdLabelB64, Response},
+    routes::{get_epoch_hash::EpochData, Response},
     AppState,
 };
 

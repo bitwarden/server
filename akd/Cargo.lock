@@ -711,6 +711,7 @@ dependencies = [
  "akd_storage",
  "async-trait",
  "bitwarden-akd-configuration",
+ "bitwarden-encoding",
  "config",
  "hex",
  "serde",

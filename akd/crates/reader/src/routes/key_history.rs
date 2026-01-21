@@ -1,4 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
+use common::AkdLabelB64;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
@@ -10,8 +11,8 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KeyHistoryRequest {
+    pub label_b64: AkdLabelB64,
     /// the label to look up encoded as an uppercase hex string
-    pub label: akd::AkdLabel,
     pub history_params: HistoryParams,
 }
 
@@ -45,12 +46,14 @@ pub struct HistoryData {
 pub async fn key_history_handler(
     State(AppState { directory, .. }): State<AppState>,
     Json(KeyHistoryRequest {
-        label,
+        label_b64,
         history_params,
     }): Json<KeyHistoryRequest>,
 ) -> (StatusCode, Json<Response<HistoryData>>) {
     info!("Handling get key history request");
-    let history_proof = directory.key_history(&label, history_params.into()).await;
+    let history_proof = directory
+        .key_history(&label_b64.into(), history_params.into())
+        .await;
 
     match history_proof {
         Ok((history_proof, epoch_hash)) => (
