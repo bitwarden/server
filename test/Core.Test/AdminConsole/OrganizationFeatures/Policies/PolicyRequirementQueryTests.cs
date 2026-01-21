@@ -12,25 +12,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 public class PolicyRequirementQueryTests
 {
     [Theory, BitAutoData]
-    public async Task GetAsync_IgnoresOtherPolicyTypes(Guid userId)
-    {
-        var thisPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userId };
-        var otherPolicy = new OrganizationPolicyDetails { PolicyType = PolicyType.RequireSso, UserId = userId };
-        var policyRepository = Substitute.For<IPolicyRepository>();
-        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
-                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(userId)), PolicyType.SingleOrg)
-            .Returns([otherPolicy, thisPolicy]);
-
-        var factory = new TestPolicyRequirementFactory(_ => true);
-        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
-
-        var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
-
-        Assert.Contains(thisPolicy, requirement.Policies);
-        Assert.DoesNotContain(otherPolicy, requirement.Policies);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetAsync_CallsEnforceCallback(Guid userId)
     {
         // Arrange policies
@@ -84,6 +65,128 @@ public class PolicyRequirementQueryTests
         var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
 
         Assert.Empty(requirement.Policies);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_WithMultipleUserIds_ReturnsRequirementPerUser(Guid userIdA, Guid userIdB)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var policyA = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userIdA };
+        var policyB = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userIdB };
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Any<IEnumerable<Guid>>(), PolicyType.SingleOrg)
+            .Returns([policyA, policyB]);
+
+        var factory = new TestPolicyRequirementFactory(_ => true);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
+
+        Assert.Equal(2, requirements.Count);
+        Assert.Contains(policyA, requirements[0].Policies);
+        Assert.DoesNotContain(policyB, requirements[0].Policies);
+        Assert.Contains(policyB, requirements[1].Policies);
+        Assert.DoesNotContain(policyA, requirements[1].Policies);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_WithMultipleUserIds_CallsEnforceCallback(Guid userIdA, Guid userIdB)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var policyA = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userIdA };
+        var policyB = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userIdB };
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Any<IEnumerable<Guid>>(), PolicyType.SingleOrg)
+            .Returns([policyA, policyB]);
+
+        var callback = Substitute.For<Func<PolicyDetails, bool>>();
+        callback(Arg.Any<PolicyDetails>()).Returns(x => x.Arg<PolicyDetails>() == policyA);
+
+        var factory = new TestPolicyRequirementFactory(callback);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
+
+        Assert.Contains(policyA, requirements[0].Policies);
+        Assert.Empty(requirements[1].Policies);
+        callback.Received()(Arg.Is(policyA));
+        callback.Received()(Arg.Is(policyB));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_WithMultipleUserIds_FiltersOutPoliciesThatAreNotEnforced(Guid userIdA, Guid userIdB)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var enforcedPolicyA = new OrganizationPolicyDetails
+        { PolicyType = PolicyType.SingleOrg, UserId = userIdA, IsProvider = false };
+        var notEnforcedPolicyA = new OrganizationPolicyDetails
+        { PolicyType = PolicyType.SingleOrg, UserId = userIdA, IsProvider = true };
+        var enforcedPolicyB = new OrganizationPolicyDetails
+        { PolicyType = PolicyType.SingleOrg, UserId = userIdB, IsProvider = false };
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Any<IEnumerable<Guid>>(), PolicyType.SingleOrg)
+            .Returns([enforcedPolicyA, notEnforcedPolicyA, enforcedPolicyB]);
+
+        // Enforce returns false for providers (filtering them out)
+        var factory = new TestPolicyRequirementFactory(p => !p.IsProvider);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
+
+        Assert.Equal(2, requirements.Count);
+        Assert.Contains(enforcedPolicyA, requirements[0].Policies);
+        Assert.DoesNotContain(notEnforcedPolicyA, requirements[0].Policies);
+        Assert.Contains(enforcedPolicyB, requirements[1].Policies);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_WithMultipleUserIds_ThrowsIfNoFactoryRegistered(Guid userIdA, Guid userIdB)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var sut = new PolicyRequirementQuery(policyRepository, []);
+
+        var exception = await Assert.ThrowsAsync<NotImplementedException>(()
+            => sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB]));
+        Assert.Contains("No Requirement Factory found", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_WithMultipleUserIds_HandlesNoPolicies(Guid userIdA, Guid userIdB)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Any<IEnumerable<Guid>>(), PolicyType.SingleOrg)
+            .Returns([]);
+
+        var factory = new TestPolicyRequirementFactory(_ => true);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
+
+        Assert.Equal(2, requirements.Count);
+        Assert.Empty(requirements[0].Policies);
+        Assert.Empty(requirements[1].Policies);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAsync_WithMultipleUserIds_ReturnsEmptyRequirementForUserWithoutPolicies(
+        Guid userIdA, Guid userIdB)
+    {
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var policyA = new OrganizationPolicyDetails { PolicyType = PolicyType.SingleOrg, UserId = userIdA };
+        // Only userIdA has a policy, userIdB has none
+        policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(
+                Arg.Any<IEnumerable<Guid>>(), PolicyType.SingleOrg)
+            .Returns([policyA]);
+
+        var factory = new TestPolicyRequirementFactory(_ => true);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
+        var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
+
+        Assert.Equal(2, requirements.Count);
+        Assert.Contains(policyA, requirements[0].Policies);
+        Assert.Empty(requirements[1].Policies);
     }
 
     [Theory, BitAutoData]
