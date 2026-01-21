@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
@@ -14,8 +11,8 @@ public class EmergencyAccess : ITableObject<Guid>
     public Guid GrantorId { get; set; }
     public Guid? GranteeId { get; set; }
     [MaxLength(256)]
-    public string Email { get; set; }
-    public string KeyEncrypted { get; set; }
+    public required string Email { get; set; }
+    public required string KeyEncrypted { get; set; }
     public EmergencyAccessType Type { get; set; }
     public EmergencyAccessStatusType Status { get; set; }
     public short WaitTimeDays { get; set; }
