@@ -63,11 +63,11 @@ public class PreviewInvoiceController(
         [BindNever] User user,
         [FromBody] PreviewPremiumUpgradeProrationRequest request)
     {
-        var (tierType, billingAddress) = request.ToDomain();
+        var (planType, billingAddress) = request.ToDomain();
 
         var result = await previewPremiumUpgradeProrationCommand.Run(
             user,
-            tierType,
+            planType,
             billingAddress);
 
         return Handle(result.Map(pair => new { pair.Tax, pair.Total, pair.Credit }));

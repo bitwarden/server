@@ -74,7 +74,7 @@ public class UpgradePremiumToOrganizationCommand(
 
         if (passwordManagerItem == null)
         {
-            return new BadRequest("Premium subscription item not found.");
+            return new BadRequest("Premium subscription password manager item not found.");
         }
 
         var usersPremiumPlan = premiumPlans.First(p => p.Seat.StripePriceId == passwordManagerItem.Price.Id);
@@ -133,7 +133,7 @@ public class UpgradePremiumToOrganizationCommand(
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = subscriptionItemOptions,
-            ProrationBehavior = StripeConstants.ProrationBehavior.None,
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
@@ -144,6 +144,11 @@ public class UpgradePremiumToOrganizationCommand(
                 [StripeConstants.MetadataKeys.UserId] = string.Empty // Remove userId to unlink subscription from User
             }
         };
+
+        if (targetPlan.TrialPeriodDays.HasValue)
+        {
+            subscriptionUpdateOptions.TrialEnd = DateTime.UtcNow.AddDays((double)targetPlan.TrialPeriodDays);
+        }
 
         // Create the Organization entity
         var organization = new Organization

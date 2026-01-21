@@ -28,7 +28,8 @@ public class UpgradePremiumToOrganizationCommandTests
             string? stripePlanId = null,
             string? stripeSeatPlanId = null,
             string? stripePremiumAccessPlanId = null,
-            string? stripeStoragePlanId = null)
+            string? stripeStoragePlanId = null,
+            int? trialPeriodDays = null)
         {
             Type = planType;
             ProductTier = ProductTierType.Teams;
@@ -37,7 +38,7 @@ public class UpgradePremiumToOrganizationCommandTests
             NameLocalizationKey = "";
             DescriptionLocalizationKey = "";
             CanBeUsedByBusiness = true;
-            TrialPeriodDays = null;
+            TrialPeriodDays = trialPeriodDays;
             HasSelfHost = false;
             HasPolicies = false;
             HasGroups = false;
@@ -86,10 +87,9 @@ public class UpgradePremiumToOrganizationCommandTests
         string? stripePlanId = null,
         string? stripeSeatPlanId = null,
         string? stripePremiumAccessPlanId = null,
-        string? stripeStoragePlanId = null)
-    {
-        return new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId);
-    }
+        string? stripeStoragePlanId = null,
+        int? trialPeriodDays = null) =>
+        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId, trialPeriodDays);
 
     private static PremiumPlan CreateTestPremiumPlan(
         string seatPriceId = "premium-annually",
@@ -642,5 +642,76 @@ public class UpgradePremiumToOrganizationCommandTests
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
         Assert.Equal("Premium subscription item not found.", badRequest.Response);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_PlanWithTrialPeriod_SetsTrialEnd(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = new List<SubscriptionItem>
+                {
+                    new SubscriptionItem
+                    {
+                        Id = "si_premium",
+                        Price = new Price { Id = "premium-annually" },
+                        CurrentPeriodEnd = currentPeriodEnd
+                    }
+                }
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var mockPremiumPlans = CreateTestPremiumPlansList();
+
+        // Create a plan with a trial period
+        var mockPlan = CreateTestPlan(
+            PlanType.TeamsAnnually,
+            stripeSeatPlanId: "teams-seat-annually",
+            trialPeriodDays: 7
+        );
+
+        // Capture the subscription update options to verify TrialEnd is set
+        SubscriptionUpdateOptions capturedOptions = null;
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123")
+            .Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Do<SubscriptionUpdateOptions>(opts => capturedOptions = opts))
+            .Returns(Task.FromResult(mockSubscription));
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var testStartTime = DateTime.UtcNow;
+        var result = await _command.Run(user, "My Organization", "encrypted-key", PlanType.TeamsAnnually);
+        var testEndTime = DateTime.UtcNow;
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync("sub_123", Arg.Any<SubscriptionUpdateOptions>());
+
+        Assert.NotNull(capturedOptions);
+        Assert.NotNull(capturedOptions.TrialEnd);
+
+        // TrialEnd is AnyOf<DateTime?, SubscriptionTrialEnd> - verify it's a DateTime
+        var trialEndDateTime = capturedOptions.TrialEnd.Value as DateTime?;
+        Assert.NotNull(trialEndDateTime);
+        Assert.True(trialEndDateTime.Value >= testStartTime.AddDays(7));
+        Assert.True(trialEndDateTime.Value <= testEndTime.AddDays(7));
     }
 }

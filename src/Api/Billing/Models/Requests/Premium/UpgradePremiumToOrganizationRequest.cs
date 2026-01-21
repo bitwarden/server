@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.Billing.Enums;
 
 namespace Bit.Api.Billing.Models.Requests.Premium;
@@ -14,24 +15,29 @@ public class UpgradePremiumToOrganizationRequest
 
     [Required]
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public ProductTierType Tier { get; set; }
+    public required ProductTierType TargetProductTierType { get; set; }
 
     [Required]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public PlanCadenceType Cadence { get; set; }
+    public required MinimalBillingAddressRequest BillingAddress { get; set; }
 
-    private PlanType PlanType =>
-        Tier switch
+    private PlanType PlanType
+    {
+        get
         {
-            ProductTierType.Families => PlanType.FamiliesAnnually,
-            ProductTierType.Teams => Cadence == PlanCadenceType.Monthly
-                ? PlanType.TeamsMonthly
-                : PlanType.TeamsAnnually,
-            ProductTierType.Enterprise => Cadence == PlanCadenceType.Monthly
-                ? PlanType.EnterpriseMonthly
-                : PlanType.EnterpriseAnnually,
-            _ => throw new InvalidOperationException("Cannot upgrade to an Organization subscription that isn't Families, Teams or Enterprise.")
-        };
+            if (TargetProductTierType is not (ProductTierType.Families or ProductTierType.Teams or ProductTierType.Enterprise))
+            {
+                throw new InvalidOperationException($"Cannot upgrade Premium subscription to {TargetProductTierType} plan.");
+            }
+
+            return TargetProductTierType switch
+            {
+                ProductTierType.Families => PlanType.FamiliesAnnually,
+                ProductTierType.Teams => PlanType.TeamsAnnually,
+                ProductTierType.Enterprise => PlanType.EnterpriseAnnually,
+                _ => throw new InvalidOperationException($"Unexpected ProductTierType: {TargetProductTierType}")
+            };
+        }
+    }
 
     public (string OrganizationName, string Key, PlanType PlanType) ToDomain() => (OrganizationName, Key, PlanType);
 }

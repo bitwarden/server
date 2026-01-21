@@ -36,7 +36,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
         user.Premium = false;
 
         // Act
-        var result = await _command.Run(user, ProductTierType.Teams, billingAddress);
+        var result = await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert
         Assert.True(result.IsT1);
@@ -52,7 +52,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
         user.GatewaySubscriptionId = null;
 
         // Act
-        var result = await _command.Run(user, ProductTierType.Teams, billingAddress);
+        var result = await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert
         Assert.True(result.IsT1);
@@ -136,7 +136,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
             .Returns(invoice);
 
         // Act
-        var result = await _command.Run(user, ProductTierType.Teams, billingAddress);
+        var result = await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert
         Assert.True(result.IsT0);
@@ -212,7 +212,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
             .Returns(invoice);
 
         // Act
-        var result = await _command.Run(user, ProductTierType.Teams, billingAddress);
+        var result = await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert
         Assert.True(result.IsT0);
@@ -279,7 +279,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
             .Returns(invoice);
 
         // Act
-        await _command.Run(user, ProductTierType.Teams, billingAddress);
+        await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert - Verify that the subscription item quantity is always 1
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
@@ -287,82 +287,6 @@ public class PreviewPremiumUpgradeProrationCommandTests
                 options.SubscriptionDetails.Items.Any(item =>
                     item.Price == targetPlan.PasswordManager.StripeSeatPlanId &&
                     item.Quantity == 1)));
-    }
-
-    [Theory]
-    [InlineData(ProductTierType.Families, PlanType.FamiliesAnnually)]
-    [InlineData(ProductTierType.Teams, PlanType.TeamsAnnually)]
-    [InlineData(ProductTierType.Enterprise, PlanType.EnterpriseAnnually)]
-    public async Task Run_ProductTierTypeConversion_MapsToCorrectPlanType(
-        ProductTierType productTierType,
-        PlanType expectedPlanType)
-    {
-        // Arrange
-        var user = new User
-        {
-            Premium = true,
-            GatewaySubscriptionId = "sub_123",
-            GatewayCustomerId = "cus_123"
-        };
-        var billingAddress = new BillingAddress
-        {
-            Country = "US",
-            PostalCode = "12345"
-        };
-
-        var premiumPlan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
-            {
-                StripePriceId = "premium-annually",
-                Price = 10m,
-                Provided = 1
-            },
-            Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
-            {
-                StripePriceId = "storage-gb-annually",
-                Price = 4m,
-                Provided = 1
-            }
-        };
-        var premiumPlans = new List<PremiumPlan> { premiumPlan };
-
-        var currentSubscription = new Subscription
-        {
-            Id = "sub_123",
-            Customer = new Customer { Id = "cus_123", Discount = null },
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new() { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
-                }
-            }
-        };
-
-        var targetPlan = new TeamsPlan(isAnnual: true);
-
-        var invoice = new Invoice
-        {
-            Total = 5000,
-            TotalTaxes = new List<InvoiceTotalTax> { new() { Amount = 500 } }
-        };
-
-        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
-        _pricingClient.GetPlanOrThrow(expectedPlanType).Returns(targetPlan);
-        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>())
-            .Returns(currentSubscription);
-        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
-            .Returns(invoice);
-
-        // Act
-        await _command.Run(user, productTierType, billingAddress);
-
-        // Assert - Verify that the correct PlanType was used
-        await _pricingClient.Received(1).GetPlanOrThrow(expectedPlanType);
     }
 
     [Theory, BitAutoData]
@@ -423,7 +347,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
             .Returns(invoice);
 
         // Act
-        await _command.Run(user, ProductTierType.Teams, billingAddress);
+        await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert - Verify both password manager and storage items are marked as deleted
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
@@ -491,7 +415,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
             .Returns(invoice);
 
         // Act
-        await _command.Run(user, ProductTierType.Families, billingAddress);
+        await _command.Run(user, PlanType.FamiliesAnnually, billingAddress);
 
         // Assert - Verify non-seat-based plan uses StripePlanId with quantity 1
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
@@ -560,7 +484,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
             .Returns(invoice);
 
         // Act
-        await _command.Run(user, ProductTierType.Teams, billingAddress);
+        await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert - Verify all invoice preview options are correct
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
@@ -570,24 +494,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
                 options.Subscription == "sub_123" &&
                 options.CustomerDetails.Address.Country == "US" &&
                 options.CustomerDetails.Address.PostalCode == "12345" &&
-                options.SubscriptionDetails.ProrationBehavior == "always_invoice"));
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_TeamsStarterTierType_ReturnsBadRequest(User user, BillingAddress billingAddress)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        // Act
-        var result = await _command.Run(user, ProductTierType.TeamsStarter, billingAddress);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("Cannot upgrade Premium subscription to TeamsStarter plan.", badRequest.Response);
+                options.SubscriptionDetails.ProrationBehavior == "create_prorations"));
     }
 
     [Theory, BitAutoData]
@@ -648,7 +555,7 @@ public class PreviewPremiumUpgradeProrationCommandTests
             .Returns(invoice);
 
         // Act
-        await _command.Run(user, ProductTierType.Teams, billingAddress);
+        await _command.Run(user, PlanType.TeamsAnnually, billingAddress);
 
         // Assert - Verify seat-based plan uses StripeSeatPlanId with quantity 1
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(

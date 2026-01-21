@@ -20,12 +20,12 @@ public interface IPreviewPremiumUpgradeProrationCommand
     /// Calculates the tax, total cost, and proration credit for upgrading a Premium subscription to an Organization plan.
     /// </summary>
     /// <param name="user">The user with an active Premium subscription.</param>
-    /// <param name="targetProductTierType">The target organization tier (Families, Teams, or Enterprise).</param>
+    /// <param name="targetPlanType">The target organization plan type.</param>
     /// <param name="billingAddress">The billing address for tax calculation.</param>
     /// <returns>A tuple containing the tax amount, total cost, and proration credit from unused Premium time.</returns>
     Task<BillingCommandResult<(decimal Tax, decimal Total, decimal Credit)>> Run(
         User user,
-        ProductTierType targetProductTierType,
+        PlanType targetPlanType,
         BillingAddress billingAddress);
 }
 
@@ -38,27 +38,13 @@ public class PreviewPremiumUpgradeProrationCommand(
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total, decimal Credit)>> Run(
         User user,
-        ProductTierType targetProductTierType,
+        PlanType targetPlanType,
         BillingAddress billingAddress) => HandleAsync<(decimal, decimal, decimal)>(async () =>
     {
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
         {
             return new BadRequest("User does not have an active Premium subscription.");
         }
-
-        if (targetProductTierType is not (ProductTierType.Families or ProductTierType.Teams or ProductTierType.Enterprise))
-        {
-            return new BadRequest($"Cannot upgrade Premium subscription to {targetProductTierType} plan.");
-        }
-
-        // Convert ProductTierType to PlanType (for premium upgrade, the only choice is annual plans so we can assume that cadence)
-        var targetPlanType = targetProductTierType switch
-        {
-            ProductTierType.Families => PlanType.FamiliesAnnually,
-            ProductTierType.Teams => PlanType.TeamsAnnually,
-            ProductTierType.Enterprise => PlanType.EnterpriseAnnually,
-            _ => throw new InvalidOperationException($"Unexpected ProductTierType: {targetProductTierType}")
-        };
 
         // Hardcode seats to 1 for upgrade flow
         const int seats = 1;
@@ -128,7 +114,7 @@ public class PreviewPremiumUpgradeProrationCommand(
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items = subscriptionItems,
-                ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice
+                ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
             }
         };
 
