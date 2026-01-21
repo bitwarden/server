@@ -58,7 +58,7 @@ public class RestoreOrganizationUserCommand(
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
     {
-        await RepositoryRestoreUserAsync(organizationUser, ""); // TODO fix this
+        await RepositoryRestoreUserAsync(organizationUser, ""); // users stored by a system user will not get a default collection at this point.
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored,
             systemUser);
 
@@ -199,6 +199,9 @@ public class RestoreOrganizationUserCommand(
         var orgUsersAndOrgs = await GetRelatedOrganizationUsersAndOrganizationsAsync(filteredUsers);
 
         var result = new List<Tuple<OrganizationUser, string>>();
+        var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId))
+            .ToList();
 
         foreach (var organizationUser in filteredUsers)
         {
@@ -240,10 +243,9 @@ public class RestoreOrganizationUserCommand(
                 await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
                 if (organizationUser.UserId.HasValue)
                 {
-                    if ((await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId
-                           .Value)).State == OrganizationDataOwnershipState.Enabled
-                       && organizationUser.Status == OrganizationUserStatusType.Confirmed
-                       && !string.IsNullOrWhiteSpace(defaultCollectionName))
+                    if (organizationUsersDataOwnershipEnabled.Contains(organizationUser.Id)
+                        && organizationUser.Status == OrganizationUserStatusType.Confirmed
+                        && !string.IsNullOrWhiteSpace(defaultCollectionName))
                     {
                         await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
                             [organizationUser.Id],

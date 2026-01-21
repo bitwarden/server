@@ -1339,13 +1339,10 @@ public class RestoreOrganizationUserCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
-        // Setup policy for orgUser1 (the one with UserId)
-        SetupOrganizationDataOwnershipPolicy(
-            sutProvider,
-            orgUser1.UserId!.Value,
-            organization.Id,
-            OrganizationUserStatusType.Revoked,
-            policyEnabled: true);
+        // Setup bulk policy query - returns org user IDs with policy enabled
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns([orgUser1.Id]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -1395,21 +1392,10 @@ public class RestoreOrganizationUserCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
-        // Setup policy enabled only for orgUser1
-        SetupOrganizationDataOwnershipPolicy(
-            sutProvider,
-            orgUser1.UserId!.Value,
-            organization.Id,
-            OrganizationUserStatusType.Revoked,
-            policyEnabled: true);
-
-        // Setup policy disabled for orgUser2
-        SetupOrganizationDataOwnershipPolicy(
-            sutProvider,
-            orgUser2.UserId!.Value,
-            organization.Id,
-            OrganizationUserStatusType.Revoked,
-            policyEnabled: false);
+        // Setup bulk policy query - only orgUser1 has policy enabled
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns([orgUser1.Id]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -1459,20 +1445,10 @@ public class RestoreOrganizationUserCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
-        // Setup policy enabled for both users
-        SetupOrganizationDataOwnershipPolicy(
-            sutProvider,
-            orgUser1.UserId!.Value,
-            organization.Id,
-            OrganizationUserStatusType.Revoked,
-            policyEnabled: true);
-
-        SetupOrganizationDataOwnershipPolicy(
-            sutProvider,
-            orgUser2.UserId!.Value,
-            organization.Id,
-            OrganizationUserStatusType.Revoked,
-            policyEnabled: true);
+        // Setup bulk policy query - both users have policy enabled
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns([orgUser1.Id, orgUser2.Id]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
