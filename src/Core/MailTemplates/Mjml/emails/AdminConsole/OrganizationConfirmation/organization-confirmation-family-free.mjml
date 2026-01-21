@@ -1,6 +1,19 @@
 <mjml>
   <mj-head>
     <mj-include path="../../../components/head.mjml" />
+
+      <mj-style>
+          @media only screen and (max-width:480px) {
+              .mj-bw-icon-row-text {
+                  padding-left: 5px !important;
+                  line-height: 20px;
+              }
+              .mj-bw-icon-row {
+                  padding: 10px 15px;
+                  width: fit-content !important;
+              }
+          }
+      </mj-style>
   </mj-head>
 
   <mj-body css-class="border-fix">
@@ -54,29 +67,97 @@
         </mj-section>
     </mj-wrapper>
 
-    <!-- Main Content -->
-    <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-section background-color="#fff" padding="15px 10px 10px 10px">
-        <mj-column>
-          <mj-text font-size="16px" line-height="24px" padding="10px 15px">
-            As a member of <b>{{OrganizationName}}</b>:
-          </mj-text>
-        </mj-column>
-      </mj-section>
-      <mj-bw-icon-row
-        icon-src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
-        icon-alt="Collections Icon"
-        text="You can access passwords {{OrganizationName}} has shared with you."
-      />
-      <mj-bw-icon-row
-        icon-src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
-        icon-alt="Group Users Icon"
-        text="You can easily share passwords with friends, family, or coworkers."
-        foot-url-text="Share passwords in Bitwarden"
-        foot-url="https://bitwarden.com/help/sharing"
-      />
-      <mj-section background-color="#fff" padding="0 20px 20px 20px">
-      </mj-section>
+        <!-- Main Content -->
+        <mj-wrapper padding="5px 20px 10px 20px">
+          <mj-section background-color="#fff" padding="32px 32px 0px 0px">
+            <mj-column>
+              <mj-text font-size="16px" line-height="24px" padding="10px 15px">
+                As a member of <b>{{OrganizationName}}</b>:
+              </mj-text>
+            </mj-column>
+          </mj-section>
+
+        <mj-section background-color="#fff" padding="24px 32px 0px">
+            <mj-group >
+                <mj-column width="72px" padding-right="24px" vertical-align="top">
+                    <mj-image
+                            src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
+                            alt="Collections Icon"
+                            width="48px"
+                            padding="0px"
+                            border-radius="8px"
+                            align="left"
+                    />
+                </mj-column>
+
+                <mj-column width="484px" vertical-align="top">
+
+                    <mj-text
+                            css-class="mj-bw-icon-row-text"
+                            padding="0px"
+                            font-family="Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                            font-size="16px"
+                            font-weight="400"
+                            line-height="24px"
+                            align="left"
+                    >
+                        You can access passwords {{OrganizationName}} has shared with you.
+                    </mj-text>
+
+                </mj-column>
+            </mj-group>
+        </mj-section>
+        <mj-section background-color="#fff" padding="24px 32px 32px">
+            <mj-group >
+                <mj-column width="72px" padding-right="24px" vertical-align="top">
+                    <mj-image
+                            src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
+                            alt="Group Users Icon"
+                            width="48px"
+                            padding="0px"
+                            border-radius="8px"
+                            align="left"
+                    />
+                </mj-column>
+
+                <mj-column width="484px" vertical-align="top">
+
+                    <mj-text
+                            css-class="mj-bw-icon-row-text"
+                            padding="0px"
+                            font-family="Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                            font-size="16px"
+                            font-weight="400"
+                            line-height="24px"
+                            align="left"
+                    >
+                        You can easily share passwords with friends, family, or coworkers.
+                    </mj-text>
+
+                    <mj-text
+                            css-class="mj-bw-icon-row-text"
+                            padding="0px"
+                            font-family="Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                            font-size="16px"
+                            font-weight="400"
+                            line-height="24px"
+                            align="left"
+                    >
+                        <a href="https://bitwarden.com/help/sharing" class="link">
+                            Share passwords in Bitwarden
+                            <span style="text-decoration: none">
+                                <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
+                                     alt="External Link Icon"
+                                     width="16px"
+                                     style="vertical-align: middle;"
+                                />
+                            </span>
+                        </a>
+                    </mj-text>
+
+                </mj-column>
+            </mj-group>
+        </mj-section>
     </mj-wrapper>
 
     <!-- Download Mobile Apps Section -->
@@ -127,7 +208,6 @@
                             width="140px"
                             height="40px"
                             padding="0"
-
                     />
                 </mj-column>
             </mj-group>
