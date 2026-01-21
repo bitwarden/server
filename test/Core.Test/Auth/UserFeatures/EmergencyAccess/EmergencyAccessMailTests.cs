@@ -41,7 +41,7 @@ public class EmergencyAccessMailTests
             ToEmails = [grantorEmail],
             View = new EmergencyAccessRemoveGranteesMailView
             {
-                RemovedGranteeNames = [granteeName]
+                RemovedGranteeEmails = [granteeName]
             }
         };
 
@@ -84,7 +84,7 @@ public class EmergencyAccessMailTests
             ToEmails = [grantorEmail],
             View = new EmergencyAccessRemoveGranteesMailView
             {
-                RemovedGranteeNames = granteeNames
+                RemovedGranteeEmails = granteeNames
             }
         };
 
@@ -119,14 +119,14 @@ public class EmergencyAccessMailTests
             View = new EmergencyAccessRemoveGranteesMailView
             {
                 // Required: at least one removed grantee name
-                RemovedGranteeNames = ["Example Grantee"]
+                RemovedGranteeEmails = ["Example Grantee"]
             }
         };
 
         // Assert
         Assert.NotNull(mail);
         Assert.NotNull(mail.View);
-        Assert.NotEmpty(mail.View.RemovedGranteeNames);
+        Assert.NotEmpty(mail.View.RemovedGranteeEmails);
     }
 
     /// <summary>
@@ -141,13 +141,13 @@ public class EmergencyAccessMailTests
         var mail = new EmergencyAccessRemoveGranteesMail
         {
             ToEmails = [grantorEmail],
-            View = new EmergencyAccessRemoveGranteesMailView { RemovedGranteeNames = [granteeName] }
+            View = new EmergencyAccessRemoveGranteesMailView { RemovedGranteeEmails = [granteeName] }
         };
 
         // Assert
         Assert.NotNull(mail);
         Assert.NotNull(mail.View);
         Assert.Equal(_emergencyAccessMailSubject, mail.Subject);
-        Assert.Equal(_emergencyAccessHelpUrl, mail.View.EmergencyAccessHelpPageUrl);
+        Assert.Equal(_emergencyAccessHelpUrl, EmergencyAccessRemoveGranteesMailView.EmergencyAccessHelpPageUrl);
     }
 }
