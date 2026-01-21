@@ -19,7 +19,6 @@ pub struct KeyHistoryRequest {
 /// The parameters that dictate how much of the history proof to return to the consumer
 /// (either a complete history, or some limited form).
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
-#[serde(tag = "type")]
 pub enum HistoryParams {
     /// Returns a complete history for a label
     Complete,
