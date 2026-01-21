@@ -62,9 +62,10 @@ public class SubscriberService(
         // Check if this is a Premium-to-Organization upgrade that can be reverted
         if (subscriber is Organization organization)
         {
-            var canRevert = await TryRevertPremiumUpgradeAsync(subscription, organization);
+            var canRevert = await CanRevertPremiumUpgradeAsync(subscription, organization);
             if (canRevert)
             {
+                await RevertPremiumUpgradeAsync(subscription, organization);
                 return;
             }
         }
@@ -87,7 +88,7 @@ public class SubscriberService(
 
         if (cancelImmediately)
         {
-            if (subscription.Metadata.ContainsKey("organizationId"))
+            if (subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId))
             {
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
@@ -975,43 +976,31 @@ public class SubscriberService(
     }
 
     /// <summary>
-    /// Attempts to revert a Premium-to-Organization upgrade by checking for premium upgrade metadata
-    /// and reverting the subscription to the original Premium plan if found.
+    /// Checks if a Premium-to-Organization upgrade can be reverted by validating the subscription metadata
+    /// and organization match.
     /// </summary>
     /// <param name="subscription">The Stripe subscription to check</param>
     /// <param name="organization">The organization attempting to cancel</param>
-    /// <returns>True if the reversion was successful, false if no reversion metadata was found</returns>
-    private async Task<bool> TryRevertPremiumUpgradeAsync(Subscription subscription, Organization organization)
+    /// <returns>True if the reversion is possible, false otherwise</returns>
+    private Task<bool> CanRevertPremiumUpgradeAsync(Subscription subscription, Organization organization)
     {
         // Extract all metadata once
         var metadata = subscription.Metadata;
 
-        // VALIDATION PHASE: Quick checks to determine if reversion is applicable
-        // These checks return false (no error) because they indicate "reversion not needed"
-        // rather than "reversion failed" - the cancellation should proceed normally.
-
-        // Check if metadata exists
-        if (metadata == null)
-        {
-            logger.LogDebug("Subscription {SubscriptionId} has no metadata", subscription.Id);
-            return false;
-        }
-
         // Check if subscription has the premium upgrade metadata
-        if (!metadata.TryGetValue(MetadataKeys.PreviousPremiumPriceId, out var previousPremiumPriceId) ||
+        if (!metadata.TryGetValue(MetadataKeys.PreviousPremiumPriceId, out _) ||
             !metadata.TryGetValue(MetadataKeys.UpgradedOrganizationId, out var upgradedOrganizationIdStr) ||
-            !metadata.TryGetValue(MetadataKeys.PreviousPremiumUserId, out var previousPremiumUserIdStr))
+            !metadata.TryGetValue(MetadataKeys.PreviousPremiumUserId, out _))
         {
             logger.LogDebug("Subscription {SubscriptionId} does not have premium upgrade metadata", subscription.Id);
-            return false;
+            return Task.FromResult(false);
         }
 
         // Parse IDs once
-        if (!Guid.TryParse(upgradedOrganizationIdStr, out var upgradedOrganizationId) ||
-            !Guid.TryParse(previousPremiumUserIdStr, out var previousPremiumUserId))
+        if (!Guid.TryParse(upgradedOrganizationIdStr, out var upgradedOrganizationId))
         {
             logger.LogWarning("Invalid GUID format in premium upgrade metadata for subscription {SubscriptionId}", subscription.Id);
-            return false;
+            return Task.FromResult(false);
         }
 
         // Verify that this is the organization that was upgraded
@@ -1020,7 +1009,7 @@ public class SubscriberService(
             logger.LogWarning(
                 "Organization {OrganizationId} attempted to revert subscription {SubscriptionId} that belongs to organization {ActualOrganizationId}",
                 organization.Id, subscription.Id, upgradedOrganizationId);
-            return false;
+            return Task.FromResult(false);
         }
 
         // Verify subscription is in trial - reversion only allowed during trial period
@@ -1029,13 +1018,33 @@ public class SubscriberService(
             logger.LogWarning(
                 "Cannot revert subscription {SubscriptionId} - not in trial period (current status: {Status})",
                 subscription.Id, subscription.Status);
-            return false;
+            return Task.FromResult(false);
         }
 
-        // REVERSION PHASE: At this point we've determined reversion IS applicable and should happen.
-        // Any failures from here on throw exceptions (not return false) because they indicate
-        // a serious error that should fail the cancellation - we don't want to cancel an org
-        // subscription if we can't properly revert it back to the user.
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
+    /// Reverts a Premium-to-Organization upgrade by restoring the subscription to the original Premium plan.
+    /// This method should only be called after CanRevertPremiumUpgradeAsync returns true.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to revert</param>
+    /// <param name="organization">The organization whose subscription is being reverted</param>
+    /// <exception cref="BillingException">Thrown if the reversion fails</exception>
+    private async Task RevertPremiumUpgradeAsync(Subscription subscription, Organization organization)
+    {
+        var metadata = subscription.Metadata;
+
+        // Extract required metadata values (we know they exist from CanRevertPremiumUpgradeAsync)
+        var previousPremiumPriceId = metadata[MetadataKeys.PreviousPremiumPriceId];
+        var previousPremiumUserIdStr = metadata[MetadataKeys.PreviousPremiumUserId];
+
+        if (!Guid.TryParse(previousPremiumUserIdStr, out var previousPremiumUserId))
+        {
+            logger.LogError("Invalid GUID format for previous premium user ID in subscription {SubscriptionId}", subscription.Id);
+            throw new BillingException("Invalid premium upgrade metadata");
+        }
+
         try
         {
             logger.LogInformation("Reverting Premium-to-Organization upgrade for organization {OrganizationId}", organization.Id);
@@ -1124,9 +1133,6 @@ public class SubscriberService(
             // Ensure user ID is in metadata
             updatedMetadata[MetadataKeys.UserId] = previousPremiumUserId.ToString();
 
-            // Remove organization ID from metadata since this is now a user subscription
-            updatedMetadata.Remove(MetadataKeys.OrganizationId);
-
             // STEP 6: Update Stripe subscription
             var updateOptions = new SubscriptionUpdateOptions
             {
@@ -1147,27 +1153,20 @@ public class SubscriberService(
 
             await userRepository.ReplaceAsync(user);
 
-            // STEP 8: Clear organization's subscription reference
+            // STEP 8: Clear organization's gateway references and disable it
             // NOTE: The organization entity itself is NOT deleted. It remains in the database with:
+            // - GatewayCustomerId set to null (no gateway customer)
             // - GatewaySubscriptionId set to null (no active subscription)
+            // - Enabled set to false (organization is disabled)
             // - All existing data (vaults, members, etc.) preserved
-            // - Effectively becomes a "Free" organization (no billing)
-            //
-            // TODO: Discuss with @micahblut about whether we should:
-            // 1. Explicitly transition the organization to a Free plan, or
-            // 2. Delete the organization entirely, or
-            // 3. Leave it as-is (current behavior)
-            //
-            // Current behavior: Organization remains but has no active subscription, making it
-            // effectively unusable for new billing operations but data is preserved.
+            organization.GatewayCustomerId = null;
             organization.GatewaySubscriptionId = null;
+            organization.Enabled = false;
             await organizationRepository.ReplaceAsync(organization);
 
             logger.LogInformation(
                 "Successfully reverted Premium-to-Organization upgrade for organization {OrganizationId}. Subscription {SubscriptionId} restored to user {UserId}",
                 organization.Id, subscription.Id, previousPremiumUserId);
-
-            return true;
         }
         catch (Exception ex)
         {

@@ -208,23 +208,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task<bool> IsPremiumSubscriptionAsync(Subscription subscription)
     {
-        if (subscription.Items == null || !subscription.Items.Any())
-        {
-            return false;
-        }
-
         var premiumPlans = await _pricingClient.ListPremiumPlans();
-        if (premiumPlans == null || !premiumPlans.Any())
-        {
-            return false;
-        }
-
         var premiumPriceIds = premiumPlans
-            .Where(p => p.Seat != null && p.Storage != null)
             .SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId })
             .ToHashSet();
 
-        return subscription.Items.Any(i => i.Price != null && premiumPriceIds.Contains(i.Price.Id));
+        return subscription.Items.Any(i => premiumPriceIds.Contains(i.Price.Id));
     }
 
     /// <summary>
@@ -294,13 +283,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         // Get all plan IDs that include Secrets Manager support to check if the organization has secret manager in the
         // previous and/or current subscriptions.
-        var plans = await _pricingClient.ListPlans();
-        if (plans == null)
-        {
-            return;
-        }
-
-        var planIdsOfPlansWithSecretManager = plans
+        var planIdsOfPlansWithSecretManager = (await _pricingClient.ListPlans())
             .Where(orgPlan => orgPlan.SupportsSecretsManager && orgPlan.SecretsManager.StripeSeatPlanId != null)
             .Select(orgPlan => orgPlan.SecretsManager.StripeSeatPlanId)
             .ToHashSet();
@@ -314,7 +297,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 previousSubscriptionItem => planIdsOfPlansWithSecretManager.Contains(previousSubscriptionItem.Plan.Id));
 
         var currentSubscriptionHasSecretsManager =
-            subscription.Items is not null &&
             subscription.Items.Any(
                 currentSubscriptionItem => planIdsOfPlansWithSecretManager.Contains(currentSubscriptionItem.Plan.Id));
 
@@ -456,22 +438,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             return;
         }
 
-        // STEP 5: Check if subscription still has OrganizationId (race condition check)
-        // If reversion already happened, OrganizationId would be removed and we should skip cleanup
-        if (!subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId))
-        {
-            _logger.LogInformation(
-                "Skipping cleanup for subscription {SubscriptionId} - appears to have been reverted already",
-                subscription.Id);
-            return;
-        }
-
         try
         {
-            _logger.LogInformation(
-                "Cleaning up premium upgrade metadata for subscription {SubscriptionId} after trial ended",
-                subscription.Id);
-
             // Remove all premium upgrade metadata keys while preserving other metadata
             var updatedMetadata = new Dictionary<string, string>(subscription.Metadata);
             updatedMetadata.Remove(StripeConstants.MetadataKeys.PreviousPremiumPriceId);
