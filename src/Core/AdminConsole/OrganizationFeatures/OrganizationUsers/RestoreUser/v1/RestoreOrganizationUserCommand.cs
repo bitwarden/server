@@ -104,19 +104,18 @@ public class RestoreOrganizationUserCommand(
         var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
+        organizationUser.Status = status;
 
         if (organizationUser.UserId.HasValue
            && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId
                .Value)).State == OrganizationDataOwnershipState.Enabled
-           && organizationUser.Status == OrganizationUserStatusType.Confirmed
+           && status == OrganizationUserStatusType.Confirmed
            && !string.IsNullOrWhiteSpace(defaultCollectionName))
         {
             await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
                 [organizationUser.Id],
                 defaultCollectionName);
         }
-
-        organizationUser.Status = status;
     }
 
     private async Task CheckUserForOtherFreeOrganizationOwnershipAsync(OrganizationUser organizationUser)
