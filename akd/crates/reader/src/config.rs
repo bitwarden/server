@@ -12,10 +12,17 @@ pub struct ApplicationConfig {
     /// The unique Bitwarden installation ID using this AKD reader instance.
     /// This value is used to namespace AKD data to a given installation.
     pub installation_id: Uuid,
+    /// Maximum number of labels allowed in a single batch lookup request. Defaults to 10.
+    #[serde(default = "default_max_batch_lookup_size")]
+    pub max_batch_lookup_size: usize,
 }
 
 fn default_web_server_bind_address() -> String {
     "127.0.0.1:3001".to_string()
+}
+
+fn default_max_batch_lookup_size() -> usize {
+    10
 }
 
 impl ApplicationConfig {

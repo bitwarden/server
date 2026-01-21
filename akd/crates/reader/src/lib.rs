@@ -20,6 +20,7 @@ struct AppState {
     directory: ReadOnlyDirectory<BitwardenV1Configuration, AkdDatabase, VrfKeyDatabase>,
     // TODO: use this to allow for unique failures for lookup and key history requests that have pending updates
     // publish_queue: ReadOnlyPublishQueueType,
+    max_batch_lookup_size: usize,
 }
 
 #[instrument(skip_all, name = "reader_start")]
@@ -35,10 +36,12 @@ pub async fn start(
 
     let mut shutdown_rx = shutdown_rx.resubscribe();
 
+    let max_batch_lookup_size = config.max_batch_lookup_size;
     let handle = tokio::spawn(async move {
         let app_state = AppState {
             directory: directory,
             // publish_queue: publish_queue,
+            max_batch_lookup_size,
         };
 
         let app = Router::new()

@@ -22,7 +22,11 @@ pub struct BatchLookupData {
 
 #[instrument(skip_all)]
 pub async fn batch_lookup_handler(
-    State(AppState { directory, .. }): State<AppState>,
+    State(AppState {
+        directory,
+        max_batch_lookup_size,
+        ..
+    }): State<AppState>,
     Json(BatchLookupRequest { labels_b64 }): Json<BatchLookupRequest>,
 ) -> (StatusCode, Json<Response<BatchLookupData>>) {
     info!("Handling batch lookup request");
@@ -37,18 +41,16 @@ pub async fn batch_lookup_handler(
     }
 
     // Validate batch size
-    // TODO: make this configurable
-    const MAX_BATCH_SIZE: usize = 1000;
-    if labels_b64.len() > MAX_BATCH_SIZE {
+    if labels_b64.len() > max_batch_lookup_size {
         error!(
             batch_size = labels_b64.len(),
-            max_size = MAX_BATCH_SIZE,
+            max_size = max_batch_lookup_size,
             "Batch size exceeds limit"
         );
         return (
             StatusCode::BAD_REQUEST,
             Json(Response::error(ReaderError::BatchTooLarge {
-                limit: MAX_BATCH_SIZE,
+                limit: max_batch_lookup_size,
             })),
         );
     }
