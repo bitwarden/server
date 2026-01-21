@@ -11,7 +11,7 @@ public class PolicyRequirementQuery(
     : IPolicyRequirementQuery
 {
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
-        => (await GetAsync<T>([userId])).First();
+        => (await GetAsync<T>([userId])).Single();
 
     public async Task<IEnumerable<T>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement
     {
