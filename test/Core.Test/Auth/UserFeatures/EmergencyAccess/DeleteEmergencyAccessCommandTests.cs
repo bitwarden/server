@@ -49,6 +49,8 @@ public class DeleteEmergencyAccessCommandTests
             Id = emergencyAccessId,
             GrantorId = grantorId,
             GranteeId = granteeId,
+            GranteeEmail = "grantee@test.dev",
+            GrantorEmail = "grantor@test.dev",
             Status = EmergencyAccessStatusType.Confirmed,
             Type = EmergencyAccessType.View
         };
@@ -101,6 +103,8 @@ public class DeleteEmergencyAccessCommandTests
             Id = Guid.NewGuid(),
             GrantorId = grantorId,
             GranteeId = Guid.NewGuid(),
+            GranteeEmail = "grantee@test.dev",
+            GrantorEmail = "grantor@test.dev",
             Status = EmergencyAccessStatusType.Confirmed,
             Type = EmergencyAccessType.View
         };
@@ -110,6 +114,8 @@ public class DeleteEmergencyAccessCommandTests
             Id = Guid.NewGuid(),
             GrantorId = grantorId,
             GranteeId = Guid.NewGuid(),
+            GranteeEmail = "grantee@test.dev",
+            GrantorEmail = "grantor@test.dev",
             Status = EmergencyAccessStatusType.Invited,
             Type = EmergencyAccessType.Takeover
         };
@@ -119,6 +125,8 @@ public class DeleteEmergencyAccessCommandTests
             Id = Guid.NewGuid(),
             GrantorId = grantorId,
             GranteeId = Guid.NewGuid(),
+            GranteeEmail = "grantee@test.dev",
+            GrantorEmail = "grantor@test.dev",
             Type = EmergencyAccessType.View
         };
 
@@ -157,6 +165,8 @@ public class DeleteEmergencyAccessCommandTests
             Id = emergencyAccessId,
             GrantorId = grantorId,
             GranteeId = granteeId,
+            GranteeEmail = "grantee@test.dev",
+            GrantorEmail = "grantor@test.dev",
             Status = EmergencyAccessStatusType.Confirmed,
             Type = EmergencyAccessType.Takeover
         };

@@ -5,7 +5,7 @@ namespace Bit.Core.Auth.Models.Data;
 public class EmergencyAccessDetails : EmergencyAccess
 {
     public string? GranteeName { get; set; }
-    public required string GranteeEmail { get; set; }
+    public string? GranteeEmail { get; set; }
     public string? GranteeAvatarColor { get; set; }
     public string? GrantorName { get; set; }
     public required string GrantorEmail { get; set; }
