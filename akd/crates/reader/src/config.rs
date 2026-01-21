@@ -15,6 +15,9 @@ pub struct ApplicationConfig {
     /// Maximum number of labels allowed in a single batch lookup request. Defaults to 10.
     #[serde(default = "default_max_batch_lookup_size")]
     pub max_batch_lookup_size: usize,
+    /// Optional polling interval for AZKS storage in milliseconds Should be significantly less than the epoch interval. Defaults to 100 ms.
+    #[serde(default = "default_azks_poll_interval_ms")]
+    pub azks_poll_interval_ms: u64,
 }
 
 fn default_web_server_bind_address() -> String {
@@ -23,6 +26,10 @@ fn default_web_server_bind_address() -> String {
 
 fn default_max_batch_lookup_size() -> usize {
     10
+}
+
+fn default_azks_poll_interval_ms() -> u64 {
+    100
 }
 
 impl ApplicationConfig {

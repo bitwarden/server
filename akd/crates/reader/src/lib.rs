@@ -37,9 +37,9 @@ pub async fn start(
     let mut shutdown_rx = shutdown_rx.resubscribe();
 
     let max_batch_lookup_size = config.max_batch_lookup_size;
-    let handle = tokio::spawn(async move {
+    let axum_handle = tokio::spawn(async move {
         let app_state = AppState {
-            directory: directory,
+            directory: directory.clone(),
             // publish_queue: publish_queue,
             max_batch_lookup_size,
         };
@@ -56,6 +56,19 @@ pub async fn start(
             "Reader web server listening"
         );
 
+        // polls azks storage for epoch changes. This is necessary to pick up newly published updates.
+        let _poll_handle = tokio::spawn(async move {
+            let result = directory
+                .poll_for_azks_changes(
+                    tokio::time::Duration::from_millis(config.azks_poll_interval_ms),
+                    None,
+                )
+                .await;
+            if let Err(e) = result {
+                tracing::error!("Error polling for AZKS changes: {:?}", e);
+            }
+        });
+
         axum::serve(listener, app.into_make_service())
             .with_graceful_shutdown(async move {
                 shutdown_rx.recv().await.ok();
@@ -66,5 +79,5 @@ pub async fn start(
         Ok(())
     });
 
-    Ok(handle)
+    Ok(axum_handle)
 }
