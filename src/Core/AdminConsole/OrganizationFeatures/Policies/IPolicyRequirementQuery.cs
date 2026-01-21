@@ -19,10 +19,10 @@ public interface IPolicyRequirementQuery
     /// <summary>
     /// Get a policy requirement for a list of users.
     /// The policy requirement represents how one or more policy types should be enforced against the users.
+    /// </summary>
     /// <returns>
     /// A list of applicable policy requirements in corresponding order of the submitted user IDs.
     /// </returns>
-    /// </summary>
     /// <param name="userIds">The users that you need to enforce the policy against.</param>
     /// <typeparam name="T">The IPolicyRequirement that corresponds to the policy you want to enforce.</typeparam>
     Task<IEnumerable<T>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement;
