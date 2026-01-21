@@ -7,7 +7,7 @@ license-file.workspace = true
 keywords.workspace = true
 
 [dependencies]
-akd = "0.11.0"
+akd.workspace = true
 async-trait = { workspace = true }
 akd_storage = { workspace = true }
 bitwarden-akd-configuration = { workspace = true }

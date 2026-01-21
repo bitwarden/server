@@ -15,7 +15,10 @@ unwrap_used = "deny"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
-akd = "0.11.0"
+akd = { version = "0.12.0-pre.11", features = [
+  "tracing",
+  "tracing_instrument",
+] }
 async-trait = "0.1.89"
 akd_storage = { path = "crates/akd_storage" }
 axum = { version = "0.8.8", features = ["macros"] }

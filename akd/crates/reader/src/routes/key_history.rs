@@ -24,8 +24,6 @@ pub enum HistoryParams {
     Complete,
     /// Returns up to the most recent N updates for a label
     MostRecent(usize),
-    /// Returns all updates since a specified epoch (inclusive)
-    SinceEpoch(u64),
 }
 
 impl From<HistoryParams> for akd::HistoryParams {
@@ -33,7 +31,6 @@ impl From<HistoryParams> for akd::HistoryParams {
         match params {
             HistoryParams::Complete => akd::HistoryParams::Complete,
             HistoryParams::MostRecent(n) => akd::HistoryParams::MostRecent(n),
-            HistoryParams::SinceEpoch(epoch) => akd::HistoryParams::SinceEpoch(epoch),
         }
     }
 }

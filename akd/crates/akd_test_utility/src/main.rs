@@ -187,6 +187,8 @@ async fn main() -> Result<()> {
             key: "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=".to_string(),
         },
         publish_queue_config: akd_storage::publish_queue_config::PublishQueueConfig::DbBacked,
+        insertion_parallelism: 32,
+        preload_parallelism: 32,
     };
     let (mut directory, db, _) = config
         .initialize_directory::<TC>()

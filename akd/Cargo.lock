@@ -51,9 +51,9 @@ dependencies = [
 
 [[package]]
 name = "akd"
-version = "0.11.0"
+version = "0.12.0-pre.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "636d3630d66710dde433d97ccc9c868f8858ab31bdd8b0401f9bea59b02f53b6"
+checksum = "6adb55bd1a2b7e662efe48791800d69c30ae4edc6ea8b29f69626c32cc24bd5c"
 dependencies = [
  "akd_core",
  "async-recursion",
@@ -64,13 +64,14 @@ dependencies = [
  "protobuf",
  "serde",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
 name = "akd_core"
-version = "0.11.0"
+version = "0.12.0-pre.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "713d42c0592799667f6712d1a61fbc0274b0d51c60ecb0407d343f01bc7279f6"
+checksum = "5cb7880a7b8f195f8a253a4e6b26ff4b19cc2031e171170f02a7ddd6eb95c1de"
 dependencies = [
  "async-trait",
  "blake3",

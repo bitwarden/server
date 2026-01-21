@@ -10,6 +10,7 @@ const DEFAULT_EPOCH_DURATION_MS: u64 = 30000; // 30 seconds
 #[derive(Clone, Debug, Deserialize)]
 pub struct ApplicationConfig {
     pub storage: AkdStorageConfig,
+    #[serde(default)]
     pub publisher: PublisherConfig,
     /// The unique Bitwarden installation ID using this AKD publisher instance.
     /// This value is used to namespace AKD data to a given installation.
@@ -39,6 +40,15 @@ pub struct PublisherConfig {
     /// The limit to the number of AKD values to update in a single epoch. Defaults to no limit.
     #[serde(default = "default_epoch_update_limit")]
     pub epoch_update_limit: Option<isize>,
+}
+
+impl Default for PublisherConfig {
+    fn default() -> Self {
+        PublisherConfig {
+            epoch_duration_ms: default_epoch_duration_ms(),
+            epoch_update_limit: default_epoch_update_limit(),
+        }
+    }
 }
 
 fn default_epoch_duration_ms() -> u64 {

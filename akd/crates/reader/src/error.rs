@@ -47,6 +47,7 @@ pub enum ErrorCode {
     AkdTreeNode,
     AkdVerification,
     AkdInvalidEpoch,
+    AkdInvalidVersion,
     AkdReadOnlyDirectory,
     AkdPublish,
     AkdAzks,
@@ -81,6 +82,7 @@ impl ReaderError {
                 },
                 AkdError::Directory(dir_err) => match dir_err {
                     akd::errors::DirectoryError::InvalidEpoch(_) => StatusCode::BAD_REQUEST,
+                    akd::errors::DirectoryError::InvalidVersion(_) => StatusCode::BAD_REQUEST,
                     akd::errors::DirectoryError::Verification(_) => {
                         StatusCode::UNPROCESSABLE_ENTITY
                     }
@@ -114,6 +116,7 @@ impl ReaderError {
             AkdError::Directory(dir_err) => match dir_err {
                 akd::errors::DirectoryError::Verification(_) => ErrorCode::AkdVerification,
                 akd::errors::DirectoryError::InvalidEpoch(_) => ErrorCode::AkdInvalidEpoch,
+                akd::errors::DirectoryError::InvalidVersion(_) => ErrorCode::AkdInvalidVersion,
                 akd::errors::DirectoryError::ReadOnlyDirectory(_) => {
                     ErrorCode::AkdReadOnlyDirectory
                 }
