@@ -41,12 +41,17 @@ name = "aio"
 version = "0.1.0"
 dependencies = [
  "akd_storage",
+ "anyhow",
+ "bitwarden-akd-configuration",
  "common",
+ "config",
  "publisher",
  "reader",
+ "serde",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

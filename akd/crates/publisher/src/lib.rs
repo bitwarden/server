@@ -9,7 +9,7 @@ use tracing::{error, info, instrument, trace};
 mod config;
 mod routes;
 
-pub use crate::config::ApplicationConfig;
+pub use crate::config::{ApplicationConfig, PublisherConfig};
 use crate::routes::auth;
 
 pub struct AppHandles {

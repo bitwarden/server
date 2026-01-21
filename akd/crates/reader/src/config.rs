@@ -8,7 +8,7 @@ pub struct ApplicationConfig {
     pub storage: AkdStorageConfig,
     /// The address the web server will bind to. Defaults to "127.0.0.1:3001".
     #[serde(default = "default_web_server_bind_address")]
-    web_server_bind_address: String,
+    pub web_server_bind_address: String,
     /// The unique Bitwarden installation ID using this AKD reader instance.
     /// This value is used to namespace AKD data to a given installation.
     pub installation_id: Uuid,

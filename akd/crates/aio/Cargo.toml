@@ -8,12 +8,17 @@ keywords.workspace = true
 
 [dependencies]
 akd_storage = { workspace = true }
+anyhow = { workspace = true }
+bitwarden-akd-configuration = { workspace = true }
 common = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-tokio = { workspace = true }
+config = { workspace = true }
 publisher = { path = "../publisher" }
 reader = { path = "../reader" }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
 
 [lints]
 workspace = true

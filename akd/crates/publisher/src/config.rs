@@ -17,7 +17,7 @@ pub struct ApplicationConfig {
     pub installation_id: Uuid,
     /// The address the web server will bind to. Defaults to "127.0.0.1:3000".
     #[serde(default = "default_web_server_bind_address")]
-    web_server_bind_address: String,
+    pub web_server_bind_address: String,
     /// The API key required to access the web server endpoints.
     ///
     /// NOTE: constant-time comparison is used, but mismatched string length cause immediate failure.
