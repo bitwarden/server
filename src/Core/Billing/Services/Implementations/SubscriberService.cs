@@ -1132,16 +1132,15 @@ public class SubscriberService(
 
             // Ensure user ID is in metadata
             updatedMetadata[MetadataKeys.UserId] = previousPremiumUserId.ToString();
+            updatedMetadata.Remove(MetadataKeys.OrganizationId);
 
             // STEP 6: Update Stripe subscription
-            var updateOptions = new SubscriptionUpdateOptions
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
             {
                 Items = subscriptionItemOptions,
-                TrialEnd = SubscriptionTrialEnd.Now, // End the trial immediately
+                TrialEnd = periodEnd,
                 Metadata = updatedMetadata
-            };
-
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
+            });
 
             // STEP 7: Update user's Premium status and storage
             user.Premium = true;
