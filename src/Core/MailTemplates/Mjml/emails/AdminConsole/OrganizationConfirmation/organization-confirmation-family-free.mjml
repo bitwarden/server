@@ -6,12 +6,52 @@
   <mj-body css-class="border-fix">
     <!-- Blue Header Section -->
     <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
-      <mj-bw-hero
-        img-src="https://assets.bitwarden.com/email/v1/spot-family-homes.png"
-        title="You can now share passwords with members of <b>{{OrganizationName}}!</b>"
-        button-text="<b>Log in</b>"
-        button-url="{{WebVaultUrl}}"
-      />
+        <mj-section
+                full-width="full-width"
+                background-color="#175ddc"
+                border-radius="4px 4px 0px 0px"
+        >
+            <mj-column width="70%">
+                <mj-image
+                        align="left"
+                        src="https://bitwarden.com/images/logo-horizontal-white.png"
+                        width="150px"
+                        height="30px"
+                />
+
+                <mj-text color="#fff" padding-top="0" padding-bottom="0">
+                    <h1 style="font-weight: normal; font-size: 24px; line-height: 32px">
+                        You can now share passwords with members of <b>{{OrganizationName}}!</b>
+                    </h1>
+                </mj-text>
+
+                <mj-button
+                        href="{{WebVaultUrl}}"
+                        background-color="#ffffff"
+                        color="#1A41AC"
+                        border-radius="20px"
+                        align="left"
+                        inner-padding="12px 24px"
+                        font-size="16px"
+                        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+                        font-weight="700"
+                        line-height="24px"
+                >
+                    Log in
+                </mj-button>
+
+            </mj-column>
+
+            <mj-column width="30%" vertical-align="bottom">
+                <mj-image
+                        src="https://assets.bitwarden.com/email/v1/spot-family-homes.png"
+                        alt=""
+                        width="155px"
+                        padding="0px"
+                        css-class="mj-bw-hero-responsive-img"
+                />
+            </mj-column>
+        </mj-section>
     </mj-wrapper>
 
     <!-- Main Content -->
