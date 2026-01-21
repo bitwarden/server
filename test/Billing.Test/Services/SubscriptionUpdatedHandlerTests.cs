@@ -1276,6 +1276,7 @@ public class SubscriptionUpdatedHandlerTests
 
         var plan = new Enterprise2023Plan(true);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns([plan]);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1400,6 +1401,7 @@ public class SubscriptionUpdatedHandlerTests
 
         var plan = new Enterprise2023Plan(true);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns([plan]);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
