@@ -1,6 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-    <Sdk Name="Aspire.AppHost.Sdk" Version="9.3.1" />
+<Project Sdk="Aspire.AppHost.Sdk/13.1.0">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -11,12 +9,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Aspire.Hosting.AppHost" Version="9.3.1" />
-        <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="9.3.1" />
-        <PackageReference Include="Aspire.Hosting.NodeJs" Version="9.3.1" />
-        <PackageReference Include="Aspire.Hosting.SqlServer" Version="9.3.2" />
-        <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ngrok" Version="9.3.0" />
-        <PackageReference Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.3.0" />
+        <PackageReference Include="Aspire.Hosting.AppHost" Version="13.1.0" />
+        <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="13.1.0" />
+        <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.1.0" />
+        <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.1.0" />
+        <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ngrok" Version="13.1.1" />
+        <PackageReference Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" Version="9.9.0" />
     </ItemGroup>
 
     <ItemGroup>
