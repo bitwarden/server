@@ -735,7 +735,7 @@ public class RestoreOrganizationUserCommandTests
                 Users = 1
             });
 
-        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, "");
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
