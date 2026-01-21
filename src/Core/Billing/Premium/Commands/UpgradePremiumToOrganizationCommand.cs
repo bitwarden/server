@@ -28,12 +28,14 @@ public interface IUpgradePremiumToOrganizationCommand
     /// <param name="organizationName">The name for the new organization.</param>
     /// <param name="key">The encrypted organization key for the owner.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
+    /// <param name="billingAddress">The billing address for tax calculation.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
         string organizationName,
         string key,
-        PlanType targetPlanType);
+        PlanType targetPlanType,
+        Payment.Models.BillingAddress billingAddress);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -51,7 +53,8 @@ public class UpgradePremiumToOrganizationCommand(
         User user,
         string organizationName,
         string key,
-        PlanType targetPlanType) => HandleAsync<None>(async () =>
+        PlanType targetPlanType,
+        Payment.Models.BillingAddress billingAddress) => HandleAsync<None>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -134,6 +137,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             Items = subscriptionItemOptions,
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
@@ -186,6 +190,16 @@ public class UpgradePremiumToOrganizationCommand(
             GatewayCustomerId = user.GatewayCustomerId,
             GatewaySubscriptionId = currentSubscription.Id
         };
+
+        // Update customer billing address for tax calculation
+        await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode
+            }
+        });
 
         // Update the subscription in Stripe
         await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);

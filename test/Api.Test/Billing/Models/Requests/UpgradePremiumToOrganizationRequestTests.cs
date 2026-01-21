@@ -27,12 +27,14 @@ public class UpgradePremiumToOrganizationRequestTests
         };
 
         // Act
-        var (organizationName, key, planType) = sut.ToDomain();
+        var (organizationName, key, planType, billingAddress) = sut.ToDomain();
 
         // Assert
         Assert.Equal("Test Organization", organizationName);
         Assert.Equal("encrypted-key", key);
         Assert.Equal(expectedPlanType, planType);
+        Assert.Equal("US", billingAddress.Country);
+        Assert.Equal("12345", billingAddress.PostalCode);
     }
 
     [Theory]

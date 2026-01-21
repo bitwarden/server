@@ -39,5 +39,6 @@ public class UpgradePremiumToOrganizationRequest
         }
     }
 
-    public (string OrganizationName, string Key, PlanType PlanType) ToDomain() => (OrganizationName, Key, PlanType);
+    public (string OrganizationName, string Key, PlanType PlanType, Core.Billing.Payment.Models.BillingAddress BillingAddress) ToDomain() =>
+        (OrganizationName, Key, PlanType, BillingAddress.ToDomain());
 }
