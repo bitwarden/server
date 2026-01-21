@@ -72,7 +72,23 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         BillingAddress billingAddress,
         short additionalStorageGb) => HandleAsync<None>(async () =>
     {
-        if (user.Premium)
+        var hasTerminalSubscription = false;
+        if (!string.IsNullOrEmpty(user.GatewaySubscriptionId))
+        {
+            try
+            {
+                var existingSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+                hasTerminalSubscription = existingSubscription.Status is
+                    SubscriptionStatus.Canceled or
+                    SubscriptionStatus.IncompleteExpired;
+            }
+            catch
+            {
+                // Subscription doesn't exist or can't be fetched, proceed as normal
+            }
+        }
+
+        if (user.Premium && !hasTerminalSubscription)
         {
             return new BadRequest("Already a premium user.");
         }
@@ -98,8 +114,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
          * purchased account credit but chose to use a tokenizable payment method to pay for the subscription. In this case,
          * we need to add the payment method to their customer first. If the incoming payment method is account credit,
          * we can just go straight to fetching the customer since there's no payment method to apply.
+         *
+         * Additionally, if this is a resubscribe scenario with a tokenized payment method, we should update the payment method
+         * to ensure the new payment method is used instead of the old one.
          */
-        else if (paymentMethod.IsTokenized && !await hasPaymentMethodQuery.Run(user))
+        else if (paymentMethod.IsTokenized && (!await hasPaymentMethodQuery.Run(user) || hasTerminalSubscription))
         {
             await updatePaymentMethodCommand.Run(user, paymentMethod.AsTokenized, billingAddress);
             customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
@@ -122,7 +141,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                     case { Type: TokenizablePaymentMethodType.PayPal }
                         when subscription.Status == SubscriptionStatus.Incomplete:
                     case { Type: not TokenizablePaymentMethodType.PayPal }
-                        when subscription.Status == SubscriptionStatus.Active:
+                        when subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Incomplete:
                         {
                             user.Premium = true;
                             user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
@@ -132,7 +151,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             },
             _ =>
             {
-                if (subscription.Status != SubscriptionStatus.Active)
+                if (subscription.Status is not (SubscriptionStatus.Active or SubscriptionStatus.Incomplete))
                 {
                     return;
                 }
