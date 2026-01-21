@@ -1,6 +1,7 @@
-use akd::errors::AkdError;
 use axum::routing::get;
 use serde::{Deserialize, Serialize};
+
+use crate::error::{ErrorResponse, ReaderError};
 
 mod audit;
 mod batch_lookup;
@@ -26,49 +27,15 @@ pub fn api_routes() -> axum::Router<AppState> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response<T> {
-    success: bool,
-    data: Option<T>,
-    error: Option<ResponseError>,
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<ErrorResponse>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ResponseError {
-    pub akd_error_type: String,
-    pub message: String,
-}
-
-impl From<AkdError> for ResponseError {
-    fn from(err: AkdError) -> Self {
-        ResponseError {
-            akd_error_type: match &err {
-                AkdError::TreeNode(_) => "TreeNode".to_string(),
-                AkdError::Directory(err) => match err {
-                    akd::errors::DirectoryError::Verification(_) => "VerificationError".to_string(),
-                    akd::errors::DirectoryError::InvalidEpoch(_) => "InvalidEpoch".to_string(),
-                    akd::errors::DirectoryError::ReadOnlyDirectory(_) => {
-                        "ReadOnlyDirectory".to_string()
-                    }
-                    akd::errors::DirectoryError::Publish(_) => "Publish".to_string(),
-                },
-                AkdError::AzksErr(_) => "AzksErr".to_string(),
-                AkdError::Vrf(_) => "Vrf".to_string(),
-                AkdError::Storage(err) => match err {
-                    akd::errors::StorageError::NotFound(_) => "NotFound".to_string(),
-                    akd::errors::StorageError::Transaction(_) => "Transaction".to_string(),
-                    akd::errors::StorageError::Connection(_) => "Connection".to_string(),
-                    akd::errors::StorageError::Other(_) => "Other".to_string(),
-                },
-                AkdError::AuditErr(_) => "AuditErr".to_string(),
-                AkdError::Parallelism(_) => "Parallelism".to_string(),
-                AkdError::TestErr(_) => "TestErr".to_string(),
-            },
-            message: err.to_string(),
-        }
-    }
-}
-
-impl<'a, T: Serialize + Deserialize<'a>> Response<T> {
-    fn success(data: T) -> Self {
+impl<T: Serialize> Response<T> {
+    pub fn success(data: T) -> Self {
         Self {
             success: true,
             data: Some(data),
@@ -76,11 +43,11 @@ impl<'a, T: Serialize + Deserialize<'a>> Response<T> {
         }
     }
 
-    fn fail(err: AkdError) -> Self {
+    pub fn error(err: ReaderError) -> Self {
         Self {
             success: false,
             data: None,
-            error: Some(err.into()),
+            error: Some(err.to_error_response()),
         }
     }
 }

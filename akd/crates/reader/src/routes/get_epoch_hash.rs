@@ -3,7 +3,7 @@ use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
-use crate::{routes::Response, AppState};
+use crate::{error::ReaderError, routes::Response, AppState};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EpochData {
@@ -33,8 +33,10 @@ pub async fn get_epoch_hash_handler(
             Json(Response::<EpochData>::success(epoch_hash.into())),
         ),
         Err(e) => {
-            error!(err = ?e, "Failed to get current AKD epoch hash");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(Response::fail(e)))
+            let reader_error = ReaderError::Akd(e);
+            let status = reader_error.status_code();
+            error!(err = ?reader_error, status = %status, "Failed to get current AKD epoch hash");
+            (status, Json(Response::error(reader_error)))
         }
     }
 }

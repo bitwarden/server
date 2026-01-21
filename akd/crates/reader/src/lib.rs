@@ -7,9 +7,11 @@ use tokio::{net::TcpListener, sync::broadcast::Receiver};
 use tracing::{info, instrument};
 
 mod config;
+pub mod error;
 mod routes;
 
 pub use crate::config::ApplicationConfig;
+pub use error::{ErrorCode, ErrorResponse, ReaderError};
 pub use routes::response_types;
 
 #[derive(Clone)]

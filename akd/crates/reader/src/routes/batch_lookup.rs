@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
 use crate::{
+    error::ReaderError,
     routes::{get_epoch_hash::EpochData, lookup::AkdLabelB64, Response},
     AppState,
 };
@@ -25,6 +26,33 @@ pub async fn batch_lookup_handler(
     Json(BatchLookupRequest { labels_b64 }): Json<BatchLookupRequest>,
 ) -> (StatusCode, Json<Response<BatchLookupData>>) {
     info!("Handling batch lookup request");
+
+    // Validate batch not empty
+    if labels_b64.is_empty() {
+        error!("Empty batch request received");
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(Response::error(ReaderError::EmptyBatch)),
+        );
+    }
+
+    // Validate batch size
+    // TODO: make this configurable
+    const MAX_BATCH_SIZE: usize = 1000;
+    if labels_b64.len() > MAX_BATCH_SIZE {
+        error!(
+            batch_size = labels_b64.len(),
+            max_size = MAX_BATCH_SIZE,
+            "Batch size exceeds limit"
+        );
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(Response::error(ReaderError::BatchTooLarge {
+                limit: MAX_BATCH_SIZE,
+            })),
+        );
+    }
+
     let labels = labels_b64
         .into_iter()
         .map(|label_b64| label_b64.into())
@@ -40,8 +68,10 @@ pub async fn batch_lookup_handler(
             })),
         ),
         Err(e) => {
-            error!(err = ?e, "Failed to perform batch lookup");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(Response::fail(e)))
+            let reader_error = ReaderError::Akd(e);
+            let status = reader_error.status_code();
+            error!(err = ?reader_error, status = %status, "Failed to perform batch lookup");
+            (status, Json(Response::error(reader_error)))
         }
     }
 }

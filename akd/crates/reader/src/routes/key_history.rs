@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
 use crate::{
+    error::ReaderError,
     routes::{get_epoch_hash::EpochData, Response},
     AppState,
 };
@@ -58,13 +59,15 @@ pub async fn key_history_handler(
         Ok((history_proof, epoch_hash)) => (
             StatusCode::OK,
             Json(Response::success(HistoryData {
-                history_proof: history_proof,
+                history_proof,
                 epoch_data: epoch_hash.into(),
             })),
         ),
         Err(e) => {
-            error!(err = ?e, "Failed to get key history");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(Response::fail(e)))
+            let reader_error = ReaderError::Akd(e);
+            let status = reader_error.status_code();
+            error!(err = ?reader_error, status = %status, "Failed to get key history");
+            (status, Json(Response::error(reader_error)))
         }
     }
 }

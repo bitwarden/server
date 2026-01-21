@@ -248,4 +248,18 @@ mod tests {
 
         assert_eq!(hasher1.finish(), hasher2.finish());
     }
+
+    #[test]
+    fn test_b64_from_json() {
+        let json_data = "\"SGVsbG8sIFdvcmxkIQ==\"";
+        let b64: B64 = serde_json::from_str(json_data).unwrap();
+        assert_eq!(b64.as_bytes(), b"Hello, World!");
+    }
+
+    #[test]
+    fn test_not_b64_from_json_fails() {
+        let json_data = "\"InvalidBase64@@@\"";
+        let result: Result<B64, _> = serde_json::from_str(json_data);
+        assert!(result.is_err());
+    }
 }

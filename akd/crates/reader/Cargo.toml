@@ -21,6 +21,7 @@ uuid = { workspace = true }
 axum = { workspace = true }
 chrono = { workspace = true }
 bitwarden-encoding = { workspace = true }
+thiserror = { workspace = true }
 
 [lints]
 workspace = true
