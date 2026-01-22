@@ -255,6 +255,7 @@ public static class FeatureFlagKeys
     /* DIRT Team */
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
+    public const string EventManagementForHuntress = "event-management-for-huntress";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
