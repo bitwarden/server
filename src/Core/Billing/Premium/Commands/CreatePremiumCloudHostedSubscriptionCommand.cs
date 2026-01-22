@@ -72,6 +72,10 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         BillingAddress billingAddress,
         short additionalStorageGb) => HandleAsync<None>(async () =>
     {
+        // A "terminal" subscription is one that has ended and cannot be renewed/reactivated.
+        // These are: 'canceled' (user canceled) and 'incomplete_expired' (payment failed and time expired).
+        // We allow users with terminal subscriptions to create a new subscription even if user.Premium is still true,
+        // enabling the resubscribe workflow without requiring Premium status to be cleared first.
         var hasTerminalSubscription = false;
         if (!string.IsNullOrEmpty(user.GatewaySubscriptionId))
         {
@@ -82,9 +86,12 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                     SubscriptionStatus.Canceled or
                     SubscriptionStatus.IncompleteExpired;
             }
-            catch
+            catch (Exception ex)
             {
-                // Subscription doesn't exist or can't be fetched, proceed as normal
+                // Subscription doesn't exist in Stripe or can't be fetched (e.g., network issues, invalid ID)
+                // Log the issue but proceed with subscription creation to avoid blocking legitimate resubscribe attempts
+                _logger.LogWarning(ex, "Unable to fetch existing subscription {SubscriptionId} for user {UserId}. Proceeding with subscription creation",
+                    user.GatewaySubscriptionId, user.Id);
             }
         }
 

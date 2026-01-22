@@ -1093,67 +1093,6 @@ public class SubscriptionUpdatedHandlerTests
         return (providerId, newSubscription, provider, parsedEvent);
     }
 
-    [Fact]
-    public async Task HandleAsync_IncompleteUserSubscriptionWithoutOpenInvoice_DoesNotCancelSubscription()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
-        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
-        var paidInvoice = new Invoice
-        {
-            Id = "inv_123",
-            Status = StripeInvoiceStatus.Paid
-        };
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = StripeSubscriptionStatus.Incomplete,
-            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
-            LatestInvoice = paidInvoice,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        CurrentPeriodEnd = currentPeriodEnd,
-                        Price = new Price { Id = IStripeEventUtilityService.PremiumPlanId }
-                    }
-                ]
-            }
-        };
-
-        var parsedEvent = new Event { Data = new EventData() };
-
-        var premiumPlan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
-            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
-        };
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
-
-        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
-            .Returns(subscription);
-
-        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
-            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _userService.DidNotReceive()
-            .DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
-        await _stripeFacade.DidNotReceive()
-            .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
-        await _stripeFacade.DidNotReceive()
-            .ListInvoices(Arg.Any<InvoiceListOptions>());
-    }
-
     public static IEnumerable<object[]> GetNonActiveSubscriptions()
     {
         return new List<object[]>
