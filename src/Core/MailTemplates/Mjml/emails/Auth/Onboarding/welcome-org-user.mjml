@@ -9,7 +9,7 @@
       <mj-bw-hero
         img-src="https://assets.bitwarden.com/email/v1/account-fill.png"
         title="Welcome to Bitwarden!"
-        sub-title="Let's get set up to autofill."
+        sub-title="Let’s get you set up to autofill."
       />
     </mj-wrapper>
 

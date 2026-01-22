@@ -93,7 +93,9 @@ public static class OrganizationTestHelpers
             UseOrganizationDomains = true,
             UseAdminSponsoredFamilies = true,
             SyncSeats = false,
-            UseAutomaticUserConfirmation = true
+            UseAutomaticUserConfirmation = true,
+            UsePhishingBlocker = true,
+            UseDisableSmAdsForUsers = true,
         });
     }
 

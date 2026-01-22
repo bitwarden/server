@@ -1,16 +1,20 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
@@ -32,12 +36,15 @@ public class AccountsControllerTests : IDisposable
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
+    private readonly IUserRepository _userRepository;
 
     public AccountsControllerTests()
     {
@@ -47,12 +54,15 @@ public class AccountsControllerTests : IDisposable
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
+        _setInitialMasterPasswordCommandV1 = Substitute.For<ISetInitialMasterPasswordCommandV1>();
         _twoFactorIsEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
+        _tdeSetPasswordCommand = Substitute.For<ITdeSetPasswordCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
+        _userRepository = Substitute.For<IUserRepository>();
 
         _sut = new AccountsController(
             _organizationService,
@@ -61,12 +71,15 @@ public class AccountsControllerTests : IDisposable
             _userService,
             _policyService,
             _setInitialMasterPasswordCommand,
+            _setInitialMasterPasswordCommandV1,
+            _tdeSetPasswordCommand,
             _tdeOffboardingPasswordCommand,
             _twoFactorIsEnabledQuery,
             _featureService,
             _userAccountKeysQuery,
             _twoFactorEmailService,
-            _changeKdfCommand
+            _changeKdfCommand,
+            _userRepository
         );
     }
 
@@ -375,13 +388,13 @@ public class AccountsControllerTests : IDisposable
     [BitAutoData(true, null, "newPublicKey", false)]
     // reject overwriting existing keys
     [BitAutoData(true, "newPrivateKey", "newPublicKey", false)]
-    public async Task PostSetPasswordAsync_WhenUserExistsAndSettingPasswordSucceeds_ShouldHandleKeysCorrectlyAndReturn(
+    public async Task PostSetPasswordAsync_V1_WhenUserExistsAndSettingPasswordSucceeds_ShouldHandleKeysCorrectlyAndReturn(
         bool hasExistingKeys,
         string requestPrivateKey,
         string requestPublicKey,
         bool shouldSucceed,
         User user,
-        SetPasswordRequestModel setPasswordRequestModel)
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
         // Arrange
         const string existingPublicKey = "existingPublicKey";
@@ -398,13 +411,15 @@ public class AccountsControllerTests : IDisposable
             user.PrivateKey = null;
         }
 
+        UpdateSetInitialPasswordRequestModelToV1(setInitialPasswordRequestModel);
+
         if (requestPrivateKey == null && requestPublicKey == null)
         {
-            setPasswordRequestModel.Keys = null;
+            setInitialPasswordRequestModel.Keys = null;
         }
         else
         {
-            setPasswordRequestModel.Keys = new KeysRequestModel
+            setInitialPasswordRequestModel.Keys = new KeysRequestModel
             {
                 EncryptedPrivateKey = requestPrivateKey,
                 PublicKey = requestPublicKey
@@ -412,44 +427,44 @@ public class AccountsControllerTests : IDisposable
         }
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
                 user,
-                setPasswordRequestModel.MasterPasswordHash,
-                setPasswordRequestModel.Key,
-                setPasswordRequestModel.OrgIdentifier)
+                setInitialPasswordRequestModel.MasterPasswordHash,
+                setInitialPasswordRequestModel.Key,
+                setInitialPasswordRequestModel.OrgIdentifier)
             .Returns(Task.FromResult(IdentityResult.Success));
 
         // Act
         if (shouldSucceed)
         {
-            await _sut.PostSetPasswordAsync(setPasswordRequestModel);
+            await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
             // Assert
-            await _setInitialMasterPasswordCommand.Received(1)
+            await _setInitialMasterPasswordCommandV1.Received(1)
                 .SetInitialMasterPasswordAsync(
                     Arg.Is<User>(u => u == user),
-                    Arg.Is<string>(s => s == setPasswordRequestModel.MasterPasswordHash),
-                    Arg.Is<string>(s => s == setPasswordRequestModel.Key),
-                    Arg.Is<string>(s => s == setPasswordRequestModel.OrgIdentifier));
+                    Arg.Is<string>(s => s == setInitialPasswordRequestModel.MasterPasswordHash),
+                    Arg.Is<string>(s => s == setInitialPasswordRequestModel.Key),
+                    Arg.Is<string>(s => s == setInitialPasswordRequestModel.OrgIdentifier));
 
             // Additional Assertions for User object modifications
-            Assert.Equal(setPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
-            Assert.Equal(setPasswordRequestModel.Kdf, user.Kdf);
-            Assert.Equal(setPasswordRequestModel.KdfIterations, user.KdfIterations);
-            Assert.Equal(setPasswordRequestModel.KdfMemory, user.KdfMemory);
-            Assert.Equal(setPasswordRequestModel.KdfParallelism, user.KdfParallelism);
-            Assert.Equal(setPasswordRequestModel.Key, user.Key);
+            Assert.Equal(setInitialPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
+            Assert.Equal(setInitialPasswordRequestModel.Kdf, user.Kdf);
+            Assert.Equal(setInitialPasswordRequestModel.KdfIterations, user.KdfIterations);
+            Assert.Equal(setInitialPasswordRequestModel.KdfMemory, user.KdfMemory);
+            Assert.Equal(setInitialPasswordRequestModel.KdfParallelism, user.KdfParallelism);
+            Assert.Equal(setInitialPasswordRequestModel.Key, user.Key);
         }
         else
         {
-            await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
+            await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
         }
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_WhenUserExistsAndHasKeysAndKeysAreUpdated_ShouldThrowAsync(
+    public async Task PostSetPasswordAsync_V1_WhenUserExistsAndHasKeysAndKeysAreUpdated_ShouldThrowAsync(
     User user,
-    SetPasswordRequestModel setPasswordRequestModel)
+    SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
         // Arrange
         const string existingPublicKey = "existingPublicKey";
@@ -461,47 +476,52 @@ public class AccountsControllerTests : IDisposable
         user.PublicKey = existingPublicKey;
         user.PrivateKey = existingEncryptedPrivateKey;
 
-        setPasswordRequestModel.Keys = new KeysRequestModel()
+        UpdateSetInitialPasswordRequestModelToV1(setInitialPasswordRequestModel);
+
+        setInitialPasswordRequestModel.Keys = new KeysRequestModel()
         {
             PublicKey = newPublicKey,
             EncryptedPrivateKey = newEncryptedPrivateKey
         };
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
                 user,
-                setPasswordRequestModel.MasterPasswordHash,
-                setPasswordRequestModel.Key,
-                setPasswordRequestModel.OrgIdentifier)
+                setInitialPasswordRequestModel.MasterPasswordHash,
+                setInitialPasswordRequestModel.Key,
+                setInitialPasswordRequestModel.OrgIdentifier)
             .Returns(Task.FromResult(IdentityResult.Success));
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
     }
 
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
-        SetPasswordRequestModel setPasswordRequestModel)
+    public async Task PostSetPasswordAsync_V1_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
     {
+        UpdateSetInitialPasswordRequestModelToV1(setInitialPasswordRequestModel);
+
         // Arrange
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PostSetPasswordAsync_WhenSettingPasswordFails_ShouldThrowBadRequestException(
+    public async Task PostSetPasswordAsync_V1_WhenSettingPasswordFails_ShouldThrowBadRequestException(
         User user,
-        SetPasswordRequestModel model)
+        SetInitialPasswordRequestModel model)
     {
+        UpdateSetInitialPasswordRequestModelToV1(model);
         model.Keys = null;
         // Arrange
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+        _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
             .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Some Error" })));
 
         // Act & Assert
@@ -688,6 +708,37 @@ public class AccountsControllerTests : IDisposable
         await _sut.PostKdf(model);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PostKeys_NoUser_Errors(KeysRequestModel model)
+    {
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult<User>(null));
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostKeys(model));
+    }
+
+    [Theory]
+    [BitAutoData("existing", "existing")]
+    [BitAutoData((string)null, "existing")]
+    [BitAutoData("", "existing")]
+    [BitAutoData(" ", "existing")]
+    [BitAutoData("existing", null)]
+    [BitAutoData("existing", "")]
+    [BitAutoData("existing", " ")]
+    public async Task PostKeys_UserAlreadyHasKeys_Errors(string? existingPrivateKey, string? existingPublicKey,
+        KeysRequestModel model)
+    {
+        var user = GenerateExampleUser();
+        user.PrivateKey = existingPrivateKey;
+        user.PublicKey = existingPublicKey;
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostKeys(model));
+
+        Assert.NotNull(exception.Message);
+        Assert.Contains("User has existing keypair", exception.Message);
+    }
+
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
     // something greater in order to share common test steps with
@@ -737,6 +788,212 @@ public class AccountsControllerTests : IDisposable
     {
         _userService.GetUserByIdAsync(Arg.Any<Guid>())
                     .Returns(Task.FromResult((User)null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithAccountKeys_CallsSetV2AccountCryptographicState(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = new AccountKeysRequestModel
+        {
+            UserKeyEncryptedAccountPrivateKey = "wrapped-private-key",
+            AccountPublicKey = "public-key",
+            PublicKeyEncryptionKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+            {
+                PublicKey = "public-key",
+                WrappedPrivateKey = "wrapped-private-key",
+                SignedPublicKey = "signed-public-key"
+            },
+            SignatureKeyPair = new SignatureKeyPairRequestModel
+            {
+                VerifyingKey = "verifying-key",
+                SignatureAlgorithm = "ed25519",
+                WrappedSigningKey = "wrapped-signing-key"
+            },
+            SecurityState = new SecurityStateModel
+            {
+                SecurityState = "security-state",
+                SecurityVersion = 2
+            }
+        };
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        var result = await _sut.PostKeys(model);
+
+        // Assert
+        await _userRepository.Received(1).SetV2AccountCryptographicStateAsync(
+            user.Id,
+            Arg.Any<UserAccountKeysData>());
+        await _userService.DidNotReceiveWithAnyArgs().SaveUserAsync(Arg.Any<User>());
+        Assert.NotNull(result);
+        Assert.Equal("keys", result.Object);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostKeys_WithoutAccountKeys_CallsSaveUser(
+        User user,
+        KeysRequestModel model)
+    {
+        // Arrange
+        user.PublicKey = null;
+        user.PrivateKey = null;
+        model.AccountKeys = null;
+        model.PublicKey = "public-key";
+        model.EncryptedPrivateKey = "encrypted-private-key";
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        // Act
+        var result = await _sut.PostKeys(model);
+
+        // Assert
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
+            u.PublicKey == model.PublicKey &&
+            u.PrivateKey == model.EncryptedPrivateKey));
+        await _userRepository.DidNotReceiveWithAnyArgs()
+            .SetV2AccountCryptographicStateAsync(Arg.Any<Guid>(), Arg.Any<UserAccountKeysData>());
+        Assert.NotNull(result);
+        Assert.Equal("keys", result.Object);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WhenUserExistsAndSettingPasswordSucceeds_ShouldSetInitialMasterPassword(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert
+        await _setInitialMasterPasswordCommand.Received(1)
+            .SetInitialMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<SetInitialMasterPasswordDataModel>(d =>
+                    d.MasterPasswordAuthentication != null &&
+                    d.MasterPasswordUnlock != null &&
+                    d.AccountKeys != null &&
+                    d.OrgSsoIdentifier == setInitialPasswordRequestModel.OrgIdentifier));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WithTdeSetPassword_ShouldCallTdeSetPasswordCommand(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel, includeTdeSetPassword: true);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _tdeSetPasswordCommand.SetMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _sut.PostSetPasswordAsync(setInitialPasswordRequestModel);
+
+        // Assert
+        await _tdeSetPasswordCommand.Received(1)
+            .SetMasterPasswordAsync(
+                Arg.Is<User>(u => u == user),
+                Arg.Is<SetInitialMasterPasswordDataModel>(d =>
+                    d.MasterPasswordAuthentication != null &&
+                    d.MasterPasswordUnlock != null &&
+                    d.AccountKeys == null &&
+                    d.OrgSsoIdentifier == setInitialPasswordRequestModel.OrgIdentifier));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_WhenSettingPasswordFails_ShouldThrowException(
+        User user,
+        SetInitialPasswordRequestModel setInitialPasswordRequestModel)
+    {
+        // Arrange
+        UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+            .Returns(Task.FromException(new Exception("Setting password failed")));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => _sut.PostSetPasswordAsync(setInitialPasswordRequestModel));
+    }
+
+    private void UpdateSetInitialPasswordRequestModelToV1(SetInitialPasswordRequestModel model)
+    {
+        model.MasterPasswordAuthentication = null;
+        model.MasterPasswordUnlock = null;
+        model.AccountKeys = null;
+    }
+
+    private void UpdateSetInitialPasswordRequestModelToV2(SetInitialPasswordRequestModel model, bool includeTdeSetPassword = false)
+    {
+        var kdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = 600000
+        };
+
+        model.MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = kdf,
+            MasterPasswordAuthenticationHash = "authHash",
+            Salt = "salt"
+        };
+
+        model.MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = kdf,
+            MasterKeyWrappedUserKey = "wrappedKey",
+            Salt = "salt"
+        };
+
+        if (includeTdeSetPassword)
+        {
+            // TDE set password does not include AccountKeys
+            model.AccountKeys = null;
+        }
+        else
+        {
+            model.AccountKeys = new AccountKeysRequestModel
+            {
+                UserKeyEncryptedAccountPrivateKey = "privateKey",
+                AccountPublicKey = "publicKey"
+            };
+        }
+
+        // Clear V1 properties
+        model.MasterPasswordHash = null;
+        model.Key = null;
+        model.Keys = null;
+        model.Kdf = null;
+        model.KdfIterations = null;
+        model.KdfMemory = null;
+        model.KdfParallelism = null;
     }
 }
 

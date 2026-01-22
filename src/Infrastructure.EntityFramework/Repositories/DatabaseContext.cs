@@ -17,8 +17,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class DatabaseContext : DbContext
@@ -57,6 +55,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
     public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
+    public DbSet<PlayItem> PlayItem { get; set; }
     public DbSet<OrganizationIntegration> OrganizationIntegrations { get; set; }
     public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }

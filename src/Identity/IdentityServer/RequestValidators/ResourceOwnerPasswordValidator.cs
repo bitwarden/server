@@ -31,6 +31,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
@@ -50,6 +51,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -147,14 +149,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
-            customResponse);
-    }
-
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
-    protected override void SetSsoResult(ResourceOwnerPasswordValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
             customResponse);
     }
 

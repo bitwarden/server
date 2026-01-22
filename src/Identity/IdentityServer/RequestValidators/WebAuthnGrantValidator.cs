@@ -38,6 +38,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
@@ -59,6 +60,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -137,14 +139,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
-            customResponse);
-    }
-
-    [Obsolete("Consider using SetValidationErrorResult instead.")]
-    protected override void SetSsoResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
             customResponse);
     }
 

@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
@@ -223,6 +224,148 @@ public class CipherRepositoryTests
 
             var savedCipher = await sut.GetByIdAsync(cipher.Id);
             Assert.True(savedCipher == null);
+        }
+    }
+
+    [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
+    public async Task ReplaceAsync_WithCollections_UpdatesFoldersFavoritesRepromptAndArchivedDateAsync(
+        Cipher cipher,
+        User user,
+        Organization org,
+        Collection collection,
+        List<EfVaultRepo.CipherRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        List<EfRepo.CollectionRepository> efCollectionRepos)
+    {
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+
+            var postEfOrg = await efOrgRepos[i].CreateAsync(org);
+            efOrgRepos[i].ClearChangeTracking();
+            var postEfUser = await efUserRepos[i].CreateAsync(user);
+            efUserRepos[i].ClearChangeTracking();
+
+            collection.OrganizationId = postEfOrg.Id;
+            var postEfCollection = await efCollectionRepos[i].CreateAsync(collection);
+            efCollectionRepos[i].ClearChangeTracking();
+
+            cipher.UserId = postEfUser.Id;
+            cipher.OrganizationId = null;
+            cipher.Folders = $"{{\"{postEfUser.Id}\":\"some-folder-id\"}}";
+            cipher.Favorites = $"{{\"{postEfUser.Id}\":true}}";
+            cipher.Reprompt = Core.Vault.Enums.CipherRepromptType.Password;
+
+            var createdCipher = await sut.CreateAsync(cipher);
+            sut.ClearChangeTracking();
+
+            var updatedCipher = await sut.GetByIdAsync(createdCipher.Id);
+            updatedCipher.UserId = postEfUser.Id;
+            updatedCipher.OrganizationId = postEfOrg.Id;
+            updatedCipher.Folders = $"{{\"{postEfUser.Id}\":\"new-folder-id\"}}";
+            updatedCipher.Favorites = $"{{\"{postEfUser.Id}\":true}}";
+            updatedCipher.Reprompt = Core.Vault.Enums.CipherRepromptType.Password;
+
+            await sut.ReplaceAsync(updatedCipher, new List<Guid> { postEfCollection.Id });
+            sut.ClearChangeTracking();
+
+
+            var savedCipher = await sut.GetByIdAsync(createdCipher.Id);
+            Assert.NotNull(savedCipher);
+            Assert.Null(savedCipher.UserId);
+            Assert.Equal(postEfOrg.Id, savedCipher.OrganizationId);
+            Assert.Equal($"{{\"{postEfUser.Id}\":\"new-folder-id\"}}", savedCipher.Folders);
+            Assert.Equal($"{{\"{postEfUser.Id}\":true}}", savedCipher.Favorites);
+            Assert.Equal(Core.Vault.Enums.CipherRepromptType.Password, savedCipher.Reprompt);
+        }
+    }
+
+    [CiSkippedTheory, EfUserCipherCustomize, BitAutoData]
+    public async Task ArchiveAsync_SetsArchivesJsonAndBumpsUserAccountRevisionDate(
+        Cipher cipher,
+        User user,
+        List<EfVaultRepo.CipherRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos)
+    {
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+
+            var efUser = await efUserRepos[i].CreateAsync(user);
+            efUserRepos[i].ClearChangeTracking();
+
+            cipher.UserId = efUser.Id;
+            cipher.OrganizationId = null;
+
+            var createdCipher = await sut.CreateAsync(cipher);
+            sut.ClearChangeTracking();
+
+            var archiveUtcNow = await sut.ArchiveAsync(new[] { createdCipher.Id }, efUser.Id);
+            sut.ClearChangeTracking();
+
+            var savedCipher = await sut.GetByIdAsync(createdCipher.Id);
+            Assert.NotNull(savedCipher);
+
+            Assert.Equal(archiveUtcNow, savedCipher.RevisionDate);
+
+            Assert.False(string.IsNullOrWhiteSpace(savedCipher.Archives));
+            var archives = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime>>(savedCipher.Archives);
+            Assert.NotNull(archives);
+            Assert.True(archives.ContainsKey(efUser.Id));
+            Assert.Equal(archiveUtcNow, archives[efUser.Id]);
+
+            var bumpedUser = await efUserRepos[i].GetByIdAsync(efUser.Id);
+            Assert.Equal(DateTime.UtcNow.ToShortDateString(), bumpedUser.AccountRevisionDate.ToShortDateString());
+        }
+    }
+
+    [CiSkippedTheory, EfUserCipherCustomize, BitAutoData]
+    public async Task UnarchiveAsync_RemovesUserFromArchivesJsonAndBumpsUserAccountRevisionDate(
+        Cipher cipher,
+        User user,
+        List<EfVaultRepo.CipherRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos)
+    {
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+
+            var efUser = await efUserRepos[i].CreateAsync(user);
+            efUserRepos[i].ClearChangeTracking();
+
+            cipher.UserId = efUser.Id;
+            cipher.OrganizationId = null;
+
+            var createdCipher = await sut.CreateAsync(cipher);
+            sut.ClearChangeTracking();
+
+            // Precondition: archived
+            await sut.ArchiveAsync(new[] { createdCipher.Id }, efUser.Id);
+            sut.ClearChangeTracking();
+
+            var unarchiveUtcNow = await sut.UnarchiveAsync(new[] { createdCipher.Id }, efUser.Id);
+            sut.ClearChangeTracking();
+
+            var savedCipher = await sut.GetByIdAsync(createdCipher.Id);
+            Assert.NotNull(savedCipher);
+
+            Assert.Equal(unarchiveUtcNow, savedCipher.RevisionDate);
+
+            // Archives should be null or not contain this user (repo clears string when map empty)
+            if (!string.IsNullOrWhiteSpace(savedCipher.Archives))
+            {
+                var archives = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, DateTime>>(savedCipher.Archives)
+                    ?? new Dictionary<Guid, DateTime>();
+                Assert.False(archives.ContainsKey(efUser.Id));
+            }
+            else
+            {
+                Assert.Null(savedCipher.Archives);
+            }
+
+            var bumpedUser = await efUserRepos[i].GetByIdAsync(efUser.Id);
+            Assert.Equal(DateTime.UtcNow.ToShortDateString(), bumpedUser.AccountRevisionDate.ToShortDateString());
         }
     }
 }

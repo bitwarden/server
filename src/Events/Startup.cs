@@ -36,6 +36,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -84,6 +85,8 @@ public class Startup
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
+        // Add event integration services
+        services.AddDistributedCache(globalSettings);
         services.AddRabbitMqListeners(globalSettings);
     }
 
