@@ -8,7 +8,6 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer.Services;
-using Microsoft.IdentityModel.Logging;
 using Stripe;
 
 namespace Bit.Sso;
@@ -96,11 +95,6 @@ public class Startup
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        if (env.IsDevelopment() || globalSettings.SelfHosted)
-        {
-            IdentityModelEventSource.ShowPII = true;
-        }
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 

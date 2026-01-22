@@ -14,7 +14,6 @@ using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 
 namespace Bit.Identity;
@@ -174,8 +173,6 @@ public class Startup
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        IdentityModelEventSource.ShowPII = true;
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
