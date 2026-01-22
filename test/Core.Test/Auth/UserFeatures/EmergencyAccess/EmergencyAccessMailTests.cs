@@ -26,7 +26,7 @@ public class EmergencyAccessMailTests
     [Theory, BitAutoData]
     public async Task SendEmergencyAccessRemoveGranteesEmail_SingleGrantee_Success(
         string grantorEmail,
-        string granteeName)
+        string granteeEmail)
     {
         // Arrange
         var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();
@@ -41,7 +41,7 @@ public class EmergencyAccessMailTests
             ToEmails = [grantorEmail],
             View = new EmergencyAccessRemoveGranteesMailView
             {
-                RemovedGranteeEmails = [granteeName]
+                RemovedGranteeEmails = [granteeEmail]
             }
         };
 
@@ -58,8 +58,8 @@ public class EmergencyAccessMailTests
         Assert.Contains(grantorEmail, sentMessage.ToEmails);
 
         // Verify the content contains the grantee name
-        Assert.Contains(granteeName, sentMessage.TextContent);
-        Assert.Contains(granteeName, sentMessage.HtmlContent);
+        Assert.Contains(granteeEmail, sentMessage.TextContent);
+        Assert.Contains(granteeEmail, sentMessage.HtmlContent);
     }
 
     /// <summary>
@@ -77,14 +77,14 @@ public class EmergencyAccessMailTests
             new HandlebarMailRenderer(logger, globalSettings),
             deliveryService);
 
-        var granteeNames = new[] { "Alice", "Bob", "Carol" };
+        var granteeEmails = new[] { "Alice@test.dev", "Bob@test.dev", "Carol@test.dev" };
 
         var mail = new EmergencyAccessRemoveGranteesMail
         {
             ToEmails = [grantorEmail],
             View = new EmergencyAccessRemoveGranteesMailView
             {
-                RemovedGranteeEmails = granteeNames
+                RemovedGranteeEmails = granteeEmails
             }
         };
 
@@ -98,10 +98,10 @@ public class EmergencyAccessMailTests
 
         // Assert - All grantee names should appear in the email
         Assert.NotNull(sentMessage);
-        foreach (var granteeName in granteeNames)
+        foreach (var granteeEmail in granteeEmails)
         {
-            Assert.Contains(granteeName, sentMessage.TextContent);
-            Assert.Contains(granteeName, sentMessage.HtmlContent);
+            Assert.Contains(granteeEmail, sentMessage.TextContent);
+            Assert.Contains(granteeEmail, sentMessage.HtmlContent);
         }
     }
 
@@ -148,6 +148,6 @@ public class EmergencyAccessMailTests
         Assert.NotNull(mail);
         Assert.NotNull(mail.View);
         Assert.Equal(_emergencyAccessMailSubject, mail.Subject);
-        Assert.Equal(_emergencyAccessHelpUrl, EmergencyAccessRemoveGranteesMailView.EmergencyAccessHelpPageUrl);
+        Assert.Equal(_emergencyAccessHelpUrl, mail.View.EmergencyAccessHelpPageUrl);
     }
 }
