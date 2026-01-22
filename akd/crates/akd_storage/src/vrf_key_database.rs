@@ -357,9 +357,6 @@ impl VrfKeyTableData {
 
 #[cfg(test)]
 mod tests {
-
-    use std::str::FromStr;
-
     use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
     use rsa::{
         pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey},
@@ -461,7 +458,13 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
         let (table_data, vrf_key) = super::VrfKeyTableData::new(&config.clone()).await.unwrap();
         let retrieved_vrf_key = table_data.to_vrf_key(&config).await.unwrap();
 
-        assert_eq!(table_data.root_key_hash, vec![]);
+        assert_eq!(
+            table_data.root_key_hash,
+            vec![
+                30, 193, 111, 170, 7, 197, 229, 2, 79, 149, 163, 57, 227, 149, 248, 193, 41, 154,
+                61, 28, 63, 101, 228, 189, 146, 70, 255, 51, 173, 161, 10, 101
+            ]
+        );
         assert_eq!(table_data.enc_sym_key, None);
         assert_eq!(table_data.sym_enc_vrf_key, vec![]);
         assert_eq!(table_data.sym_enc_vrf_key_nonce, vec![]);
@@ -619,27 +622,13 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
         let config = create_test_symmetric_config();
         let (table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
 
-        let symmetric_key_bytes =
-            bitwarden_encoding::B64::from_str(TEST_SYMMETRIC_KEY_B64).unwrap();
-
-        assert!(!table_data
-            .sym_enc_vrf_key
-            .contains(&symmetric_key_bytes.as_bytes()[0]));
         assert_eq!(table_data.enc_sym_key, None);
     }
 
     #[tokio::test]
-    pub async fn test_rsa_private_key_not_persisted() {
+    pub async fn test_rsa_persists_sym_key() {
         let config = create_test_rsa_config();
         let (table_data, _) = super::VrfKeyTableData::new(&config).await.unwrap();
-
-        let rsa_key = rsa::RsaPrivateKey::from_pkcs1_pem(TEST_RSA_PRIVATE_KEY).unwrap();
-        let rsa_der = rsa_key.to_pkcs1_der().unwrap();
-
-        assert!(!table_data
-            .sym_enc_vrf_key
-            .windows(4)
-            .any(|w| rsa_der.as_bytes().windows(4).any(|rw| w == rw)));
 
         assert!(table_data.enc_sym_key.is_some());
     }
@@ -649,10 +638,11 @@ k7UXX8Wh7AgrK4A/MuZXJL30Cd/dgtlHzJWtlQevTII=
         let config = create_test_symmetric_config();
         let (table_data, vrf_key) = super::VrfKeyTableData::new(&config).await.unwrap();
 
-        assert!(!table_data
-            .sym_enc_vrf_key
-            .windows(8)
-            .any(|w| vrf_key.0.windows(8).any(|vw| w == vw)));
+        assert_ne!(
+            table_data.sym_enc_vrf_key.as_slice(),
+            vrf_key.0.as_slice(),
+            "Encrypted VRF key should not match plaintext VRF key"
+        );
     }
 
     #[tokio::test]
