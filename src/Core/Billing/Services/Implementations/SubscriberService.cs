@@ -62,8 +62,7 @@ public class SubscriberService(
         // Check if this is a Premium-to-Organization upgrade that can be reverted
         if (subscriber is Organization organization)
         {
-            var canRevert = await CanRevertPremiumUpgradeAsync(subscription, organization);
-            if (canRevert)
+            if (IsPremiumUpgradeReversion(subscription, organization))
             {
                 await RevertPremiumUpgradeAsync(subscription, organization);
                 return;
@@ -976,13 +975,13 @@ public class SubscriberService(
     }
 
     /// <summary>
-    /// Checks if a Premium-to-Organization upgrade can be reverted by validating the subscription metadata
-    /// and organization match.
+    /// Determines if a subscription represents a Premium-to-Organization upgrade that can be reverted
+    /// by validating the subscription metadata and organization match.
     /// </summary>
     /// <param name="subscription">The Stripe subscription to check</param>
     /// <param name="organization">The organization attempting to cancel</param>
-    /// <returns>True if the reversion is possible, false otherwise</returns>
-    private Task<bool> CanRevertPremiumUpgradeAsync(Subscription subscription, Organization organization)
+    /// <returns>True if this is a revertible Premium upgrade, false otherwise</returns>
+    private bool IsPremiumUpgradeReversion(Subscription subscription, Organization organization)
     {
         // Extract all metadata once
         var metadata = subscription.Metadata;
@@ -993,14 +992,14 @@ public class SubscriberService(
             !metadata.TryGetValue(MetadataKeys.PreviousPremiumUserId, out _))
         {
             logger.LogDebug("Subscription {SubscriptionId} does not have premium upgrade metadata", subscription.Id);
-            return Task.FromResult(false);
+            return false;
         }
 
         // Parse IDs once
         if (!Guid.TryParse(upgradedOrganizationIdStr, out var upgradedOrganizationId))
         {
             logger.LogWarning("Invalid GUID format in premium upgrade metadata for subscription {SubscriptionId}", subscription.Id);
-            return Task.FromResult(false);
+            return false;
         }
 
         // Verify that this is the organization that was upgraded
@@ -1009,7 +1008,7 @@ public class SubscriberService(
             logger.LogWarning(
                 "Organization {OrganizationId} attempted to revert subscription {SubscriptionId} that belongs to organization {ActualOrganizationId}",
                 organization.Id, subscription.Id, upgradedOrganizationId);
-            return Task.FromResult(false);
+            return false;
         }
 
         // Verify subscription is in trial - reversion only allowed during trial period
@@ -1018,15 +1017,15 @@ public class SubscriberService(
             logger.LogWarning(
                 "Cannot revert subscription {SubscriptionId} - not in trial period (current status: {Status})",
                 subscription.Id, subscription.Status);
-            return Task.FromResult(false);
+            return false;
         }
 
-        return Task.FromResult(true);
+        return true;
     }
 
     /// <summary>
     /// Reverts a Premium-to-Organization upgrade by restoring the subscription to the original Premium plan.
-    /// This method should only be called after CanRevertPremiumUpgradeAsync returns true.
+    /// This method should only be called after IsPremiumUpgradeReversion returns true.
     /// </summary>
     /// <param name="subscription">The Stripe subscription to revert</param>
     /// <param name="organization">The organization whose subscription is being reverted</param>
@@ -1035,7 +1034,7 @@ public class SubscriberService(
     {
         var metadata = subscription.Metadata;
 
-        // Extract required metadata values (we know they exist from CanRevertPremiumUpgradeAsync)
+        // Extract required metadata values (we know they exist from IsPremiumUpgradeReversion)
         var previousPremiumPriceId = metadata[MetadataKeys.PreviousPremiumPriceId];
         var previousPremiumUserIdStr = metadata[MetadataKeys.PreviousPremiumUserId];
 
