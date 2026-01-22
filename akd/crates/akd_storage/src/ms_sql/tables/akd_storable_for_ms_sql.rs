@@ -437,9 +437,8 @@ impl AkdStorableForMsSql for DbRecord {
             }
             StorageType::TreeNode => {
                 let bin = St::get_full_binary_key_id(key);
-                // These are constructed from a safe key, they should never fail
                 let key = TreeNodeWithPreviousValue::key_from_full_binary(&bin)
-                    .expect("Failed to decode key"); // TODO: should this be an error?
+                    .map_err(|e| StorageError::Other(format!("Failed to decode TreeNode key: {}", e)))?;
 
                 params.add("label_len", Box::new(key.0.label_len as i32));
                 params.add("label_val", Box::new(key.0.label_val.to_vec()));
@@ -455,8 +454,8 @@ impl AkdStorableForMsSql for DbRecord {
             }
             StorageType::ValueState => {
                 let bin = St::get_full_binary_key_id(key);
-                // These are constructed from a safe key, they should never fail
-                let key = ValueState::key_from_full_binary(&bin).expect("Failed to decode key"); // TODO: should this be an error?
+                let key = ValueState::key_from_full_binary(&bin)
+                    .map_err(|e| StorageError::Other(format!("Failed to decode ValueState key: {}", e)))?;
 
                 params.add("raw_label", Box::new(key.0.clone()));
                 params.add("epoch", Box::new(key.1 as i64));
@@ -485,9 +484,8 @@ impl AkdStorableForMsSql for DbRecord {
                 let mut rows = Vec::new();
                 for k in key {
                     let bin = St::get_full_binary_key_id(k);
-                    // These are constructed from a safe key, they should never fail
                     let key = TreeNodeWithPreviousValue::key_from_full_binary(&bin)
-                        .expect("Failed to decode key");
+                        .map_err(|e| StorageError::Other(format!("Failed to decode TreeNode key: {}", e)))?;
 
                     let row = (key.0.label_len as i32, key.0.label_val.to_vec()).into_row();
                     rows.push(row);
@@ -498,8 +496,8 @@ impl AkdStorableForMsSql for DbRecord {
                 let mut rows = Vec::new();
                 for k in key {
                     let bin = St::get_full_binary_key_id(k);
-                    // These are constructed from a safe key, they should never fail
-                    let key = ValueState::key_from_full_binary(&bin).expect("Failed to decode key"); // TODO: should this be an error?
+                    let key = ValueState::key_from_full_binary(&bin)
+                        .map_err(|e| StorageError::Other(format!("Failed to decode ValueState key: {}", e)))?;
 
                     let row = (key.0.clone(), key.1 as i64).into_row();
                     rows.push(row);

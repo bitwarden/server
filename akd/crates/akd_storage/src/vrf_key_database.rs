@@ -162,14 +162,23 @@ pub(crate) enum VrfRootKeyType {
     RsaKey = 2,
 }
 
-impl From<i16> for VrfRootKeyType {
-    fn from(value: i16) -> Self {
+#[derive(Debug, Error)]
+#[error("Invalid VrfRootKeyType value from database: {0}")]
+pub struct InvalidVrfRootKeyTypeError(i16);
+
+impl TryFrom<i16> for VrfRootKeyType {
+    type Error = InvalidVrfRootKeyTypeError;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
         match value {
-            1 => VrfRootKeyType::SymmetricKey,
-            2 => VrfRootKeyType::RsaKey,
+            1 => Ok(VrfRootKeyType::SymmetricKey),
+            2 => Ok(VrfRootKeyType::RsaKey),
             #[cfg(test)]
-            0 => VrfRootKeyType::None,
-            _ => panic!("Invalid VrfRootKeyType value: {}", value),
+            0 => Ok(VrfRootKeyType::None),
+            _ => {
+                error!("Invalid VrfRootKeyType value from database: {}", value);
+                Err(InvalidVrfRootKeyTypeError(value))
+            }
         }
     }
 }

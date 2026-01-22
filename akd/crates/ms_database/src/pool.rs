@@ -101,14 +101,22 @@ impl ManagedConnection {
     }
 
     async fn ping(&mut self) -> Result<i32, tiberius::error::Error> {
-        let row = self
+        let rows = self
             .0
             .simple_query("SELECT 1")
             .await?
             .into_first_result()
             .await?;
-        debug!(?row, "Ping response");
-        let value = row[0].get(0).expect("value is present");
+        debug!(?rows, "Ping response");
+
+        let row = rows.first().ok_or_else(|| {
+            tiberius::error::Error::Conversion("Ping query returned no rows".into())
+        })?;
+
+        let value = row.get(0).ok_or_else(|| {
+            tiberius::error::Error::Conversion("Ping query returned no columns".into())
+        })?;
+
         Ok(value)
     }
 }

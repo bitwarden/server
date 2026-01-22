@@ -79,9 +79,14 @@ pub fn from_row(row: &ms_database::Row) -> Result<VrfKeyTableData, VrfKeyStorage
         VrfKeyStorageError("sym_enc_vrf_key_nonce is NULL or missing".to_string())
     })?;
 
+    let root_key_type = root_key_type.try_into().map_err(|err| {
+        error!(%err, "Invalid root_key_type value from database");
+        VrfKeyStorageError(format!("Invalid root_key_type value from database: {}", err))
+    })?;
+
     Ok(VrfKeyTableData {
         root_key_hash: root_key_hash.to_vec(),
-        root_key_type: root_key_type.into(),
+        root_key_type,
         enc_sym_key: enc_sym_key.map(|k| k.to_vec()),
         sym_enc_vrf_key: sym_enc_vrf_key.to_vec(),
         sym_enc_vrf_key_nonce: sym_enc_vrf_key_nonce.to_vec(),

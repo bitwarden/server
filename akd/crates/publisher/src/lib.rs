@@ -151,12 +151,13 @@ async fn start_web(
         .route_layer(from_fn_with_state(app_state.clone(), auth))
         .with_state(app_state);
 
-    let listener = TcpListener::bind(&config.socket_address())
+    let socket_addr = config.socket_address().context("Failed to parse socket address")?;
+    let listener = TcpListener::bind(&socket_addr)
         .await
         .context("Socket bind failed")?;
     info!(
         "Publisher web server listening on {}",
-        config.socket_address()
+        socket_addr
     );
     axum::serve(listener, app.into_make_service())
         .with_graceful_shutdown(async move {

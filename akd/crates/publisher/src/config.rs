@@ -103,11 +103,10 @@ impl ApplicationConfig {
     }
 
     /// Get the web server bind address as a SocketAddr
-    /// Panics if the address is invalid
-    pub fn socket_address(&self) -> std::net::SocketAddr {
+    pub fn socket_address(&self) -> Result<std::net::SocketAddr, ConfigError> {
         self.web_server_bind_address
             .parse()
-            .expect("Invalid web server bind address")
+            .map_err(|e| ConfigError::Message(format!("Invalid web server bind address '{}': {}", self.web_server_bind_address, e)))
     }
 
     pub fn api_key_valid(&self, api_key: &str) -> bool {

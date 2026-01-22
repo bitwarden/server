@@ -48,11 +48,12 @@ pub async fn start(
             .merge(crate::routes::api_routes())
             .with_state(app_state);
 
-        let listener = TcpListener::bind(&config.socket_address())
+        let socket_addr = config.socket_address().context("Failed to parse socket address")?;
+        let listener = TcpListener::bind(&socket_addr)
             .await
             .context("Socket bind failed")?;
         info!(
-            socket_address = %config.socket_address(),
+            socket_address = %socket_addr,
             "Reader web server listening"
         );
 
