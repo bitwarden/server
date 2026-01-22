@@ -251,10 +251,10 @@ public class RestoreOrganizationUserCommand(
                             defaultCollectionName);
                     }
 
-                    await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-
                     await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
+
+                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
                 result.Add(Tuple.Create(organizationUser, ""));
             }
