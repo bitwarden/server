@@ -105,3 +105,101 @@ impl SqlParams {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sequential_parameter_keys() {
+        // Parameters must be sequential (@P1, @P2, @P3...) for SQL Server
+        let mut params = SqlParams::new();
+        params.add("label", Box::new("value1".to_string()));
+        params.add("value", Box::new("value2".to_string()));
+        params.add("epoch", Box::new(42i64));
+
+        let keys = params.keys();
+        assert_eq!(keys, vec!["@P1", "@P2", "@P3"]);
+    }
+
+    #[test]
+    fn test_column_bracketing() {
+        // SQL Server requires column names in brackets to handle reserved words
+        let mut params = SqlParams::new();
+        params.add("user", Box::new("test".to_string()));
+
+        let columns = params.columns();
+        assert_eq!(columns[0], "[user]");
+    }
+
+    #[test]
+    fn test_column_bracketing_idempotent() {
+        // Bracketing should be idempotent - don't double-bracket
+        assert_eq!(SqlParam::wrap_in_brackets("[already_bracketed]"), "[already_bracketed]");
+        assert_eq!(SqlParam::wrap_in_brackets("not_bracketed"), "[not_bracketed]");
+        assert_eq!(SqlParam::wrap_in_brackets("[partial"), "[partial]");
+        assert_eq!(SqlParam::wrap_in_brackets("partial]"), "[partial]");
+    }
+
+    #[test]
+    fn test_column_bracketing_with_whitespace() {
+        // Should trim whitespace before bracketing
+        assert_eq!(SqlParam::wrap_in_brackets("  column  "), "[column]");
+        assert_eq!(SqlParam::wrap_in_brackets("  [column]  "), "[column]");
+    }
+
+    #[test]
+    fn test_keys_as_columns() {
+        // Used in SELECT statements: @P1 AS [column1], @P2 AS [column2]
+        let mut params = SqlParams::new();
+        params.add("id", Box::new(1i32));
+        params.add("name", Box::new("test".to_string()));
+
+        let keys_as_cols = params.keys_as_columns();
+        assert_eq!(keys_as_cols, vec!["@P1 AS [id]", "@P2 AS [name]"]);
+    }
+
+    #[test]
+    fn test_key_for_column() {
+        // Lookup parameter key by column name
+        let mut params = SqlParams::new();
+        params.add("label", Box::new("value".to_string()));
+        params.add("epoch", Box::new(1i64));
+
+        assert_eq!(params.key_for("label"), Some("@P1".to_string()));
+        assert_eq!(params.key_for("epoch"), Some("@P2".to_string()));
+        assert_eq!(params.key_for("nonexistent"), None);
+    }
+
+    #[test]
+    fn test_set_columns_equal() {
+        // Used in UPDATE statements: target.[col] = source.[col]
+        let mut params = SqlParams::new();
+        params.add("label", Box::new("val".to_string()));
+        params.add("value", Box::new("val".to_string()));
+        params.add("id", Box::new(1i32));
+
+        let set_clause = params.set_columns_equal_except("target.", "source.", vec!["id"]);
+        assert_eq!(set_clause, vec!["target.[label] = source.[label]", "target.[value] = source.[value]"]);
+    }
+
+    #[test]
+    fn test_empty_params() {
+        let params = SqlParams::new();
+        assert!(params.keys().is_empty());
+        assert!(params.columns().is_empty());
+        assert_eq!(params.key_for("anything"), None);
+    }
+
+    #[test]
+    fn test_param_count() {
+        let mut params = SqlParams::new();
+        assert_eq!(params.keys().len(), 0);
+
+        params.add("col1", Box::new(1i32));
+        assert_eq!(params.keys().len(), 1);
+
+        params.add("col2", Box::new(2i32));
+        assert_eq!(params.keys().len(), 2);
+    }
+}
