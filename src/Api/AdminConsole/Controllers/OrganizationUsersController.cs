@@ -703,7 +703,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore/vnext")]
     [Authorize<ManageUsersRequirement>]
-    public async Task RestoreAsync(Guid orgId, Guid id, OrganizationUserRestoreRequest request)
+    [RequireFeature(FeatureFlagKeys.DefaultUserCollectionRestore)]
+    public async Task RestoreAsync_vNext(Guid orgId, Guid id, OrganizationUserRestoreRequest request)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, request.DefaultUserCollectionName));
     }
