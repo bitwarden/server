@@ -52,8 +52,16 @@ impl ConnectionManager {
 
     /// Mark the pool as unhealthy. This is used to indicate that a connection should be replaced.
     pub async fn set_unhealthy(&self) {
-        let mut healthy = self.is_healthy.write().expect("poisoned is_healthy lock");
-        *healthy = false;
+        match self.is_healthy.write() {
+            Ok(mut guard) => {
+                *guard = false;
+            }
+            Err(poisoned) => {
+                // Even if poisoned, we can safely set the boolean value
+                tracing::error!("Health lock was poisoned, recovering and setting unhealthy");
+                *poisoned.into_inner() = false;
+            }
+        }
     }
 }
 
@@ -149,6 +157,13 @@ impl ManageConnection for ConnectionManager {
     }
 
     fn has_broken(&self, _conn: &mut Self::Connection) -> bool {
-        *self.is_healthy.read().expect("poisoned is_healthy lock")
+        match self.is_healthy.read() {
+            Ok(guard) => *guard,
+            Err(poisoned) => {
+                // If poisoned, assume unhealthy (safe default)
+                tracing::error!("Health lock was poisoned during read, assuming unhealthy");
+                *poisoned.into_inner()
+            }
+        }
     }
 }

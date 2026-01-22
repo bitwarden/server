@@ -102,8 +102,18 @@ impl VrfKeyDatabase {
 #[async_trait]
 impl VRFKeyStorage for VrfKeyDatabase {
     async fn retrieve(&self) -> Result<Vec<u8>, VrfError> {
-        if let Some(cached_key) = self.cached_vrf_key.read().expect("cache poisoned").as_ref() {
-            return Ok(cached_key.clone());
+        // Handle poisoned lock by forcing a cache reload
+        let cached = match self.cached_vrf_key.read() {
+            Ok(guard) => guard.as_ref().cloned(),
+            Err(_poisoned) => {
+                error!("VRF key cache lock was poisoned, forcing reload from database");
+                // Don't trust the cached value - force a reload
+                None
+            }
+        };
+
+        if let Some(cached_key) = cached {
+            return Ok(cached_key);
         }
 
         let result = match &self.get_vrf_key().await {
@@ -137,9 +147,17 @@ impl VRFKeyStorage for VrfKeyDatabase {
         };
 
         if result.is_ok() {
-            // update cached key
-            let mut write_guard = self.cached_vrf_key.write().expect("cache poisoned");
-            *write_guard = Some(result.as_ref().unwrap().clone());
+            // Update cached key, clearing poison if present
+            match self.cached_vrf_key.write() {
+                Ok(mut guard) => {
+                    *guard = Some(result.as_ref().unwrap().clone());
+                }
+                Err(poisoned) => {
+                    error!("VRF key cache lock was poisoned during write, recovering by caching fresh value");
+                    // We have a valid value from the database - use it to fix the poisoned cache
+                    *poisoned.into_inner() = Some(result.as_ref().unwrap().clone());
+                }
+            }
         }
 
         result
