@@ -1,7 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -18,7 +26,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 [SutProviderCustomize]
 public class InitPendingOrganizationCommandTests
 {
-
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
@@ -165,5 +172,457 @@ public class InitPendingOrganizationCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
 
         return protectedToken;
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithValidData_InitializesOrgAndConfirmsUser(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Id = orgId;
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
+
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new List<PolicyDetails>());
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, null, token, userKey);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(orgId);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .InitializePendingOrganizationAsync(
+                orgId, publicKey, privateKey, orgUserId, user.Id, userKey, null);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithCollectionName_CreatesDefaultCollection(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        string collectionName, SutProvider<InitPendingOrganizationCommand> sutProvider,
+        Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Id = orgId;
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
+
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new List<PolicyDetails>());
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, collectionName, token, userKey);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(orgId);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .InitializePendingOrganizationAsync(
+                orgId, publicKey, privateKey, orgUserId, user.Id, userKey, collectionName);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithNullOrgUser_ReturnsOrganizationUserNotFoundError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns((OrganizationUser)null);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", "token", userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationUserNotFoundError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithInvalidToken_ReturnsInvalidTokenError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, OrganizationUser orgUser)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId)
+            .Returns(orgUser);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", "invalid-token", userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<InvalidTokenError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithEnabledOrg_ReturnsOrganizationAlreadyEnabledError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Enabled = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationAlreadyEnabledError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithNonPendingOrg_ReturnsOrganizationNotPendingError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Created;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationNotPendingError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithExistingKeys_ReturnsOrganizationHasKeysError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PublicKey = "existing-key";
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationHasKeysError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithNullOrganization_ReturnsOrganizationNotFoundError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns((Organization)null);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationNotFoundError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithEmailMismatch_ReturnsEmailMismatchError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = "different@example.com";
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<EmailMismatchError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithTwoFactorRequired_UserDoesntHave_ReturnsTwoFactorRequiredError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(false);
+
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(
+            new List<PolicyDetails> { new PolicyDetails { OrganizationId = orgId } });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<TwoFactorRequiredError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithUserAlreadyAdminOfFreeOrg_ReturnsFreeOrgAdminLimitError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        orgUser.Type = OrganizationUserType.Owner;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+        org.PlanType = PlanType.Free;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
+            .Returns(1);
+
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new List<PolicyDetails>());
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<FreeOrgAdminLimitError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithAutomaticUserConfirmationPolicy_ReturnsSingleOrgPolicyViolationError(
+        User user, Guid orgId, Guid orgUserId, Guid otherOrgId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
+
+        // Enable AutomaticConfirmUsers feature flag
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // User is subject to AutomaticUserConfirmation policy from another organization
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(
+            new List<PolicyDetails> { new PolicyDetails { OrganizationId = otherOrgId } });
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new List<PolicyDetails>());
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
+
+        // No legacy SingleOrg policy
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg).Returns(false);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<SingleOrgPolicyViolationError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithSingleOrgPolicy_ReturnsSingleOrgPolicyViolationError(
+        User user, Guid orgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = orgId;
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
+
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new List<PolicyDetails>());
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
+
+        // User is subject to SingleOrg policy from another organization
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<SingleOrgPolicyViolationError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganizationVNextAsync_WithMismatchedOrganizationId_ReturnsOrganizationMismatchError(
+        User user, Guid orgId, Guid differentOrgId, Guid orgUserId, string publicKey, string privateKey, string userKey,
+        SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.OrganizationId = differentOrgId;
+
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+
+        org.Status = OrganizationStatusType.Pending;
+        org.Enabled = false;
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns(org);
+
+        // Act
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
+            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationMismatchError>(result.AsError);
     }
 }

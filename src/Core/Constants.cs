@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
+    public const string RefactorOrgAcceptInit = "pm-28795-refactor-org-accept-init";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";

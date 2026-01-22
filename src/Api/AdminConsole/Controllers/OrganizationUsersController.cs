@@ -309,7 +309,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("{organizationUserId}/accept-init")]
-    public async Task AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
+    public async Task<IResult> AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -317,9 +317,21 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit))
+        {
+            var result = await _initPendingOrganizationCommand.InitPendingOrganizationVNextAsync(
+                user, orgId, organizationUserId,
+                model.Keys.PublicKey, model.Keys.EncryptedPrivateKey,
+                model.CollectionName, model.Token, model.Key);
+
+            return Handle(result);
+        }
+
         await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
         await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
+
+        return TypedResults.Ok();
     }
 
     [HttpPost("{organizationUserId}/accept")]
