@@ -81,106 +81,12 @@ Two ORM implementations exist for database flexibility:
 
 ## Testing Patterns
 
-Tests use **xUnit** with **NSubstitute** for mocking and **AutoFixture** for test data. All tests must follow the **AAA (Arrange-Act-Assert)** pattern with clear section comments.
+See **[test/Common/TESTING.md](../test/Common/TESTING.md)** for detailed testing patterns, examples, and SutProvider usage.
 
-### Unit Tests
-Unit tests mock dependencies and test isolated business logic:
-
-```csharp
-[SutProviderCustomize]
-public class DeleteGroupCommandTests
-{
-    [Theory, BitAutoData]
-    public async Task DeleteGroup_Success(SutProvider<DeleteGroupCommand> sutProvider, Group group)
-    {
-        // Arrange
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetByIdAsync(group.Id)
-            .Returns(group);
-
-        // Act
-        await sutProvider.Sut.DeleteGroupAsync(group.OrganizationId, group.Id);
-
-        // Assert
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).DeleteAsync(group);
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogGroupEventAsync(group, EventType.Group_Deleted);
-    }
-}
-```
-
-Key testing utilities:
-- `[BitAutoData]` - AutoFixture attribute for generating test data
-- `SutProvider<T>` - Helper for creating system-under-test with mocked dependencies
-- `[SutProviderCustomize]` - Attribute to enable SutProvider pattern
-
-**SutProvider advanced usage:**
-- **Parameter order with inline data**: `[BitAutoData("value")]` inline parameters come before `SutProvider<T>` in the method signature
-- **Non-mock dependencies**: Use `new SutProvider<T>().SetDependency<IInterface>(realInstance).Create()` when you need a real implementation (e.g., `FakeLogger`) instead of a mock
-- **Interface matching**: SutProvider matches dependencies by the exact interface type in the constructor
-
-### Integration Tests
-Integration tests exercise real code paths with actual database operations. **Do not mock** - use real repositories and test helpers to set up data:
-
-```csharp
-public class GroupRepositoryTests
-{
-    [DatabaseTheory, DatabaseData]
-    public async Task AddGroupUsersByIdAsync_CreatesGroupUsers(
-        IGroupRepository groupRepository,
-        IUserRepository userRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
-    {
-        // Arrange
-        var user1 = await userRepository.CreateTestUserAsync("user1");
-        var user2 = await userRepository.CreateTestUserAsync("user2");
-        var org = await organizationRepository.CreateTestOrganizationAsync();
-        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user1);
-        var orgUser2 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user2);
-        var group = await groupRepository.CreateTestGroupAsync(org);
-
-        // Act
-        await groupRepository.AddGroupUsersByIdAsync(group.Id, [orgUser1.Id, orgUser2.Id]);
-
-        // Assert
-        var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
-        Assert.Equal(new[] { orgUser1.Id, orgUser2.Id }.Order(), actual.Order());
-    }
-}
-```
-
-API integration tests use `ApiApplicationFactory` and real HTTP calls:
-
-```csharp
-public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
-{
-    [Fact]
-    public async Task Put_AsOwner_CanUpdateOrganization()
-    {
-        // Arrange
-        await _loginHelper.LoginAsync(_ownerEmail);
-        var updateRequest = new OrganizationUpdateRequestModel
-        {
-            Name = "Updated Organization Name",
-            BillingEmail = "newbilling@example.com"
-        };
-
-        // Act
-        var response = await _client.PutAsJsonAsync($"/organizations/{_organization.Id}", updateRequest);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var organizationRepository = _factory.GetService<IOrganizationRepository>();
-        var updatedOrg = await organizationRepository.GetByIdAsync(_organization.Id);
-        Assert.Equal("Updated Organization Name", updatedOrg.Name);
-    }
-}
-```
-
-Key integration test attributes:
-- `[DatabaseTheory, DatabaseData]` - For repository tests against real databases
-- `IClassFixture<ApiApplicationFactory>` - For API controller tests
+**Quick reference:**
+- **Unit tests**: Use `[SutProviderCustomize]`, `[Theory, BitAutoData]`, and `SutProvider<T>` for mocked dependencies
+- **Integration tests**: Use `[DatabaseTheory, DatabaseData]` for repository tests, `ApiApplicationFactory` for API tests
+- **All tests**: Follow AAA (Arrange-Act-Assert) pattern with clear section comments
 
 ## Critical Rules
 
