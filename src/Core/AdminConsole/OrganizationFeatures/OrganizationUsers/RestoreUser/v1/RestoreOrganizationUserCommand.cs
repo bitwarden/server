@@ -104,12 +104,12 @@ public class RestoreOrganizationUserCommand(
         var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
-        organizationUser.Status = status;
 
         if (organizationUser.UserId.HasValue
            && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId
                .Value)).State == OrganizationDataOwnershipState.Enabled
            && status == OrganizationUserStatusType.Confirmed
+           && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
            && !string.IsNullOrWhiteSpace(defaultCollectionName))
         {
             await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
@@ -238,19 +238,20 @@ public class RestoreOrganizationUserCommand(
                 var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
                 await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
-                organizationUser.Status = status;
 
-                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
                 if (organizationUser.UserId.HasValue)
                 {
                     if (organizationUsersDataOwnershipEnabled.Contains(organizationUser.Id)
-                        && organizationUser.Status == OrganizationUserStatusType.Confirmed
-                        && !string.IsNullOrWhiteSpace(defaultCollectionName))
+                        && status == OrganizationUserStatusType.Confirmed
+                        && !string.IsNullOrWhiteSpace(defaultCollectionName)
+                        && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore))
                     {
                         await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
                             [organizationUser.Id],
                             defaultCollectionName);
                     }
+
+                    await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
                     await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
