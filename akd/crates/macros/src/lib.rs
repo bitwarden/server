@@ -39,38 +39,47 @@ use std::fs;
 use std::path::Path;
 use syn::{parse_macro_input, LitStr};
 
-/// Resolves a directory path by walking up to find the workspace root (first Cargo.toml).
-/// All paths are resolved relative to the workspace root.
+/// Resolves a directory path relative to the invoking crate.
+/// Handles special case of trybuild tests by mapping back to the source crate.
 fn resolve_path(path_str: &str) -> std::path::PathBuf {
     // Try to get the current crate directory from CARGO_MANIFEST_DIR
-    let start_dir = if let Ok(crate_dir) = std::env::var("CARGO_MANIFEST_DIR") {
-        std::path::PathBuf::from(crate_dir)
+    let crate_dir = if let Ok(dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        std::path::PathBuf::from(dir)
     } else {
-        // CARGO_MANIFEST_DIR not set (e.g., in trybuild tests)
-        // Start from the current directory and walk up
+        // CARGO_MANIFEST_DIR not set - start from current directory
         std::env::current_dir().expect("Could not determine current directory")
     };
 
-    let mut current = start_dir.as_path();
-
-    // Walk up to find the first Cargo.toml (workspace root)
-    loop {
-        if current.join("Cargo.toml").exists() {
-            return current.join(path_str);
-        }
-
-        // Move to parent directory
-        match current.parent() {
-            Some(parent) => current = parent,
-            None => {
-                // Reached filesystem root without finding Cargo.toml
-                panic!(
-                    "Could not find Cargo.toml in any parent directory starting from {}",
-                    start_dir.display()
-                );
+    // Check if we're in a trybuild test environment
+    // trybuild creates test crates in paths like: target/tests/trybuild/{crate-name}/
+    let crate_dir_str = crate_dir.to_string_lossy();
+    if crate_dir_str.contains("/target/tests/trybuild/") {
+        // We're in a trybuild test - need to find the source crate
+        // The trybuild Cargo.toml contains the path to the actual crate in dependencies
+        let cargo_toml_path = crate_dir.join("Cargo.toml");
+        if let Ok(content) = fs::read_to_string(&cargo_toml_path) {
+            // Look for the macros dependency path like:
+            // [dependencies.macros]
+            // path = "/path/to/actual/crate/"
+            for line in content.lines() {
+                if line.starts_with("path = ") {
+                    // Extract the path - it's in quotes
+                    if let Some(start) = line.find('"') {
+                        if let Some(end) = line.rfind('"') {
+                            let dep_path = &line[start + 1..end];
+                            let source_crate = std::path::PathBuf::from(dep_path);
+                            if source_crate.exists() {
+                                return source_crate.join(path_str);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+
+    // Not in trybuild or couldn't resolve - use the crate directory directly
+    crate_dir.join(path_str)
 }
 
 /// Helper function to load a migration from a directory path.

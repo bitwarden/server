@@ -1,0 +1,7 @@
+error: proc macro panicked
+ --> tests/compile_panics/load_migrations.rs:4:34
+  |
+4 | const MIGRATIONS: &[Migration] = load_migrations!("tests/test_panic_migrations");
+  |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: message: Migration name '20250930_03_really_long_name_that_exceeds_the_50_character_limit' exceeds 50 characters (length: 64)
