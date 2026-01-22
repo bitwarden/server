@@ -195,7 +195,8 @@ mod tests {
         let response = err.to_error_response();
 
         assert!(matches!(response.code, ErrorCode::InvalidEpochRange));
-        assert!(response.message.contains("invalid range"));
+        eprintln!("Error message: {}", response.message);
+        assert!(response.message.contains("Invalid epoch range"));
     }
 
     #[test]
