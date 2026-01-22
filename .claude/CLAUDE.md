@@ -114,6 +114,11 @@ Key testing utilities:
 - `SutProvider<T>` - Helper for creating system-under-test with mocked dependencies
 - `[SutProviderCustomize]` - Attribute to enable SutProvider pattern
 
+**SutProvider advanced usage:**
+- **Parameter order with inline data**: `[BitAutoData("value")]` inline parameters come before `SutProvider<T>` in the method signature
+- **Non-mock dependencies**: Use `new SutProvider<T>().SetDependency<IInterface>(realInstance).Create()` when you need a real implementation (e.g., `FakeLogger`) instead of a mock
+- **Interface matching**: SutProvider matches dependencies by the exact interface type in the constructor
+
 ### Integration Tests
 Integration tests exercise real code paths with actual database operations. **Do not mock** - use real repositories and test helpers to set up data:
 
