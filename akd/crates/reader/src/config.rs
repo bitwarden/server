@@ -18,6 +18,10 @@ pub struct ApplicationConfig {
     /// Optional polling interval for AZKS storage in milliseconds Should be significantly less than the epoch interval. Defaults to 100 ms.
     #[serde(default = "default_azks_poll_interval_ms")]
     pub azks_poll_interval_ms: u64,
+    /// Expected duration between epoch publishes in milliseconds.
+    /// This value should match the publisher's epoch_duration_ms configuration.
+    /// Used to predict when the next epoch will be published.
+    pub expected_epoch_duration_ms: u64,
 }
 
 fn default_web_server_bind_address() -> String {
@@ -71,6 +75,13 @@ impl ApplicationConfig {
         self.storage
             .validate()
             .map_err(|e| ConfigError::Message(format!("{e}")))?;
+
+        if self.expected_epoch_duration_ms == 0 {
+            return Err(ConfigError::Message(
+                "expected_epoch_duration_ms must be greater than 0".to_string(),
+            ));
+        }
+
         Ok(())
     }
 

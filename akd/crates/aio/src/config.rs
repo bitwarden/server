@@ -139,7 +139,6 @@ impl ApplicationConfig {
         self.reader.validate()?;
         Ok(())
     }
-
 }
 
 impl PublisherSettings {
@@ -197,6 +196,7 @@ impl From<&ApplicationConfig> for reader::ApplicationConfig {
             installation_id: config.installation_id,
             max_batch_lookup_size: config.reader.max_batch_lookup_size,
             azks_poll_interval_ms: config.reader.azks_poll_interval_ms,
+            expected_epoch_duration_ms: config.publisher.epoch_duration_ms,
         }
     }
 }
