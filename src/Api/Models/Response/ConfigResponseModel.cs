@@ -18,6 +18,7 @@ public class ConfigResponseModel : ResponseModel
     public EnvironmentConfigResponseModel Environment { get; set; }
     public IDictionary<string, object> FeatureStates { get; set; }
     public PushSettings Push { get; set; }
+    public CommunicationSettings Communication { get; set; }
     public ServerSettingsResponseModel Settings { get; set; }
 
     public ConfigResponseModel() : base("config")
@@ -48,6 +49,7 @@ public class ConfigResponseModel : ResponseModel
         FeatureStates = featureService.GetAll();
         var webPushEnabled = FeatureStates.TryGetValue(FeatureFlagKeys.WebPush, out var webPushEnabledValue) ? (bool)webPushEnabledValue : false;
         Push = PushSettings.Build(webPushEnabled, globalSettings);
+        Communication = CommunicationSettings.Build(globalSettings);
         Settings = new ServerSettingsResponseModel
         {
             DisableUserRegistration = globalSettings.DisableUserRegistration
@@ -84,6 +86,36 @@ public class PushSettings
         {
             VapidPublicKey = vapidPublicKey,
             PushTechnology = pushTechnology
+        };
+    }
+}
+
+public class CommunicationSettings
+{
+    public string Type { get; private init; }
+    public string IdpLoginUrl { get; private init; }
+    public string CookieName { get; private init; }
+    public string CookieDomain { get; private init; }
+
+    public static CommunicationSettings Build(IGlobalSettings globalSettings)
+    {
+        var bootstrap = globalSettings.Communication?.Bootstrap?.ToLowerInvariant();
+
+        if (string.IsNullOrEmpty(bootstrap) || bootstrap == "none")
+        {
+            return null;
+        }
+
+        return bootstrap switch
+        {
+            "ssocookievendor" => new CommunicationSettings
+            {
+                Type = "ssoCookieVendor",
+                IdpLoginUrl = globalSettings.Communication?.SsoCookieVendor?.IdpLoginUrl,
+                CookieName = globalSettings.Communication?.SsoCookieVendor?.CookieName,
+                CookieDomain = globalSettings.Communication?.SsoCookieVendor?.CookieDomain
+            },
+            _ => null
         };
     }
 }
