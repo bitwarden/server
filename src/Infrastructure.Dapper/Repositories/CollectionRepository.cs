@@ -158,7 +158,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                $"[{Schema}].[Collection_ReadByOrganizationIdWithPermissions]",
+                $"[{Schema}].[Collection_ReadSharedCollectionsByOrganizationIdWithPermissions]",
                 new { OrganizationId = organizationId, UserId = userId, IncludeAccessRelationships = includeAccessRelationships },
                 commandType: CommandType.StoredProcedure);
 
@@ -353,7 +353,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionAccessSelection>(
-                $"[{Schema}].[CollectionUser_ReadByCollectionId]",
+                $"[{Schema}].[CollectionUser_ReadSharedCollectionsByOrganizationUserIds]",
                 new { CollectionId = id },
                 commandType: CommandType.StoredProcedure);
 

@@ -192,7 +192,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]",
+                "[dbo].[OrganizationUserUserDetails_ReadWithSharedCollectionsById]",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
@@ -234,7 +234,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             if (includeCollections)
             {
                 userCollections = (await connection.QueryAsync<CollectionUser>(
-                    "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
+                    "[dbo].[CollectionUser_ReadSharedCollectionsByOrganizationUserIds]",
                     new { OrganizationUserIds = orgUserIds },
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }
