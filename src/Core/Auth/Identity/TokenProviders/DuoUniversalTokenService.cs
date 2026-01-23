@@ -1,10 +1,12 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Http;
@@ -213,11 +215,33 @@ public class DuoUniversalTokenService(
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the initiating client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-        var requestHost = _currentContext.HttpContext?.Request?.Host.Host;
-        var deeplinkScheme = GetDeeplinkSchemeOverride(_currentContext.HttpContext) ??
-            (IsBitwardenCloudHost(requestHost) ? "https" : "bitwarden");
-        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
-            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web", deeplinkScheme);
+        var clientTypeHeader = bitwardenClientName.FirstOrDefault();
+        var clientType = Enum.TryParse<ClientType>(clientTypeHeader, ignoreCase: true, out var parsedClientType)
+            ? parsedClientType
+            : ClientType.Web;
+        var clientName = clientType.ToString().ToLowerInvariant();
+
+        string redirectUri;
+
+        // Handle mobile case separately because mobile needs to define the scheme ahead of time
+        // for security reasons.
+        if (clientType == ClientType.Mobile)
+        {
+            var requestHost = _currentContext.HttpContext.Request.Host.Host;
+            var deeplinkScheme = GetDeeplinkSchemeOverride(_currentContext.HttpContext) ??
+                (IsBitwardenCloudHost(requestHost) ? "https" : "bitwarden");
+            redirectUri = string.Format(CultureInfo.InvariantCulture,
+                "{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
+                _globalSettings.BaseServiceUri.Vault, clientName, deeplinkScheme);
+        }
+        // All other clients will not use the deep link scheme property built into the duo token provided
+        // back from their api.
+        else
+        {
+            redirectUri = string.Format(CultureInfo.InvariantCulture,
+                "{0}/duo-redirect-connector.html?client={1}",
+                _globalSettings.BaseServiceUri.Vault, clientName);
+        }
 
         var client = new Duo.ClientBuilder(
             (string)provider.MetaData["ClientId"],
