@@ -60,7 +60,7 @@ public class DeleteEmergencyAccessCommandTests
         Assert.Equal(emergencyAccessDetails.GrantorId, result.GrantorId);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .DeleteAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(ea => ea.Id == emergencyAccessDetails.Id));
+            .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
             .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
@@ -124,8 +124,8 @@ public class DeleteEmergencyAccessCommandTests
         Assert.NotNull(result);
         Assert.Equal(3, result.Count);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
-            .Received(3)
-            .DeleteAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
+            .Received(1)
+            .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
             .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
@@ -152,7 +152,7 @@ public class DeleteEmergencyAccessCommandTests
         Assert.Equal(emergencyAccessDetails.Id, result.First().Id);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .DeleteAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(ea => ea.Id == emergencyAccessDetails.Id));
+            .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
             .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
@@ -177,7 +177,7 @@ public class DeleteEmergencyAccessCommandTests
         Assert.Empty(result);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
-            .DeleteAsync(default);
+            .DeleteManyAsync(default);
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
@@ -204,7 +204,7 @@ public class DeleteEmergencyAccessCommandTests
         Assert.Equal(emergencyAccessDetails.Id, result.First().Id);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .DeleteAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(ea => ea.Id == emergencyAccessDetails.Id));
+            .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
             .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
@@ -244,8 +244,8 @@ public class DeleteEmergencyAccessCommandTests
         Assert.NotNull(result);
         Assert.Equal(3, result.Count);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
-            .Received(3)
-            .DeleteAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
+            .Received(1)
+            .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
             .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());

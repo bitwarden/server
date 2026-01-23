@@ -71,10 +71,10 @@ public class DeleteEmergencyAccessCommand(
         var grantorEmails = new HashSet<string>();
         var granteeEmails = new HashSet<string>();
 
+        await _emergencyAccessRepository.DeleteManyAsync([.. emergencyAccessDetails.Select(ea => ea.Id)]);
+
         foreach (var details in emergencyAccessDetails)
         {
-            var emergencyAccess = details.ToEmergencyAccess();
-            await _emergencyAccessRepository.DeleteAsync(emergencyAccess);
             granteeEmails.Add(details.GranteeEmail ?? string.Empty);
             grantorEmails.Add(details.GrantorEmail);
         }
