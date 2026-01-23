@@ -322,4 +322,61 @@ public class ImportCiphersAsyncCommandTests
                     c[0].Archives.Contains(archivedDate.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"))),
                 Arg.Any<List<Folder>>());
     }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoOrganizationalVaultAsync_WithArchivedCiphers_PreservesArchiveStatus(
+        Organization organization,
+        Guid importingUserId,
+        OrganizationUser importingOrganizationUser,
+        List<Collection> collections,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        var archivedDate = DateTime.UtcNow.AddDays(-1);
+        organization.MaxCollections = null;
+        importingOrganizationUser.OrganizationId = organization.Id;
+
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        ciphers[0].ArchivedDate = archivedDate;
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns(importingOrganizationUser);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Collection>());
+
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(
+                Arg.Is<List<CipherDetails>>(c =>
+                    c[0].Archives != null &&
+                    c[0].Archives.Contains(importingUserId.ToString().ToUpperInvariant()) &&
+                    c[0].Archives.Contains(archivedDate.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"))),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Any<IEnumerable<CollectionCipher>>(),
+                Arg.Any<IEnumerable<CollectionUser>>());
+    }
 }

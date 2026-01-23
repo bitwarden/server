@@ -141,10 +141,18 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        // Init. ids for ciphers
         foreach (var cipher in ciphers)
         {
+            // Init. ids for ciphers
             cipher.SetNewId();
+
+            // Preserve archived status for organizational ciphers
+            // Archives are stored per-user even for org ciphers
+            if (cipher.ArchivedDate.HasValue)
+            {
+                cipher.Archives = $"{{\"{importingUserId.ToString().ToUpperInvariant()}\":\"" +
+                                  $"{cipher.ArchivedDate.Value:yyyy-MM-ddTHH:mm:ss.fffffffZ}\"}}";
+            }
         }
 
         var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
