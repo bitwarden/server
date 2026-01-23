@@ -41,6 +41,29 @@ public class DeleteEmergencyAccessCommandTests
     }
 
     /// <summary>
+    /// Verifies that attempting to delete a non-existent emergency access record
+    /// throws a <see cref="BadRequestException"/> and does not call delete or send email.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task DeleteByIdGrantorIdAsync_DeletesEmergencyAccessAndSendsEmail(
+        SutProvider<DeleteEmergencyAccessCommand> sutProvider,
+        EmergencyAccessDetails emergencyAccessDetails)
+    {
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetDetailsByIdGrantorIdAsync(emergencyAccessDetails.Id, emergencyAccessDetails.GrantorId)
+            .Returns(emergencyAccessDetails);
+
+        var result = await sutProvider.Sut.DeleteByIdGrantorIdAsync(emergencyAccessDetails.Id, emergencyAccessDetails.GrantorId);
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
+    }
+
+    /// <summary>
     /// Verifies that when a grantor has no emergency access records, the method returns
     /// an empty collection and does not attempt to delete or send email.
     /// </summary>
