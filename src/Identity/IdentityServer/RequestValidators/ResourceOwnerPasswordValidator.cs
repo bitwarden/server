@@ -153,14 +153,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     }
 
     [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
-    protected override void SetSsoResult(ResourceOwnerPasswordValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
-            customResponse);
-    }
-
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetErrorResult(ResourceOwnerPasswordValidationContext context,
         Dictionary<string, object> customResponse)
     {
