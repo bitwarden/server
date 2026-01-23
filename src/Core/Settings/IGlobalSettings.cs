@@ -29,4 +29,5 @@ public interface IGlobalSettings
     IWebPushSettings WebPush { get; set; }
     GlobalSettings.EventLoggingSettings EventLogging { get; set; }
     GlobalSettings.WebAuthnSettings WebAuthn { get; set; }
+    ICommunicationSettings Communication { get; set; }
 }
