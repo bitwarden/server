@@ -148,6 +148,6 @@ public class EmergencyAccessMailTests
         Assert.NotNull(mail);
         Assert.NotNull(mail.View);
         Assert.Equal(_emergencyAccessMailSubject, mail.Subject);
-        Assert.Equal(_emergencyAccessHelpUrl, mail.View.EmergencyAccessHelpPageUrl);
+        Assert.Equal(_emergencyAccessHelpUrl, EmergencyAccessRemoveGranteesMailView.EmergencyAccessHelpPageUrl);
     }
 }
