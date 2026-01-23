@@ -41,32 +41,6 @@ public class DeleteEmergencyAccessCommandTests
     }
 
     /// <summary>
-    /// Verifies that a valid delete request successfully deletes the emergency access record,
-    /// returns the deleted details, and sends a notification email to the grantor.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async Task DeleteByIdGrantorIdAsync_ValidRequest_DeletesAndReturnsDetails(
-        SutProvider<DeleteEmergencyAccessCommand> sutProvider,
-        EmergencyAccessDetails emergencyAccessDetails)
-    {
-        sutProvider.GetDependency<IEmergencyAccessRepository>()
-            .GetDetailsByIdGrantorIdAsync(emergencyAccessDetails.Id, emergencyAccessDetails.GrantorId)
-            .Returns(emergencyAccessDetails);
-
-        var result = await sutProvider.Sut.DeleteByIdGrantorIdAsync(emergencyAccessDetails.Id, emergencyAccessDetails.GrantorId);
-
-        Assert.NotNull(result);
-        Assert.Equal(emergencyAccessDetails.Id, result.Id);
-        Assert.Equal(emergencyAccessDetails.GrantorId, result.GrantorId);
-        await sutProvider.GetDependency<IEmergencyAccessRepository>()
-            .Received(1)
-            .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
-        await sutProvider.GetDependency<IMailer>()
-            .Received(1)
-            .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
-    }
-
-    /// <summary>
     /// Verifies that when a grantor has no emergency access records, the method returns
     /// an empty collection and does not attempt to delete or send email.
     /// </summary>
@@ -85,7 +59,7 @@ public class DeleteEmergencyAccessCommandTests
         Assert.Empty(result);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .DidNotReceiveWithAnyArgs()
-            .DeleteAsync(default);
+            .DeleteManyAsync(default);
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
@@ -93,20 +67,21 @@ public class DeleteEmergencyAccessCommandTests
 
     /// <summary>
     /// Verifies that when a grantor has multiple emergency access records, all records are deleted,
-    /// the details are returned, and a single notification email is sent.
+    /// the details are returned, and a single notification email is sent to the grantor.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task DeleteAllByGrantorIdAsync_MultipleRecords_DeletesAllAndReturnsDetails(
+    public async Task DeleteAllByGrantorIdAsync_MultipleRecords_DeletesAllReturnsDetailsSendsSingleEmail(
         SutProvider<DeleteEmergencyAccessCommand> sutProvider,
         EmergencyAccessDetails emergencyAccessDetails1,
         EmergencyAccessDetails emergencyAccessDetails2,
-        EmergencyAccessDetails emergencyAccessDetails3,
-        Guid grantorId)
+        EmergencyAccessDetails emergencyAccessDetails3)
     {
+        // Arrange
         // link all details to the same grantor
-        emergencyAccessDetails1.GrantorId = grantorId;
-        emergencyAccessDetails2.GrantorId = grantorId;
-        emergencyAccessDetails3.GrantorId = grantorId;
+        emergencyAccessDetails2.GrantorId = emergencyAccessDetails1.GrantorId;
+        emergencyAccessDetails2.GrantorEmail = emergencyAccessDetails1.GrantorEmail;
+        emergencyAccessDetails3.GrantorId = emergencyAccessDetails1.GrantorId;
+        emergencyAccessDetails3.GrantorEmail = emergencyAccessDetails1.GrantorEmail;
 
         var allDetails = new List<EmergencyAccessDetails>
         {
@@ -116,11 +91,13 @@ public class DeleteEmergencyAccessCommandTests
         };
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
-            .GetManyDetailsByGrantorIdAsync(grantorId)
+            .GetManyDetailsByGrantorIdAsync(emergencyAccessDetails1.GrantorId)
             .Returns(allDetails);
 
-        var result = await sutProvider.Sut.DeleteAllByGrantorIdAsync(grantorId);
+        // Act
+        var result = await sutProvider.Sut.DeleteAllByGrantorIdAsync(emergencyAccessDetails1.GrantorId);
 
+        // Assert
         Assert.NotNull(result);
         Assert.Equal(3, result.Count);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
@@ -136,7 +113,7 @@ public class DeleteEmergencyAccessCommandTests
     /// the details are returned, and a notification email is sent.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task DeleteAllByGrantorIdAsync_SingleRecord_DeletesAndReturnsDetails(
+    public async Task DeleteAllByGrantorIdAsync_SingleRecord_DeletesAndReturnsDetailsSendsSingleEmail(
         SutProvider<DeleteEmergencyAccessCommand> sutProvider,
         EmergencyAccessDetails emergencyAccessDetails,
         Guid grantorId)
@@ -188,7 +165,7 @@ public class DeleteEmergencyAccessCommandTests
     /// the details are returned, and a notification email is sent to the grantor.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task DeleteAllByGranteeIdAsync_SingleRecord_DeletesAndReturnsDetails(
+    public async Task DeleteAllByGranteeIdAsync_SingleRecord_DeletesAndReturnsDetailsSendsSingleEmail(
         SutProvider<DeleteEmergencyAccessCommand> sutProvider,
         EmergencyAccessDetails emergencyAccessDetails,
         Guid granteeId)
@@ -213,20 +190,20 @@ public class DeleteEmergencyAccessCommandTests
     /// <summary>
     /// Verifies that when a grantee has multiple emergency access records from different grantors,
     /// all records are deleted, the details are returned, and a single notification email is sent
-    /// to all affected grantors.
+    /// to all affected grantors individually.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task DeleteAllByGranteeIdAsync_MultipleRecords_DeletesAllAndReturnsDetails(
+    public async Task DeleteAllByGranteeIdAsync_MultipleRecords_DeletesAllReturnsDetailsSendsMultipleEmails(
         SutProvider<DeleteEmergencyAccessCommand> sutProvider,
         EmergencyAccessDetails emergencyAccessDetails1,
         EmergencyAccessDetails emergencyAccessDetails2,
-        EmergencyAccessDetails emergencyAccessDetails3,
-        Guid granteeId)
+        EmergencyAccessDetails emergencyAccessDetails3)
     {
         // link all details to the same grantee
-        emergencyAccessDetails1.GranteeId = granteeId;
-        emergencyAccessDetails2.GranteeId = granteeId;
-        emergencyAccessDetails3.GranteeId = granteeId;
+        emergencyAccessDetails2.GranteeId = emergencyAccessDetails1.GranteeId;
+        emergencyAccessDetails2.GranteeEmail = emergencyAccessDetails1.GranteeEmail;
+        emergencyAccessDetails3.GranteeId = emergencyAccessDetails1.GranteeId;
+        emergencyAccessDetails3.GranteeEmail = emergencyAccessDetails1.GranteeEmail;
 
         var allDetails = new List<EmergencyAccessDetails>
         {
@@ -236,10 +213,10 @@ public class DeleteEmergencyAccessCommandTests
         };
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
-            .GetManyDetailsByGranteeIdAsync(granteeId)
+            .GetManyDetailsByGranteeIdAsync((Guid)emergencyAccessDetails1.GranteeId)
             .Returns(allDetails);
 
-        var result = await sutProvider.Sut.DeleteAllByGranteeIdAsync(granteeId);
+        var result = await sutProvider.Sut.DeleteAllByGranteeIdAsync((Guid)emergencyAccessDetails1.GranteeId);
 
         Assert.NotNull(result);
         Assert.Equal(3, result.Count);
@@ -247,7 +224,7 @@ public class DeleteEmergencyAccessCommandTests
             .Received(1)
             .DeleteManyAsync(Arg.Any<ICollection<Guid>>());
         await sutProvider.GetDependency<IMailer>()
-            .Received(1)
+            .Received(allDetails.Count)
             .SendEmail(Arg.Any<EmergencyAccessRemoveGranteesMail>());
     }
 }

@@ -90,15 +90,18 @@ public class DeleteEmergencyAccessCommand(
     /// <returns></returns>
     private async Task SendEmergencyAccessRemoveGranteesEmailAsync(IEnumerable<string> grantorEmails, IEnumerable<string> formattedGranteeIdentifiers)
     {
-        var email = new EmergencyAccessRemoveGranteesMail
+        foreach (var email in grantorEmails)
         {
-            ToEmails = grantorEmails,
-            View = new EmergencyAccessRemoveGranteesMailView
+            var emailViewModel = new EmergencyAccessRemoveGranteesMail
             {
-                RemovedGranteeEmails = formattedGranteeIdentifiers
-            }
-        };
+                ToEmails = [email],
+                View = new EmergencyAccessRemoveGranteesMailView
+                {
+                    RemovedGranteeEmails = formattedGranteeIdentifiers
+                }
+            };
 
-        await mailer.SendEmail(email);
+            await mailer.SendEmail(emailViewModel);
+        }
     }
 }
