@@ -121,6 +121,9 @@ public class OrganizationUserBulkRequestModel
 {
     [Required, MinLength(1)]
     public IEnumerable<Guid> Ids { get; set; } = new List<Guid>();
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string? DefaultUserCollectionName { get; set; }
 }
 #nullable disable
