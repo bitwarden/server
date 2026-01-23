@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
@@ -11,7 +10,6 @@ using Duende.IdentityServer.Validation;
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 public class SendEmailOtpRequestValidator(
-    IFeatureService featureService,
     IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider,
     IMailService mailService) : ISendAuthenticationMethodValidator<EmailOtp>
 {
