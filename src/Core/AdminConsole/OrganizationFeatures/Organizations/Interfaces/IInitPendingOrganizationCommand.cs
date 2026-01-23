@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
@@ -17,7 +18,5 @@ public interface IInitPendingOrganizationCommand
     /// Initializes a pending organization and confirms the first owner with upfront validation.
     /// </summary>
     /// <returns>A CommandResult indicating success or specific validation errors.</returns>
-    Task<CommandResult> InitPendingOrganizationVNextAsync(
-        User user, Guid organizationId, Guid organizationUserId, string publicKey,
-        string privateKey, string collectionName, string emailToken, string userKey);
+    Task<CommandResult> InitPendingOrganizationVNextAsync(InitPendingOrganizationRequest request);
 }

@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
@@ -176,40 +177,32 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         return tokenValid;
     }
 
-    public async Task<CommandResult> InitPendingOrganizationVNextAsync(
-        User user,
-        Guid organizationId,
-        Guid organizationUserId,
-        string publicKey,
-        string privateKey,
-        string collectionName,
-        string emailToken,
-        string userKey)
+    public async Task<CommandResult> InitPendingOrganizationVNextAsync(InitPendingOrganizationRequest request)
     {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        var orgUser = await _organizationUserRepository.GetByIdAsync(request.OrganizationUserId);
         if (orgUser == null)
         {
             return new OrganizationUserNotFoundError();
         }
 
-        if (!ValidateInviteToken(orgUser, user, emailToken))
+        if (!ValidateInviteToken(orgUser, request.User, request.EmailToken))
         {
             return new InvalidTokenError();
         }
 
-        var validationError = ValidateUserEmail(orgUser, user);
+        var validationError = ValidateUserEmail(orgUser, request.User);
         if (validationError != null)
         {
             return validationError;
         }
 
-        var org = await _organizationRepository.GetByIdAsync(organizationId);
+        var org = await _organizationRepository.GetByIdAsync(request.OrganizationId);
         if (org == null)
         {
             return new OrganizationNotFoundError();
         }
 
-        if (orgUser.OrganizationId != organizationId)
+        if (orgUser.OrganizationId != request.OrganizationId)
         {
             return new OrganizationMismatchError();
         }
@@ -220,22 +213,22 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             return validationError;
         }
 
-        validationError = await ValidatePoliciesAsync(user, organizationId, org, orgUser);
+        validationError = await ValidatePoliciesAsync(request.User, request.OrganizationId, org, orgUser);
         if (validationError != null)
         {
             return validationError;
         }
 
         await _organizationRepository.InitializePendingOrganizationAsync(
-            organizationId,
-            publicKey,
-            privateKey,
-            organizationUserId,
-            user.Id,
-            userKey,
-            collectionName);
+            request.OrganizationId,
+            request.PublicKey,
+            request.PrivateKey,
+            request.OrganizationUserId,
+            request.User.Id,
+            request.UserKey,
+            request.CollectionName);
 
-        await SendNotificationsAsync(org, orgUser, user, organizationId);
+        await SendNotificationsAsync(org, orgUser, request.User, request.OrganizationId);
 
         return new None();
     }

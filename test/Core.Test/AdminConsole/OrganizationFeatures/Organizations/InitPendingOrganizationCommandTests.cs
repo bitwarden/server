@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -206,8 +207,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(twoFactorReq);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, null, token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = null,
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -256,8 +267,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(twoFactorReq);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, collectionName, token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = collectionName,
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsSuccess);
@@ -281,8 +302,18 @@ public class InitPendingOrganizationCommandTests
             .Returns((OrganizationUser)null);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", "token", userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = "token",
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -300,8 +331,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(orgUser);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", "invalid-token", userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = "invalid-token",
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -324,8 +365,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(org);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -349,8 +400,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(org);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -375,8 +436,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(org);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -398,8 +469,18 @@ public class InitPendingOrganizationCommandTests
             .Returns((Organization)null);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -421,8 +502,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(org);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -462,8 +553,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(twoFactorReq);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -503,8 +604,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(twoFactorReq);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -549,8 +660,18 @@ public class InitPendingOrganizationCommandTests
             .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg).Returns(false);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -589,8 +710,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(true);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);
@@ -618,8 +749,18 @@ public class InitPendingOrganizationCommandTests
             .Returns(org);
 
         // Act
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(
-            user, orgId, orgUserId, publicKey, privateKey, "", token, userKey);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = orgUserId,
+            PublicKey = publicKey,
+            PrivateKey = privateKey,
+            CollectionName = "",
+            EmailToken = token,
+            UserKey = userKey
+        };
+        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(request);
 
         // Assert
         Assert.True(result.IsError);

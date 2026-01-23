@@ -14,6 +14,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -319,10 +320,19 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         if (_featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit))
         {
-            var result = await _initPendingOrganizationCommand.InitPendingOrganizationVNextAsync(
-                user, orgId, organizationUserId,
-                model.Keys.PublicKey, model.Keys.EncryptedPrivateKey,
-                model.CollectionName, model.Token, model.Key);
+            var request = new InitPendingOrganizationRequest
+            {
+                User = user,
+                OrganizationId = orgId,
+                OrganizationUserId = organizationUserId,
+                PublicKey = model.Keys.PublicKey,
+                PrivateKey = model.Keys.EncryptedPrivateKey,
+                CollectionName = model.CollectionName,
+                EmailToken = model.Token,
+                UserKey = model.Key
+            };
+
+            var result = await _initPendingOrganizationCommand.InitPendingOrganizationVNextAsync(request);
 
             return Handle(result);
         }
