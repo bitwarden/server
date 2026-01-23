@@ -12,7 +12,8 @@ blake3.workspace = true
 config = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 tracing = { workspace = true, optional = true }
-uuid = { version = "1.18.1", features = ["serde"] }
+uuid = { workspace = true }
+thiserror = { workspace = true }
 
 [lints]
 workspace = true

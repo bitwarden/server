@@ -530,6 +530,7 @@ dependencies = [
  "blake3",
  "config",
  "serde",
+ "thiserror 2.0.17",
  "tracing",
  "uuid",
 ]
