@@ -9,8 +9,6 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-#nullable enable
-
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEmergencyAccessRepository
@@ -151,5 +149,15 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
                 cmd.ExecuteNonQuery();
             }
         };
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+                "[dbo].[EmergencyAccess_DeleteMany]",
+                new { EmergencyAccessIds = emergencyAccessIds },
+                commandType: CommandType.StoredProcedure);
     }
 }

@@ -144,4 +144,19 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         };
     }
 
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var rangeToRemove = from ea in dbContext.EmergencyAccesses
+                                where emergencyAccessIds.Contains(ea.Id)
+                                select ea;
+            dbContext.EmergencyAccesses.RemoveRange(rangeToRemove);
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
 }

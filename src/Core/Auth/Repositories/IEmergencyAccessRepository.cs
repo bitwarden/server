@@ -30,4 +30,11 @@ public interface IEmergencyAccessRepository : IRepository<EmergencyAccess, Guid>
     /// <param name="emergencyAccessKeys">A list of emergency access with updated keys</param>
     UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId,
         IEnumerable<EmergencyAccess> emergencyAccessKeys);
+
+    /// <summary>
+    /// Deletes multiple emergency access records by their IDs
+    /// </summary>
+    /// <param name="emergencyAccessIds">Ids of records to be deleted</param>
+    /// <returns>void</returns>
+    Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds);
 }
