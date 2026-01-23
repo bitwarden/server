@@ -3,7 +3,7 @@
 /// <summary>
 /// Deeplink scheme values used for mobile client redirects after Duo authentication.
 /// </summary>
-public enum DeeplinkScheme : byte
+public enum DuoDeeplinkScheme : byte
 {
     /// <summary>
     /// HTTPS scheme used for Bitwarden cloud-hosted environments.

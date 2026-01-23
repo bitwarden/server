@@ -197,7 +197,7 @@ public class DuoUniversalTokenService(
                normalizedHost.EndsWith(".localhost");
     }
 
-    private static DeeplinkScheme? GetDeeplinkSchemeOverride(HttpContext httpContext)
+    private static DuoDeeplinkScheme? GetDeeplinkSchemeOverride(HttpContext httpContext)
     {
         if (httpContext == null)
         {
@@ -217,7 +217,7 @@ public class DuoUniversalTokenService(
         var candidate = (overrideFromQuery ?? overrideFromHeader)?.Trim();
 
         // Allow only the two supported values
-        return Enum.TryParse<DeeplinkScheme>(candidate, ignoreCase: true, out var scheme) ? scheme : null;
+        return Enum.TryParse<DuoDeeplinkScheme>(candidate, ignoreCase: true, out var scheme) ? scheme : null;
     }
 
     public string BuildDuoTwoFactorRedirectUri()
@@ -237,7 +237,7 @@ public class DuoUniversalTokenService(
         {
             var requestHost = _currentContext.HttpContext.Request.Host.Host;
             var deeplinkScheme = GetDeeplinkSchemeOverride(_currentContext.HttpContext) ??
-                (IsBitwardenCloudHost(requestHost) ? DeeplinkScheme.Https : DeeplinkScheme.Bitwarden);
+                (IsBitwardenCloudHost(requestHost) ? DuoDeeplinkScheme.Https : DuoDeeplinkScheme.Bitwarden);
             return string.Format(CultureInfo.InvariantCulture,
                 "{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
                 _globalSettings.BaseServiceUri.Vault, clientName, deeplinkScheme.ToString().ToLowerInvariant());
@@ -249,7 +249,7 @@ public class DuoUniversalTokenService(
         {
             return string.Format(CultureInfo.InvariantCulture,
                 "{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
-                _globalSettings.BaseServiceUri.Vault, clientName, DeeplinkScheme.Bitwarden.ToString().ToLowerInvariant());
+                _globalSettings.BaseServiceUri.Vault, clientName, DuoDeeplinkScheme.Bitwarden.ToString().ToLowerInvariant());
         }
 
         // All other clients will not provide an explicit handling. See the complimentary
