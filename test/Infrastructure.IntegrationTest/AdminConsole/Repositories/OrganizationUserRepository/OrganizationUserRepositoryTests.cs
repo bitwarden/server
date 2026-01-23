@@ -430,7 +430,7 @@ public class OrganizationUserRepositoryTests
 
         // Get organization users with collections included
         var organizationUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(
-            organization.Id, includeGroups: false, includeCollections: true);
+            organization.Id, includeGroups: false, includeSharedCollections: true);
 
         Assert.NotNull(organizationUsers);
         Assert.Single(organizationUsers);
@@ -835,7 +835,7 @@ public class OrganizationUserRepositoryTests
 
         await organizationUserRepository.CreateManyAsync(orgUserCollection);
 
-        var orgUser1 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[0].OrganizationUser.Id);
+        var orgUser1 = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUserCollection[0].OrganizationUser.Id);
         var group1Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[0].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[0].OrganizationUser.Id, orgUser1.OrganizationUser.Id);
 
@@ -846,13 +846,13 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(group1.Id, group1Database.First());
 
 
-        var orgUser2 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[1].OrganizationUser.Id);
+        var orgUser2 = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUserCollection[1].OrganizationUser.Id);
         var group2Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[1].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[1].OrganizationUser.Id, orgUser2.OrganizationUser.Id);
         Assert.Equal(collection2.Id, orgUser2.Collections.First().Id);
         Assert.Equal(group2.Id, group2Database.First());
 
-        var orgUser3 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[2].OrganizationUser.Id);
+        var orgUser3 = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUserCollection[2].OrganizationUser.Id);
         var group3Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[2].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[2].OrganizationUser.Id, orgUser3.OrganizationUser.Id);
         Assert.Equal(collection3.Id, orgUser3.Collections.First().Id);
@@ -928,7 +928,7 @@ public class OrganizationUserRepositoryTests
             AccessSecretsManager = true
         });
 
-        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: false, includeCollections: false);
+        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: false, includeSharedCollections: false);
 
         Assert.NotNull(responseModel);
         Assert.Equal(2, responseModel.Count);
@@ -1083,7 +1083,7 @@ public class OrganizationUserRepositoryTests
 
         await organizationUserRepository.CreateManyAsync(createOrgUserWithCollections);
 
-        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: true, includeCollections: true);
+        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: true, includeSharedCollections: true);
 
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
