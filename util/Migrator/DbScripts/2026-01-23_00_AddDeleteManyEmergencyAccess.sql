@@ -9,7 +9,6 @@ BEGIN
     -- Delete EmergencyAccess Records
     WHILE @BatchSize > 0
     BEGIN
-        BEGIN TRANSACTION
 
         DELETE TOP(@BatchSize) EA
         FROM
@@ -19,7 +18,6 @@ BEGIN
 
         SET @BatchSize = @@ROWCOUNT
 
-        COMMIT TRANSACTION
     END
 END
 GO
