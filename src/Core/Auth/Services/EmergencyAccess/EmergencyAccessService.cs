@@ -3,6 +3,8 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -34,6 +36,8 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -46,7 +50,9 @@ public class EmergencyAccessService : IEmergencyAccessService
         IUserService userService,
         GlobalSettings globalSettings,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IFeatureService featureService,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -59,6 +65,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         _globalSettings = globalSettings;
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _featureService = featureService;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime)
@@ -71,6 +79,17 @@ public class EmergencyAccessService : IEmergencyAccessService
         if (accessType == EmergencyAccessType.Takeover && grantorUser.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var requirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
+
+            if (requirement.CannotGrantEmergencyAccess())
+            {
+                throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
+            }
         }
 
         var emergencyAccess = new EmergencyAccess
@@ -129,6 +148,17 @@ public class EmergencyAccessService : IEmergencyAccessService
         if (!data.IsValid(emergencyAccessId, granteeUser.Email))
         {
             throw new BadRequestException("Invalid token.");
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var requirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
+
+            if (requirement.CannotBeGrantedEmergencyAccess())
+            {
+                throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
+            }
         }
 
         if (emergencyAccess.Status == EmergencyAccessStatusType.Accepted)

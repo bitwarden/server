@@ -1,4 +1,8 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -1511,5 +1515,318 @@ public class EmergencyAccessServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.GetAttachmentDownloadAsync(emergencyAccess.Id, default, default, granteeUser));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    public async Task InviteAsync_FeatureFlagEnabled_UserInAutoConfirmOrg_ThrowsBadRequest(
+        OrganizationUserStatusType status,
+        SutProvider<EmergencyAccessService> sutProvider,
+        User invitingUser,
+        string email,
+        int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Create a real requirement with an active status that blocks emergency access
+        var requirement = new AutomaticUserConfirmationPolicyRequirement(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = Guid.NewGuid(),
+                PolicyType = PolicyType.AutomaticUserConfirmation,
+                OrganizationUserStatus = status
+            }
+        ]);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(requirement);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.View, waitTime));
+
+        Assert.Contains("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_FeatureFlagEnabled_UserNotInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User invitingUser,
+        string email,
+        int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Create a real requirement with no policies (user is not in auto-confirm org)
+        var requirement = new AutomaticUserConfirmationPolicyRequirement([]);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(requirement);
+
+        var result = await sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.View, waitTime);
+
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1).CreateAsync(Arg.Any<EmergencyAccess>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_FeatureFlagDisabled_UserInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User invitingUser,
+        string email,
+        int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.View, waitTime);
+
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1).CreateAsync(Arg.Any<EmergencyAccess>());
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_FeatureFlagEnabled_UserInvitedToAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User invitingUser,
+        string email,
+        int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Create a real requirement with Invited status (should not block emergency access)
+        var requirement = new AutomaticUserConfirmationPolicyRequirement(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = Guid.NewGuid(),
+                PolicyType = PolicyType.AutomaticUserConfirmation,
+                OrganizationUserStatus = OrganizationUserStatusType.Invited
+            }
+        ]);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(requirement);
+
+        var result = await sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.View, waitTime);
+
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1).CreateAsync(Arg.Any<EmergencyAccess>());
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    public async Task AcceptUserAsync_FeatureFlagEnabled_UserInAutoConfirmOrg_ThrowsBadRequest(
+        OrganizationUserStatusType status,
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Create a real requirement with an active status that blocks emergency access
+        var requirement = new AutomaticUserConfirmationPolicyRequirement(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = Guid.NewGuid(),
+                PolicyType = PolicyType.AutomaticUserConfirmation,
+                OrganizationUserStatus = status
+            }
+        ]);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(requirement);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
+
+        Assert.Contains("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_FeatureFlagEnabled_UserNotInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        User invitingUser,
+        EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(Arg.Any<Guid>())
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Create a real requirement with no policies (user is not in auto-confirm org)
+        var requirement = new AutomaticUserConfirmationPolicyRequirement([]);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(requirement);
+
+        await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_FeatureFlagDisabled_UserInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        User invitingUser,
+        EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(Arg.Any<Guid>())
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_FeatureFlagEnabled_UserInvitedToAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        User invitingUser,
+        EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(Arg.Any<Guid>())
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        // Create a real requirement with Invited status (should not block emergency access)
+        var requirement = new AutomaticUserConfirmationPolicyRequirement(
+        [
+            new PolicyDetails
+            {
+                OrganizationId = Guid.NewGuid(),
+                PolicyType = PolicyType.AutomaticUserConfirmation,
+                OrganizationUserStatus = OrganizationUserStatusType.Invited
+            }
+        ]);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(requirement);
+
+        await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
     }
 }
