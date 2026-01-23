@@ -94,7 +94,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendSendEmailOtpEmailv2Async(string email, string token, string subject)
+    public Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
     {
         return Task.FromResult(0);
     }

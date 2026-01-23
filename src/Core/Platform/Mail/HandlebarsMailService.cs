@@ -208,7 +208,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendSendEmailOtpEmailv2Async(string email, string token, string subject)
+    public async Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
     {
         var message = CreateDefaultMessage(subject, email);
         var requestDateTime = DateTime.UtcNow;

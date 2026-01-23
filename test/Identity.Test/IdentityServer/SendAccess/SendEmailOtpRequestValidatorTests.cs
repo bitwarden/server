@@ -44,7 +44,7 @@ public class SendEmailOtpRequestValidatorTests
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendSendEmailOtpEmailv2Async(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendSendEmailOtpEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -77,7 +77,7 @@ public class SendEmailOtpRequestValidatorTests
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendSendEmailOtpEmailv2Async(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendSendEmailOtpEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -126,7 +126,7 @@ public class SendEmailOtpRequestValidatorTests
         // Verify email sending
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendSendEmailOtpEmailv2Async(email, generatedToken, Arg.Any<string>());
+            .SendSendEmailOtpEmailAsync(email, generatedToken, Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -160,7 +160,7 @@ public class SendEmailOtpRequestValidatorTests
         // Verify no email was sent
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendSendEmailOtpEmailv2Async(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendSendEmailOtpEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -212,7 +212,7 @@ public class SendEmailOtpRequestValidatorTests
         // Verify no email was sent (validation only)
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendSendEmailOtpEmailv2Async(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendSendEmailOtpEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
