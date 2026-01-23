@@ -62,20 +62,12 @@ public class SendEmailOtpRequestValidator(
             {
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
-            if (featureService.IsEnabled(FeatureFlagKeys.MJMLBasedEmailTemplates))
-            {
-                await mailService.SendSendEmailOtpEmailv2Async(
-                    email,
-                    token,
-                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
-            }
-            else
-            {
-                await mailService.SendSendEmailOtpEmailAsync(
-                    email,
-                    token,
-                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
-            }
+ 
+            await mailService.SendSendEmailOtpEmailv2Async(
+                email,
+                token,
+                string.Format(SendAccessConstants.OtpEmail.Subject, token));
+
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent);
         }
 

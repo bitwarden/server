@@ -51,11 +51,9 @@ public interface IMailService
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, TwoFactorEmailPurpose purpose);
-    Task SendSendEmailOtpEmailAsync(string email, string token, string subject);
     /// <summary>
     /// <see cref="DefaultOtpTokenProviderOptions"/> has a default expiry of 5 minutes so we set the expiry to that value int he view model.
     /// Sends OTP code token to the specified email address.
-    /// will replace <see cref="SendSendEmailOtpEmailAsync"/> when MJML templates are fully accepted.
     /// </summary>
     /// <param name="email">Email address to send the OTP to</param>
     /// <param name="token">Otp code token</param>
