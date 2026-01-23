@@ -156,8 +156,8 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
     {
         using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-                "[dbo].[EmergencyAccess_DeleteMany]",
-                new { EmergencyAccessIds = emergencyAccessIds },
+                "[dbo].[EmergencyAccess_DeleteManyById]",
+                new { EmergencyAccessIds = emergencyAccessIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
     }
 }
