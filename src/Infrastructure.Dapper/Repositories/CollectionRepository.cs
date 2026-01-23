@@ -353,7 +353,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionAccessSelection>(
-                $"[{Schema}].[CollectionUser_ReadSharedCollectionsByOrganizationUserIds]",
+                $"[{Schema}].[CollectionUser_ReadByCollectionId]",
                 new { CollectionId = id },
                 commandType: CommandType.StoredProcedure);
 
