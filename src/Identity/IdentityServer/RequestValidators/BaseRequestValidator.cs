@@ -4,7 +4,6 @@
 
 using System.Security.Claims;
 using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -233,56 +232,14 @@ public abstract class BaseRequestValidator<T> where T : class
     private async Task<bool> ValidateSsoAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // TODO: Clean up Feature Flag: Remove this if block: PM-28281
-        if (!_featureService.IsEnabled(FeatureFlagKeys.RedirectOnSsoRequired))
+        var ssoValid = await _ssoRequestValidator.ValidateAsync(validatorContext.User, request, validatorContext);
+        if (ssoValid)
         {
-            validatorContext.SsoRequired = await RequireSsoLoginAsync(validatorContext.User, request.GrantType);
-            if (!validatorContext.SsoRequired)
-            {
-                return true;
-            }
-
-            // Users without SSO requirement requesting 2FA recovery will be fast-forwarded through login and are
-            // presented with their 2FA management area as a reminder to re-evaluate their 2FA posture after recovery and
-            // review their new recovery token if desired.
-            // SSO users cannot be assumed to be authenticated, and must prove authentication with their IdP after recovery.
-            // As described in validation order determination, if TwoFactorRequired, the 2FA validation scheme will have been
-            // evaluated, and recovery will have been performed if requested.
-            // We will send a descriptive message in these cases so clients can give the appropriate feedback and redirect
-            // to /login.
-            if (validatorContext.TwoFactorRequired &&
-                validatorContext.TwoFactorRecoveryRequested)
-            {
-                SetSsoResult(context,
-                    new Dictionary<string, object>
-                    {
-                        {
-                            "ErrorModel",
-                            new ErrorResponseModel(
-                                "Two-factor recovery has been performed. SSO authentication is required.")
-                        }
-                    });
-                return false;
-            }
-
-            SetSsoResult(context,
-                new Dictionary<string, object>
-                {
-                    { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
-                });
-            return false;
+            return true;
         }
-        else
-        {
-            var ssoValid = await _ssoRequestValidator.ValidateAsync(validatorContext.User, request, validatorContext);
-            if (ssoValid)
-            {
-                return true;
-            }
 
-            SetValidationErrorResult(context, validatorContext);
-            return ssoValid;
-        }
+        SetValidationErrorResult(context, validatorContext);
+        return ssoValid;
     }
 
     /// <summary>
@@ -522,9 +479,6 @@ public abstract class BaseRequestValidator<T> where T : class
     protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
 
     [Obsolete("Consider using SetValidationErrorResult instead.")]
-    protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
-
-    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
 
     /// <summary>
@@ -539,41 +493,6 @@ public abstract class BaseRequestValidator<T> where T : class
         Dictionary<string, object> customResponse);
 
     protected abstract ClaimsPrincipal GetSubject(T context);
-
-    /// <summary>
-    /// Check if the user is required to authenticate via SSO. If the user requires SSO, but they are
-    /// logging in using an API Key (client_credentials) then they are allowed to bypass the SSO requirement.
-    /// If the GrantType is authorization_code or client_credentials we know the user is trying to login
-    /// using the SSO flow so they are allowed to continue.
-    /// </summary>
-    /// <param name="user">user trying to login</param>
-    /// <param name="grantType">magic string identifying the grant type requested</param>
-    /// <returns>true if sso required; false if not required or already in process</returns>
-    [Obsolete(
-        "This method is deprecated and will be removed in future versions, PM-28281. Please use the SsoRequestValidator scheme instead.")]
-    private async Task<bool> RequireSsoLoginAsync(User user, string grantType)
-    {
-        if (grantType == "authorization_code" || grantType == "client_credentials")
-        {
-            // Already using SSO to authenticate, or logging-in via api key to skip SSO requirement
-            // allow to authenticate successfully
-            return false;
-        }
-
-        // Check if user belongs to any organization with an active SSO policy
-        var ssoRequired = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
-            .SsoRequired
-            : await PolicyService.AnyPoliciesApplicableToUserAsync(
-                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (ssoRequired)
-        {
-            return true;
-        }
-
-        // Default - SSO is not required
-        return false;
-    }
 
     private async Task ResetFailedAuthDetailsAsync(User user)
     {

@@ -327,7 +327,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     where ou.UserId == userWithDomain.UserId &&
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
-                          o.Enabled == true
+                          o.Enabled == true &&
+                          ou.Status != OrganizationUserStatusType.Invited
                     select o;
 
         return await query.ToArrayAsync();

@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
+    public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string RefactorOrgAcceptInit = "pm-28795-refactor-org-accept-init";
 
     /* Architecture */
@@ -163,7 +164,6 @@ public static class FeatureFlagKeys
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
-    public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
 
