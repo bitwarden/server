@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Identity.TokenProviders;
+﻿using System.Reflection;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Context;
 using Bit.Test.Common.AutoFixture;
@@ -13,6 +14,17 @@ namespace Bit.Core.Test.Auth.Services;
 [SutProviderCustomize]
 public class DuoUniversalTokenServiceTests
 {
+    /// <summary>
+    /// Helper method to invoke the private BuildDuoTwoFactorRedirectUri method via reflection.
+    /// </summary>
+    private static string InvokeBuildDuoTwoFactorRedirectUri(DuoUniversalTokenService sut)
+    {
+        var method = typeof(DuoUniversalTokenService).GetMethod(
+            "BuildDuoTwoFactorRedirectUri",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        return (string)method!.Invoke(sut, null)!;
+    }
+
     [Theory]
     [BitAutoData("", "ClientId", "ClientSecret")]
     [BitAutoData("api-valid.duosecurity.com", "", "ClientSecret")]
@@ -113,7 +125,7 @@ public class DuoUniversalTokenServiceTests
         var sut = new DuoUniversalTokenService(currentContext, globalSettings);
 
         // Act
-        var result = sut.BuildDuoTwoFactorRedirectUri();
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
 
         // Assert
         Assert.Contains("client=mobile", result);
@@ -143,7 +155,7 @@ public class DuoUniversalTokenServiceTests
         var sut = new DuoUniversalTokenService(currentContext, globalSettings);
 
         // Act
-        var result = sut.BuildDuoTwoFactorRedirectUri();
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
 
         // Assert
         Assert.Contains("client=mobile", result);
@@ -169,7 +181,7 @@ public class DuoUniversalTokenServiceTests
         var sut = new DuoUniversalTokenService(currentContext, globalSettings);
 
         // Act
-        var result = sut.BuildDuoTwoFactorRedirectUri();
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
 
         // Assert
         Assert.Contains("client=desktop", result);
@@ -199,7 +211,7 @@ public class DuoUniversalTokenServiceTests
         var sut = new DuoUniversalTokenService(currentContext, globalSettings);
 
         // Act
-        var result = sut.BuildDuoTwoFactorRedirectUri();
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
 
         // Assert
         Assert.Contains($"client={clientName}", result);
@@ -225,7 +237,7 @@ public class DuoUniversalTokenServiceTests
         var sut = new DuoUniversalTokenService(currentContext, globalSettings);
 
         // Act
-        var result = sut.BuildDuoTwoFactorRedirectUri();
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
 
         // Assert
         Assert.Contains("client=web", result);
@@ -254,7 +266,7 @@ public class DuoUniversalTokenServiceTests
         var sut = new DuoUniversalTokenService(currentContext, globalSettings);
 
         // Act
-        var result = sut.BuildDuoTwoFactorRedirectUri();
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
 
         // Assert
         Assert.Contains("client=web", result);
@@ -284,7 +296,7 @@ public class DuoUniversalTokenServiceTests
         var sut = new DuoUniversalTokenService(currentContext, globalSettings);
 
         // Act
-        var result = sut.BuildDuoTwoFactorRedirectUri();
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
 
         // Assert
         Assert.Contains("client=mobile", result);

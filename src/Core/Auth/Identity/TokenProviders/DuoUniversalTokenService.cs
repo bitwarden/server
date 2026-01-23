@@ -77,15 +77,6 @@ public interface IDuoUniversalTokenService
     /// <param name="provider">TwoFactorProvider Duo or OrganizationDuo</param>
     /// <returns>Duo.Client object or null</returns>
     Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider);
-
-    /// <summary>
-    /// Builds the redirect URI for Duo authentication based on the client type and request context.
-    /// Mobile clients include a deeplinkScheme parameter (https for cloud, bitwarden for self-hosted).
-    /// Desktop clients always use the bitwarden scheme.
-    /// Other clients (web, browser, cli) do not include the deeplinkScheme parameter.
-    /// </summary>
-    /// <returns>The redirect URI to be used for Duo authentication</returns>
-    string BuildDuoTwoFactorRedirectUri();
 }
 
 public class DuoUniversalTokenService(
@@ -220,7 +211,7 @@ public class DuoUniversalTokenService(
         return Enum.TryParse<DuoDeeplinkScheme>(candidate, ignoreCase: true, out var scheme) ? scheme : null;
     }
 
-    public string BuildDuoTwoFactorRedirectUri()
+    private string BuildDuoTwoFactorRedirectUri()
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the initiating client
