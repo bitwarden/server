@@ -625,7 +625,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
         await connection.ExecuteAsync(
             "[dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]",
-            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), Status = OrganizationUserStatusType.Revoked },
+            new
+            {
+                OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                Status = OrganizationUserStatusType.Revoked
+            },
             commandType: CommandType.StoredProcedure);
     }
 
@@ -687,5 +691,22 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             });
 
         return rowCount > 0;
+    }
+
+    public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUserUserDetails_ReadByOrganizationIdUserId]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    UserId = userId
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
     }
 }

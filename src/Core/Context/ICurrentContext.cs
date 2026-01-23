@@ -31,9 +31,6 @@ public interface ICurrentContext
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
-    bool IsBot { get; set; }
-    bool MaybeBot { get; set; }
-    int? BotScore { get; set; }
     string ClientId { get; set; }
     Version ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }

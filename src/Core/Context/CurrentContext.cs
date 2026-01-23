@@ -38,10 +38,6 @@ public class CurrentContext(
     public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
     public virtual Guid? OrganizationId { get; set; }
-    public virtual bool CloudflareWorkerProxied { get; set; }
-    public virtual bool IsBot { get; set; }
-    public virtual bool MaybeBot { get; set; }
-    public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
     public virtual bool ClientVersionIsPrerelease { get; set; }
@@ -68,27 +64,6 @@ public class CurrentContext(
             Enum.TryParse(deviceType.ToString(), out DeviceType dType))
         {
             DeviceType = dType;
-        }
-
-        if (!BotScore.HasValue && httpContext.Request.Headers.TryGetValue("X-Cf-Bot-Score", out var cfBotScore) &&
-            int.TryParse(cfBotScore, out var parsedBotScore))
-        {
-            BotScore = parsedBotScore;
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Worked-Proxied", out var cfWorkedProxied))
-        {
-            CloudflareWorkerProxied = cfWorkedProxied == "1";
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Is-Bot", out var cfIsBot))
-        {
-            IsBot = cfIsBot == "1";
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Maybe-Bot", out var cfMaybeBot))
-        {
-            MaybeBot = cfMaybeBot == "1";
         }
 
         if (httpContext.Request.Headers.TryGetValue("Bitwarden-Client-Version", out var bitWardenClientVersion) && Version.TryParse(bitWardenClientVersion, out var cVersion))

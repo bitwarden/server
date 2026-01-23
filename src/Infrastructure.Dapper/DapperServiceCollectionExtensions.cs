@@ -15,6 +15,7 @@ using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Bit.Infrastructure.Dapper.Billing.Repositories;
 using Bit.Infrastructure.Dapper.Dirt;
+using Bit.Infrastructure.Dapper.Dirt.Repositories;
 using Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 using Bit.Infrastructure.Dapper.NotificationCenter.Repositories;
 using Bit.Infrastructure.Dapper.Platform;
@@ -50,6 +51,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+        services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
         services.AddSingleton<IProviderRepository, ProviderRepository>();

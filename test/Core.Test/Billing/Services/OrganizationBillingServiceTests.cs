@@ -9,7 +9,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -178,7 +177,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -195,7 +194,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(7, capturedOptions.TrialPeriodDays);
@@ -254,7 +253,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -271,7 +270,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(0, capturedOptions.TrialPeriodDays);
@@ -328,7 +327,7 @@ public class OrganizationBillingServiceTests
 
         SubscriptionCreateOptions capturedOptions = null;
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionCreateAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
             .Returns(new Subscription
             {
                 Id = "sub_test123",
@@ -345,7 +344,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
-            .SubscriptionCreateAsync(Arg.Any<SubscriptionCreateOptions>());
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
 
         Assert.NotNull(capturedOptions);
         Assert.Equal(7, capturedOptions.TrialPeriodDays);
@@ -353,4 +352,173 @@ public class OrganizationBillingServiceTests
     }
 
     #endregion
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_UpdatesStripeCustomer(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        organization.Name = "Short name";
+
+        CustomerUpdateOptions capturedOptions = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateCustomerAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
+            .Returns(new Customer());
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .UpdateCustomerAsync(
+                organization.GatewayCustomerId,
+                Arg.Any<CustomerUpdateOptions>());
+
+        Assert.NotNull(capturedOptions);
+        Assert.Equal(organization.BillingEmail, capturedOptions.Email);
+        Assert.Equal(organization.DisplayName(), capturedOptions.Description);
+        Assert.NotNull(capturedOptions.InvoiceSettings);
+        Assert.NotNull(capturedOptions.InvoiceSettings.CustomFields);
+        Assert.Single(capturedOptions.InvoiceSettings.CustomFields);
+
+        var customField = capturedOptions.InvoiceSettings.CustomFields.First();
+        Assert.Equal(organization.SubscriberType(), customField.Name);
+        Assert.Equal(organization.DisplayName(), customField.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenNameIsLong_UsesFullName(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        var longName = "This is a very long organization name that exceeds thirty characters";
+        organization.Name = longName;
+
+        CustomerUpdateOptions capturedOptions = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateCustomerAsync(
+                Arg.Is<string>(id => id == organization.GatewayCustomerId),
+                Arg.Do<CustomerUpdateOptions>(options => capturedOptions = options))
+            .Returns(new Customer());
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .UpdateCustomerAsync(
+                organization.GatewayCustomerId,
+                Arg.Any<CustomerUpdateOptions>());
+
+        Assert.NotNull(capturedOptions);
+        Assert.NotNull(capturedOptions.InvoiceSettings);
+        Assert.NotNull(capturedOptions.InvoiceSettings.CustomFields);
+
+        var customField = capturedOptions.InvoiceSettings.CustomFields.First();
+        Assert.Equal(longName, customField.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenGatewayCustomerIdIsNull_LogsWarningAndReturns(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.GatewayCustomerId = null;
+        organization.Name = "Test Organization";
+        organization.BillingEmail = "billing@example.com";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenGatewayCustomerIdIsEmpty_LogsWarningAndReturns(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.GatewayCustomerId = "";
+        organization.Name = "Test Organization";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenNameIsNull_LogsWarningAndReturns(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.Name = null;
+        organization.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenNameIsEmpty_LogsWarningAndReturns(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.Name = "";
+        organization.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await stripeAdapter.DidNotReceive().UpdateCustomerAsync(
+            Arg.Any<string>(),
+            Arg.Any<CustomerUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationNameAndEmail_WhenBillingEmailIsNull_UpdatesWithNull(
+        Organization organization,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        organization.Name = "Test Organization";
+        organization.BillingEmail = null;
+        organization.GatewayCustomerId = "cus_test123";
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        // Act
+        await sutProvider.Sut.UpdateOrganizationNameAndEmail(organization);
+
+        // Assert
+        await stripeAdapter.Received(1).UpdateCustomerAsync(
+            organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options =>
+                options.Email == null &&
+                options.Description == organization.Name));
+    }
 }

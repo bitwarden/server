@@ -41,6 +41,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -99,8 +100,6 @@ public class Startup
         {
             IdentityModelEventSource.ShowPII = true;
         }
-
-        app.UseSerilog(env, appLifetime, globalSettings);
 
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
