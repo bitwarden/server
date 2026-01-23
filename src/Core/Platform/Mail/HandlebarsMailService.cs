@@ -1039,7 +1039,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
     {
-        if(string.IsNullOrEmpty(emergencyAccess.Email))
+        if (string.IsNullOrEmpty(emergencyAccess.Email))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
