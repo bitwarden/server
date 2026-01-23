@@ -144,6 +144,7 @@ public static class FeatureFlagKeys
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
+    public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -174,6 +175,7 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
