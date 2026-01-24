@@ -41,8 +41,8 @@ public class DeleteEmergencyAccessCommandTests
     }
 
     /// <summary>
-    /// Verifies that attempting to delete a non-existent emergency access record
-    /// throws a <see cref="BadRequestException"/> and does not call delete or send email.
+    /// Verifies successful deletion of an emergency access record by ID and grantor ID,
+    /// and ensures that a notification email is sent to the grantor.
     /// </summary>
     [Theory, BitAutoData]
     public async Task DeleteByIdGrantorIdAsync_DeletesEmergencyAccessAndSendsEmail(
