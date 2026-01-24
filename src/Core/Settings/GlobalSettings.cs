@@ -44,6 +44,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
+    public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
     public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
     public virtual string DatabaseProvider { get; set; }
@@ -82,7 +83,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
-
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
@@ -92,6 +92,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
     public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
+    public virtual ICommunicationSettings Communication { get; set; } = new CommunicationSettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -774,5 +775,18 @@ public class GlobalSettings : IGlobalSettings
     public class Fido2Settings
     {
         public HashSet<string> Origins { get; set; }
+    }
+
+    public class CommunicationSettings : ICommunicationSettings
+    {
+        public string Bootstrap { get; set; } = "none";
+        public ISsoCookieVendorSettings SsoCookieVendor { get; set; } = new SsoCookieVendorSettings();
+    }
+
+    public class SsoCookieVendorSettings : ISsoCookieVendorSettings
+    {
+        public string IdpLoginUrl { get; set; }
+        public string CookieName { get; set; }
+        public string CookieDomain { get; set; }
     }
 }
