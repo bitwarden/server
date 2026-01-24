@@ -6,9 +6,10 @@
   ],
   "service": "bitwarden_server",
   "workspaceFolder": "/workspace",
+  "initializeCommand": "mkdir -p dev/.data/keys dev/.data/mssql dev/.data/azurite dev/helpers/mssql",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "16"
+      "version": "22"
     },
     "ghcr.io/devcontainers/features/rust:1": {}
   },
@@ -27,8 +28,16 @@
   },
   "onCreateCommand": "bash .devcontainer/internal_dev/onCreateCommand.sh",
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh",
-  "forwardPorts": [1080, 1433, 3306, 5432, 10000, 10001, 10002],
+  "forwardPorts": [
+    1080, 1433, 3306, 5432, 10000, 10001, 10002,
+    4000, 4001, 33656, 33657, 44519, 44559,
+    46273, 46274, 50024, 51822, 51823,
+    54103, 61840, 61841, 62911, 62912
+  ],
   "portsAttributes": {
+    "default": {
+      "onAutoForward": "ignore"
+    },
     "1080": {
       "label": "Mail Catcher",
       "onAutoForward": "notify"
@@ -50,11 +59,75 @@
       "onAutoForward": "notify"
     },
     "10001": {
-      "label": "Azurite Storage Queue ",
+      "label": "Azurite Storage Queue",
       "onAutoForward": "notify"
     },
     "10002": {
       "label": "Azurite Storage Table",
+      "onAutoForward": "notify"
+    },
+    "4000": {
+      "label": "Api (Cloud)",
+      "onAutoForward": "notify"
+    },
+    "4001": {
+      "label": "Api (SelfHost)",
+      "onAutoForward": "notify"
+    },
+    "33656": {
+      "label": "Identity (Cloud)",
+      "onAutoForward": "notify"
+    },
+    "33657": {
+      "label": "Identity (SelfHost)",
+      "onAutoForward": "notify"
+    },
+    "44519": {
+      "label": "Billing",
+      "onAutoForward": "notify"
+    },
+    "44559": {
+      "label": "Scim",
+      "onAutoForward": "notify"
+    },
+    "46273": {
+      "label": "Events (Cloud)",
+      "onAutoForward": "notify"
+    },
+    "46274": {
+      "label": "Events (SelfHost)",
+      "onAutoForward": "notify"
+    },
+    "50024": {
+      "label": "Icons",
+      "onAutoForward": "notify"
+    },
+    "51822": {
+      "label": "Sso (Cloud)",
+      "onAutoForward": "notify"
+    },
+    "51823": {
+      "label": "Sso (SelfHost)",
+      "onAutoForward": "notify"
+    },
+    "54103": {
+      "label": "EventsProcessor",
+      "onAutoForward": "notify"
+    },
+    "61840": {
+      "label": "Notifications (Cloud)",
+      "onAutoForward": "notify"
+    },
+    "61841": {
+      "label": "Notifications (SelfHost)",
+      "onAutoForward": "notify"
+    },
+    "62911": {
+      "label": "Admin (Cloud)",
+      "onAutoForward": "notify"
+    },
+    "62912": {
+      "label": "Admin (SelfHost)",
       "onAutoForward": "notify"
     }
   }

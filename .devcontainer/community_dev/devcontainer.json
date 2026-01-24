@@ -3,9 +3,10 @@
   "dockerComposeFile": "../../.devcontainer/bitwarden_common/docker-compose.yml",
   "service": "bitwarden_server",
   "workspaceFolder": "/workspace",
+  "initializeCommand": "mkdir -p dev/.data/keys dev/.data/mssql dev/.data/azurite dev/helpers/mssql",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "16"
+      "version": "22"
     },
     "ghcr.io/devcontainers/features/rust:1": {}
   },
@@ -22,5 +23,27 @@
       "extensions": ["ms-dotnettools.csdevkit"]
     }
   },
-  "postCreateCommand": "bash .devcontainer/community_dev/postCreateCommand.sh"
+  "postCreateCommand": "bash .devcontainer/community_dev/postCreateCommand.sh",
+  "forwardPorts": [1080, 1433, 3306, 5432],
+  "portsAttributes": {
+    "default": {
+      "onAutoForward": "ignore"
+    },
+    "1080": {
+      "label": "Mail Catcher",
+      "onAutoForward": "notify"
+    },
+    "1433": {
+      "label": "SQL Server",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "MySQL",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "notify"
+    }
+  }
 }
