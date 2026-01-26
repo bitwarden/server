@@ -158,6 +158,10 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
 
                 keys.Add(new Tuple<string, TwoFactorProvider.WebAuthnData>(keyName, key));
             }
+        foreach (var kvp in provider.MetaData.Where(k => k.Key.StartsWith("Key")))
+        {
+            var key = new TwoFactorProvider.WebAuthnData((dynamic)kvp.Value);
+            keys.Add(new Tuple<string, TwoFactorProvider.WebAuthnData>(kvp.Key, key));
         }
 
         return keys;
