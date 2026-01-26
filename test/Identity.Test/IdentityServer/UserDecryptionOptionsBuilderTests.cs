@@ -60,6 +60,7 @@ public class UserDecryptionOptionsBuilderTests
         {
             Assert.NotNull(result.WebAuthnPrfOption);
             Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOption!.EncryptedPrivateKey);
+            Assert.Equal(credential.CredentialId, result.WebAuthnPrfOption!.CredentialId);
             Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOption!.EncryptedUserKey);
         }
         else

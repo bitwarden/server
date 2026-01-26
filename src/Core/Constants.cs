@@ -149,6 +149,7 @@ public static class FeatureFlagKeys
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
     public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
     public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
+    public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
@@ -160,6 +161,7 @@ public static class FeatureFlagKeys
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
+    public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
