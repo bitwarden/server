@@ -76,3 +76,13 @@ The `IMailService` automatically uses both versions when sending emails:
 
 ## `*.mjml`
 This is a templating language we use to increase efficiency when creating email content. See the `MJML` [documentation](./Mjml/README.md) for more details.
+
+# Managing email assets
+
+We host assets that are included in emails at `assets.bitwarden.com`, at the `/email/v1` path. This corresponds to a static file storage container that is managed by our SRE team.  For example: https://assets.bitwarden.com/email/v1/mail-github.png. This is the URL for all assets for emails sent from any environment.
+
+## Adding an asset
+
+When you are creating an email that needs a new asset, you should first check to see if that asset already exists. The easiest way to do this is check at the corresponding `https://assets.bitwarden.com/email/v1/` URL (e.g. https://assets.bitwarden.com/email/v1/my_new_image.png). 
+
+If the asset you are adding is not there, enter a ticket for the SRE team to add the asset to the email asset container. The preferred format for assets is a `.png` file, and the file(s) should be attached to the ticket.

@@ -20,7 +20,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,
@@ -113,7 +113,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseRiskInsights = e.UseRiskInsights,
                 UseOrganizationDomains = e.UseOrganizationDomains,
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
-                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation
+                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
+                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
+                UsePhishingBlocker = e.UsePhishingBlocker
             }).ToListAsync();
         }
     }
@@ -323,7 +325,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     where ou.UserId == userWithDomain.UserId &&
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
-                          o.Enabled == true
+                          o.Enabled == true &&
+                          ou.Status != OrganizationUserStatusType.Invited
                     select o;
 
         return await query.ToArrayAsync();

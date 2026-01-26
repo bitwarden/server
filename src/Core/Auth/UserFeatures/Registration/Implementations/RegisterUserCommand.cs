@@ -5,6 +5,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -98,6 +99,9 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     public async Task<IdentityResult> RegisterSSOAutoProvisionedUserAsync(User user, Organization organization)
     {
+        // Validate that the email domain is not blocked by another organization's policy
+        await ValidateEmailDomainNotBlockedAsync(user.Email, organization.Id);
+
         var result = await _userService.CreateUserAsync(user);
         if (result == IdentityResult.Success)
         {
@@ -455,9 +459,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         else if (!string.IsNullOrEmpty(organization.DisplayName()))
         {
             // If the organization is Free or Families plan, send families welcome email
-            if (organization.PlanType is PlanType.FamiliesAnnually
-                or PlanType.FamiliesAnnually2019
-                or PlanType.Free)
+            if (organization.PlanType.GetProductTier() is ProductTierType.Free or ProductTierType.Families)
             {
                 await _mailService.SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.DisplayName());
             }

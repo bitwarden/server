@@ -54,6 +54,7 @@ IBaseRequestValidatorTestWrapper
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
+        ISsoRequestValidator ssoRequestValidator,
         IOrganizationUserRepository organizationUserRepository,
         ILogger logger,
         ICurrentContext currentContext,
@@ -73,6 +74,7 @@ IBaseRequestValidatorTestWrapper
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
+            ssoRequestValidator,
             organizationUserRepository,
             logger,
             currentContext,
@@ -109,15 +111,6 @@ IBaseRequestValidatorTestWrapper
         context.GrantResult = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
     }
 
-    [Obsolete]
-    protected override void SetSsoResult(
-        BaseRequestValidationContextFake context,
-        Dictionary<string, object> customResponse)
-    {
-        context.GrantResult = new GrantValidationResult(
-            TokenRequestErrors.InvalidGrant, "Sso authentication required.", customResponse);
-    }
-
     protected override Task SetSuccessResult(
         BaseRequestValidationContextFake context,
         User user,
@@ -132,12 +125,17 @@ IBaseRequestValidatorTestWrapper
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
-    { }
+    {
+        context.GrantResult = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant, "Two-factor authentication required.", customResponse);
+    }
 
     protected override void SetValidationErrorResult(
         BaseRequestValidationContextFake context,
         CustomValidatorRequestContext requestContext)
-    { }
+    {
+        context.GrantResult.IsError = true;
+    }
 
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,

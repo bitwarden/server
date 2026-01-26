@@ -1,21 +1,21 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.UserFeatures.SendAccess;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
+using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +24,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Tools.Controllers;
 
 [Route("sends")]
-[Authorize("Application")]
 public class SendsController : Controller
 {
     private readonly ISendRepository _sendRepository;
@@ -33,8 +32,10 @@ public class SendsController : Controller
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IAnonymousSendCommand _anonymousSendCommand;
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
+    private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ILogger<SendsController> _logger;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -42,21 +43,26 @@ public class SendsController : Controller
         ISendAuthorizationService sendAuthorizationService,
         IAnonymousSendCommand anonymousSendCommand,
         INonAnonymousSendCommand nonAnonymousSendCommand,
+        ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
-        GlobalSettings globalSettings)
+        IFeatureService featureService,
+        IPushNotificationService pushNotificationService)
     {
         _sendRepository = sendRepository;
         _userService = userService;
         _sendAuthorizationService = sendAuthorizationService;
         _anonymousSendCommand = anonymousSendCommand;
         _nonAnonymousSendCommand = nonAnonymousSendCommand;
+        _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
-        _globalSettings = globalSettings;
+        _featureService = featureService;
+        _pushNotificationService = pushNotificationService;
     }
 
     #region Anonymous endpoints
+
     [AllowAnonymous]
     [HttpPost("access/{id}")]
     public async Task<IActionResult> Access(string id, [FromBody] SendAccessRequestModel model)
@@ -70,28 +76,44 @@ public class SendsController : Controller
 
         var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
         var send = await _sendRepository.GetByIdAsync(guid);
-        SendAccessResult sendAuthResult =
+
+        if (send == null)
+        {
+            throw new BadRequestException("Could not locate send");
+        }
+
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            return new UnauthorizedResult();
+        }
+
+        var sendAuthResult =
             await _sendAuthorizationService.AccessAsync(send, model.Password);
         if (sendAuthResult.Equals(SendAccessResult.PasswordRequired))
         {
             return new UnauthorizedResult();
         }
+
         if (sendAuthResult.Equals(SendAccessResult.PasswordInvalid))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid password.");
         }
+
         if (sendAuthResult.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
         }
 
-        var sendResponse = new SendAccessResponseModel(send, _globalSettings);
+        var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
             var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
             sendResponse.CreatorIdentifier = creator.Email;
         }
+
         return new ObjectResult(sendResponse);
     }
 
@@ -115,6 +137,13 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            return new UnauthorizedResult();
+        }
+
         var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
             model.Password);
 
@@ -122,21 +151,19 @@ public class SendsController : Controller
         {
             return new UnauthorizedResult();
         }
+
         if (result.Equals(SendAccessResult.PasswordInvalid))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid password.");
         }
+
         if (result.Equals(SendAccessResult.Denied))
         {
             throw new NotFoundException();
         }
 
-        return new ObjectResult(new SendFileDownloadDataResponseModel()
-        {
-            Id = fileId,
-            Url = url,
-        });
+        return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url, });
     }
 
     [AllowAnonymous]
@@ -150,7 +177,8 @@ public class SendsController : Controller
                 {
                     try
                     {
-                        var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
+                        var blobName =
+                            eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
                         var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
                         var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
                         if (send == null)
@@ -159,6 +187,7 @@ public class SendsController : Controller
                             {
                                 await azureSendFileStorageService.DeleteBlobAsync(blobName);
                             }
+
                             return;
                         }
 
@@ -166,7 +195,8 @@ public class SendsController : Controller
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}", JsonSerializer.Serialize(eventGridEvent));
+                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}",
+                            JsonSerializer.Serialize(eventGridEvent));
                         return;
                     }
                 }
@@ -178,38 +208,98 @@ public class SendsController : Controller
 
     #region Non-anonymous endpoints
 
+    [Authorize(Policies.Application)]
     [HttpGet("{id}")]
     public async Task<SendResponseModel> Get(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var send = await _sendRepository.GetByIdAsync(new Guid(id));
-        if (send == null || send.UserId != userId)
+        var sendId = new Guid(id);
+        var send = await _sendOwnerQuery.Get(sendId, User);
+        return new SendResponseModel(send);
+    }
+
+    [Authorize(Policies.Application)]
+    [HttpGet("")]
+    public async Task<ListResponseModel<SendResponseModel>> GetAll()
+    {
+        var sends = await _sendOwnerQuery.GetOwned(User);
+        var responses = sends.Select(s => new SendResponseModel(s));
+        var result = new ListResponseModel<SendResponseModel>(responses);
+
+        return result;
+    }
+
+    [Authorize(Policy = Policies.Send)]
+    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
+    [HttpPost("access/")]
+    public async Task<IActionResult> AccessUsingAuth()
+    {
+        var guid = User.GetSendId();
+        var send = await _sendRepository.GetByIdAsync(guid);
+        if (send == null)
+        {
+            throw new BadRequestException("Could not locate send");
+        }
+        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
+            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow || send.Disabled ||
+            send.DeletionDate < DateTime.UtcNow)
         {
             throw new NotFoundException();
         }
 
-        return new SendResponseModel(send, _globalSettings);
+        var sendResponse = new SendAccessResponseModel(send);
+        if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
+        {
+            var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
+            sendResponse.CreatorIdentifier = creator.Email;
+        }
+
+        send.AccessCount++;
+        await _sendRepository.ReplaceAsync(send);
+        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+
+        return new ObjectResult(sendResponse);
     }
 
-    [HttpGet("")]
-    public async Task<ListResponseModel<SendResponseModel>> GetAll()
+    [Authorize(Policy = Policies.Send)]
+    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
+    [HttpPost("access/file/{fileId}")]
+    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var sends = await _sendRepository.GetManyByUserIdAsync(userId);
-        var responses = sends.Select(s => new SendResponseModel(s, _globalSettings));
-        return new ListResponseModel<SendResponseModel>(responses);
+        var sendId = User.GetSendId();
+        var send = await _sendRepository.GetByIdAsync(sendId);
+
+        if (send == null)
+        {
+            throw new BadRequestException("Could not locate send");
+        }
+        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
+            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow || send.Disabled ||
+            send.DeletionDate < DateTime.UtcNow)
+        {
+            throw new NotFoundException();
+        }
+
+        var url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId);
+
+        send.AccessCount++;
+        await _sendRepository.ReplaceAsync(send);
+        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+
+        return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("")]
     public async Task<SendResponseModel> Post([FromBody] SendRequestModel model)
     {
         model.ValidateCreation();
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = model.ToSend(userId, _sendAuthorizationService);
         await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("file/v2")]
     public async Task<SendFileUploadDataResponseModel> PostFile([FromBody] SendRequestModel model)
     {
@@ -229,27 +319,28 @@ public class SendsController : Controller
         }
 
         model.ValidateCreation();
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var (send, data) = model.ToSend(userId, model.File.FileName, _sendAuthorizationService);
         var uploadUrl = await _nonAnonymousSendCommand.SaveFileSendAsync(send, data, model.FileLength.Value);
         return new SendFileUploadDataResponseModel
         {
             Url = uploadUrl,
             FileUploadType = _sendFileStorageService.FileUploadType,
-            SendResponse = new SendResponseModel(send, _globalSettings)
+            SendResponse = new SendResponseModel(send)
         };
     }
 
+    [Authorize(Policies.Application)]
     [HttpGet("{id}/file/{fileId}")]
     public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var sendId = new Guid(id);
         var send = await _sendRepository.GetByIdAsync(sendId);
-        var fileData = JsonSerializer.Deserialize<SendFileData>(send?.Data);
+        var fileData = JsonSerializer.Deserialize<SendFileData>(send?.Data ?? string.Empty);
 
         if (send == null || send.Type != SendType.File || (send.UserId.HasValue && send.UserId.Value != userId) ||
-            !send.UserId.HasValue || fileData.Id != fileId || fileData.Validated)
+            !send.UserId.HasValue || fileData?.Id != fileId || fileData.Validated)
         {
             // Not found if Send isn't found, user doesn't have access, request is faulty,
             // or we've already validated the file. This last is to emulate create-only blob permissions for Azure
@@ -260,62 +351,95 @@ public class SendsController : Controller
         {
             Url = await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId),
             FileUploadType = _sendFileStorageService.FileUploadType,
-            SendResponse = new SendResponseModel(send, _globalSettings),
+            SendResponse = new SendResponseModel(send),
         };
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("{id}/file/{fileId}")]
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
     public async Task PostFileForExistingSend(string id, string fileId)
     {
-        if (!Request?.ContentType.Contains("multipart/") ?? true)
+        if (!Request?.ContentType?.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
         }
 
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
+        if (send == null)
+        {
+            throw new BadRequestException("Could not locate send");
+        }
+
         await Request.GetFileAsync(async (stream) =>
         {
             await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
         });
     }
 
+    [Authorize(Policies.Application)]
     [HttpPut("{id}")]
     public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
     {
         model.ValidateEdit();
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         if (send == null || send.UserId != userId)
         {
             throw new NotFoundException();
         }
 
-        await _nonAnonymousSendCommand.SaveSendAsync(model.ToSend(send, _sendAuthorizationService));
-        return new SendResponseModel(send, _globalSettings);
+        await _nonAnonymousSendCommand.SaveSendAsync(model.UpdateSend(send, _sendAuthorizationService));
+        return new SendResponseModel(send);
     }
 
+    [Authorize(Policies.Application)]
     [HttpPut("{id}/remove-password")]
     public async Task<SendResponseModel> PutRemovePassword(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         if (send == null || send.UserId != userId)
         {
             throw new NotFoundException();
         }
 
+        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
+        // This allows clients to update other fields without re-submitting sensitive auth data.
         send.Password = null;
+        send.AuthType = AuthType.None;
         await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send, _globalSettings);
+        return new SendResponseModel(send);
     }
 
+    // Removes ALL authentication (email or password) if any is present
+    [Authorize(Policies.Application)]
+    [HttpPut("{id}/remove-auth")]
+    public async Task<SendResponseModel> PutRemoveAuth(string id)
+    {
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var send = await _sendRepository.GetByIdAsync(new Guid(id));
+        if (send == null || send.UserId != userId)
+        {
+            throw new NotFoundException();
+        }
+
+        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
+        // This allows clients to update other fields without re-submitting sensitive auth data.
+        send.Password = null;
+        send.Emails = null;
+        send.AuthType = AuthType.None;
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+        return new SendResponseModel(send);
+    }
+
+    [Authorize(Policies.Application)]
     [HttpDelete("{id}")]
     public async Task Delete(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         if (send == null || send.UserId != userId)
         {

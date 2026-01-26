@@ -1,7 +1,10 @@
-﻿using System.Text.Json;
+﻿using System.Reflection;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -95,5 +98,125 @@ public class OrganizationTests
         Assert.Equal("SKey_value", sKey);
         var host = Assert.Contains("Host", (IDictionary<string, object>)duo.MetaData);
         Assert.Equal("Host_value", host);
+    }
+
+    [Fact]
+    public void UseDisableSmAdsForUsers_DefaultValue_IsFalse()
+    {
+        var organization = new Organization();
+
+        Assert.False(organization.UseDisableSmAdsForUsers);
+    }
+
+    [Fact]
+    public void UseDisableSmAdsForUsers_CanBeSetToTrue()
+    {
+        var organization = new Organization
+        {
+            UseDisableSmAdsForUsers = true
+        };
+
+        Assert.True(organization.UseDisableSmAdsForUsers);
+    }
+
+    [Fact]
+    public void UpdateFromLicense_AppliesAllLicenseProperties()
+    {
+        // This test ensures that when a new property is added to OrganizationLicense,
+        // it is also applied to the Organization in UpdateFromLicense().
+        // This is the fourth step in the license synchronization pipeline:
+        // Property → Constant → Claim → Extraction → Application
+
+        // 1. Get all public properties from OrganizationLicense
+        var licenseProperties = typeof(OrganizationLicense)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.Name)
+            .ToHashSet();
+
+        // 2. Define properties that don't need to be applied to Organization
+        var excludedProperties = new HashSet<string>
+        {
+            // Internal/computed properties
+            "SignatureBytes",             // Computed from Signature property
+            "ValidLicenseVersion",        // Internal property, not serialized
+            "CurrentLicenseFileVersion",  // Constant field, not an instance property
+            "Hash",                       // Signature-related, not applied to org
+            "Signature",                  // Signature-related, not applied to org
+            "Token",                      // The JWT itself, not applied to org
+            "Version",                    // License version, not stored on org
+
+            // Properties intentionally excluded from UpdateFromLicense
+            "Id",                         // Self-hosted org has its own unique Guid
+            "MaxStorageGb",               // Not enforced for self-hosted (per comment in UpdateFromLicense)
+
+            // Properties not stored on Organization model
+            "LicenseType",                // Not a property on Organization
+            "InstallationId",             // Not a property on Organization
+            "Issued",                     // Not a property on Organization
+            "Refresh",                    // Not a property on Organization
+            "ExpirationWithoutGracePeriod", // Not a property on Organization
+            "Trial",                      // Not a property on Organization
+            "Expires",                    // Mapped to ExpirationDate on Organization (different name)
+
+            // Deprecated properties not applied
+            "LimitCollectionCreationDeletion",      // Deprecated, not applied
+            "AllowAdminAccessToAllCollectionItems", // Deprecated, not applied
+        };
+
+        // 3. Get properties that should be applied
+        var propertiesThatShouldBeApplied = licenseProperties
+            .Except(excludedProperties)
+            .ToHashSet();
+
+        // 4. Read Organization.UpdateFromLicense source code
+        var organizationSourcePath = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "..", "..", "..", "..", "..", "src", "Core", "AdminConsole", "Entities", "Organization.cs");
+        var sourceCode = File.ReadAllText(organizationSourcePath);
+
+        // 5. Find all property assignments in UpdateFromLicense method
+        // Pattern matches: PropertyName = license.PropertyName
+        // This regex looks for assignments like "Name = license.Name" or "ExpirationDate = license.Expires"
+        var assignmentPattern = @"(\w+)\s*=\s*license\.(\w+)";
+        var matches = Regex.Matches(sourceCode, assignmentPattern);
+
+        var appliedProperties = new HashSet<string>();
+        foreach (Match match in matches)
+        {
+            // Get the license property name (right side of assignment)
+            var licensePropertyName = match.Groups[2].Value;
+            appliedProperties.Add(licensePropertyName);
+        }
+
+        // Special case: Expires is mapped to ExpirationDate
+        if (appliedProperties.Contains("Expires"))
+        {
+            appliedProperties.Add("Expires"); // Already added, but being explicit
+        }
+
+        // 6. Find missing applications
+        var missingApplications = propertiesThatShouldBeApplied
+            .Except(appliedProperties)
+            .OrderBy(p => p)
+            .ToList();
+
+        // 7. Build error message with guidance
+        var errorMessage = "";
+        if (missingApplications.Any())
+        {
+            errorMessage = $"The following OrganizationLicense properties are NOT applied to Organization in UpdateFromLicense():\n";
+            errorMessage += string.Join("\n", missingApplications.Select(p => $"  - {p}"));
+            errorMessage += "\n\nPlease add the following lines to Organization.UpdateFromLicense():\n";
+            foreach (var prop in missingApplications)
+            {
+                errorMessage += $"  {prop} = license.{prop};\n";
+            }
+            errorMessage += "\nNote: If the property maps to a different name on Organization (like Expires → ExpirationDate), adjust accordingly.";
+        }
+
+        // 8. Assert - if this fails, the error message guides the developer to add the application
+        Assert.True(
+            !missingApplications.Any(),
+            $"\n{errorMessage}");
     }
 }

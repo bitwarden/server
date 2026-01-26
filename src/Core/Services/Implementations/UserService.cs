@@ -14,9 +14,12 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
@@ -57,7 +60,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly ILicensingService _licenseService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly IFido2 _fido2;
@@ -73,6 +76,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IDistributedCache _distributedCache;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public UserService(
         IUserRepository userRepository,
@@ -93,7 +97,7 @@ public class UserService : UserManager<User>, IUserService
         ILicensingService licenseService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         IFido2 fido2,
@@ -108,7 +112,8 @@ public class UserService : UserManager<User>, IUserService
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IHasPremiumAccessQuery hasPremiumAccessQuery)
         : base(
               store,
               optionsAccessor,
@@ -149,6 +154,7 @@ public class UserService : UserManager<User>, IUserService
         _distributedCache = distributedCache;
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
+        _hasPremiumAccessQuery = hasPremiumAccessQuery;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -340,6 +346,12 @@ public class UserService : UserManager<User>, IUserService
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
     }
 
+    /// <summary>
+    /// Initiates WebAuthn 2FA credential registration and generates a challenge for adding a new security key.
+    /// </summary>
+    /// <param name="user">The current user.</param>
+    /// <returns></returns>
+    /// <exception cref="BadRequestException">Maximum allowed number of credentials already registered.</exception>
     public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
     {
         var providers = user.GetTwoFactorProviders();
@@ -358,6 +370,17 @@ public class UserService : UserManager<User>, IUserService
         if (provider.MetaData == null)
         {
             provider.MetaData = new Dictionary<string, object>();
+        }
+
+        // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
+        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
+            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
+        // Count only saved credentials ("Key{id}") toward the limit.
+        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
+            maximumAllowedCredentialCount)
+        {
+            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
 
         var fidoUser = new Fido2User
@@ -396,6 +419,17 @@ public class UserService : UserManager<User>, IUserService
         if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
         {
             return false;
+        }
+
+        // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
+        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
+            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
+            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
+        // Count only saved credentials ("Key{id}") toward the limit.
+        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
+            maximumAllowedCredentialCount)
+        {
+            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
         }
 
         var options = CredentialCreateOptions.FromJson((string)pendingValue);
@@ -534,7 +568,7 @@ public class UserService : UserManager<User>, IUserService
 
             try
             {
-                await _stripeSyncService.UpdateCustomerEmailAddress(user.GatewayCustomerId,
+                await _stripeSyncService.UpdateCustomerEmailAddressAsync(user.GatewayCustomerId,
                     user.BillingEmailAddress());
             }
             catch (Exception ex)
@@ -617,6 +651,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
     }
 
+    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
     {
         var identityResult = CheckCanUseKeyConnector(user);
@@ -867,7 +902,7 @@ public class UserService : UserManager<User>, IUserService
         }
 
         string paymentIntentClientSecret = null;
-        IPaymentService paymentService = null;
+        IStripePaymentService paymentService = null;
         if (_globalSettings.SelfHosted)
         {
             if (license == null || !_licenseService.VerifyLicense(license))
@@ -949,6 +984,16 @@ public class UserService : UserManager<User>, IUserService
             throw new BadRequestException(exceptionMessage);
         }
 
+        // If the license has a Token (claims-based), extract all properties from claims
+        // Otherwise, fall back to using the properties already on the license object (backward compatibility)
+        if (claimsPrincipal != null)
+        {
+            license.LicenseKey = claimsPrincipal.GetValue<string>(UserLicenseConstants.LicenseKey);
+            license.Premium = claimsPrincipal.GetValue<bool>(UserLicenseConstants.Premium);
+            license.MaxStorageGb = claimsPrincipal.GetValue<short?>(UserLicenseConstants.MaxStorageGb);
+            license.Expires = claimsPrincipal.GetValue<DateTime?>(UserLicenseConstants.Expires);
+        }
+
         var dir = $"{_globalSettings.LicenseDirectory}/user";
         Directory.CreateDirectory(dir);
         using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
@@ -962,6 +1007,7 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
     }
 
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
     {
         if (user == null)
@@ -1007,6 +1053,7 @@ public class UserService : UserManager<User>, IUserService
         await _paymentService.CancelSubscriptionAsync(user, eop);
     }
 
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     public async Task ReinstatePremiumAsync(User user)
     {
         await _paymentService.ReinstateSubscriptionAsync(user);
@@ -1104,7 +1151,7 @@ public class UserService : UserManager<User>, IUserService
         return success;
     }
 
-    public async Task<bool> CanAccessPremium(ITwoFactorProvidersUser user)
+    public async Task<bool> CanAccessPremium(User user)
     {
         var userId = user.GetUserId();
         if (!userId.HasValue)
@@ -1112,15 +1159,25 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        return user.GetPremium() || await this.HasPremiumFromOrganization(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
+        }
+
+        return user.Premium || await HasPremiumFromOrganization(user);
     }
 
-    public async Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user)
+    public async Task<bool> HasPremiumFromOrganization(User user)
     {
         var userId = user.GetUserId();
         if (!userId.HasValue)
         {
             return false;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
+        {
+            return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
         }
 
         // orgUsers in the Invited status are not associated with a userId yet, so this will get
@@ -1138,6 +1195,7 @@ public class UserService : UserManager<User>, IUserService
             orgAbility.UsersGetPremium &&
             orgAbility.Enabled);
     }
+
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
     {
         var token = await GenerateUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider,

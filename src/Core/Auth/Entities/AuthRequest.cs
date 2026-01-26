@@ -49,11 +49,9 @@ public class AuthRequest : ITableObject<Guid>
 
     public bool IsExpired()
     {
-        // TODO: PM-24252 - consider using TimeProvider for better mocking in tests
         return GetExpirationDate() < DateTime.UtcNow;
     }
 
-    // TODO: PM-24252 - this probably belongs in a service.
     public bool IsValidForAuthentication(Guid userId,
         string password)
     {
