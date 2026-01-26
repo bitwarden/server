@@ -78,6 +78,51 @@ public class RustSdkService
         }
     }
 
+    public unsafe string EncryptCipher(string cipherViewJson, string symmetricKeyBase64)
+    {
+        var cipherViewBytes = StringToRustString(cipherViewJson);
+        var keyBytes = StringToRustString(symmetricKeyBase64);
+
+        fixed (byte* cipherViewPtr = cipherViewBytes)
+        fixed (byte* keyPtr = keyBytes)
+        {
+            var resultPtr = NativeMethods.encrypt_cipher(cipherViewPtr, keyPtr);
+
+            return TakeAndDestroyRustString(resultPtr);
+        }
+    }
+
+    public unsafe string DecryptCipher(string cipherJson, string symmetricKeyBase64)
+    {
+        var cipherBytes = StringToRustString(cipherJson);
+        var keyBytes = StringToRustString(symmetricKeyBase64);
+
+        fixed (byte* cipherPtr = cipherBytes)
+        fixed (byte* keyPtr = keyBytes)
+        {
+            var resultPtr = NativeMethods.decrypt_cipher(cipherPtr, keyPtr);
+
+            return TakeAndDestroyRustString(resultPtr);
+        }
+    }
+
+    /// <summary>
+    /// Encrypts a plaintext string using the provided symmetric key.
+    /// Returns an EncString in format "2.{iv}|{data}|{mac}".
+    /// </summary>
+    public unsafe string EncryptString(string plaintext, string symmetricKeyBase64)
+    {
+        var plaintextBytes = StringToRustString(plaintext);
+        var keyBytes = StringToRustString(symmetricKeyBase64);
+
+        fixed (byte* plaintextPtr = plaintextBytes)
+        fixed (byte* keyPtr = keyBytes)
+        {
+            var resultPtr = NativeMethods.encrypt_string(plaintextPtr, keyPtr);
+
+            return TakeAndDestroyRustString(resultPtr);
+        }
+    }
 
     private static byte[] StringToRustString(string str)
     {
