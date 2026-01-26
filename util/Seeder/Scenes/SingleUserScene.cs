@@ -15,6 +15,8 @@ public class SingleUserScene(UserSeeder userSeeder, IUserRepository userReposito
         public required string Email { get; set; }
         public bool EmailVerified { get; set; } = false;
         public bool Premium { get; set; } = false;
+        public Guid? Id { get; set; }
+        public string? ApiKey { get; set; }
     }
 
     public async Task<SceneResult> SeedAsync(Request request)
@@ -26,11 +28,11 @@ public class SingleUserScene(UserSeeder userSeeder, IUserRepository userReposito
         return new SceneResult(mangleMap: userSeeder.GetMangleMap(user, new UserData
         {
             Email = request.Email,
-            Id = user.Id,
+            Id = request.Id ?? user.Id,
             Key = user.Key,
             PublicKey = user.PublicKey,
             PrivateKey = user.PrivateKey,
-            ApiKey = user.ApiKey,
+            ApiKey = request.ApiKey ?? user.ApiKey,
             Kdf = user.Kdf,
             KdfIterations = user.KdfIterations,
         }));
