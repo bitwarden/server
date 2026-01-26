@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Caches.Implementations;
 
 public class SetupIntentDistributedCache(
     [FromKeyedServices("persistent")]
-    IDistributedCache distributedCache) : ISetupIntentCache
+    IDistributedCache distributedCache,
+    ILogger<SetupIntentDistributedCache> logger) : ISetupIntentCache
 {
     public async Task<string?> GetSetupIntentIdForSubscriber(Guid subscriberId)
     {
@@ -17,11 +19,12 @@ public class SetupIntentDistributedCache(
     {
         var cacheKey = GetCacheKeyBySetupIntentId(setupIntentId);
         var value = await distributedCache.GetStringAsync(cacheKey);
-        if (string.IsNullOrEmpty(value) || !Guid.TryParse(value, out var subscriberId))
+        if (!string.IsNullOrEmpty(value) && Guid.TryParse(value, out var subscriberId))
         {
-            return null;
+            return subscriberId;
         }
-        return subscriberId;
+        logger.LogError("Subscriber ID value ({Value}) cached for Setup Intent ({SetupIntentId}) is null or not a valid Guid", value, setupIntentId);
+        return null;
     }
 
     public async Task RemoveSetupIntentForSubscriber(Guid subscriberId)
