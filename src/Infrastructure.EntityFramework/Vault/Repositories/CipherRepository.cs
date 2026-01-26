@@ -801,7 +801,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var query = from ucd in await userCipherDetailsQuery.Run(dbContext).ToListAsync()
                         join c in cipherEntitiesToCheck
                             on ucd.Id equals c.Id
-                        where ucd.Edit && FilterArchivedDate(action, ucd)
+                        where FilterArchivedDate(action, ucd)
                         select c;
 
             var utcNow = DateTime.UtcNow;

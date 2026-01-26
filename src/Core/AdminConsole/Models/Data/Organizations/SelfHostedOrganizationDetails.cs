@@ -128,6 +128,7 @@ public class SelfHostedOrganizationDetails : Organization
             UseApi = UseApi,
             UseResetPassword = UseResetPassword,
             UseSecretsManager = UseSecretsManager,
+            UsePasswordManager = UsePasswordManager,
             SelfHost = SelfHost,
             UsersGetPremium = UsersGetPremium,
             UseCustomPermissions = UseCustomPermissions,
@@ -156,6 +157,8 @@ public class SelfHostedOrganizationDetails : Organization
             UseAdminSponsoredFamilies = UseAdminSponsoredFamilies,
             UseDisableSmAdsForUsers = UseDisableSmAdsForUsers,
             UsePhishingBlocker = UsePhishingBlocker,
+            UseOrganizationDomains = UseOrganizationDomains,
+            UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
         };
     }
 }
