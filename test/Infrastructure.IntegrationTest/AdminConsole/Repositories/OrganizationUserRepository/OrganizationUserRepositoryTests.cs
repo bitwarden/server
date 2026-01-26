@@ -445,6 +445,83 @@ public class OrganizationUserRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdWithSharedCollectionsAsync_ExcludesDefaultCollections(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user.Email,
+            Plan = "Test",
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        // Create a shared collection
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Shared Collection",
+            Type = CollectionType.SharedCollection
+        });
+
+        // Create a default user collection
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Default Collection",
+            Type = CollectionType.DefaultUserCollection,
+            DefaultUserCollectionEmail = user.Email
+        });
+
+        // Assign the organization user to both collections
+        await organizationUserRepository.ReplaceAsync(orgUser, new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = sharedCollection.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            },
+            new CollectionAccessSelection
+            {
+                Id = defaultCollection.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        });
+
+        // Get organization user details with collections
+        var (orgUserDetails, collections) = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUser.Id);
+
+        Assert.NotNull(orgUserDetails);
+        Assert.NotNull(collections);
+
+        // Should only include the shared collection, not the default collection
+        Assert.Single(collections);
+        Assert.Equal(sharedCollection.Id, collections.First().Id);
+        Assert.DoesNotContain(collections, c => c.Id == defaultCollection.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyDetailsByUserAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
