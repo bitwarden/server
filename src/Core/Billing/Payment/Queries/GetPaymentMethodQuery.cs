@@ -5,6 +5,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Braintree;
+using Braintree.Exceptions;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -35,14 +36,27 @@ public class GetPaymentMethodQuery(
         // First check for PayPal
         if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
         {
-            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
-            if (braintreeCustomer.DefaultPaymentMethod is PayPalAccount payPalAccount)
+            try
             {
-                return new MaskedPayPalAccount { Email = payPalAccount.Email };
-            }
+                var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
 
-            logger.LogWarning("Subscriber ({SubscriberID}) has a linked Braintree customer ({BraintreeCustomerId}) with no PayPal account.", subscriber.Id, braintreeCustomerId);
+                if (braintreeCustomer.DefaultPaymentMethod is PayPalAccount payPalAccount)
+                {
+                    return new MaskedPayPalAccount { Email = payPalAccount.Email };
+                }
+
+                logger.LogWarning(
+                    "Subscriber ({SubscriberID}) has a linked Braintree customer ({BraintreeCustomerId}) with no PayPal account.",
+                    subscriber.Id,
+                    braintreeCustomerId);
+            }
+            catch (NotFoundException)
+            {
+                logger.LogWarning(
+                    "Subscriber ({SubscriberID}) is linked to a Braintree Customer ({BraintreeCustomerId}) that does not exist.",
+                    subscriber.Id,
+                    braintreeCustomerId);
+            }
 
             return null;
         }

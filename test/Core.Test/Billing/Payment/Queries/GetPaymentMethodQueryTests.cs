@@ -5,6 +5,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Test.Billing.Extensions;
 using Braintree;
+using Braintree.Exceptions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
@@ -343,5 +344,35 @@ public class GetPaymentMethodQueryTests
         Assert.True(maskedPaymentMethod.IsT2);
         var maskedPayPalAccount = maskedPaymentMethod.AsT2;
         Assert.Equal("user@gmail.com", maskedPayPalAccount.Email);
+    }
+
+    [Fact]
+    public async Task Run_BraintreeCustomerNotFound_ReturnsNull()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid()
+        };
+
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.BraintreeCustomerId] = "non_existent_braintree_customer_id"
+            }
+        };
+
+        _subscriberService.GetCustomer(organization,
+            Arg.Is<CustomerGetOptions>(options =>
+                options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).Returns(customer);
+
+        var customerGateway = Substitute.For<ICustomerGateway>();
+        customerGateway.FindAsync("non_existent_braintree_customer_id").Returns<Braintree.Customer>(_ => throw new NotFoundException());
+        _braintreeGateway.Customer.Returns(customerGateway);
+
+        var maskedPaymentMethod = await _query.Run(organization);
+
+        Assert.Null(maskedPaymentMethod);
     }
 }
