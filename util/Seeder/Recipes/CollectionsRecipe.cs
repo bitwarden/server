@@ -12,9 +12,9 @@ namespace Bit.Seeder.Recipes;
 /// <summary>
 /// Creates collections for seeding organization vaults.
 /// </summary>
-public class CollectionsRecipe(DatabaseContext db, RustSdkService sdkService)
+public class CollectionsRecipe(DatabaseContext db, RustSdkService? sdkService = null)
 {
-    private readonly CollectionSeeder _collectionSeeder = new(sdkService);
+    private readonly CollectionSeeder? _collectionSeeder = sdkService != null ? new(sdkService) : null;
 
     /// <summary>
     /// Creates collections from an organizational structure (e.g., Traditional departments, Spotify tribes).
@@ -30,7 +30,7 @@ public class CollectionsRecipe(DatabaseContext db, RustSdkService sdkService)
         var structure = OrgStructures.GetStructure(model);
 
         var collections = structure.Units
-            .Select(unit => _collectionSeeder.CreateCollection(organizationId, orgKeyBase64, unit.Name))
+            .Select(unit => _collectionSeeder!.CreateCollection(organizationId, orgKeyBase64, unit.Name))
             .ToList();
 
         db.BulkCopy(collections);
