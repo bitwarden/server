@@ -23,7 +23,7 @@ public class Program
         string domain,
         [Option('c', "ciphers", Description = "Number of login ciphers to create")]
         int ciphers = 0,
-        [Option('s', "structure", Description = "Org structure for collections: Traditional, Spotify, or Modern")]
+        [Option('o', "org-structure", Description = "Org structure for collections: Traditional, Spotify, or Modern")]
         string? structure = null
     )
     {
