@@ -42,8 +42,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         }
         var schedulerBuilder = SchedulerBuilder.Create()
             .WithName(fullName) // Ensure each project has a unique instanceName
-            .WithId("AUTO")
-            .UseJobFactory<JobFactory>();
+            .WithId("AUTO");
 
         if (!string.IsNullOrEmpty(_globalSettings.SqlServer.JobSchedulerConnectionString))
         {
@@ -58,6 +57,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
 
         var factory = schedulerBuilder.Build();
         _scheduler = await factory.GetScheduler(cancellationToken);
+        _scheduler.JobFactory = new JobFactory(_serviceProvider);
 
         _scheduler.ListenerManager.AddJobListener(new JobListener(_listenerLogger), GroupMatcher<JobKey>.AnyGroup());
 
