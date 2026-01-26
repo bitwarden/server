@@ -472,7 +472,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 collections = (await (from cu in dbContext.CollectionUsers
                                       join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
                                       join c in dbContext.Collections on cu.CollectionId equals c.Id
-                                      where c.Type != CollectionType.DefaultUserCollection
+                                      where c.Type == CollectionType.SharedCollection
                                       select cu).ToListAsync())
                     .GroupBy(c => c.OrganizationUserId).ToList();
             }
