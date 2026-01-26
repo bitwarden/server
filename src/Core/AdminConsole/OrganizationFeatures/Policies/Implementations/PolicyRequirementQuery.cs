@@ -11,9 +11,9 @@ public class PolicyRequirementQuery(
     : IPolicyRequirementQuery
 {
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
-        => (await GetAsync<T>([userId])).Single();
+        => (await GetAsync<T>([userId])).Single().Requirement;
 
-    public async Task<IEnumerable<T>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement
+    public async Task<IEnumerable<(Guid UserId, T Requirement)>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement
     {
         var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
         if (factory is null)
@@ -27,7 +27,7 @@ public class PolicyRequirementQuery(
             .Where(factory.Enforce)
             .ToLookup(l => l.UserId);
 
-        var policyRequirements = userIdList.Select(u => factory.Create(policyDetailsByUser[u]));
+        var policyRequirements = userIdList.Select(u => (u, factory.Create(policyDetailsByUser[u])));
 
         return policyRequirements;
     }

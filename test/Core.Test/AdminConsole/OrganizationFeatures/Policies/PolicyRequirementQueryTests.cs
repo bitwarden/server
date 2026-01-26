@@ -83,10 +83,12 @@ public class PolicyRequirementQueryTests
         var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
 
         Assert.Equal(2, requirements.Count);
-        Assert.Contains(policyA, requirements[0].Policies);
-        Assert.DoesNotContain(policyB, requirements[0].Policies);
-        Assert.Contains(policyB, requirements[1].Policies);
-        Assert.DoesNotContain(policyA, requirements[1].Policies);
+        Assert.Equal(userIdA, requirements[0].UserId);
+        Assert.Equal(userIdB, requirements[1].UserId);
+        Assert.Contains(policyA, requirements[0].Requirement.Policies);
+        Assert.DoesNotContain(policyB, requirements[0].Requirement.Policies);
+        Assert.Contains(policyB, requirements[1].Requirement.Policies);
+        Assert.DoesNotContain(policyA, requirements[1].Requirement.Policies);
     }
 
     [Theory, BitAutoData]
@@ -107,8 +109,8 @@ public class PolicyRequirementQueryTests
 
         var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
 
-        Assert.Contains(policyA, requirements[0].Policies);
-        Assert.Empty(requirements[1].Policies);
+        Assert.Contains(policyA, requirements[0].Requirement.Policies);
+        Assert.Empty(requirements[1].Requirement.Policies);
         callback.Received()(Arg.Is(policyA));
         callback.Received()(Arg.Is(policyB));
     }
@@ -134,9 +136,9 @@ public class PolicyRequirementQueryTests
         var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
 
         Assert.Equal(2, requirements.Count);
-        Assert.Contains(enforcedPolicyA, requirements[0].Policies);
-        Assert.DoesNotContain(notEnforcedPolicyA, requirements[0].Policies);
-        Assert.Contains(enforcedPolicyB, requirements[1].Policies);
+        Assert.Contains(enforcedPolicyA, requirements[0].Requirement.Policies);
+        Assert.DoesNotContain(notEnforcedPolicyA, requirements[0].Requirement.Policies);
+        Assert.Contains(enforcedPolicyB, requirements[1].Requirement.Policies);
     }
 
     [Theory, BitAutoData]
@@ -164,8 +166,10 @@ public class PolicyRequirementQueryTests
         var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
 
         Assert.Equal(2, requirements.Count);
-        Assert.Empty(requirements[0].Policies);
-        Assert.Empty(requirements[1].Policies);
+        Assert.Equal(userIdA, requirements[0].UserId);
+        Assert.Equal(userIdB, requirements[1].UserId);
+        Assert.Empty(requirements[0].Requirement.Policies);
+        Assert.Empty(requirements[1].Requirement.Policies);
     }
 
     [Theory, BitAutoData]
@@ -185,8 +189,10 @@ public class PolicyRequirementQueryTests
         var requirements = (await sut.GetAsync<TestPolicyRequirement>([userIdA, userIdB])).ToList();
 
         Assert.Equal(2, requirements.Count);
-        Assert.Contains(policyA, requirements[0].Policies);
-        Assert.Empty(requirements[1].Policies);
+        Assert.Equal(userIdA, requirements[0].UserId);
+        Assert.Equal(userIdB, requirements[1].UserId);
+        Assert.Contains(policyA, requirements[0].Requirement.Policies);
+        Assert.Empty(requirements[1].Requirement.Policies);
     }
 
     [Theory, BitAutoData]
