@@ -147,8 +147,11 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return keys;
         }
 
-        // Support up to 5 keys
-        for (var i = 1; i <= 5; i++)
+        // Load all WebAuthn credentials stored in metadata. The number of allowed credentials
+        // is controlled by PremiumMaximumAllowedCredentials and NonPremiumMaximumAllowedCredentials
+        // in GlobalSettings.WebAuthn (10 for premium, 5 for non-premium).
+        var maximumCredentials = _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials;
+        for (var i = 1; i <= maximumCredentials; i++)
         {
             var keyName = $"Key{i}";
             if (provider.MetaData.TryGetValue(keyName, out var value))
