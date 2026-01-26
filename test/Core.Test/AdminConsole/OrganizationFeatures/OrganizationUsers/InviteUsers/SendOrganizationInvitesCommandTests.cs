@@ -34,7 +34,7 @@ public class SendOrganizationInvitesCommandTests
         Organization organization,
         SsoConfig ssoConfig,
         OrganizationUser invite,
-        [Policy(PolicyType.RequireSso, false)] PolicyData policy,
+        [Policy(PolicyType.RequireSso, false)] PolicyStatus policy,
         SutProvider<SendOrganizationInvitesCommand> sutProvider)
     {
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks

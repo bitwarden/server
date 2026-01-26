@@ -30,7 +30,7 @@ internal class PolicyCustomization : ICustomization
             .With(o => o.Enabled, Enabled)
             .With(o => o.Data, Data));
 
-        fixture.Customize<PolicyData>(composer => composer
+        fixture.Customize<PolicyStatus>(composer => composer
             .With(o => o.OrganizationId, orgId)
             .With(o => o.Type, Type)
             .With(o => o.Enabled, Enabled)

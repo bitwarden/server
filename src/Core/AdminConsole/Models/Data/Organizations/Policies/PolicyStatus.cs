@@ -4,9 +4,9 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
-public class PolicyData
+public class PolicyStatus
 {
-    public PolicyData(Guid organizationId, PolicyType policyType, Policy? policy = null)
+    public PolicyStatus(Guid organizationId, PolicyType policyType, Policy? policy = null)
     {
         OrganizationId = policy?.OrganizationId ?? organizationId;
         Data = policy?.Data;

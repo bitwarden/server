@@ -7,7 +7,7 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class PolicyStatusResponseModel : ResponseModel
 {
-    public PolicyStatusResponseModel(PolicyData policy, bool canToggleState = true) : base("policy")
+    public PolicyStatusResponseModel(PolicyStatus policy, bool canToggleState = true) : base("policy")
     {
         OrganizationId = policy.OrganizationId;
         Type = policy.Type;

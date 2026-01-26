@@ -8,7 +8,7 @@ namespace Bit.Api.AdminConsole.Models.Response.Helpers;
 public static class PolicyStatusResponses
 {
     public static async Task<PolicyStatusResponseModel> GetSingleOrgPolicyStatusResponseAsync(
-        this PolicyData policy, IOrganizationHasVerifiedDomainsQuery hasVerifiedDomainsQuery)
+        this PolicyStatus policy, IOrganizationHasVerifiedDomainsQuery hasVerifiedDomainsQuery)
     {
         if (policy.Type is not PolicyType.SingleOrg)
         {

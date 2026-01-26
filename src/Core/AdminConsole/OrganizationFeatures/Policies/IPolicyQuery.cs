@@ -10,8 +10,8 @@ public interface IPolicyQuery
     /// </summary>
     /// <remarks>
     /// This query is the entrypoint for consumers interested in understanding how a particular <see cref="PolicyType"/>
-    /// has been applied to an organization; the resultant <see cref="PolicyData"/> is not indicative of explicit
+    /// has been applied to an organization; the resultant <see cref="PolicyStatus"/> is not indicative of explicit
     /// policy configuration. 
     /// </remarks>
-    Task<PolicyData> RunAsync(Guid organizationId, PolicyType policyType);
+    Task<PolicyStatus> RunAsync(Guid organizationId, PolicyType policyType);
 }

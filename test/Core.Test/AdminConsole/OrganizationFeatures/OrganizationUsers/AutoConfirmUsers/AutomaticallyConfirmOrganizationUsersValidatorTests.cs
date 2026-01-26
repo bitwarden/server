@@ -119,7 +119,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true, planType: PlanType.EnterpriseAnnually)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyData autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -279,7 +279,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         Guid userId,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyData autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -333,7 +333,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyData autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -388,7 +388,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyData autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -447,7 +447,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyData autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -501,7 +501,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         Guid userId,
-        [Policy(PolicyType.AutomaticUserConfirmation, false)] PolicyData policy)
+        [Policy(PolicyType.AutomaticUserConfirmation, false)] PolicyStatus policy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -545,7 +545,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: false)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         Guid userId,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyData autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -589,7 +589,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyData autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;

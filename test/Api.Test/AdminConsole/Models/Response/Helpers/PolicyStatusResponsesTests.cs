@@ -16,7 +16,7 @@ public class PolicyStatusResponsesTests
         bool policyEnabled,
         bool expectedCanToggle)
     {
-        var policy = new PolicyData(Guid.NewGuid(), PolicyType.SingleOrg) { Enabled = policyEnabled };
+        var policy = new PolicyStatus(Guid.NewGuid(), PolicyType.SingleOrg) { Enabled = policyEnabled };
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
@@ -30,7 +30,7 @@ public class PolicyStatusResponsesTests
     [Fact]
     public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsNotSingleOrgType_ThenShouldThrowArgumentException()
     {
-        var policy = new PolicyData(Guid.NewGuid(), PolicyType.TwoFactorAuthentication);
+        var policy = new PolicyStatus(Guid.NewGuid(), PolicyType.TwoFactorAuthentication);
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
@@ -44,7 +44,7 @@ public class PolicyStatusResponsesTests
     [Fact]
     public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsSingleOrgTypeAndDoesNotHaveVerifiedDomains_ThenShouldBeAbleToToggle()
     {
-        var policy = new PolicyData(Guid.NewGuid(), PolicyType.SingleOrg);
+        var policy = new PolicyStatus(Guid.NewGuid(), PolicyType.SingleOrg);
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)

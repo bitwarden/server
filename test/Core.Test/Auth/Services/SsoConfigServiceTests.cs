@@ -165,7 +165,7 @@ public class SsoConfigServiceTests
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_SingleOrgNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
         Organization organization,
-        [Policy(PolicyType.SingleOrg, false)] PolicyData policy)
+        [Policy(PolicyType.SingleOrg, false)] PolicyStatus policy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -197,8 +197,8 @@ public class SsoConfigServiceTests
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_SsoPolicyNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
         Organization organization,
-        [Policy(PolicyType.SingleOrg, true)] PolicyData singleOrgPolicy,
-        [Policy(PolicyType.RequireSso, false)] PolicyData requireSsoPolicy)
+        [Policy(PolicyType.SingleOrg, true)] PolicyStatus singleOrgPolicy,
+        [Policy(PolicyType.RequireSso, false)] PolicyStatus requireSsoPolicy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -232,7 +232,7 @@ public class SsoConfigServiceTests
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_SsoConfigNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
         Organization organization,
-        [Policy(PolicyType.SingleOrg, true)] PolicyData policy)
+        [Policy(PolicyType.SingleOrg, true)] PolicyStatus policy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -264,7 +264,7 @@ public class SsoConfigServiceTests
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_KeyConnectorAbilityNotEnabled_Throws(SutProvider<SsoConfigService> sutProvider,
         Organization organization,
-        [Policy(PolicyType.SingleOrg, true)] PolicyData policy)
+        [Policy(PolicyType.SingleOrg, true)] PolicyStatus policy)
     {
         var utcNow = DateTime.UtcNow;
 
@@ -297,7 +297,7 @@ public class SsoConfigServiceTests
     [Theory, BitAutoData]
     public async Task SaveAsync_KeyConnector_Success(SutProvider<SsoConfigService> sutProvider,
         Organization organization,
-        [Policy(PolicyType.SingleOrg, true)] PolicyData policy)
+        [Policy(PolicyType.SingleOrg, true)] PolicyStatus policy)
     {
         var utcNow = DateTime.UtcNow;
 

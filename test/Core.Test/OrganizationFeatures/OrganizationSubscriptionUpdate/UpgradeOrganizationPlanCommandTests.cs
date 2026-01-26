@@ -76,7 +76,7 @@ public class UpgradeOrganizationPlanCommandTests
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
     public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         sutProvider.GetDependency<IPolicyQuery>()
@@ -108,7 +108,7 @@ public class UpgradeOrganizationPlanCommandTests
         PlanType planType,
         Organization organization,
         OrganizationUpgrade organizationUpgrade,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -153,7 +153,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
 
@@ -197,7 +197,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpgradePlan_SM_NotEnoughSmSeats_Throws(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         upgrade.Plan = planType;
@@ -237,7 +237,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.TeamsStarter, 51)]
     public async Task UpgradePlan_SM_NotEnoughServiceAccounts_Throws(PlanType planType, int currentServiceAccounts,
      Organization organization, OrganizationUpgrade upgrade,
-     [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+     [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
      SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         upgrade.Plan = planType;
@@ -279,7 +279,7 @@ public class UpgradeOrganizationPlanCommandTests
         OrganizationUpgrade upgrade,
         string newPublicKey,
         string newPrivateKey,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         organization.PublicKey = null;
@@ -323,7 +323,7 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotOverwriteWithNull(
         Organization organization,
         OrganizationUpgrade upgrade,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         // Arrange
@@ -369,7 +369,7 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotBackfillWithNewKeys(
         Organization organization,
         OrganizationUpgrade upgrade,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         // Arrange

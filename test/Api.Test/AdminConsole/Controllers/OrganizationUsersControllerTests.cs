@@ -138,7 +138,7 @@ public class OrganizationUsersControllerTests
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsEnabledAndResetPolicyIsEnabled_ShouldHandleResetPassword(Guid orgId, Guid orgUserId,
         OrganizationUserAcceptRequestModel model, User user,
-        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
@@ -172,7 +172,7 @@ public class OrganizationUsersControllerTests
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsDisabled_ShouldNotHandleResetPassword(Guid orgId, Guid orgUserId,
         OrganizationUserAcceptRequestModel model, User user,
-        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange

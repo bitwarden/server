@@ -31,7 +31,7 @@ public class AdminRecoverAccountCommandTests
         Organization organization,
         OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
@@ -96,7 +96,7 @@ public class AdminRecoverAccountCommandTests
         string newMasterPassword,
         string key,
         Organization organization,
-        [Policy(PolicyType.ResetPassword, false)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
@@ -167,7 +167,7 @@ public class AdminRecoverAccountCommandTests
         Organization organization,
         string newMasterPassword,
         string key,
-        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
@@ -187,7 +187,7 @@ public class AdminRecoverAccountCommandTests
         string key,
         Organization organization,
         OrganizationUser organizationUser,
-        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
@@ -211,7 +211,7 @@ public class AdminRecoverAccountCommandTests
         Organization organization,
         OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.ResetPassword, true)] PolicyData policy,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<AdminRecoverAccountCommand> sutProvider)
     {
         // Arrange
@@ -237,7 +237,7 @@ public class AdminRecoverAccountCommandTests
             .Returns(organization);
     }
 
-    private static void SetupValidPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization, PolicyData policy)
+    private static void SetupValidPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization, PolicyStatus policy)
     {
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(organization.Id, PolicyType.ResetPassword)

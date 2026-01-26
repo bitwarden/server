@@ -245,7 +245,7 @@ public class RegisterUserCommandTests
     [BitAutoData(true, "Secrets Manager trial")]
     public async Task RegisterUserViaOrganizationInviteToken_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
-        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyData policy)
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
     {
         // Arrange
         sutProvider.GetDependency<IGlobalSettings>()
@@ -435,7 +435,7 @@ public class RegisterUserCommandTests
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromDifferentOrg_ThrowsBadRequestException(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
-        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyData policy)
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
@@ -481,7 +481,7 @@ public class RegisterUserCommandTests
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromSameOrg_Succeeds(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
-        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyData policy)
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@company-domain.com";
@@ -1258,7 +1258,7 @@ public class RegisterUserCommandTests
         OrganizationUser orgUser,
         string orgInviteToken,
         string masterPasswordHash,
-        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyData policy,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
@@ -1345,7 +1345,7 @@ public class RegisterUserCommandTests
         OrganizationUser orgUser,
         string masterPasswordHash,
         string orgInviteToken,
-        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyData policy,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange

@@ -186,7 +186,7 @@ public class PoliciesControllerTests
     [Theory]
     [BitAutoData]
     public async Task Get_WhenUserCanManagePolicies_WithExistingType_ReturnsExistingPolicy(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyData policy, PolicyType type)
+        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyStatus policy, PolicyType type)
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()

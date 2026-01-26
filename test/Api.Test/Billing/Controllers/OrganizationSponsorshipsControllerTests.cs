@@ -87,7 +87,7 @@ public class OrganizationSponsorshipsControllerTests
     public async Task RedeemSponsorship_NotSponsoredOrgOwner_Success(string sponsorshipToken, User user,
         OrganizationSponsorship sponsorship, Organization sponsoringOrganization,
         OrganizationSponsorshipRedeemRequestModel model,
-        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyData policy,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
         SutProvider<OrganizationSponsorshipsController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
@@ -111,7 +111,7 @@ public class OrganizationSponsorshipsControllerTests
     [BitAutoData]
     public async Task PreValidateSponsorshipToken_ValidatesToken_Success(string sponsorshipToken, User user,
         OrganizationSponsorship sponsorship,
-        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyData policy,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
         SutProvider<OrganizationSponsorshipsController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
