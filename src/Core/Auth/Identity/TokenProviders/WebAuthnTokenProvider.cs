@@ -148,8 +148,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         }
 
         // Load all WebAuthn credentials stored in metadata. The number of allowed credentials
-        // is controlled by PremiumMaximumAllowedCredentials and NonPremiumMaximumAllowedCredentials
-        // in GlobalSettings.WebAuthn (10 for premium, 5 for non-premium).
+        // is controlled by credential registration.
         for (var i = 1; i <=  provider.MetaData.Count(k => k.Key.StartsWith("Key")); i++)
         {
             var keyName = $"Key{i}";
