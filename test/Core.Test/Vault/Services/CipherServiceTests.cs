@@ -6,6 +6,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -2228,10 +2230,6 @@ public class CipherServiceTests
             .PushSyncCiphersAsync(deletingUserId);
     }
 
-
-
-
-
     [Theory]
     [OrganizationCipherCustomize]
     [BitAutoData]
@@ -2385,6 +2383,186 @@ public class CipherServiceTests
             .Received(1)
             .MarkAsCompleteByCipherIds(Arg.Is<IEnumerable<Guid>>(ids =>
                 ids.Count() == cipherIds.Length && ids.All(id => cipherIds.Contains(id))));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAttachmentAsync_UserWithOrgGrantedPremium_UsesStorageFromPricingClient(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid savingUserId)
+    {
+        var stream = new MemoryStream(new byte[100]);
+        var fileName = "test.txt";
+        var key = "test-key";
+
+        // Setup cipher with user ownership
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        // Setup user WITHOUT personal premium (Premium = false), but with org-granted premium access
+        var user = new User
+        {
+            Id = savingUserId,
+            Premium = false, // User does not have personal premium
+            MaxStorageGb = null, // No personal storage allocation
+            Storage = 0 // No storage used yet
+        };
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(savingUserId)
+            .Returns(user);
+
+        // User has premium access through their organization
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(user)
+            .Returns(true);
+
+        // Mock GlobalSettings to indicate cloud (not self-hosted)
+        sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = false;
+
+        // Mock the PricingClient to return a premium plan with 1 GB of storage
+        var premiumPlan = new Plan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "price_123", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "price_456", Price = 4, Provided = 1 }
+        };
+        sutProvider.GetDependency<IPricingClient>()
+            .GetAvailablePremiumPlan()
+            .Returns(premiumPlan);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .UploadNewAttachmentAsync(Arg.Any<Stream>(), cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .ValidateFileAsync(cipher, Arg.Any<CipherAttachment.MetaData>(), Arg.Any<long>())
+            .Returns((true, 100L));
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .UpdateAttachmentAsync(Arg.Any<CipherAttachment>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .ReplaceAsync(Arg.Any<CipherDetails>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sutProvider.Sut.CreateAttachmentAsync(cipher, stream, fileName, key, 100, savingUserId, false, cipher.RevisionDate);
+
+        // Assert - PricingClient was called to get the premium plan storage
+        await sutProvider.GetDependency<IPricingClient>().Received(1).GetAvailablePremiumPlan();
+
+        // Assert - Attachment was uploaded successfully
+        await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
+            .UploadNewAttachmentAsync(Arg.Any<Stream>(), cipher, Arg.Any<CipherAttachment.MetaData>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAttachmentAsync_UserWithOrgGrantedPremium_ExceedsStorage_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid savingUserId)
+    {
+        var stream = new MemoryStream(new byte[100]);
+        var fileName = "test.txt";
+        var key = "test-key";
+
+        // Setup cipher with user ownership
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        // Setup user WITHOUT personal premium, with org-granted access, but storage is full
+        var user = new User
+        {
+            Id = savingUserId,
+            Premium = false,
+            MaxStorageGb = null,
+            Storage = 1073741824 // 1 GB already used (equals the provided storage)
+        };
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(savingUserId)
+            .Returns(user);
+
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(user)
+            .Returns(true);
+
+        sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = false;
+
+        // Premium plan provides 1 GB of storage
+        var premiumPlan = new Plan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "price_123", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "price_456", Price = 4, Provided = 1 }
+        };
+        sutProvider.GetDependency<IPricingClient>()
+            .GetAvailablePremiumPlan()
+            .Returns(premiumPlan);
+
+        // Act & Assert - Should throw because storage is full
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAttachmentAsync(cipher, stream, fileName, key, 100, savingUserId, false, cipher.RevisionDate));
+        Assert.Contains("Not enough storage available", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAttachmentAsync_UserWithOrgGrantedPremium_SelfHosted_UsesConstantStorage(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid savingUserId)
+    {
+        var stream = new MemoryStream(new byte[100]);
+        var fileName = "test.txt";
+        var key = "test-key";
+
+        // Setup cipher with user ownership
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        // Setup user WITHOUT personal premium, but with org-granted premium access
+        var user = new User
+        {
+            Id = savingUserId,
+            Premium = false,
+            MaxStorageGb = null,
+            Storage = 0
+        };
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(savingUserId)
+            .Returns(user);
+
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(user)
+            .Returns(true);
+
+        // Mock GlobalSettings to indicate self-hosted
+        sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = true;
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .UploadNewAttachmentAsync(Arg.Any<Stream>(), cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .ValidateFileAsync(cipher, Arg.Any<CipherAttachment.MetaData>(), Arg.Any<long>())
+            .Returns((true, 100L));
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .UpdateAttachmentAsync(Arg.Any<CipherAttachment>())
+            .Returns(Task.CompletedTask);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .ReplaceAsync(Arg.Any<CipherDetails>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sutProvider.Sut.CreateAttachmentAsync(cipher, stream, fileName, key, 100, savingUserId, false, cipher.RevisionDate);
+
+        // Assert - PricingClient should NOT be called for self-hosted
+        await sutProvider.GetDependency<IPricingClient>().DidNotReceive().GetAvailablePremiumPlan();
+
+        // Assert - Attachment was uploaded successfully
+        await sutProvider.GetDependency<IAttachmentStorageService>().Received(1)
+            .UploadNewAttachmentAsync(Arg.Any<Stream>(), cipher, Arg.Any<CipherAttachment.MetaData>());
     }
 
     private async Task AssertNoActionsAsync(SutProvider<CipherService> sutProvider)
