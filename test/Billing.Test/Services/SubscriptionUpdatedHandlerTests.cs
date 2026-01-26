@@ -21,7 +21,6 @@ using Quartz;
 using Stripe;
 using Xunit;
 using Event = Stripe.Event;
-using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
 namespace Bit.Billing.Test.Services;
 
