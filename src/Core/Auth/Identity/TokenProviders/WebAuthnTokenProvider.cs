@@ -151,7 +151,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         // is controlled by PremiumMaximumAllowedCredentials and NonPremiumMaximumAllowedCredentials
         // in GlobalSettings.WebAuthn (10 for premium, 5 for non-premium).
         var maximumCredentials = _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials;
-        for (var i = 1; i <= maximumCredentials; i++)
+        for (var i = 1; i <=  provider.MetaData.Count(k => k.Key.StartsWith("Key")); i++)
         {
             var keyName = $"Key{i}";
             if (provider.MetaData.TryGetValue(keyName, out var value))
