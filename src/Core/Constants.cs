@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
+    public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -159,6 +160,7 @@ public static class FeatureFlagKeys
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
+    public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
@@ -173,6 +175,7 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
@@ -254,6 +257,7 @@ public static class FeatureFlagKeys
     /* DIRT Team */
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
+    public const string EventManagementForHuntress = "event-management-for-huntress";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
