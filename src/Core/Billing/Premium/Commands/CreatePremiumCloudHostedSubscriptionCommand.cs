@@ -76,24 +76,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         // These are: 'canceled' (user canceled) and 'incomplete_expired' (payment failed and time expired).
         // We allow users with terminal subscriptions to create a new subscription even if user.Premium is still true,
         // enabling the resubscribe workflow without requiring Premium status to be cleared first.
-        var hasTerminalSubscription = false;
-        if (!string.IsNullOrEmpty(user.GatewaySubscriptionId))
-        {
-            try
-            {
-                var existingSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
-                hasTerminalSubscription = existingSubscription.Status is
-                    SubscriptionStatus.Canceled or
-                    SubscriptionStatus.IncompleteExpired;
-            }
-            catch (Exception ex)
-            {
-                // Subscription doesn't exist in Stripe or can't be fetched (e.g., network issues, invalid ID)
-                // Log the issue but proceed with subscription creation to avoid blocking legitimate resubscribe attempts
-                _logger.LogWarning(ex, "Unable to fetch existing subscription {SubscriptionId} for user {UserId}. Proceeding with subscription creation",
-                    user.GatewaySubscriptionId, user.Id);
-            }
-        }
+        var hasTerminalSubscription = await HasTerminalSubscriptionAsync(user);
 
         if (user.Premium && !hasTerminalSubscription)
         {
@@ -158,7 +141,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             },
             _ =>
             {
-                if (subscription.Status is not (SubscriptionStatus.Active or SubscriptionStatus.Incomplete))
+                if (subscription.Status != SubscriptionStatus.Active)
                 {
                     return;
                 }
@@ -394,5 +377,29 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         await braintreeService.PayInvoice(new UserId(userId), invoice);
 
         return subscription;
+    }
+
+    private async Task<bool> HasTerminalSubscriptionAsync(User user)
+    {
+        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
+        {
+            return false;
+        }
+
+        try
+        {
+            var existingSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+            return existingSubscription.Status is
+                SubscriptionStatus.Canceled or
+                SubscriptionStatus.IncompleteExpired;
+        }
+        catch (Exception ex)
+        {
+            // Subscription doesn't exist in Stripe or can't be fetched (e.g., network issues, invalid ID)
+            // Log the issue but proceed with subscription creation to avoid blocking legitimate resubscribe attempts
+            _logger.LogWarning(ex, "Unable to fetch existing subscription {SubscriptionId} for user {UserId}. Proceeding with subscription creation",
+                user.GatewaySubscriptionId, user.Id);
+            return false;
+        }
     }
 }

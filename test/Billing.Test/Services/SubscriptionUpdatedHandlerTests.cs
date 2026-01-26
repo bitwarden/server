@@ -377,7 +377,7 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_UnpaidUserSubscription_DisablesPremiumAndCancelsSubscription()
+    public async Task HandleAsync_UnpaidUserSubscription_DisablesPremium()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -403,24 +403,11 @@ public class SubscriptionUpdatedHandlerTests
 
         var parsedEvent = new Event { Data = new EventData() };
 
-        var premiumPlan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
-            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
-        };
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
-
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
-
-        _stripeFacade.ListInvoices(Arg.Any<InvoiceListOptions>())
-            .Returns(new StripeList<Invoice> { Data = new List<Invoice>() });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -428,15 +415,14 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _userService.Received(1)
             .DisablePremiumAsync(userId, currentPeriodEnd);
-        await _stripeFacade.Received(1)
-            .CancelSubscription(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-        await _stripeFacade.Received(1)
-            .ListInvoices(Arg.Is<InvoiceListOptions>(o =>
-                o.Status == StripeInvoiceStatus.Open && o.Subscription == subscriptionId));
+        await _stripeFacade.DidNotReceive()
+            .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+        await _stripeFacade.DidNotReceive()
+            .ListInvoices(Arg.Any<InvoiceListOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_IncompleteExpiredUserSubscription_DisablesPremiumAndCancelsSubscription()
+    public async Task HandleAsync_IncompleteExpiredUserSubscription_DisablesPremium()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -462,24 +448,11 @@ public class SubscriptionUpdatedHandlerTests
 
         var parsedEvent = new Event { Data = new EventData() };
 
-        var premiumPlan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new PremiumPurchasable { Price = 10M, StripePriceId = IStripeEventUtilityService.PremiumPlanId },
-            Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "storage-plan-personal" }
-        };
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { premiumPlan });
-
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
-
-        _stripeFacade.ListInvoices(Arg.Any<InvoiceListOptions>())
-            .Returns(new StripeList<Invoice> { Data = new List<Invoice>() });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -487,11 +460,10 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _userService.Received(1)
             .DisablePremiumAsync(userId, currentPeriodEnd);
-        await _stripeFacade.Received(1)
-            .CancelSubscription(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-        await _stripeFacade.Received(1)
-            .ListInvoices(Arg.Is<InvoiceListOptions>(o =>
-                o.Status == StripeInvoiceStatus.Open && o.Subscription == subscriptionId));
+        await _stripeFacade.DidNotReceive()
+            .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+        await _stripeFacade.DidNotReceive()
+            .ListInvoices(Arg.Any<InvoiceListOptions>());
     }
 
     [Fact]

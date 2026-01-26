@@ -109,12 +109,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         break;
                     }
 
-                    if (await IsPremiumSubscriptionAsync(subscription))
-                    {
-                        await CancelSubscription(subscription.Id);
-                        await VoidOpenInvoices(subscription.Id);
-                    }
-
                     await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
 
                     break;
