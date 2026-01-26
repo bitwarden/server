@@ -287,14 +287,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var userId = _userService.GetProperUserId(User);
 
         IEnumerable<Tuple<Core.Entities.OrganizationUser, string>> result;
-        if (_featureService.IsEnabled(FeatureFlagKeys.IncreaseBulkReinviteLimitForCloud))
-        {
-            result = await _bulkResendOrganizationInvitesCommand.BulkResendInvitesAsync(orgId, userId.Value, model.Ids);
-        }
-        else
-        {
-            result = await _organizationService.ResendInvitesAsync(orgId, userId.Value, model.Ids);
-        }
+        result = await _bulkResendOrganizationInvitesCommand.BulkResendInvitesAsync(orgId, userId.Value, model.Ids);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(
             result.Select(t => new OrganizationUserBulkResponseModel(t.Item1.Id, t.Item2)));
