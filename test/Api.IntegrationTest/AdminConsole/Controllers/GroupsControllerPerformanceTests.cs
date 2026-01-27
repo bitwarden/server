@@ -26,13 +26,12 @@ public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
-
-        var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, userCount);
-
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
+
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         var collectionIds = collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);

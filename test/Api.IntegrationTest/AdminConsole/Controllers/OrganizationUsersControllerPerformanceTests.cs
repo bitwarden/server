@@ -28,13 +28,13 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
-
-        var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, seats);
-
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
+
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
+
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
@@ -64,13 +64,12 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
-
-        var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, seats);
-
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
+
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
@@ -99,12 +98,11 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var groupsSeeder = new GroupsRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, 1);
-
-        var groupsSeeder = new GroupsRecipe(db);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserId = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).FirstOrDefault();
         groupsSeeder.AddToOrganization(orgId, 2, [orgUserId]);
@@ -132,10 +130,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, name: "Org", domain: domain, users: 1);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserId = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).FirstOrDefault();
 
@@ -165,10 +163,14 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, userCount, usersStatus: OrganizationUserStatusType.Accepted);
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: userCount,
+            usersStatus: OrganizationUserStatusType.Accepted);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -209,10 +211,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, name: "Org", domain: domain, users: userCount);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -249,10 +251,14 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, userCount, usersStatus: OrganizationUserStatusType.Confirmed);
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: userCount,
+            usersStatus: OrganizationUserStatusType.Confirmed);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -289,10 +295,14 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, userCount, usersStatus: OrganizationUserStatusType.Revoked);
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: userCount,
+            usersStatus: OrganizationUserStatusType.Revoked);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -329,11 +339,15 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, userCount,
+
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: userCount,
             usersStatus: OrganizationUserStatusType.Confirmed);
 
         domainSeeder.AddVerifiedDomainToOrganization(orgId, domain);
@@ -370,13 +384,13 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
-
-        var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, 1);
-
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
+
+        var domain = OrganizationTestHelpers.GenerateRandomDomain();
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
+
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         var collectionIds = collectionsSeeder.AddToOrganization(orgId, 3, orgUserIds, 0);
         var groupIds = groupsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
@@ -420,10 +434,10 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, name: "Org", domain: domain, users: userCount);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -457,11 +471,14 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, 2,
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: 2,
             usersStatus: OrganizationUserStatusType.Confirmed);
 
         domainSeeder.AddVerifiedDomainToOrganization(orgId, domain);
@@ -495,12 +512,12 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var collectionsSeeder = new CollectionsRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, 1);
+        var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
-        var collectionsSeeder = new CollectionsRecipe(db);
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
         var collectionIds = collectionsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
 
@@ -543,10 +560,14 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        using var scope = factory.Services.CreateScope();
+        var orgSeeder = new OrganizationWithUsersRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
-        var orgId = OrganizationWithUsersRecipe.SeedFromServices(scope.ServiceProvider, "Org", domain, userCount, usersStatus: OrganizationUserStatusType.Invited);
+        var orgId = orgSeeder.Seed(
+            name: "Org",
+            domain: domain,
+            users: userCount,
+            usersStatus: OrganizationUserStatusType.Invited);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
