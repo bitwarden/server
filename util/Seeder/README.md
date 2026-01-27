@@ -13,19 +13,6 @@ A class library for generating and inserting properly encrypted test data into B
 
 The "View" suffix always denotes plaintext. No suffix means encrypted.
 
-### EncString Format
-
-Encrypted strings follow this format:
-
-```
-2.{iv}|{ciphertext}|{mac}
-```
-
-- **2** = Algorithm type (AES-256-CBC-HMAC-SHA256)
-- **iv** = Initialization vector (base64)
-- **ciphertext** = Encrypted data (base64)
-- **mac** = Message authentication code (base64)
-
 ### Data Structure Differences
 
 **SDK Structure (nested):**
