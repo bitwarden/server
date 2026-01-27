@@ -1,18 +1,16 @@
-﻿using Bit.Billing.Constants;
-using Bit.Billing.Jobs;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Quartz;
 using Stripe;
 using Stripe.TestHelpers;
 using Event = Stripe.Event;
+using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -25,14 +23,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly ISchedulerFactory _schedulerFactory;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
     private readonly IPricingClient _pricingClient;
-    private readonly IFeatureService _featureService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
-    private readonly ILogger<SubscriptionUpdatedHandler> _logger;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
 
     public SubscriptionUpdatedHandler(
@@ -43,14 +38,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
         IOrganizationRepository organizationRepository,
-        ISchedulerFactory schedulerFactory,
         IOrganizationEnableCommand organizationEnableCommand,
         IOrganizationDisableCommand organizationDisableCommand,
         IPricingClient pricingClient,
-        IFeatureService featureService,
         IProviderRepository providerRepository,
         IProviderService providerService,
-        ILogger<SubscriptionUpdatedHandler> logger,
         IPushNotificationAdapter pushNotificationAdapter)
     {
         _stripeEventService = stripeEventService;
@@ -62,182 +54,46 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _userService = userService;
         _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
-        _schedulerFactory = schedulerFactory;
         _organizationEnableCommand = organizationEnableCommand;
         _organizationDisableCommand = organizationDisableCommand;
         _pricingClient = pricingClient;
-        _featureService = featureService;
         _providerRepository = providerRepository;
         _providerService = providerService;
-        _logger = logger;
         _pushNotificationAdapter = pushNotificationAdapter;
     }
 
-    /// <summary>
-    /// Handles the <see cref="HandledStripeWebhook.SubscriptionUpdated"/> event type from Stripe.
-    /// </summary>
-    /// <param name="parsedEvent"></param>
     public async Task HandleAsync(Event parsedEvent)
     {
         var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice", "test_clock"]);
-        var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
+        SubscriberId subscriberId = subscription;
 
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
 
-        switch (subscription.Status)
+        if (SubscriptionWentUnpaid(parsedEvent, subscription))
         {
-            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired
-                when organizationId.HasValue:
-                {
-                    await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
-                    if (subscription.Status == StripeSubscriptionStatus.Unpaid &&
-                        subscription.LatestInvoice is { BillingReason: "subscription_cycle" or "subscription_create" })
-                    {
-                        await ScheduleCancellationJobAsync(subscription.Id, organizationId.Value);
-                    }
-                    break;
-                }
-            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired when providerId.HasValue:
-                {
-                    await HandleUnpaidProviderSubscriptionAsync(providerId.Value, parsedEvent, subscription);
-                    break;
-                }
-            case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired:
-                {
-                    if (!userId.HasValue)
-                    {
-                        break;
-                    }
-
-                    if (await IsPremiumSubscriptionAsync(subscription))
-                    {
-                        await CancelSubscription(subscription.Id);
-                        await VoidOpenInvoices(subscription.Id);
-                    }
-
-                    await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-
-                    break;
-                }
-            case StripeSubscriptionStatus.Incomplete when userId.HasValue:
-                {
-                    // Handle Incomplete subscriptions for Premium users that have open invoices from failed payments
-                    // This prevents duplicate subscriptions when users retry the subscription flow
-                    if (await IsPremiumSubscriptionAsync(subscription) &&
-                        subscription.LatestInvoice is { Status: StripeInvoiceStatus.Open })
-                    {
-                        await CancelSubscription(subscription.Id);
-                        await VoidOpenInvoices(subscription.Id);
-                        await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-                    }
-
-                    break;
-                }
-            case StripeSubscriptionStatus.Active when organizationId.HasValue:
-                {
-                    await _organizationEnableCommand.EnableAsync(organizationId.Value);
-                    var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-                    if (organization != null)
-                    {
-                        await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
-                    }
-                    break;
-                }
-            case StripeSubscriptionStatus.Active when providerId.HasValue:
-                {
-                    var provider = await _providerRepository.GetByIdAsync(providerId.Value);
-                    if (provider != null)
-                    {
-                        provider.Enabled = true;
-                        await _providerService.UpdateAsync(provider);
-
-                        if (IsProviderSubscriptionNowActive(parsedEvent, subscription))
-                        {
-                            // Update the CancelAtPeriodEnd subscription option to prevent the now active provider subscription from being cancelled
-                            var subscriptionUpdateOptions = new SubscriptionUpdateOptions { CancelAtPeriodEnd = false };
-                            await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionUpdateOptions);
-                        }
-                    }
-                    break;
-                }
-            case StripeSubscriptionStatus.Active:
-                {
-                    if (userId.HasValue)
-                    {
-                        await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
-                    }
-                    break;
-                }
+            await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
+            await SetSubscriptionToCancelAsync(subscription);
+        }
+        else if (SubscriptionBecameActive(parsedEvent, subscription))
+        {
+            await EnableSubscriberAsync(subscriberId, currentPeriodEnd);
+            await RemovePendingCancellationAsync(subscription);
         }
 
-        if (organizationId.HasValue)
-        {
-            await _organizationService.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd);
-            if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
+        await subscriberId.Match(
+            userId => _userService.UpdatePremiumExpirationAsync(userId.Value, currentPeriodEnd),
+            async organizationId =>
             {
-                await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd.Value);
-            }
+                await _organizationService.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd);
 
-            await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription);
-        }
-        else if (userId.HasValue)
-        {
-            await _userService.UpdatePremiumExpirationAsync(userId.Value, currentPeriodEnd);
-        }
-    }
+                if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
+                {
+                    await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd.Value);
+                }
 
-    private async Task CancelSubscription(string subscriptionId) =>
-        await _stripeFacade.CancelSubscription(subscriptionId, new SubscriptionCancelOptions());
-
-    private async Task VoidOpenInvoices(string subscriptionId)
-    {
-        var options = new InvoiceListOptions
-        {
-            Status = StripeInvoiceStatus.Open,
-            Subscription = subscriptionId
-        };
-        var invoices = await _stripeFacade.ListInvoices(options);
-        foreach (var invoice in invoices)
-        {
-            await _stripeFacade.VoidInvoice(invoice.Id);
-        }
-    }
-
-    private async Task<bool> IsPremiumSubscriptionAsync(Subscription subscription)
-    {
-        var premiumPlans = await _pricingClient.ListPremiumPlans();
-        var premiumPriceIds = premiumPlans.SelectMany(p => new[] { p.Seat.StripePriceId, p.Storage.StripePriceId }).ToHashSet();
-        return subscription.Items.Any(i => premiumPriceIds.Contains(i.Price.Id));
-    }
-
-    /// <summary>
-    /// Checks if the provider subscription status has changed from a non-active to an active status type
-    /// If the previous status is already active(active,past-due,trialing),canceled,or null, then this will return false.
-    /// </summary>
-    /// <param name="parsedEvent">The event containing the previous subscription status</param>
-    /// <param name="subscription">The current subscription status</param>
-    /// <returns>A boolean that represents whether the event status has changed from a non-active status to an active status</returns>
-    private static bool IsProviderSubscriptionNowActive(Event parsedEvent, Subscription subscription)
-    {
-        if (parsedEvent.Data.PreviousAttributes == null)
-        {
-            return false;
-        }
-
-        var previousSubscription = parsedEvent
-            .Data
-            .PreviousAttributes
-            .ToObject<Subscription>() as Subscription;
-
-        return previousSubscription?.Status switch
-        {
-            StripeSubscriptionStatus.IncompleteExpired
-                or StripeSubscriptionStatus.Paused
-                or StripeSubscriptionStatus.Incomplete
-                or StripeSubscriptionStatus.Unpaid
-                when subscription.Status == StripeSubscriptionStatus.Active => true,
-            _ => false
-        };
+                await RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(parsedEvent, subscription);
+            },
+            _ => Task.CompletedTask);
     }
 
     /// <summary>
@@ -305,7 +161,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             ?.Id == "sm-standalone";
 
         var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Coupon.Id)
-            .Contains(StripeConstants.CouponIDs.SecretsManagerStandalone);
+            .Contains(CouponIDs.SecretsManagerStandalone);
 
         if (customerHasSecretsManagerTrial)
         {
@@ -318,74 +174,93 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         }
     }
 
-    private async Task ScheduleCancellationJobAsync(string subscriptionId, Guid organizationId)
-    {
-        var scheduler = await _schedulerFactory.GetScheduler();
-
-        var job = JobBuilder.Create<SubscriptionCancellationJob>()
-            .WithIdentity($"cancel-sub-{subscriptionId}", "subscription-cancellations")
-            .UsingJobData("subscriptionId", subscriptionId)
-            .UsingJobData("organizationId", organizationId.ToString())
-            .Build();
-
-        var trigger = TriggerBuilder.Create()
-            .WithIdentity($"cancel-trigger-{subscriptionId}", "subscription-cancellations")
-            .StartAt(DateTimeOffset.UtcNow.AddDays(7))
-            .Build();
-
-        await scheduler.ScheduleJob(job, trigger);
-    }
-
-    private async Task HandleUnpaidProviderSubscriptionAsync(
-        Guid providerId,
+    private static bool SubscriptionBecameActive(
         Event parsedEvent,
-        Subscription currentSubscription)
-    {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
-        if (provider == null)
+        Subscription currentSubscription) =>
+        parsedEvent.Data.PreviousAttributes.ToObject<Subscription>() is Subscription
         {
-            return;
-        }
-
-        try
+            Status:
+            SubscriptionStatus.Incomplete or
+            SubscriptionStatus.Unpaid
+        } && currentSubscription is
         {
-            provider.Enabled = false;
-            await _providerService.UpdateAsync(provider);
+            Status: SubscriptionStatus.Active,
+            LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
+        };
 
-            if (parsedEvent.Data.PreviousAttributes != null)
+    private static bool SubscriptionWentUnpaid(
+        Event parsedEvent,
+        Subscription currentSubscription) =>
+        parsedEvent.Data.PreviousAttributes.ToObject<Subscription>() is Subscription
+        {
+            Status:
+            SubscriptionStatus.Trialing or
+            SubscriptionStatus.Active or
+            SubscriptionStatus.PastDue
+        } && currentSubscription is
+        {
+            Status: SubscriptionStatus.Unpaid,
+            LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
+        };
+
+    private Task DisableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
+        subscriberId.Match(
+            userId => _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd),
+            async organizationId =>
             {
-                var previousSubscription = parsedEvent.Data.PreviousAttributes.ToObject<Subscription>() as Subscription;
-
-                if (previousSubscription is
-                    {
-                        Status:
-                        StripeSubscriptionStatus.Trialing or
-                        StripeSubscriptionStatus.Active or
-                        StripeSubscriptionStatus.PastDue
-                    } && currentSubscription is
-                    {
-                        Status: StripeSubscriptionStatus.Unpaid,
-                        LatestInvoice.BillingReason: "subscription_cycle" or "subscription_create"
-                    })
+                await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
+                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+                if (organization != null)
                 {
-                    if (currentSubscription.TestClock != null)
-                    {
-                        await WaitForTestClockToAdvanceAsync(currentSubscription.TestClock);
-                    }
-
-                    var now = currentSubscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
-
-                    var subscriptionUpdateOptions = new SubscriptionUpdateOptions { CancelAt = now.AddDays(7) };
-
-                    await _stripeFacade.UpdateSubscription(currentSubscription.Id, subscriptionUpdateOptions);
+                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
                 }
-            }
-        }
-        catch (Exception exception)
+            },
+            async providerId =>
+            {
+                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+                if (provider != null)
+                {
+                    provider.Enabled = false;
+                    await _providerService.UpdateAsync(provider);
+                }
+            });
+
+    private Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
+        subscriberId.Match(
+            userId => _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd),
+            async organizationId =>
+            {
+                await _organizationEnableCommand.EnableAsync(organizationId.Value, currentPeriodEnd);
+                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+                if (organization != null)
+                {
+                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+                }
+            },
+            async providerId =>
+            {
+                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+                if (provider != null)
+                {
+                    provider.Enabled = true;
+                    await _providerService.UpdateAsync(provider);
+                }
+            });
+
+    private async Task SetSubscriptionToCancelAsync(Subscription subscription)
+    {
+        if (subscription.TestClock != null)
         {
-            _logger.LogError(exception, "An error occurred while trying to disable and schedule subscription cancellation for provider ({ProviderID})", providerId);
+            await WaitForTestClockToAdvanceAsync(subscription.TestClock);
         }
+
+        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        await _stripeFacade.UpdateSubscription(subscription.Id, new SubscriptionUpdateOptions { CancelAt = now.AddDays(7) });
     }
+
+    private async Task RemovePendingCancellationAsync(Subscription subscription)
+        => await _stripeFacade.UpdateSubscription(subscription.Id, new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
 
     private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
     {
@@ -399,4 +274,5 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
         }
     }
+
 }
