@@ -95,11 +95,6 @@ public class Startup
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        if (environment.IsDevelopment() || globalSettings.SelfHosted)
-        {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-        }
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
