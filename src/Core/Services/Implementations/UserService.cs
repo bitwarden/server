@@ -344,33 +344,6 @@ public class UserService : UserManager<User>, IUserService
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
     }
 
-    public async Task<bool> DeleteWebAuthnKeyAsync(User user, int id)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            return false;
-        }
-
-        var keyName = $"Key{id}";
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
-        {
-            return false;
-        }
-
-        if (provider.MetaData.Count < 2)
-        {
-            return false;
-        }
-
-        provider.MetaData.Remove(keyName);
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-        return true;
-    }
-
     public async Task SendEmailVerificationAsync(User user)
     {
         if (user.EmailVerified)

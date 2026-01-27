@@ -42,6 +42,7 @@ public class TwoFactorController : Controller
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IStartTwoFactorWebAuthnRegistrationCommand _startTwoFactorWebAuthnRegistrationCommand;
     private readonly ICompleteTwoFactorWebAuthnRegistrationCommand _completeTwoFactorWebAuthnRegistrationCommand;
+    private readonly IDeleteTwoFactorWebAuthnCredentialCommand _deleteTwoFactorWebAuthnCredentialCommand;
 
     public TwoFactorController(
         IUserService userService,
@@ -55,7 +56,8 @@ public class TwoFactorController : Controller
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector,
         ITwoFactorEmailService twoFactorEmailService,
         IStartTwoFactorWebAuthnRegistrationCommand startTwoFactorWebAuthnRegistrationCommand,
-        ICompleteTwoFactorWebAuthnRegistrationCommand completeTwoFactorWebAuthnRegistrationCommand)
+        ICompleteTwoFactorWebAuthnRegistrationCommand completeTwoFactorWebAuthnRegistrationCommand,
+        IDeleteTwoFactorWebAuthnCredentialCommand deleteTwoFactorWebAuthnCredentialCommand)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -69,6 +71,7 @@ public class TwoFactorController : Controller
         _twoFactorEmailService = twoFactorEmailService;
         _startTwoFactorWebAuthnRegistrationCommand = startTwoFactorWebAuthnRegistrationCommand;
         _completeTwoFactorWebAuthnRegistrationCommand = completeTwoFactorWebAuthnRegistrationCommand;
+        _deleteTwoFactorWebAuthnCredentialCommand = deleteTwoFactorWebAuthnCredentialCommand;
     }
 
     [HttpGet("")]
@@ -321,7 +324,18 @@ public class TwoFactorController : Controller
         [FromBody] TwoFactorWebAuthnDeleteRequestModel model)
     {
         var user = await CheckAsync(model, false);
-        await _userService.DeleteWebAuthnKeyAsync(user, model.Id.Value);
+
+        if (!model.Id.HasValue)
+        {
+            throw new BadRequestException("Unable to delete WebAuthn credential.");
+        }
+
+        var success = await _deleteTwoFactorWebAuthnCredentialCommand.DeleteTwoFactorWebAuthnCredentialAsync(user, model.Id.Value);
+        if (!success)
+        {
+            throw new BadRequestException("Unable to delete WebAuthn credential.");
+        }
+
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
     }
