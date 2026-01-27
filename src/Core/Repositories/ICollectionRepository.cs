@@ -64,11 +64,22 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
 
     /// <summary>
-    /// Creates default user collections for the specified organization users if they do not already have one.
+    /// Creates default user collections for the specified organization users.
+    /// Filters internally to only create collections for users who don't already have one.
     /// </summary>
     /// <param name="organizationId">The Organization ID.</param>
     /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
-    /// <returns></returns>
-    Task UpsertDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+    Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+
+    /// <summary>
+    /// Creates default user collections for the specified organization users using bulk insert operations.
+    /// Use this if you need to create collections for > ~1k users.
+    /// Filters internally to only create collections for users who don't already have one.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
+    /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
+    Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+
 }
