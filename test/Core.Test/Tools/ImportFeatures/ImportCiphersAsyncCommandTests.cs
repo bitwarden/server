@@ -360,8 +360,12 @@ public class ImportCiphersAsyncCommandTests
                 Arg.Any<List<Folder>>());
     }
 
+    /*
+     * Archive functionality is a per-user function and should only ever be presented to the user who set the archive
+     * bit to ON for the item. No admin, other user or task should mark items as archived for other users
+     */
     [Theory, BitAutoData]
-    public async Task ImportIntoOrganizationalVaultAsync_WithArchivedCiphers_PreservesArchiveStatus(
+    public async Task ImportIntoOrganizationalVaultAsync_WithArchivedCiphers_DoesNotSetArchives(
         Organization organization,
         Guid importingUserId,
         OrganizationUser importingOrganizationUser,
@@ -384,6 +388,7 @@ public class ImportCiphersAsyncCommandTests
         }
 
         ciphers[0].ArchivedDate = archivedDate;
+        ciphers[0].Archives = null;
 
         KeyValuePair<int, int>[] collectionRelationships = {
             new(0, 0),
@@ -409,9 +414,8 @@ public class ImportCiphersAsyncCommandTests
             .Received(1)
             .CreateAsync(
                 Arg.Is<List<CipherDetails>>(c =>
-                    c[0].Archives != null &&
-                    c[0].Archives.Contains(importingUserId.ToString().ToUpperInvariant()) &&
-                    c[0].Archives.Contains(archivedDate.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"))),
+                    c[0].ArchivedDate == archivedDate &&
+                    c[0].Archives == null),
                 Arg.Any<IEnumerable<Collection>>(),
                 Arg.Any<IEnumerable<CollectionCipher>>(),
                 Arg.Any<IEnumerable<CollectionUser>>());
