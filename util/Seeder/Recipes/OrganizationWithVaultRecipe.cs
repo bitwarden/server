@@ -9,6 +9,7 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 using EfOrganizationUser = Bit.Infrastructure.EntityFramework.Models.OrganizationUser;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
@@ -31,6 +32,12 @@ public class OrganizationWithVaultRecipe(
 {
     private readonly CollectionSeeder _collectionSeeder = new(sdkService);
     private readonly CipherSeeder _cipherSeeder = new(sdkService);
+    private readonly FolderSeeder _folderSeeder = new(sdkService);
+
+    /// <summary>
+    /// Tracks a user with their symmetric key for folder encryption.
+    /// </summary>
+    private record UserWithKey(User User, string SymmetricKey);
 
     /// <summary>
     /// Seeds an organization with users, collections, groups, and encrypted ciphers.
@@ -53,15 +60,17 @@ public class OrganizationWithVaultRecipe(
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
 
-        // Create member users via factory
-        var memberUsers = new List<User>();
+        // Create member users via factory, retaining keys for folder encryption
+        var memberUsersWithKeys = new List<UserWithKey>();
         var memberOrgUsers = new List<OrganizationUser>();
         var useRealisticMix = options.RealisticStatusMix && options.Users >= 10;
 
         for (var i = 0; i < options.Users; i++)
         {
-            var memberUser = UserSeeder.CreateUserWithSdkKeys($"user{i}@{options.Domain}", sdkService, passwordHasher);
-            memberUsers.Add(memberUser);
+            var email = $"user{i}@{options.Domain}";
+            var userKeys = sdkService.GenerateUserKeys(email, UserSeeder.DefaultPassword);
+            var memberUser = UserSeeder.CreateUserFromKeys(email, userKeys, passwordHasher);
+            memberUsersWithKeys.Add(new UserWithKey(memberUser, userKeys.Key));
 
             var status = useRealisticMix
                 ? GetRealisticStatus(i, options.Users)
@@ -75,6 +84,8 @@ public class OrganizationWithVaultRecipe(
             memberOrgUsers.Add(organization.CreateOrganizationUserWithKey(
                 memberUser, OrganizationUserType.User, status, memberOrgKey));
         }
+
+        var memberUsers = memberUsersWithKeys.Select(uwk => uwk.User).ToList();
 
         // Persist organization and users
         db.Add(mapper.Map<EfOrganization>(organization));
@@ -97,6 +108,7 @@ public class OrganizationWithVaultRecipe(
         var collectionIds = CreateCollections(organization.Id, orgKeys.Key, options.StructureModel, confirmedOrgUserIds);
         CreateGroups(organization.Id, options.Groups, confirmedOrgUserIds);
         CreateCiphers(organization.Id, orgKeys.Key, collectionIds, options.Ciphers, options.UsernamePattern, options.PasswordStrength, options.Region);
+        CreateFolders(memberUsersWithKeys);
 
         return organization.Id;
     }
@@ -252,5 +264,68 @@ public class OrganizationWithVaultRecipe(
         }
 
         return OrganizationUserStatusType.Revoked;
+    }
+
+    /// <summary>
+    /// Creates personal vault folders for users with realistic distribution.
+    /// Folders are encrypted with each user's individual symmetric key.
+    /// </summary>
+    private void CreateFolders(List<UserWithKey> usersWithKeys)
+    {
+        if (usersWithKeys.Count == 0)
+        {
+            return;
+        }
+
+        var seed = usersWithKeys[0].User.Id.GetHashCode();
+        var random = new Random(seed);
+        var folderNameGenerator = new FolderNameGenerator(seed);
+
+        var allFolders = usersWithKeys
+            .SelectMany((uwk, userIndex) =>
+            {
+                var folderCount = GetFolderCountForUser(userIndex, usersWithKeys.Count, random);
+                return Enumerable.Range(0, folderCount)
+                    .Select(folderIndex => _folderSeeder.CreateFolder(
+                        uwk.User.Id,
+                        uwk.SymmetricKey,
+                        folderNameGenerator.GetFolderName(userIndex * 15 + folderIndex)));
+            })
+            .ToList();
+
+        if (allFolders.Count > 0)
+        {
+            var efFolders = allFolders.Select(f => mapper.Map<EfFolder>(f)).ToList();
+            db.BulkCopy(efFolders);
+        }
+    }
+
+    /// <summary>
+    /// Returns folder count based on user index position in the distribution.
+    /// Distribution: 35% Zero, 35% Few (1-3), 20% Some (4-7), 10% TooMany (10-15)
+    /// </summary>
+    private static int GetFolderCountForUser(int userIndex, int totalUsers, Random random)
+    {
+        var zeroCount = (int)(totalUsers * 0.35);
+        var fewCount = (int)(totalUsers * 0.35);
+        var someCount = (int)(totalUsers * 0.20);
+        // TooMany gets the remainder
+
+        if (userIndex < zeroCount)
+        {
+            return 0; // Zero folders
+        }
+
+        if (userIndex < zeroCount + fewCount)
+        {
+            return random.Next(1, 4); // Few: 1-3 folders
+        }
+
+        if (userIndex < zeroCount + fewCount + someCount)
+        {
+            return random.Next(4, 8); // Some: 4-7 folders
+        }
+
+        return random.Next(10, 16); // TooMany: 10-15 folders
     }
 }

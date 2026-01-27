@@ -88,7 +88,19 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
         IPasswordHasher<User> passwordHasher)
     {
         var keys = sdkService.GenerateUserKeys(email, DefaultPassword);
+        return CreateUserFromKeys(email, keys, passwordHasher);
+    }
 
+    /// <summary>
+    /// Creates a user from pre-generated keys (no email mangling).
+    /// Use this when you need to retain the user's symmetric key for subsequent operations
+    /// (e.g., encrypting folders with the user's key).
+    /// </summary>
+    public static User CreateUserFromKeys(
+        string email,
+        UserKeys keys,
+        IPasswordHasher<User> passwordHasher)
+    {
         var user = new User
         {
             Id = CoreHelpers.GenerateComb(),
