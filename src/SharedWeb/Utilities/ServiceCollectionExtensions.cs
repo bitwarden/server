@@ -471,6 +471,11 @@ public static class ServiceCollectionExtensions
                 addAuthorization.Invoke(config);
             });
         }
+
+        if (environment.IsDevelopment() || globalSettings.SelfHosted)
+        {
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+        }
     }
 
     public static void AddCustomDataProtectionServices(
@@ -660,7 +665,6 @@ public static class ServiceCollectionExtensions
                     Constants.BrowserExtensions.OperaId
                  };
             }
-
         });
     }
 
