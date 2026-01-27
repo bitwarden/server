@@ -58,7 +58,7 @@ public class RestoreOrganizationUserCommand(
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
     {
-        await RepositoryRestoreUserAsync(organizationUser, ""); // users stored by a system user will not get a default collection at this point.
+        await RepositoryRestoreUserAsync(organizationUser, null); // users stored by a system user will not get a default collection at this point.
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored,
             systemUser);
 
