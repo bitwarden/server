@@ -34,8 +34,7 @@ public class OrganizationUserRotationValidator : IRotationValidator<IEnumerable<
         }
 
         // Exclude any account recovery that do not have a key.
-        existing = existing.Where(o => o.ResetPasswordKey != null).ToList();
-
+        existing = existing.Where(o => !string.IsNullOrEmpty(o.ResetPasswordKey)).ToList();
 
         foreach (var ou in existing)
         {
