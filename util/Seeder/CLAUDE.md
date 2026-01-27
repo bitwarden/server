@@ -1,5 +1,51 @@
 # Seeder - Claude Code Context
 
+## Ubiquitous Language
+
+The Seeder follows six core patterns:
+
+1. **Factories** - Create ONE entity with encryption. Named `{Entity}Seeder` with `Create{Type}{Entity}()` methods. Do not interact with database.
+
+2. **Recipes** - Orchestrate MANY entities. Named `{DomainConcept}Recipe`. **MUST have `Seed()` method** as primary interface, not `AddToOrganization()` or similar. Use parameters for variations, not separate methods. Compose Factories internally.
+
+3. **Models** - DTOs bridging SDK ↔ Server format. Named `{Entity}ViewDto` (plaintext), `Encrypted{Entity}Dto` (SDK format). Pure data, no logic.
+
+4. **Scenes** - Complete test scenarios with ID mangling. Implement `IScene<TRequest>`. Async, returns `SceneResult` with MangleMap. Named `{Scenario}Scene`.
+
+5. **Queries** - Read-only data retrieval. Implement `IQuery<TRequest, TResult>`. Synchronous, no DB modifications. Named `{DataToRetrieve}Query`.
+
+6. **Data** - Static, filterable test data collections (Companies, Passwords, Names, OrgStructures). Deterministic, composable. Enums provide public API.
+
+## The Recipe Contract
+
+Recipes follow strict rules (like a cooking recipe that you follow completely):
+
+1. A Recipe SHALL have exactly one public method named `Seed()`
+2. A Recipe MUST produce one cohesive result (like baking one complete cake)
+3. A Recipe MAY have overloaded `Seed()` methods with different parameters
+4. A Recipe SHALL use private helper methods for internal steps
+5. A Recipe SHALL use BulkCopy for performance when creating multiple entities
+6. A Recipe SHALL compose Factories for individual entity creation
+7. A Recipe SHALL NOT expose implementation details as public methods
+
+**Current violations** (to be refactored):
+
+- `CiphersRecipe` - Uses `AddLoginCiphersToOrganization()` instead of `Seed()`
+- `CollectionsRecipe` - Uses `AddFromStructure()` and `AddToOrganization()` instead of `Seed()`
+- `GroupsRecipe` - Uses `AddToOrganization()` instead of `Seed()`
+- `OrganizationDomainRecipe` - Uses `AddVerifiedDomainToOrganization()` instead of `Seed()`
+
+## Pattern Decision Tree
+
+```
+Need to create test data?
+├─ ONE entity with encryption? → Factory
+├─ MANY entities as cohesive operation? → Recipe
+├─ Complete test scenario with ID mangling? → Scene
+├─ READ existing seeded data? → Query
+└─ Data transformation SDK ↔ Server? → Model
+```
+
 ## When to Use the Seeder
 
 ✅ Use for:
@@ -56,17 +102,6 @@ CipherView (plaintext) → encrypt_composite() → Cipher (encrypted)
 Cipher (encrypted) → decrypt() → CipherView (plaintext)
 ```
 
-### EncString Format
-
-All encrypted fields use the EncString format:
-
-```
-2.{base64_iv}|{base64_data}|{base64_mac}
-│ └──────────┘ └──────────┘ └──────────┘
-│     IV         Ciphertext      HMAC
-└─ Type 2 = AES-256-CBC-HMAC-SHA256
-```
-
 ### SDK vs Server Format Difference
 
 **Critical:** The SDK and server use different JSON structures.
@@ -93,8 +128,6 @@ All encrypted fields use the EncString format:
 }
 ```
 
-The `CipherSeeder.TransformToServerCipher()` method performs this flattening.
-
 ### Data Flow in Seeder
 
 ```
@@ -117,15 +150,6 @@ The `CipherSeeder.TransformToServerCipher()` method performs this flattening.
 └─────────────────┘     └──────────────────┘     └─────────────────────┘
 ```
 
-### Key Files
-
-| File                           | Purpose                                                |
-| ------------------------------ | ------------------------------------------------------ |
-| `Models/CipherViewDto.cs`      | Plaintext input matching SDK's CipherView              |
-| `Models/EncryptedCipherDto.cs` | Parses SDK's encrypted Cipher output                   |
-| `Factories/CipherSeeder.cs`    | Creates encrypted ciphers, transforms to server format |
-| `Recipes/CiphersRecipe.cs`     | Bulk cipher creation with collection assignment        |
-
 ### Key Hierarchy
 
 Bitwarden uses a two-level encryption hierarchy:
@@ -136,14 +160,6 @@ Bitwarden uses a two-level encryption hierarchy:
 For seeding, we use the organization's symmetric key directly (no per-cipher key).
 
 ## Rust SDK FFI
-
-### Available Functions
-
-| Function                     | Input                 | Output                      |
-| ---------------------------- | --------------------- | --------------------------- |
-| `encrypt_cipher`             | CipherView JSON + key | Cipher JSON                 |
-| `decrypt_cipher`             | Cipher JSON + key     | CipherView JSON             |
-| `generate_organization_keys` | (none)                | Org symmetric key + keypair |
 
 ### Error Handling
 
@@ -157,7 +173,7 @@ Always check for `"error"` in the response before parsing.
 
 ## Testing
 
-Integration tests in `test/SeederApi.IntegrationTest/RustSdkCipherTests.cs` verify:
+Integration tests in `test/SeederApi.IntegrationTest` verify:
 
 1. **Roundtrip encryption** - Encrypt then decrypt preserves plaintext
 2. **Server format compatibility** - Output matches CipherLoginData structure
