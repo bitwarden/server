@@ -78,7 +78,7 @@ BEGIN
         C.[DefaultUserCollectionEmail],
         C.[Type]
 
-   IF (@IncludeAccessRelationships = 1)
+    IF (@IncludeAccessRelationships = 1)
     BEGIN
         EXEC [dbo].[CollectionGroup_ReadByOrganizationId] @OrganizationId
         EXEC [dbo].[CollectionUser_ReadByOrganizationId] @OrganizationId
