@@ -92,23 +92,27 @@ public class PushSettings
 
 public class CommunicationSettings
 {
+    public CommunicationBootstrapSettings Bootstrap { get; private init; }
+
+    public static CommunicationSettings Build(IGlobalSettings globalSettings)
+    {
+        var bootstrap = CommunicationBootstrapSettings.Build(globalSettings);
+        return bootstrap == null ? null : new() { Bootstrap = bootstrap };
+    }
+}
+
+public class CommunicationBootstrapSettings
+{
     public string Type { get; private init; }
     public string IdpLoginUrl { get; private init; }
     public string CookieName { get; private init; }
     public string CookieDomain { get; private init; }
 
-    public static CommunicationSettings Build(IGlobalSettings globalSettings)
+    public static CommunicationBootstrapSettings Build(IGlobalSettings globalSettings)
     {
-        var bootstrap = globalSettings.Communication?.Bootstrap?.ToLowerInvariant();
-
-        if (string.IsNullOrEmpty(bootstrap) || bootstrap == "none")
+        return globalSettings.Communication?.Bootstrap?.ToLowerInvariant() switch
         {
-            return null;
-        }
-
-        return bootstrap switch
-        {
-            "ssocookievendor" => new CommunicationSettings
+            "ssocookievendor" => new()
             {
                 Type = "ssoCookieVendor",
                 IdpLoginUrl = globalSettings.Communication?.SsoCookieVendor?.IdpLoginUrl,
