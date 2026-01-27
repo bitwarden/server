@@ -111,15 +111,6 @@ IBaseRequestValidatorTestWrapper
         context.GrantResult = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
     }
 
-    [Obsolete]
-    protected override void SetSsoResult(
-        BaseRequestValidationContextFake context,
-        Dictionary<string, object> customResponse)
-    {
-        context.GrantResult = new GrantValidationResult(
-            TokenRequestErrors.InvalidGrant, "Sso authentication required.", customResponse);
-    }
-
     protected override Task SetSuccessResult(
         BaseRequestValidationContextFake context,
         User user,

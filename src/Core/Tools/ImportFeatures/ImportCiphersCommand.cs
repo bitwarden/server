@@ -74,7 +74,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
             if (cipher.UserId.HasValue && cipher.Favorite)
             {
-                cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"true\"}}";
+                cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":true}}";
             }
         }
 

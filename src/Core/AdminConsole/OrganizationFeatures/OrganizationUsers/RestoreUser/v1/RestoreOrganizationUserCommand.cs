@@ -93,7 +93,7 @@ public class RestoreOrganizationUserCommand(
                 .twoFactorIsEnabled;
         }
 
-        if (organization.PlanType == PlanType.Free)
+        if (organization.PlanType == PlanType.Free && organizationUser.UserId.HasValue)
         {
             await CheckUserForOtherFreeOrganizationOwnershipAsync(organizationUser);
         }
