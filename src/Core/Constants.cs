@@ -166,6 +166,7 @@ public static class FeatureFlagKeys
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
+    public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
 
     /* Autofill Team */
