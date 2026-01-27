@@ -56,7 +56,7 @@ public class Program
         [Option('g', "groups", Description = "Number of groups to create (required, minimum 1)")]
         int groups,
         [Option('m', "mix-user-statuses", Description = "Use realistic status mix (85% confirmed, 5% each invited/accepted/revoked). Requires >= 10 users.")]
-        bool mixStatuses = false,
+        bool mixStatuses = true,
         [Option('o', "org-structure", Description = "Org structure for collections: Traditional, Spotify, or Modern")]
         string? structure = null
     )

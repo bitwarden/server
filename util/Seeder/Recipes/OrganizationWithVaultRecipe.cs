@@ -87,7 +87,7 @@ public class OrganizationWithVaultRecipe(
         db.BulkCopy(efMemberOrgUsers);
         db.SaveChanges();
 
-        // Get confirmed user IDs for relationships
+        // Get confirmed org user IDs for collection/group relationships
         var confirmedOrgUserIds = memberOrgUsers
             .Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
             .Select(ou => ou.Id)
@@ -129,8 +129,8 @@ public class OrganizationWithVaultRecipe(
             var collectionUsers = orgUserIds
                 .SelectMany((orgUserId, userIndex) =>
                 {
-                    var collectionCount = (userIndex % 3) + 1;
-                    return Enumerable.Range(0, collectionCount)
+                    var maxAssignments = Math.Min((userIndex % 3) + 1, collections.Count);
+                    return Enumerable.Range(0, maxAssignments)
                         .Select(j => CollectionSeeder.CreateCollectionUser(
                             collections[(userIndex + j) % collections.Count].Id,
                             orgUserId,
