@@ -146,10 +146,11 @@ public class ImportCiphersCommand : IImportCiphersCommand
             // Init. ids for ciphers
             cipher.SetNewId();
 
-            /*
-             * Archive functionality is a per-user function and should only ever be presented to the user who set the archive
-             * bit to ON for the item. No admin, other user or task should mark items as archived for other users.
-             */
+            if (cipher.ArchivedDate.HasValue)
+            {
+                cipher.Archives = $"{{\"{importingUserId.ToString().ToUpperInvariant()}\":\"" +
+                                  $"{cipher.ArchivedDate.Value:yyyy-MM-ddTHH:mm:ss.fffffffZ}\"}}";
+            }
         }
 
         var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
