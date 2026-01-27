@@ -4,9 +4,13 @@ namespace Bit.Seeder.Data;
 
 /// <summary>
 /// Generates deterministic usernames for companies using configurable patterns.
+/// Uses Bogus library for locale-aware name generation while maintaining determinism
+/// through pre-generated arrays indexed by a seed.
 /// </summary>
-internal sealed class UsernameGenerator
+internal sealed class CipherUsernameGenerator
 {
+    private const int _namePoolSize = 1500;
+
     private readonly Random _random;
 
     private readonly UsernamePattern _pattern;
@@ -15,7 +19,7 @@ internal sealed class UsernameGenerator
 
     private readonly string[] _lastNames;
 
-    public UsernameGenerator(
+    public CipherUsernameGenerator(
         int seed,
         UsernamePatternType patternType = UsernamePatternType.FirstDotLast,
         GeographicRegion? region = null)
@@ -23,12 +27,10 @@ internal sealed class UsernameGenerator
         _random = new Random(seed);
         _pattern = UsernamePatterns.GetPattern(patternType);
 
-        (_firstNames, _lastNames) = region switch
-        {
-            GeographicRegion.NorthAmerica => (Names.UsFirstNames, Names.UsLastNames),
-            GeographicRegion.Europe => (Names.EuropeanFirstNames, Names.EuropeanLastNames),
-            _ => (Names.AllFirstNames, Names.AllLastNames)
-        };
+        // Pre-generate arrays from Bogus for deterministic index-based access
+        var provider = new BogusNameProvider(region ?? GeographicRegion.Global, seed);
+        _firstNames = Enumerable.Range(0, _namePoolSize).Select(_ => provider.FirstName()).ToArray();
+        _lastNames = Enumerable.Range(0, _namePoolSize).Select(_ => provider.LastName()).ToArray();
     }
 
     public string Generate(Company company)

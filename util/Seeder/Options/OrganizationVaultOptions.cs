@@ -54,4 +54,10 @@ public class OrganizationVaultOptions
     /// (25% VeryWeak, 30% Weak, 25% Fair, 15% Strong, 5% VeryStrong).
     /// </summary>
     public PasswordStrength PasswordStrength { get; init; } = PasswordStrength.Realistic;
+
+    /// <summary>
+    /// Geographic region for culturally-appropriate name generation in cipher usernames.
+    /// Defaults to Global (mixed locales from all regions).
+    /// </summary>
+    public GeographicRegion? Region { get; init; }
 }

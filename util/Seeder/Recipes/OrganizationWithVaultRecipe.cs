@@ -96,7 +96,7 @@ public class OrganizationWithVaultRecipe(
 
         var collectionIds = CreateCollections(organization.Id, orgKeys.Key, options.StructureModel, confirmedOrgUserIds);
         CreateGroups(organization.Id, options.Groups, confirmedOrgUserIds);
-        CreateCiphers(organization.Id, orgKeys.Key, collectionIds, options.Ciphers, options.UsernamePattern, options.PasswordStrength);
+        CreateCiphers(organization.Id, orgKeys.Key, collectionIds, options.Ciphers, options.UsernamePattern, options.PasswordStrength, options.Region);
 
         return organization.Id;
     }
@@ -170,10 +170,11 @@ public class OrganizationWithVaultRecipe(
         List<Guid> collectionIds,
         int cipherCount,
         UsernamePatternType usernamePattern,
-        PasswordStrength passwordStrength)
+        PasswordStrength passwordStrength,
+        GeographicRegion? region)
     {
         var companies = Companies.All;
-        var usernameGenerator = new UsernameGenerator(organizationId.GetHashCode(), usernamePattern);
+        var usernameGenerator = new CipherUsernameGenerator(organizationId.GetHashCode(), usernamePattern, region);
 
         var cipherList = Enumerable.Range(0, cipherCount)
             .Select(i =>

@@ -58,7 +58,9 @@ public class Program
         [Option('m', "mix-user-statuses", Description = "Use realistic status mix (85% confirmed, 5% each invited/accepted/revoked). Requires >= 10 users.")]
         bool mixStatuses = true,
         [Option('o', "org-structure", Description = "Org structure for collections: Traditional, Spotify, or Modern")]
-        string? structure = null
+        string? structure = null,
+        [Option('r', "region", Description = "Geographic region for names: NorthAmerica, Europe, AsiaPacific, LatinAmerica, MiddleEast, Africa, or Global")]
+        string? region = null
     )
     {
         if (users < 1)
@@ -77,6 +79,7 @@ public class Program
         }
 
         var structureModel = ParseOrgStructure(structure);
+        var geographicRegion = ParseGeographicRegion(region);
 
         var services = new ServiceCollection();
         ServiceCollectionExtension.ConfigureServices(services);
@@ -99,7 +102,8 @@ public class Program
             Ciphers = ciphers,
             Groups = groups,
             RealisticStatusMix = mixStatuses,
-            StructureModel = structureModel
+            StructureModel = structureModel,
+            Region = geographicRegion
         });
     }
 
@@ -116,6 +120,26 @@ public class Program
             "spotify" => OrgStructureModel.Spotify,
             "modern" => OrgStructureModel.Modern,
             _ => throw new ArgumentException($"Unknown structure '{structure}'. Use: Traditional, Spotify, or Modern")
+        };
+    }
+
+    private static GeographicRegion? ParseGeographicRegion(string? region)
+    {
+        if (string.IsNullOrEmpty(region))
+        {
+            return null;
+        }
+
+        return region.ToLowerInvariant() switch
+        {
+            "northamerica" => GeographicRegion.NorthAmerica,
+            "europe" => GeographicRegion.Europe,
+            "asiapacific" => GeographicRegion.AsiaPacific,
+            "latinamerica" => GeographicRegion.LatinAmerica,
+            "middleeast" => GeographicRegion.MiddleEast,
+            "africa" => GeographicRegion.Africa,
+            "global" => GeographicRegion.Global,
+            _ => throw new ArgumentException($"Unknown region '{region}'. Use: NorthAmerica, Europe, AsiaPacific, LatinAmerica, MiddleEast, Africa, or Global")
         };
     }
 }
