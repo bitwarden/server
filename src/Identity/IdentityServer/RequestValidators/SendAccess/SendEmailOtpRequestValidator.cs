@@ -32,17 +32,21 @@ public class SendEmailOtpRequestValidator(
         // get email
         var email = request.Get(SendAccessConstants.TokenRequest.Email);
 
-        /*
-         * It is an invalid request if the email is missing or is not in the list of emails in the EmailOtp array.
-         * This is somewhat contradictory to our process here where a poor shape means invalid_request and invalid
-         * data is invalid_grant.
-         * In this case the shape is correct but the data is invalid but to protect against enumeration we treat missing
-         * or incorrect emails as invalid requests. The response for a request with a correct email which needs an OTP and a request
-         * that has an invalid email need to be the same otherwise an attacker can enumerate until a valid email is found.
-        */
-        if (string.IsNullOrEmpty(email) || !authMethod.Emails.Contains(email))
+        // It is an invalid request if the email is missing.
+        if (string.IsNullOrEmpty(email))
         {
-            // Request is the wrong shape and doesn't contain an email field.
+            // Request is the wrong shape and doesn't contain an email field.'
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
+        }
+        /*
+         * This is somewhat contradictory to our process where a poor shape means invalid_request and invalid
+         * data is invalid_grant.
+         * In this case the shape is correct and the data is invalid but to protect against enumeration we treat incorrect emails
+         * as invalid requests. The response for a request with a correct email which needs an OTP and a request
+         * that has an invalid email need to be the same otherwise an attacker could enumerate until a valid email is found.
+        */
+        if (!authMethod.Emails.Contains(email))
+        {
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
         }
 

@@ -37,7 +37,9 @@ public class SendNeverAuthenticateRequestValidator(GlobalSettings globalSettings
                 errorType = SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId;
                 break;
             case SendAccessConstants.EnumerationProtection.Email:
-                errorType = SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired;
+                var hasEmail = request.Get(SendAccessConstants.TokenRequest.Email) is not null;
+                errorType = hasEmail ? SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired
+                    : SendAccessConstants.EmailOtpValidatorResults.EmailRequired;
                 break;
             case SendAccessConstants.EnumerationProtection.Password:
                 var hasPassword = request.Get(SendAccessConstants.TokenRequest.ClientB64HashedPassword) is not null;
@@ -63,6 +65,7 @@ public class SendNeverAuthenticateRequestValidator(GlobalSettings globalSettings
             SendAccessConstants.PasswordValidatorResults.RequestPasswordIsRequired => TokenRequestErrors.InvalidGrant,
             SendAccessConstants.PasswordValidatorResults.RequestPasswordDoesNotMatch => TokenRequestErrors.InvalidRequest,
             SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired => TokenRequestErrors.InvalidRequest,
+            SendAccessConstants.EmailOtpValidatorResults.EmailRequired => TokenRequestErrors.InvalidRequest,
             _ => TokenRequestErrors.InvalidGrant
         };
 
