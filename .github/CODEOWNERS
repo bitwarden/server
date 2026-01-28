@@ -11,6 +11,9 @@
 **/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-bre
 **/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-bre
 
+# Scanning tools
+.checkmarx/ @bitwarden/team-appsec
+
 ## BRE team owns these workflows ##
 .github/workflows/publish.yml @bitwarden/dept-bre
 
