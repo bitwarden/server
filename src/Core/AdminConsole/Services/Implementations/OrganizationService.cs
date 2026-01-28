@@ -14,7 +14,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
@@ -717,32 +716,6 @@ public class OrganizationService : IOrganizationService
 
         return (allOrgUsers, events);
     }
-
-    public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId,
-        Guid? invitingUserId,
-        IEnumerable<Guid> organizationUsersId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
-        _logger.LogUserInviteStateDiagnostics(orgUsers);
-
-        var org = await GetOrgById(organizationId);
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-        foreach (var orgUser in orgUsers)
-        {
-            if (orgUser.Status != OrganizationUserStatusType.Invited || orgUser.OrganizationId != organizationId)
-            {
-                result.Add(Tuple.Create(orgUser, "User invalid."));
-                continue;
-            }
-
-            await SendInviteAsync(orgUser, org, false);
-            result.Add(Tuple.Create(orgUser, ""));
-        }
-
-        return result;
-    }
-
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
