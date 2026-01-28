@@ -35,7 +35,7 @@ public class SendEmailOtpRequestValidator(
         // It is an invalid request if the email is missing.
         if (string.IsNullOrEmpty(email))
         {
-            // Request is the wrong shape and doesn't contain an email field.'
+            // Request is the wrong shape and doesn't contain an email field.
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         }
         /*
