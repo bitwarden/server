@@ -61,7 +61,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IPolicyService _policyService;
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
@@ -98,7 +98,7 @@ public class UserService : UserManager<User>, IUserService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IPolicyService policyService,
         IFido2 fido2,
         ICurrentContext currentContext,
@@ -139,7 +139,7 @@ public class UserService : UserManager<User>, IUserService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _policyService = policyService;
         _fido2 = fido2;
         _currentContext = currentContext;
@@ -722,9 +722,8 @@ public class UserService : UserManager<User>, IUserService
         }
 
         // Enterprise policy must be enabled
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+        var resetPasswordPolicy = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }

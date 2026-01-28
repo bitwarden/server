@@ -1,14 +1,13 @@
-﻿using AutoFixture;
-using Bit.Api.AdminConsole.Models.Response.Helpers;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Models.Response.Helpers;
 
-public class PolicyDetailResponsesTests
+public class PolicyStatusResponsesTests
 {
     [Theory]
     [InlineData(true, false)]
@@ -17,19 +16,13 @@ public class PolicyDetailResponsesTests
         bool policyEnabled,
         bool expectedCanToggle)
     {
-        var fixture = new Fixture();
-
-        var policy = fixture.Build<Policy>()
-            .Without(p => p.Data)
-            .With(p => p.Type, PolicyType.SingleOrg)
-            .With(p => p.Enabled, policyEnabled)
-            .Create();
+        var policy = new PolicyStatus(Guid.NewGuid(), PolicyType.SingleOrg) { Enabled = policyEnabled };
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
             .Returns(true);
 
-        var result = await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
+        var result = await policy.GetSingleOrgPolicyStatusResponseAsync(querySub);
 
         Assert.Equal(expectedCanToggle, result.CanToggleState);
     }
@@ -37,18 +30,13 @@ public class PolicyDetailResponsesTests
     [Fact]
     public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsNotSingleOrgType_ThenShouldThrowArgumentException()
     {
-        var fixture = new Fixture();
-
-        var policy = fixture.Build<Policy>()
-            .Without(p => p.Data)
-            .With(p => p.Type, PolicyType.TwoFactorAuthentication)
-            .Create();
+        var policy = new PolicyStatus(Guid.NewGuid(), PolicyType.TwoFactorAuthentication);
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
             .Returns(true);
 
-        var action = async () => await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
+        var action = async () => await policy.GetSingleOrgPolicyStatusResponseAsync(querySub);
 
         await Assert.ThrowsAsync<ArgumentException>("policy", action);
     }
@@ -56,18 +44,13 @@ public class PolicyDetailResponsesTests
     [Fact]
     public async Task GetSingleOrgPolicyDetailResponseAsync_WhenIsSingleOrgTypeAndDoesNotHaveVerifiedDomains_ThenShouldBeAbleToToggle()
     {
-        var fixture = new Fixture();
-
-        var policy = fixture.Build<Policy>()
-            .Without(p => p.Data)
-            .With(p => p.Type, PolicyType.SingleOrg)
-            .Create();
+        var policy = new PolicyStatus(Guid.NewGuid(), PolicyType.SingleOrg);
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
         querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
             .Returns(false);
 
-        var result = await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
+        var result = await policy.GetSingleOrgPolicyStatusResponseAsync(querySub);
 
         Assert.True(result.CanToggleState);
     }

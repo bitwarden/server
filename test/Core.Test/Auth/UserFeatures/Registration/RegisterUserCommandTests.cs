@@ -1,7 +1,8 @@
 ﻿using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -13,6 +14,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -241,7 +243,8 @@ public class RegisterUserCommandTests
     [BitAutoData(true, "sampleInitiationPath")]
     [BitAutoData(true, "Secrets Manager trial")]
     public async Task RegisterUserViaOrganizationInviteToken_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
     {
         // Arrange
         sutProvider.GetDependency<IGlobalSettings>()
@@ -267,10 +270,9 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        twoFactorPolicy.Enabled = true;
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
-            .Returns(twoFactorPolicy);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
@@ -286,9 +288,9 @@ public class RegisterUserCommandTests
             .Received(1)
             .GetByIdAsync(orgUserId);
 
-        await sutProvider.GetDependency<IPolicyRepository>()
+        await sutProvider.GetDependency<IPolicyQuery>()
             .Received(1)
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
 
         sutProvider.GetDependency<IUserService>()
             .Received(1)
@@ -431,7 +433,8 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromDifferentOrg_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
@@ -463,6 +466,10 @@ public class RegisterUserCommandTests
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", orgUser.OrganizationId)
             .Returns(true);
 
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
@@ -472,7 +479,8 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromSameOrg_Succeeds(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@company-domain.com";
@@ -508,6 +516,10 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         // Act
         var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
@@ -1245,6 +1257,7 @@ public class RegisterUserCommandTests
         OrganizationUser orgUser,
         string orgInviteToken,
         string masterPasswordHash,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
@@ -1259,9 +1272,9 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
-            .Returns((Policy)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(orgUser.OrganizationId)
@@ -1331,6 +1344,7 @@ public class RegisterUserCommandTests
         OrganizationUser orgUser,
         string masterPasswordHash,
         string orgInviteToken,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
@@ -1346,9 +1360,9 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
-            .Returns((Policy)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(orgUser.OrganizationId)
