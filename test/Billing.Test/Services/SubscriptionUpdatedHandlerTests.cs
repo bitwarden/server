@@ -17,8 +17,8 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
 using Xunit;
-using Event = Stripe.Event;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using Event = Stripe.Event;
 
 namespace Bit.Billing.Test.Services;
 
@@ -137,7 +137,10 @@ public class SubscriptionUpdatedHandlerTests
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1)));
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.ProrationBehavior == ProrationBehavior.None &&
+                options.CancellationDetails != null &&
+                options.CancellationDetails.Comment != null));
     }
 
     [Fact]
@@ -196,7 +199,10 @@ public class SubscriptionUpdatedHandlerTests
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1)));
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.ProrationBehavior == ProrationBehavior.None &&
+                options.CancellationDetails != null &&
+                options.CancellationDetails.Comment != null));
     }
 
     [Fact]
@@ -417,7 +423,10 @@ public class SubscriptionUpdatedHandlerTests
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1)));
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.ProrationBehavior == ProrationBehavior.None &&
+                options.CancellationDetails != null &&
+                options.CancellationDetails.Comment != null));
     }
 
     [Fact]
@@ -471,7 +480,10 @@ public class SubscriptionUpdatedHandlerTests
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAt.HasValue &&
-                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1)));
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.ProrationBehavior == ProrationBehavior.None &&
+                options.CancellationDetails != null &&
+                options.CancellationDetails.Comment != null));
     }
 
     [Fact]
@@ -591,7 +603,9 @@ public class SubscriptionUpdatedHandlerTests
             .NotifyEnabledChangedAsync(organization);
         await _stripeFacade.Received(1).UpdateSubscription(
             subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options => options.CancelAtPeriodEnd == false));
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAtPeriodEnd == false &&
+                options.ProrationBehavior == ProrationBehavior.None));
     }
 
     [Fact]
@@ -645,7 +659,9 @@ public class SubscriptionUpdatedHandlerTests
             .UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
         await _stripeFacade.Received(1).UpdateSubscription(
             subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(options => options.CancelAtPeriodEnd == false));
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAtPeriodEnd == false &&
+                options.ProrationBehavior == ProrationBehavior.None));
     }
 
     [Fact]
@@ -895,7 +911,9 @@ public class SubscriptionUpdatedHandlerTests
         await _stripeFacade
             .Received(1)
             .UpdateSubscription(newSubscription.Id,
-                Arg.Is<SubscriptionUpdateOptions>(options => options.CancelAtPeriodEnd == false));
+                Arg.Is<SubscriptionUpdateOptions>(options =>
+                    options.CancelAtPeriodEnd == false &&
+                    options.ProrationBehavior == ProrationBehavior.None));
     }
 
     [Fact]
