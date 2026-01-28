@@ -74,11 +74,15 @@ public static class StripeConstants
         public const string PreviousPeriodEndDate = "previous_period_end_date";
         public const string PreviousPremiumPriceId = "previous_premium_price_id";
         public const string PreviousPremiumUserId = "previous_premium_user_id";
+        public const string PreviousStoragePriceId = "previous_storage_price_id";
         public const string ProviderId = "providerId";
         public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
         public const string StorageReconciled2025 = "storage_reconciled_2025";
+
+        // Premium-to-Organization upgrade reversion metadata
+        public const string UpgradedOrganizationId = "upgraded_organization_id";
     }
 
     public static class PaymentBehavior
