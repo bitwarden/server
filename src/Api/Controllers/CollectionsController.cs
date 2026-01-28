@@ -81,7 +81,7 @@ public class CollectionsController : Controller
     [HttpGet("details")]
     public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
     {
-        var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(
+        var allOrgCollections = await _collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
             orgId, _currentContext.UserId.Value, true);
 
         var readAllAuthorized =
