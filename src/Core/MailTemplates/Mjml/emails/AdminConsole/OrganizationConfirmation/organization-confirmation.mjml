@@ -29,52 +29,51 @@
     <!-- Blue Header Section -->
     <mj-section
         border-radius="10px 10px 0px 0px"
-        padding="40px"
+        padding="32px 32px 40px 32px"
         background-color="#175ddc">
       <mj-column
-          width="60%"
+          width="65%"
           padding="0px">
         <mj-image
-            padding="0px 0px 28px 0px"
+            padding="0px 0px 24px 0px"
             align="left"
             width="150px"
             src="https://bitwarden.com/images/logo-horizontal-white.png">
         </mj-image>
         <mj-text
-            font-size="20px"
-            line-height="30px"
-            font-weight="700"
-            padding="0px"
+            font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif"
+            font-size="24px"
+            line-height="32px"
+            font-weight="600"
+            padding="0px 0px 24px 0px"
             align="left"
-            color="#FEFFEA">
-          <p>You can now share passwords with members of {{OrganizationName}}!</p>
+            color="#ffffff">
+          <p><strong>{{OrganizationName}}</strong> set up a Bitwarden password manager account for you.</p>
         </mj-text>
-        <mj-spacer
-            height="28px">
-        </mj-spacer>
         <mj-button
             href="{{WebVaultUrl}}"
             background-color="#ffffff"
             color="#1A41AC"
             border-radius="20px"
             align="left"
-            inner-padding="12px 24px"
-            padding="12px 24px"
+            inner-padding="6px 16px"
+            padding="0px"
             font-size="16px"
-            font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+            font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif"
             font-weight="700"
             line-height="24px">
           Log in
         </mj-button>
       </mj-column>
       <mj-column
-          vertical-align="bottom"
-          width="40%">
+          vertical-align="middle"
+          width="35%">
         <mj-image
             align="center"
             padding="0px"
-            width="155px"
-            src="https://assets.bitwarden.com/email/v1/spot-business.png">
+            width="200px"
+            alt="Business Building"
+            src="https://assets.bitwarden.com/email/v1/spot-enterprise.png">
         </mj-image>
       </mj-column>
     </mj-section>
@@ -107,9 +106,10 @@
     <!-- Icon Row 1: Organization Ownership -->
     <mj-section
         padding="8px 40px"
+        text-align="left"
         background-color="#fff">
       <mj-column
-          width="15%"
+          width="48px"
           vertical-align="top">
         <mj-image
             css-class="icon-box"
@@ -142,9 +142,10 @@
     <!-- Icon Row 2: Password Sharing -->
     <mj-section
         padding="8px 40px 40px 40px"
+        text-align="left"
         background-color="#fff">
       <mj-column
-          width="15%"
+          width="48px"
           vertical-align="top">
         <mj-image
             css-class="icon-box"
@@ -289,5 +290,13 @@
         </mj-text>
       </mj-column>
     </mj-section>
+
+      <!-- Learn More Section -->
+      <mj-wrapper padding="5px 20px 10px 20px">
+          <mj-bw-learn-more-footer />
+      </mj-wrapper>
+
+      <!-- Footer -->
+      <mj-include path="../../../components/footer.mjml" />
   </mj-body>
 </mjml>
