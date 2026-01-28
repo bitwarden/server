@@ -22,7 +22,7 @@ public class DeleteTwoFactorWebAuthnCredentialCommand : IDeleteTwoFactorWebAuthn
 
         var keyName = $"Key{id}";
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
+        if (provider?.MetaData == null || !provider.MetaData.ContainsKey(keyName))
         {
             return false;
         }
