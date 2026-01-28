@@ -165,6 +165,7 @@ public static class FeatureFlagKeys
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
+    public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
 
     /* Autofill Team */
@@ -223,9 +224,10 @@ public static class FeatureFlagKeys
 
     /* Platform Team */
     public const string WebPush = "web-push";
-    public const string IpcChannelFramework = "ipc-channel-framework";
+    public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
+    public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
 
     /* Tools Team */
     /// <summary>

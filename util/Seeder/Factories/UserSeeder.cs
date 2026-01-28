@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
@@ -10,13 +9,6 @@ namespace Bit.Seeder.Factories;
 public struct UserData
 {
     public string Email;
-    public Guid Id;
-    public string? Key;
-    public string? PublicKey;
-    public string? PrivateKey;
-    public string? ApiKey;
-    public KdfType Kdf;
-    public int KdfIterations;
 }
 
 public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Entities.User> passwordHasher, MangleId mangleId)
@@ -75,30 +67,8 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
     {
         var mangleMap = new Dictionary<string, string?>
         {
-            { expectedUserData.Email, MangleEmail(expectedUserData.Email) },
-            { expectedUserData.Id.ToString(), user.Id.ToString() },
-            { expectedUserData.Kdf.ToString(), user.Kdf.ToString() },
-            { expectedUserData.KdfIterations.ToString(CultureInfo.InvariantCulture), user.KdfIterations.ToString(CultureInfo.InvariantCulture) }
+            { expectedUserData.Email, user.Email },
         };
-        if (expectedUserData.Key != null)
-        {
-            mangleMap[expectedUserData.Key] = user.Key;
-        }
-
-        if (expectedUserData.PublicKey != null)
-        {
-            mangleMap[expectedUserData.PublicKey] = user.PublicKey;
-        }
-
-        if (expectedUserData.PrivateKey != null)
-        {
-            mangleMap[expectedUserData.PrivateKey] = user.PrivateKey;
-        }
-
-        if (expectedUserData.ApiKey != null)
-        {
-            mangleMap[expectedUserData.ApiKey] = user.ApiKey;
-        }
 
         return mangleMap;
     }
