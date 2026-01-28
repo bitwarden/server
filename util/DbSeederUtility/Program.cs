@@ -1,6 +1,10 @@
-﻿using Bit.Infrastructure.EntityFramework.Repositories;
+﻿using AutoMapper;
+using Bit.Core.Entities;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.RustSDK;
 using Bit.Seeder.Recipes;
 using CommandDotNet;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.DbSeederUtility;
@@ -35,5 +39,26 @@ public class Program
 
         var recipe = new OrganizationWithUsersRecipe(db);
         recipe.Seed(name: name, domain: domain, users: users);
+    }
+
+    [Command("vault-organization", Description = "Seed an organization with users and encrypted vault data (ciphers, collections, groups)")]
+    public void VaultOrganization(VaultOrganizationArgs args)
+    {
+        args.Validate();
+
+        var services = new ServiceCollection();
+        ServiceCollectionExtension.ConfigureServices(services);
+        var serviceProvider = services.BuildServiceProvider();
+
+        using var scope = serviceProvider.CreateScope();
+        var scopedServices = scope.ServiceProvider;
+
+        var recipe = new OrganizationWithVaultRecipe(
+            scopedServices.GetRequiredService<DatabaseContext>(),
+            scopedServices.GetRequiredService<IMapper>(),
+            scopedServices.GetRequiredService<RustSdkService>(),
+            scopedServices.GetRequiredService<IPasswordHasher<User>>());
+
+        recipe.Seed(args.ToOptions());
     }
 }

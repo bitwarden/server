@@ -28,6 +28,7 @@ $projects = @{
     Scim             = "../bitwarden_license/src/Scim"
     IntegrationTests = "../test/Infrastructure.IntegrationTest"
     SeederApi        = "../util/SeederApi"
+    SeederUtility    = "../util/DbSeederUtility"
 }
 
 foreach ($key in $projects.keys) {

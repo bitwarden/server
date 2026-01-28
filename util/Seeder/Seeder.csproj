@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bogus" Version="35.*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="..\..\Program.cs" />
   </ItemGroup>
 
