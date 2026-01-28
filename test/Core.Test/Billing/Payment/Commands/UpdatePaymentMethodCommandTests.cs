@@ -4,6 +4,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.Extensions;
 using Braintree;
@@ -32,6 +33,7 @@ public class UpdatePaymentMethodCommandTests
     {
         _command = new UpdatePaymentMethodCommand(
             _braintreeGateway,
+            Substitute.For<IBraintreeService>(),
             _globalSettings,
             Substitute.For<ILogger<UpdatePaymentMethodCommand>>(),
             _setupIntentCache,

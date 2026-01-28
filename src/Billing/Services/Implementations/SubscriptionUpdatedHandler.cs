@@ -109,27 +109,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                         break;
                     }
 
-                    if (await IsPremiumSubscriptionAsync(subscription))
-                    {
-                        await CancelSubscription(subscription.Id);
-                        await VoidOpenInvoices(subscription.Id);
-                    }
-
                     await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-
-                    break;
-                }
-            case StripeSubscriptionStatus.Incomplete when userId.HasValue:
-                {
-                    // Handle Incomplete subscriptions for Premium users that have open invoices from failed payments
-                    // This prevents duplicate subscriptions when users retry the subscription flow
-                    if (await IsPremiumSubscriptionAsync(subscription) &&
-                        subscription.LatestInvoice is { Status: StripeInvoiceStatus.Open })
-                    {
-                        await CancelSubscription(subscription.Id);
-                        await VoidOpenInvoices(subscription.Id);
-                        await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
-                    }
 
                     break;
                 }
