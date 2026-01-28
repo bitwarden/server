@@ -22,8 +22,7 @@ public class SendEmailOtpRequestValidator(
     private static readonly Dictionary<string, string> _sendEmailOtpValidatorErrorDescriptions = new()
     {
         { SendAccessConstants.EmailOtpValidatorResults.EmailRequired, $"{SendAccessConstants.TokenRequest.Email} is required." },
-        { SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent, "email otp sent." },
-        { SendAccessConstants.EmailOtpValidatorResults.EmailInvalid, $"{SendAccessConstants.TokenRequest.Email} is invalid." },
+        { SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, $"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required." },
         { SendAccessConstants.EmailOtpValidatorResults.EmailOtpInvalid, $"{SendAccessConstants.TokenRequest.Email} otp is invalid." },
     };
 
@@ -33,17 +32,18 @@ public class SendEmailOtpRequestValidator(
         // get email
         var email = request.Get(SendAccessConstants.TokenRequest.Email);
 
-        // It is an invalid request if the email is missing which indicated bad shape.
-        if (string.IsNullOrEmpty(email))
+        /*
+         * It is an invalid request if the email is missing or is not in the list of emails in the EmailOtp array.
+         * This is somewhat contradictory to our process here where a poor shape means invalid_request and invalid
+         * data is invalid_grant.
+         * In this case the shape is correct but the data is invalid but to protect against enumeration we treat missing
+         * or incorrect emails as invalid requests. The response for a request with a correct email which needs an OTP and a request
+         * that has an invalid email need to be the same otherwise an attacker can enumerate until a valid email is found.
+        */
+        if (string.IsNullOrEmpty(email) || !authMethod.Emails.Contains(email))
         {
             // Request is the wrong shape and doesn't contain an email field.
-            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
-        }
-
-        // email must be in the list of emails in the EmailOtp array
-        if (!authMethod.Emails.Contains(email))
-        {
-            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailInvalid);
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
         }
 
         // get otp from request
@@ -76,7 +76,7 @@ public class SendEmailOtpRequestValidator(
                     token,
                     string.Format(SendAccessConstants.OtpEmail.Subject, token));
             }
-            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent);
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
         }
 
         // validate request otp
@@ -100,7 +100,7 @@ public class SendEmailOtpRequestValidator(
         switch (error)
         {
             case SendAccessConstants.EmailOtpValidatorResults.EmailRequired:
-            case SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent:
+            case SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired:
                 return new GrantValidationResult(TokenRequestErrors.InvalidRequest,
                     errorDescription: _sendEmailOtpValidatorErrorDescriptions[error],
                     new Dictionary<string, object>
@@ -108,7 +108,6 @@ public class SendEmailOtpRequestValidator(
                         { SendAccessConstants.SendAccessError, error }
                     });
             case SendAccessConstants.EmailOtpValidatorResults.EmailOtpInvalid:
-            case SendAccessConstants.EmailOtpValidatorResults.EmailInvalid:
                 return new GrantValidationResult(
                     TokenRequestErrors.InvalidGrant,
                     errorDescription: _sendEmailOtpValidatorErrorDescriptions[error],
