@@ -225,7 +225,7 @@ public static class FeatureFlagKeys
 
     /* Platform Team */
     public const string WebPush = "web-push";
-    public const string IpcChannelFramework = "ipc-channel-framework";
+    public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
