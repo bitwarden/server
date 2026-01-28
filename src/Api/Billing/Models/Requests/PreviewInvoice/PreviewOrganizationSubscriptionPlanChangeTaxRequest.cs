@@ -4,16 +4,16 @@ using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 
-namespace Bit.Api.Billing.Models.Requests.Tax;
+namespace Bit.Api.Billing.Models.Requests.PreviewInvoice;
 
-public record PreviewOrganizationSubscriptionPurchaseTaxRequest
+public record PreviewOrganizationSubscriptionPlanChangeTaxRequest
 {
     [Required]
-    public required OrganizationSubscriptionPurchaseRequest Purchase { get; set; }
+    public required OrganizationSubscriptionPlanChangeRequest Plan { get; set; }
 
     [Required]
     public required CheckoutBillingAddressRequest BillingAddress { get; set; }
 
-    public (OrganizationSubscriptionPurchase, BillingAddress) ToDomain() =>
-        (Purchase.ToDomain(), BillingAddress.ToDomain());
+    public (OrganizationSubscriptionPlanChange, BillingAddress) ToDomain() =>
+        (Plan.ToDomain(), BillingAddress.ToDomain());
 }

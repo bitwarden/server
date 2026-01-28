@@ -2,7 +2,7 @@
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.Billing.Payment.Models;
 
-namespace Bit.Api.Billing.Models.Requests.Tax;
+namespace Bit.Api.Billing.Models.Requests.PreviewInvoice;
 
 public record PreviewPremiumSubscriptionPurchaseTaxRequest
 {
