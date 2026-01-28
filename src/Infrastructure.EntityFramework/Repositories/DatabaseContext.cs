@@ -79,6 +79,7 @@ public class DatabaseContext : DbContext
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
     public DbSet<ProviderPlan> ProviderPlans { get; set; }
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
+    public DbSet<SubscriptionDiscount> SubscriptionDiscounts { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
     public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
