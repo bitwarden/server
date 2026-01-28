@@ -6,8 +6,8 @@ namespace Bit.Api.Controllers;
 
 /// <summary>
 /// Provides an endpoint to read an SSO cookie and redirect to a custom URI
-/// scheme. The load balancer must be configured such that requests to this
-/// endpoint do not have the auth cookie stripped.
+/// scheme. The load balancer/reverse proxy must be configured such that
+/// requests to this endpoint do not have the auth cookie stripped.
 /// </summary>
 [Route("sso-cookie-vendor")]
 public class SsoCookieVendorController(IGlobalSettings globalSettings) : Controller
@@ -29,7 +29,7 @@ public class SsoCookieVendorController(IGlobalSettings globalSettings) : Control
     public IActionResult Get()
     {
         var bootstrap = _globalSettings.Communication?.Bootstrap;
-        if (string.IsNullOrEmpty(bootstrap) || bootstrap != "ssoCookieVendor")
+        if (string.IsNullOrEmpty(bootstrap) || !bootstrap.Equals("ssoCookieVendor", StringComparison.OrdinalIgnoreCase))
         {
             return NotFound();
         }
