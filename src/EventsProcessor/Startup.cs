@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Microsoft.IdentityModel.Logging;
 
 namespace Bit.EventsProcessor;
 
@@ -40,7 +39,6 @@ public class Startup
 
     public void Configure(IApplicationBuilder app)
     {
-        IdentityModelEventSource.ShowPII = true;
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseRouting();
