@@ -10,8 +10,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<Core.Auth.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
@@ -144,6 +142,21 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
 
             await dbContext.SaveChangesAsync();
         };
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var rangeToRemove = from ea in dbContext.EmergencyAccesses
+                                where emergencyAccessIds.Contains(ea.Id)
+                                select ea;
+            dbContext.EmergencyAccesses.RemoveRange(rangeToRemove);
+
+            await dbContext.SaveChangesAsync();
+        }
     }
 
 }
