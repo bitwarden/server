@@ -13,6 +13,10 @@
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <BitIncludeAuthentication>false</BitIncludeAuthentication>
+    <BitIncludeFeatures>false</BitIncludeFeatures>
+  </PropertyGroup>
 
   <PropertyGroup>
 
