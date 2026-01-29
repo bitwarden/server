@@ -21,6 +21,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using OneOf.Types;
 using Error = Bit.Core.AdminConsole.Utilities.v2.Error;
@@ -219,14 +220,12 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             return validationError;
         }
 
-        await _organizationRepository.InitializePendingOrganizationAsync(
-            request.OrganizationId,
-            request.PublicKey,
-            request.PrivateKey,
-            request.OrganizationUserId,
-            request.User.Id,
-            request.UserKey,
-            request.CollectionName);
+        PrepareOrganizationForInitialization(org, request);
+        PrepareOrganizationUserForConfirmation(orgUser, request);
+
+        var updateActions = BuildDatabaseUpdateActions(org, orgUser, request);
+
+        await _organizationRepository.ExecuteOrganizationInitializationUpdatesAsync(updateActions);
 
         await SendNotificationsAsync(org, orgUser, request.User, request.OrganizationId);
 
@@ -301,6 +300,69 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         }
 
         return null;
+    }
+
+    private static void PrepareOrganizationForInitialization(Organization org, InitPendingOrganizationRequest request)
+    {
+        org.Enabled = true;
+        org.Status = OrganizationStatusType.Created;
+        org.PublicKey = request.PublicKey;
+        org.PrivateKey = request.PrivateKey;
+        org.RevisionDate = DateTime.UtcNow;
+    }
+
+    private static void PrepareOrganizationUserForConfirmation(OrganizationUser orgUser, InitPendingOrganizationRequest request)
+    {
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+        orgUser.UserId = request.User.Id;
+        orgUser.Key = request.UserKey;
+        orgUser.Email = null;
+    }
+
+    private List<OrganizationInitializationUpdateAction> BuildDatabaseUpdateActions(
+        Organization org,
+        OrganizationUser orgUser,
+        InitPendingOrganizationRequest request)
+    {
+        List<OrganizationInitializationUpdateAction> updateActions =
+        [
+            _organizationRepository.BuildUpdateOrganizationAction(org),
+            _organizationUserRepository.BuildConfirmOrganizationUserAction(orgUser),
+            _userRepository.BuildVerifyUserEmailAction(request.User.Id),
+        ];
+
+        if (!string.IsNullOrWhiteSpace(request.CollectionName))
+        {
+            var defaultCollectionAction = CreateDefaultCollectionAction(request);
+            updateActions.Add(defaultCollectionAction);
+        }
+
+        return updateActions;
+    }
+
+    private OrganizationInitializationUpdateAction CreateDefaultCollectionAction(InitPendingOrganizationRequest request)
+    {
+        var collection = new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = request.CollectionName,
+            OrganizationId = request.OrganizationId,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow
+        };
+
+        var collectionUsers = new[]
+        {
+            new CollectionAccessSelection
+            {
+                Id = request.OrganizationUserId,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            }
+        };
+
+        return _collectionRepository.BuildCreateDefaultCollectionAction(collection, collectionUsers);
     }
 
     private async Task SendNotificationsAsync(Organization org, OrganizationUser orgUser, User user, Guid organizationId)
