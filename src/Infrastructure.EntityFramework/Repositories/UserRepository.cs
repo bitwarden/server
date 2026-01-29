@@ -5,8 +5,10 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -572,5 +574,22 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
             item.Collection.RevisionDate = DateTime.UtcNow;
         }
+    }
+
+    public OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(Guid userId)
+    {
+        return async (SqlConnection? _, SqlTransaction? _, object? context) =>
+        {
+            var dbContext = (DatabaseContext)context!;
+
+            var user = await dbContext.Users.FindAsync(userId);
+            if (user != null && !user.EmailVerified)
+            {
+                user.EmailVerified = true;
+                user.RevisionDate = DateTime.UtcNow;
+
+                await dbContext.SaveChangesAsync();
+            }
+        };
     }
 }
