@@ -5,6 +5,7 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 using NSubstitute;
@@ -105,7 +106,7 @@ public class SendEmailOtpRequestValidatorTests
                 expectedUniqueId)
             .Returns(generatedToken);
 
-        var emailHash = SendAccessTestUtilities.HashAndEncode(email);
+        var emailHash = CryptographyHelper.HashAndEncode(email);
         emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         // Act
@@ -145,7 +146,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        var emailHash = SendAccessTestUtilities.HashAndEncode(email);
+        var emailHash = CryptographyHelper.HashAndEncode(email);
         emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -181,7 +182,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        var emailHash = SendAccessTestUtilities.HashAndEncode(email);
+        var emailHash = CryptographyHelper.HashAndEncode(email);
         emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
@@ -234,7 +235,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        var emailHash = SendAccessTestUtilities.HashAndEncode(email);
+        var emailHash = CryptographyHelper.HashAndEncode(email);
         emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
