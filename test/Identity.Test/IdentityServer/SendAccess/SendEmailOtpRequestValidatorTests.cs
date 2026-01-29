@@ -105,7 +105,7 @@ public class SendEmailOtpRequestValidatorTests
                 expectedUniqueId)
             .Returns(generatedToken);
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { EmailHashes = [email] };
 
         // Act
         var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
@@ -144,7 +144,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { EmailHashes = [email] };
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
@@ -179,7 +179,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { EmailHashes = [email] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
@@ -231,7 +231,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        emailOtp = emailOtp with { EmailHashes = [email] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
