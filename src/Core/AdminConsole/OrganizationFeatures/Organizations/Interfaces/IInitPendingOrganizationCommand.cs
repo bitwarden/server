@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
+using Microsoft.Data.SqlClient;
+
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IInitPendingOrganizationCommand
@@ -20,3 +22,10 @@ public interface IInitPendingOrganizationCommand
     /// <returns>A CommandResult indicating success or specific validation errors.</returns>
     Task<CommandResult> InitPendingOrganizationVNextAsync(InitPendingOrganizationRequest request);
 }
+
+/// <summary>
+/// Represents a database update action to be executed during organization initialization.
+/// </summary>
+public delegate Task OrganizationInitializationUpdateAction(SqlConnection? connection = null,
+    SqlTransaction? transaction = null,
+    object? context = null);
