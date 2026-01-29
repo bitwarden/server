@@ -41,7 +41,7 @@ Recipes follow strict rules (like a cooking recipe that you follow completely):
 Need to create test data?
 ├─ ONE entity with encryption? → Factory
 ├─ MANY entities as cohesive operation? → Recipe
-├─ Complete test scenario with ID mangling? → Scene
+├─ Complete test scenario with ID mangling to be used by the Seeder API? → Scene
 ├─ READ existing seeded data? → Query
 └─ Data transformation SDK ↔ Server? → Model
 ```

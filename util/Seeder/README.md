@@ -29,30 +29,6 @@ The "View" suffix always denotes plaintext. No suffix means encrypted.
 
 The seeder transforms SDK output to server format before database insertion.
 
-### Key Hierarchy
-
-```
-Organization Key (or User Key)
-       │
-       ├──▶ Encrypts Cipher.Key (optional per-cipher key)
-       │
-       └──▶ Encrypts cipher fields directly (if no per-cipher key)
-```
-
-For seeding, we encrypt directly with the organization key.
-
-### Entity Relationships
-
-```
-Organization
-    │
-    ├── Collections ──┬── CollectionCipher ──┐
-    │                 │                      │
-    └── Ciphers ──────┴──────────────────────┘
-```
-
-Ciphers belong to organizations and are assigned to collections via the `CollectionCipher` join table.
-
 ### Project Structure
 
 The Seeder is organized around six core patterns, each with a specific responsibility:
@@ -70,7 +46,6 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Create ONE entity per method call
 - Handle encryption/transformation internally
 - Stateless (except for SDK service dependency)
-- Return fully-formed entity ready for persistence
 - Do NOT interact with database directly
 
 **Naming:** `{Entity}Seeder` class with `Create{Type}{Entity}()` methods
@@ -147,7 +122,6 @@ The Seeder is organized around six core patterns, each with a specific responsib
 **Key characteristics:**
 
 - Implement `IQuery<TRequest, TResult>`
-- Synchronous operations (vs. async Scenes)
 - Read-only (no database modifications)
 - Return typed data for test assertions
 - Can be used to retrieve side effects due to tested flows

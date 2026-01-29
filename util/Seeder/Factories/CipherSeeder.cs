@@ -103,11 +103,6 @@ public class CipherSeeder
         var viewJson = JsonSerializer.Serialize(cipherView, SdkJsonOptions);
         var encryptedJson = _sdkService.EncryptCipher(viewJson, keyBase64);
 
-        if (encryptedJson.Contains("\"error\""))
-        {
-            throw new InvalidOperationException($"Cipher encryption failed: {encryptedJson}");
-        }
-
         var encryptedDto = JsonSerializer.Deserialize<EncryptedCipherDto>(encryptedJson, SdkJsonOptions)
             ?? throw new InvalidOperationException("Failed to parse encrypted cipher");
 

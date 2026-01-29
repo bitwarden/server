@@ -36,43 +36,32 @@ pub unsafe extern "C" fn encrypt_cipher(
     cipher_view_json: *const c_char,
     symmetric_key_b64: *const c_char,
 ) -> *const c_char {
-    let cipher_view_json = match CStr::from_ptr(cipher_view_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return error_response("Invalid UTF-8 in cipher_view_json"),
+    let Ok(cipher_view_json) = CStr::from_ptr(cipher_view_json).to_str() else {
+        return error_response("Invalid UTF-8 in cipher_view_json");
     };
 
-    let key_b64 = match CStr::from_ptr(symmetric_key_b64).to_str() {
-        Ok(s) => s,
-        Err(_) => return error_response("Invalid UTF-8 in symmetric_key_b64"),
+    let Ok(key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
+        return error_response("Invalid UTF-8 in symmetric_key_b64");
     };
 
-    let cipher_view: CipherView = match serde_json::from_str(cipher_view_json) {
-        Ok(v) => v,
-        Err(_) => return error_response("Failed to parse CipherView JSON"),
+    let Ok(cipher_view): Result<CipherView, _> = serde_json::from_str(cipher_view_json) else {
+        return error_response("Failed to parse CipherView JSON");
     };
 
-    let key_bytes = match STANDARD.decode(key_b64) {
-        Ok(b) => b,
-        Err(_) => return error_response("Failed to decode base64 key"),
+    let Ok(key_bytes) = STANDARD.decode(key_b64) else {
+        return error_response("Failed to decode base64 key");
     };
 
-    let key =
-        match SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) {
-            Ok(k) => k,
-            Err(_) => {
-                return error_response(
-                    "Failed to create symmetric key: invalid key format or length",
-                )
-            }
-        };
+    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
+        return error_response("Failed to create symmetric key: invalid key format or length");
+    };
 
     let store: KeyStore<KeyIds> = KeyStore::default();
     let mut ctx = store.context_mut();
     let key_id = ctx.add_local_symmetric_key(key);
 
-    let cipher = match cipher_view.encrypt_composite(&mut ctx, key_id) {
-        Ok(c) => c,
-        Err(_) => return error_response("Failed to encrypt cipher: encryption operation failed"),
+    let Ok(cipher) = cipher_view.encrypt_composite(&mut ctx, key_id) else {
+        return error_response("Failed to encrypt cipher: encryption operation failed");
     };
 
     match serde_json::to_string(&cipher) {
@@ -97,43 +86,32 @@ pub unsafe extern "C" fn decrypt_cipher(
     cipher_json: *const c_char,
     symmetric_key_b64: *const c_char,
 ) -> *const c_char {
-    let cipher_json = match CStr::from_ptr(cipher_json).to_str() {
-        Ok(s) => s,
-        Err(_) => return error_response("Invalid UTF-8 in cipher_json"),
+    let Ok(cipher_json) = CStr::from_ptr(cipher_json).to_str() else {
+        return error_response("Invalid UTF-8 in cipher_json");
     };
 
-    let key_b64 = match CStr::from_ptr(symmetric_key_b64).to_str() {
-        Ok(s) => s,
-        Err(_) => return error_response("Invalid UTF-8 in symmetric_key_b64"),
+    let Ok(key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
+        return error_response("Invalid UTF-8 in symmetric_key_b64");
     };
 
-    let cipher: Cipher = match serde_json::from_str(cipher_json) {
-        Ok(c) => c,
-        Err(_) => return error_response("Failed to parse Cipher JSON"),
+    let Ok(cipher): Result<Cipher, _> = serde_json::from_str(cipher_json) else {
+        return error_response("Failed to parse Cipher JSON");
     };
 
-    let key_bytes = match STANDARD.decode(key_b64) {
-        Ok(b) => b,
-        Err(_) => return error_response("Failed to decode base64 key"),
+    let Ok(key_bytes) = STANDARD.decode(key_b64) else {
+        return error_response("Failed to decode base64 key");
     };
 
-    let key =
-        match SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) {
-            Ok(k) => k,
-            Err(_) => {
-                return error_response(
-                    "Failed to create symmetric key: invalid key format or length",
-                )
-            }
-        };
+    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
+        return error_response("Failed to create symmetric key: invalid key format or length");
+    };
 
     let store: KeyStore<KeyIds> = KeyStore::default();
     let mut ctx = store.context_mut();
     let key_id = ctx.add_local_symmetric_key(key);
 
-    let cipher_view: CipherView = match cipher.decrypt(&mut ctx, key_id) {
-        Ok(v) => v,
-        Err(_) => return error_response("Failed to decrypt cipher: decryption operation failed"),
+    let Ok(cipher_view): Result<CipherView, _> = cipher.decrypt(&mut ctx, key_id) else {
+        return error_response("Failed to decrypt cipher: decryption operation failed");
     };
 
     match serde_json::to_string(&cipher_view) {
@@ -158,34 +136,24 @@ pub unsafe extern "C" fn encrypt_string(
     plaintext: *const c_char,
     symmetric_key_b64: *const c_char,
 ) -> *const c_char {
-    let plaintext = match CStr::from_ptr(plaintext).to_str() {
-        Ok(s) => s,
-        Err(_) => return error_response("Invalid UTF-8 in plaintext"),
+    let Ok(plaintext) = CStr::from_ptr(plaintext).to_str() else {
+        return error_response("Invalid UTF-8 in plaintext");
     };
 
-    let key_b64 = match CStr::from_ptr(symmetric_key_b64).to_str() {
-        Ok(s) => s,
-        Err(_) => return error_response("Invalid UTF-8 in symmetric_key_b64"),
+    let Ok(key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
+        return error_response("Invalid UTF-8 in symmetric_key_b64");
     };
 
-    let key_bytes = match STANDARD.decode(key_b64) {
-        Ok(b) => b,
-        Err(_) => return error_response("Failed to decode base64 key"),
+    let Ok(key_bytes) = STANDARD.decode(key_b64) else {
+        return error_response("Failed to decode base64 key");
     };
 
-    let key =
-        match SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) {
-            Ok(k) => k,
-            Err(_) => {
-                return error_response(
-                    "Failed to create symmetric key: invalid key format or length",
-                )
-            }
-        };
+    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
+        return error_response("Failed to create symmetric key: invalid key format or length");
+    };
 
-    let encrypted = match plaintext.to_string().encrypt_with_key(&key) {
-        Ok(e) => e,
-        Err(_) => return error_response("Failed to encrypt string"),
+    let Ok(encrypted) = plaintext.to_string().encrypt_with_key(&key) else {
+        return error_response("Failed to encrypt string");
     };
 
     CString::new(encrypted.to_string()).unwrap().into_raw()

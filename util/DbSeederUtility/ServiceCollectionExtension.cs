@@ -16,7 +16,12 @@ public static class ServiceCollectionExtension
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
 
         // Register services
-        services.AddLogging(builder => builder.AddConsole());
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Warning);
+            builder.AddFilter("Microsoft.EntityFrameworkCore.Model.Validation", LogLevel.Error);
+        });
         services.AddSingleton(globalSettings);
         services.AddSingleton<RustSdkService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
