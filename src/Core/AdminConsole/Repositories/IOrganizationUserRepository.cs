@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 #nullable enable
 
@@ -108,4 +109,11 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Similar to GetByOrganizationAsync, but returns the user details.
     /// </remarks>
     Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId);
+
+    /// <summary>
+    /// Builds an action that confirms an organization user (sets status to Confirmed, links to user, sets key).
+    /// </summary>
+    /// <param name="organizationUser">The organization user entity with updated properties</param>
+    /// <returns>An action that can be executed within a transaction</returns>
+    OrganizationInitializationUpdateAction BuildConfirmOrganizationUserAction(OrganizationUser organizationUser);
 }
