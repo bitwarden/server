@@ -141,6 +141,7 @@ public static class FeatureFlagKeys
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
+    public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
 
@@ -260,6 +261,7 @@ public static class FeatureFlagKeys
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
     public const string EventManagementForHuntress = "event-management-for-huntress";
+    public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
