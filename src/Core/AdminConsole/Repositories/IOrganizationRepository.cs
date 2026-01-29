@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 #nullable enable
 
@@ -66,23 +67,16 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
 
     /// <summary>
-    /// Initializes a pending organization by enabling it, setting keys, confirming the first owner,
-    /// and optionally creating a default collection. All operations are performed atomically.
+    /// Builds an action that updates an organization for initialization (sets keys, status, and enabled state).
     /// </summary>
-    /// <param name="organizationId">The ID of the organization to initialize</param>
-    /// <param name="publicKey">Organization public key</param>
-    /// <param name="privateKey">Organization private key</param>
-    /// <param name="organizationUserId">The ID of the organization user to confirm</param>
-    /// <param name="userId">The ID of the user to verify</param>
-    /// <param name="userKey">The user's encrypted key</param>
-    /// <param name="collectionName">Optional name for the default collection</param>
+    /// <param name="organization">The organization entity with updated properties</param>
+    /// <returns>An action that can be executed within a transaction</returns>
+    OrganizationInitializationUpdateAction BuildUpdateOrganizationAction(Organization organization);
+
+    /// <summary>
+    /// Executes organization initialization updates within a single transaction.
+    /// </summary>
+    /// <param name="updateActions">Collection of initialization update delegates to execute</param>
     /// <returns>A task representing the asynchronous operation</returns>
-    Task InitializePendingOrganizationAsync(
-        Guid organizationId,
-        string publicKey,
-        string privateKey,
-        Guid organizationUserId,
-        Guid userId,
-        string userKey,
-        string collectionName);
+    Task ExecuteOrganizationInitializationUpdatesAsync(IEnumerable<OrganizationInitializationUpdateAction> updateActions);
 }

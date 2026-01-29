@@ -9,10 +9,10 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
-using Bit.Infrastructure.EntityFramework.Models;
 using LinqToDB.Tools;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -443,14 +443,27 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.RevisionDate, requestDate));
     }
 
-    public async Task InitializePendingOrganizationAsync(
-        Guid organizationId,
-        string publicKey,
-        string privateKey,
-        Guid organizationUserId,
-        Guid userId,
-        string userKey,
-        string collectionName)
+    public OrganizationInitializationUpdateAction BuildUpdateOrganizationAction(Core.AdminConsole.Entities.Organization organization)
+    {
+        return async (SqlConnection _, SqlTransaction _, object context) =>
+        {
+            var dbContext = (DatabaseContext)context;
+
+            var efOrganization = await dbContext.Organizations.FindAsync(organization.Id);
+            if (efOrganization != null)
+            {
+                efOrganization.Enabled = organization.Enabled;
+                efOrganization.Status = organization.Status;
+                efOrganization.PublicKey = organization.PublicKey;
+                efOrganization.PrivateKey = organization.PrivateKey;
+                efOrganization.RevisionDate = organization.RevisionDate;
+
+                await dbContext.SaveChangesAsync();
+            }
+        };
+    }
+
+    public async Task ExecuteOrganizationInitializationUpdatesAsync(IEnumerable<OrganizationInitializationUpdateAction> updateActions)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -459,79 +472,16 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         try
         {
-            // 1. Update Organization
-            var organization = await dbContext.Organizations.FindAsync(organizationId);
-            if (organization == null)
+            foreach (var action in updateActions)
             {
-                throw new InvalidOperationException($"Organization with ID {organizationId} not found.");
+                await action(null, null, dbContext);
             }
-
-            organization.Enabled = true;
-            organization.Status = OrganizationStatusType.Created;
-            organization.PublicKey = publicKey;
-            organization.PrivateKey = privateKey;
-            organization.RevisionDate = DateTime.UtcNow;
-
-            // 2. Update OrganizationUser
-            var organizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUserId);
-            if (organizationUser == null)
-            {
-                throw new InvalidOperationException($"OrganizationUser with ID {organizationUserId} not found.");
-            }
-
-            organizationUser.Status = OrganizationUserStatusType.Confirmed;
-            organizationUser.UserId = userId;
-            organizationUser.Key = userKey;
-            organizationUser.Email = null;
-
-            // 3. Update User (verify email if needed)
-            var user = await dbContext.Users.FindAsync(userId);
-            if (user == null)
-            {
-                throw new InvalidOperationException($"User with ID {userId} not found.");
-            }
-
-            if (user.EmailVerified == false)
-            {
-                user.EmailVerified = true;
-                user.RevisionDate = DateTime.UtcNow;
-            }
-
-            // 4. Create default collection if name provided
-            if (!string.IsNullOrWhiteSpace(collectionName))
-            {
-                var collection = new Collection
-                {
-                    Id = CoreHelpers.GenerateComb(),
-                    Name = collectionName,
-                    OrganizationId = organizationId,
-                    CreationDate = DateTime.UtcNow,
-                    RevisionDate = DateTime.UtcNow
-                };
-
-                await dbContext.Collections.AddAsync(collection);
-
-                // Create CollectionUser association with Manage permissions
-                var collectionUser = new CollectionUser
-                {
-                    CollectionId = collection.Id,
-                    OrganizationUserId = organizationUserId,
-                    HidePasswords = false,
-                    ReadOnly = false,
-                    Manage = true
-                };
-
-                await dbContext.CollectionUsers.AddAsync(collectionUser);
-            }
-
-            await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Failed to initialize pending organization {OrganizationId}. Rolling back transaction.",
-                organizationId);
+                "Failed to initialize organization. Rolling back transaction.");
             await transaction.RollbackAsync();
             throw;
         }
