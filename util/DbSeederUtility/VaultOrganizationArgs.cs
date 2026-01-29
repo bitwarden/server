@@ -50,6 +50,16 @@ public class VaultOrganizationArgs : IArgumentModel
         {
             throw new ArgumentException("Groups must be at least 1. Use another command for orgs without groups.");
         }
+
+        if (!string.IsNullOrEmpty(Structure))
+        {
+            ParseOrgStructure(Structure);
+        }
+
+        if (!string.IsNullOrEmpty(Region))
+        {
+            ParseGeographicRegion(Region);
+        }
     }
 
     public OrganizationVaultOptions ToOptions() => new()
