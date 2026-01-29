@@ -34,7 +34,7 @@ public class DeleteEmergencyAccessCommand(
         var emergencyAccessDetails = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(grantorId);
 
         // if there is nothing return an empty array and do not send an email
-        if (emergencyAccessDetails == null || emergencyAccessDetails.Count == 0)
+        if (emergencyAccessDetails.Count == 0)
         {
             return emergencyAccessDetails;
         }
@@ -42,7 +42,7 @@ public class DeleteEmergencyAccessCommand(
         var (grantorEmails, granteeEmails) = await DeleteEmergencyAccessAsync(emergencyAccessDetails);
 
         // Send notification email to grantor
-        await SendEmergencyAccessRemoveGranteesEmailAsync(grantorEmails, granteeEmails); ;
+        await SendEmergencyAccessRemoveGranteesEmailAsync(grantorEmails, granteeEmails);
 
         return emergencyAccessDetails;
     }
