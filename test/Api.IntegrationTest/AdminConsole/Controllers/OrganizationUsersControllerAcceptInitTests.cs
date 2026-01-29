@@ -94,11 +94,13 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         return Task.CompletedTask;
     }
 
-    [Fact]
-    public async Task AcceptInit_WithValidData_InitializesOrganizationAndConfirmsUser()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithValidData_InitializesOrganizationAndConfirmsUser(bool featureFlagEnabled)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
 
         await _loginHelper.LoginAsync(_invitedUserEmail);
 
@@ -122,7 +124,8 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
             acceptInitRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var expectedStatusCode = featureFlagEnabled ? HttpStatusCode.NoContent : HttpStatusCode.OK;
+        Assert.Equal(expectedStatusCode, response.StatusCode);
 
         // Verify organization was initialized
         var organizationRepository = _factory.GetService<IOrganizationRepository>();
@@ -134,13 +137,20 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         Assert.Equal(_mockPublicKey, updatedOrganization.PublicKey);
         Assert.Equal(_mockEncryptedPrivateKey, updatedOrganization.PrivateKey);
 
-        // Verify user was confirmed
+        // Verify user was confirmed and properly linked
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var confirmedOrgUser = await organizationUserRepository.GetByIdAsync(_invitedOrgUser.Id);
 
         Assert.NotNull(confirmedOrgUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedOrgUser.Status);
         Assert.Equal("test-user-key", confirmedOrgUser.Key);
+        Assert.Equal(_invitedUser.Id, confirmedOrgUser.UserId);
+        Assert.Null(confirmedOrgUser.Email); // Email should be cleared after acceptance
+
+        // Verify user's email was verified
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(_invitedUserEmail);
+        Assert.True(user.EmailVerified);
 
         // Verify default collection was created
         var collectionRepository = _factory.GetService<ICollectionRepository>();
@@ -159,11 +169,13 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         Assert.False(collectionAccess.First().HidePasswords);
     }
 
-    [Fact]
-    public async Task AcceptInit_WithoutCollectionName_InitializesOrganizationWithoutCreatingCollection()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithoutCollectionName_InitializesOrganizationWithoutCreatingCollection(bool featureFlagEnabled)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
 
         await _loginHelper.LoginAsync(_invitedUserEmail);
 
@@ -187,7 +199,8 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
             acceptInitRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var expectedStatusCode = featureFlagEnabled ? HttpStatusCode.NoContent : HttpStatusCode.OK;
+        Assert.Equal(expectedStatusCode, response.StatusCode);
 
         // Verify organization was initialized
         var organizationRepository = _factory.GetService<IOrganizationRepository>();
@@ -211,11 +224,13 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         Assert.Empty(collections);
     }
 
-    [Fact]
-    public async Task AcceptInit_WithInvalidToken_ReturnsBadRequest()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithInvalidToken_ReturnsBadRequest(bool featureFlagEnabled)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
 
         await _loginHelper.LoginAsync(_invitedUserEmail);
 
@@ -249,11 +264,13 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         Assert.Null(organization.PrivateKey);
     }
 
-    [Fact]
-    public async Task AcceptInit_WithAlreadyEnabledOrganization_ReturnsBadRequest()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithAlreadyEnabledOrganization_ReturnsBadRequest(bool featureFlagEnabled)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
 
         // Update the organization to be already enabled
         var organizationRepository = _factory.GetService<IOrganizationRepository>();
@@ -286,11 +303,13 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
-    public async Task AcceptInit_WithoutAuthentication_ReturnsUnauthorized()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithoutAuthentication_ReturnsUnauthorized(bool featureFlagEnabled)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
 
         // Don't log in
         var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
@@ -324,11 +343,19 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         return tokenFactory.Protect(tokenable);
     }
 
-    [Fact]
-    public async Task AcceptInit_WithFeatureFlagEnabled_AtomicallyInitializesOrgAndConfirmsUser()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithNonPendingOrganization_ReturnsBadRequest(bool featureFlagEnabled)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
+
+        // Update the organization to be non-pending but not enabled
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _pendingOrganization.Enabled = false;
+        _pendingOrganization.Status = OrganizationStatusType.Created;
+        await organizationRepository.ReplaceAsync(_pendingOrganization);
 
         await _loginHelper.LoginAsync(_invitedUserEmail);
 
@@ -352,47 +379,29 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
             acceptInitRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-
-        // Verify organization was initialized
-        var organizationRepository = _factory.GetService<IOrganizationRepository>();
-        var updatedOrganization = await organizationRepository.GetByIdAsync(_pendingOrganization.Id);
-
-        Assert.NotNull(updatedOrganization);
-        Assert.True(updatedOrganization.Enabled);
-        Assert.Equal(OrganizationStatusType.Created, updatedOrganization.Status);
-        Assert.Equal(_mockPublicKey, updatedOrganization.PublicKey);
-        Assert.Equal(_mockEncryptedPrivateKey, updatedOrganization.PrivateKey);
-
-        // Verify user was confirmed (not just accepted)
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var confirmedOrgUser = await organizationUserRepository.GetByIdAsync(_invitedOrgUser.Id);
-
-        Assert.NotNull(confirmedOrgUser);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedOrgUser.Status);
-        Assert.Equal("test-user-key", confirmedOrgUser.Key);
-        Assert.Equal(_invitedUser.Id, confirmedOrgUser.UserId);
-        Assert.Null(confirmedOrgUser.Email);
-
-        // Verify default collection was created
-        var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var collections = await collectionRepository.GetManyByOrganizationIdAsync(_pendingOrganization.Id);
-
-        Assert.Single(collections);
-        Assert.Equal(_mockEncryptedString, collections.First().Name);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
-    public async Task AcceptInit_WithFeatureFlagEnabled_InvalidToken_ReturnsBadRequest()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithExistingPublicKey_ReturnsBadRequest(bool featureFlagEnabled)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
+
+        // Update the organization to already have a public key
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _pendingOrganization.PublicKey = _mockPublicKey;
+        await organizationRepository.ReplaceAsync(_pendingOrganization);
 
         await _loginHelper.LoginAsync(_invitedUserEmail);
 
+        var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
+
         var acceptInitRequest = new OrganizationUserAcceptInitRequestModel
         {
-            Token = "invalid-token",
+            Token = token,
             Key = "test-user-key",
             Keys = new OrganizationKeysRequestModel
             {
@@ -409,20 +418,144 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 
-        // Verify NO state changes occurred (atomic behavior)
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithExistingPrivateKey_ReturnsBadRequest(bool featureFlagEnabled)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
+
+        // Update the organization to already have a private key
         var organizationRepository = _factory.GetService<IOrganizationRepository>();
-        var organization = await organizationRepository.GetByIdAsync(_pendingOrganization.Id);
+        _pendingOrganization.PrivateKey = _mockEncryptedPrivateKey;
+        await organizationRepository.ReplaceAsync(_pendingOrganization);
 
-        Assert.False(organization.Enabled);
-        Assert.Equal(OrganizationStatusType.Pending, organization.Status);
-        Assert.Null(organization.PublicKey);
-        Assert.Null(organization.PrivateKey);
+        await _loginHelper.LoginAsync(_invitedUserEmail);
 
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var orgUser = await organizationUserRepository.GetByIdAsync(_invitedOrgUser.Id);
+        var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
 
-        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
-        Assert.Null(orgUser.UserId);
+        var acceptInitRequest = new OrganizationUserAcceptInitRequestModel
+        {
+            Token = token,
+            Key = "test-user-key",
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = _mockPublicKey,
+                EncryptedPrivateKey = _mockEncryptedPrivateKey
+            },
+            CollectionName = _mockEncryptedString
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync(
+            $"organizations/{_pendingOrganization.Id}/users/{_invitedOrgUser.Id}/accept-init",
+            acceptInitRequest);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AcceptInit_WithInvalidOrganizationUserId_ReturnsBadRequestOrNotFound(bool featureFlagEnabled)
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
+
+        await _loginHelper.LoginAsync(_invitedUserEmail);
+
+        var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
+
+        var acceptInitRequest = new OrganizationUserAcceptInitRequestModel
+        {
+            Token = token,
+            Key = "test-user-key",
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = _mockPublicKey,
+                EncryptedPrivateKey = _mockEncryptedPrivateKey
+            },
+            CollectionName = _mockEncryptedString
+        };
+
+        // Act - use a non-existent organization user ID
+        var response = await _client.PostAsJsonAsync(
+            $"organizations/{_pendingOrganization.Id}/users/{Guid.NewGuid()}/accept-init",
+            acceptInitRequest);
+
+        // Assert
+        // Both implementations should reject invalid org user IDs
+        // Old returns BadRequest, new returns NotFound (more RESTful)
+        Assert.True(response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task AcceptInit_WithFeatureFlagEnabled_WithWrongOrganizationId_ReturnsNotFound()
+    {
+        // Arrange: New implementation validates org exists before checking mismatch
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(true);
+
+        await _loginHelper.LoginAsync(_invitedUserEmail);
+
+        var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
+
+        var acceptInitRequest = new OrganizationUserAcceptInitRequestModel
+        {
+            Token = token,
+            Key = "test-user-key",
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = _mockPublicKey,
+                EncryptedPrivateKey = _mockEncryptedPrivateKey
+            },
+            CollectionName = _mockEncryptedString
+        };
+
+        // Act - use a non-existent organization ID
+        var response = await _client.PostAsJsonAsync(
+            $"organizations/{Guid.NewGuid()}/users/{_invitedOrgUser.Id}/accept-init",
+            acceptInitRequest);
+
+        // Assert - Non-existent organization returns NotFound  
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AcceptInit_WithFeatureFlagEnabled_WithMismatchedEmail_ReturnsBadRequest()
+    {
+        // Arrange
+        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(true);
+
+        // Create a different user and log in as them
+        var differentEmail = $"{Guid.NewGuid()}@example.com";
+        await _factory.LoginWithNewAccount(differentEmail);
+        await _loginHelper.LoginAsync(differentEmail);
+
+        // But use a token for the originally invited user
+        var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
+
+        var acceptInitRequest = new OrganizationUserAcceptInitRequestModel
+        {
+            Token = token,
+            Key = "test-user-key",
+            Keys = new OrganizationKeysRequestModel
+            {
+                PublicKey = _mockPublicKey,
+                EncryptedPrivateKey = _mockEncryptedPrivateKey
+            },
+            CollectionName = _mockEncryptedString
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync(
+            $"organizations/{_pendingOrganization.Id}/users/{_invitedOrgUser.Id}/accept-init",
+            acceptInitRequest);
+
+        // Assert - Email mismatch should fail
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }
