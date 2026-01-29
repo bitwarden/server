@@ -265,10 +265,8 @@ public class SendEmailOtpRequestValidatorTests
         // Arrange
         var otpTokenProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         var mailService = Substitute.For<IMailService>();
-        var featureService = Substitute.For<IFeatureService>();
-
         // Act
-        var validator = new SendEmailOtpRequestValidator(featureService, otpTokenProvider, mailService);
+        var validator = new SendEmailOtpRequestValidator(otpTokenProvider, mailService);
 
         // Assert
         Assert.NotNull(validator);

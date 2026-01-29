@@ -215,26 +215,6 @@ public class HandlebarsMailService : IMailService
         var model = new DefaultEmailOtpViewModel
         {
             Token = token,
-            TheDate = requestDateTime.ToLongDateString(),
-            TheTime = requestDateTime.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName,
-        };
-        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
-        message.MetaData.Add("SendGridBypassListManagement", true);
-        // TODO - PM-25380 change to string constant
-        message.Category = "SendEmailOtp";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendSendEmailOtpEmailv2Async(string email, string token, string subject)
-    {
-        var message = CreateDefaultMessage(subject, email);
-        var requestDateTime = DateTime.UtcNow;
-        var model = new DefaultEmailOtpViewModel
-        {
-            Token = token,
             Expiry = "5", // This should be configured through the OTPDefaultTokenProviderOptions but for now we will hardcode it to 5 minutes.
             TheDate = requestDateTime.ToLongDateString(),
             TheTime = requestDateTime.ToShortTimeString(),
@@ -242,7 +222,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmailv2", model);
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         // TODO - PM-25380 change to string constant
         message.Category = "SendEmailOtp";
