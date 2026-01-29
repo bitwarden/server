@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -30,6 +31,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IGroupRepository _groupRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -45,6 +47,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IGroupRepository groupRepository,
         IStripePaymentService paymentService,
         IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         IServiceAccountRepository serviceAccountRepository,
@@ -59,6 +62,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _groupRepository = groupRepository;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _ssoConfigRepository = ssoConfigRepository;
         _organizationConnectionRepository = organizationConnectionRepository;
         _serviceAccountRepository = serviceAccountRepository;
@@ -184,9 +188,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (!newPlan.HasResetPassword && organization.UseResetPassword)
         {
-            var resetPasswordPolicy =
-                await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-            if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
+            var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+            if (resetPasswordPolicy.Enabled)
             {
                 throw new BadRequestException("Your new plan does not allow the Password Reset feature. " +
                                               "Disable your Password Reset policy.");
