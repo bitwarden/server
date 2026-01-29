@@ -549,16 +549,10 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(Guid userId)
+    public OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(User user)
     {
         return async (SqlConnection? connection, SqlTransaction? transaction, object? context) =>
         {
-            var user = (await connection!.QueryAsync<User>(
-                "[dbo].[User_ReadById]",
-                new { Id = userId },
-                commandType: CommandType.StoredProcedure,
-                transaction: transaction)).SingleOrDefault();
-
             if (user != null && !user.EmailVerified)
             {
                 user.EmailVerified = true;

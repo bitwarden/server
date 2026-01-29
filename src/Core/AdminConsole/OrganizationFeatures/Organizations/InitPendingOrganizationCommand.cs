@@ -328,7 +328,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         [
             _organizationRepository.BuildUpdateOrganizationAction(org),
             _organizationUserRepository.BuildConfirmOrganizationUserAction(orgUser),
-            _userRepository.BuildVerifyUserEmailAction(request.User.Id),
+            _userRepository.BuildVerifyUserEmailAction(request.User),
         ];
 
         if (!string.IsNullOrWhiteSpace(request.CollectionName))

@@ -615,7 +615,7 @@ public class InitPendingOrganizationCommandTests
             .Returns(callInfo => new OrganizationInitializationUpdateAction((conn, trans, ctx) => Task.CompletedTask));
 
         sutProvider.GetDependency<IUserRepository>()
-            .BuildVerifyUserEmailAction(user.Id)
+            .BuildVerifyUserEmailAction(Arg.Any<User>())
             .Returns(new OrganizationInitializationUpdateAction((conn, trans, ctx) => Task.CompletedTask));
 
         sutProvider.GetDependency<ICollectionRepository>()
