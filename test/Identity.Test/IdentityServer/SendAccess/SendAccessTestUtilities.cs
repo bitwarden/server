@@ -1,4 +1,6 @@
 ﻿using System.Collections.Specialized;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
@@ -46,5 +48,15 @@ public static class SendAccessTestUtilities
         }
 
         return rawRequestParameters;
+    }
+
+    /// <summary>
+    /// Returns a hex-encoded, SHA256 hash for the given string
+    /// </summary>
+    public static string HashAndEncode(string text)
+    {
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        var hashEncoded = Convert.ToHexString(hashBytes).ToUpperInvariant();
+        return hashEncoded;
     }
 }
