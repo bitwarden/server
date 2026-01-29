@@ -56,7 +56,7 @@ public class SendAuthenticationQueryTests
 
         // Assert
         var emailOtp = Assert.IsType<EmailOtp>(result);
-        Assert.Equal(expectedEmailHashes, emailOtp.Emails);
+        Assert.Equal(expectedEmailHashes, emailOtp.EmailHashes);
     }
 
     [Fact]
