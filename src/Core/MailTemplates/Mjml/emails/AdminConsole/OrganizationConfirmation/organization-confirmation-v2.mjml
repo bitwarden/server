@@ -5,7 +5,7 @@
 
         <mj-font
                 name="Inter"
-                href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+                href="https://fonts.googleapgis.com/css2?family=Inter:wght@400;600;700&display=swap">
         </mj-font>
         <mj-font
                 name="Roboto"
@@ -43,11 +43,11 @@
                         font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif"
                         font-size="24px"
                         line-height="32px"
-                        font-weight="600"
+                        font-weight="400"
                         padding="0px 0px 24px 0px"
                         align="left"
                         color="#ffffff">
-                    <p><strong>{{OrganizationName}}</strong> set up a Bitwarden password manager account for you.</p>
+                    <p>You can now share passwords with members of <strong>{{OrganizationName}}!</strong></p>
                 </mj-text>
                 <mj-button
                         href="{{WebVaultUrl}}"
