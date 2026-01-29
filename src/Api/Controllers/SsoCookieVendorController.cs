@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,7 @@ namespace Bit.Api.Controllers;
 /// requests to this endpoint do not have the auth cookie stripped.
 /// </summary>
 [Route("sso-cookie-vendor")]
+[SelfHosted(SelfHostedOnly = true)]
 public class SsoCookieVendorController(IGlobalSettings globalSettings) : Controller
 {
     private readonly IGlobalSettings _globalSettings = globalSettings;
