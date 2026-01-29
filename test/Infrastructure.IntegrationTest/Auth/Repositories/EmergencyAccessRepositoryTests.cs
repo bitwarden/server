@@ -48,7 +48,7 @@ public class EmergencyAccessRepositoriesTests
     /// All 3 records are then deleted in a single call to DeleteManyAsync.
     /// </summary>
     [DatabaseTheory, DatabaseData]
-    public async Task DeleteManyAsync_DeletesMultipleGranteeRecords(
+    public async Task DeleteManyAsync_DeletesMultipleGranteeRecords_UpdatesUserRevisionDates(
         IUserRepository userRepository,
         IEmergencyAccessRepository emergencyAccessRepository)
     {
@@ -61,7 +61,7 @@ public class EmergencyAccessRepositoriesTests
             SecurityStamp = "stamp",
         });
 
-        var granteeUser1 = await userRepository.CreateAsync(new User
+        var confirmedGranteeUser1 = await userRepository.CreateAsync(new User
         {
             Name = "Test Grantee User 1",
             Email = $"test+grantee{Guid.NewGuid()}@email.com",
@@ -88,7 +88,7 @@ public class EmergencyAccessRepositoriesTests
         var confirmedEmergencyAccess = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
         {
             GrantorId = grantorUser.Id,
-            GranteeId = granteeUser1.Id,
+            GranteeId = confirmedGranteeUser1.Id,
             Status = EmergencyAccessStatusType.Confirmed,
         });
 
@@ -110,7 +110,20 @@ public class EmergencyAccessRepositoriesTests
         await emergencyAccessRepository.DeleteManyAsync([confirmedEmergencyAccess.Id, invitedEmergencyAccess.Id, acceptedEmergencyAccess.Id]);
 
         // Assert
-        var emergencyAccess = await emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(grantorUser.Id);
-        Assert.Empty(emergencyAccess);
+        // ensure Grantor records deleted
+        var grantorEmergencyAccess = await emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(grantorUser.Id);
+        Assert.Empty(grantorEmergencyAccess);
+
+        // ensure Grantee records deleted
+        foreach (User grantee in (List<User>)[confirmedGranteeUser1, granteeUser2, granteeUser3])
+        {
+            var granteeEmergencyAccess = await emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(grantee.Id);
+            Assert.Empty(granteeEmergencyAccess);
+        }
+
+        // Only the Status.Confirmed grantee's AccountRevisionDate should be updated
+        var updatedGrantee = await userRepository.GetByIdAsync(confirmedGranteeUser1.Id);
+        Assert.NotNull(updatedGrantee);
+        Assert.NotEqual(updatedGrantee.AccountRevisionDate, confirmedGranteeUser1.AccountRevisionDate);
     }
 }
