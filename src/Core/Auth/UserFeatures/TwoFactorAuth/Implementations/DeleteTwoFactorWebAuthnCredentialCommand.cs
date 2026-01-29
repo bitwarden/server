@@ -27,7 +27,7 @@ public class DeleteTwoFactorWebAuthnCredentialCommand : IDeleteTwoFactorWebAuthn
             return false;
         }
 
-        if (provider.MetaData.Count < 2)
+        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) < 2)
         {
             return false;
         }
