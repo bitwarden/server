@@ -10,7 +10,7 @@ The Seeder follows six core patterns:
 
 3. **Models** - DTOs bridging SDK ↔ Server format. Named `{Entity}ViewDto` (plaintext), `Encrypted{Entity}Dto` (SDK format). Pure data, no logic.
 
-4. **Scenes** - Complete test scenarios with ID mangling. Implement `IScene<TRequest>`. Async, returns `SceneResult` with MangleMap. Named `{Scenario}Scene`.
+4. **Scenes** - Complete test scenarios with ID mangling. Implement `IScene<TReques, TResult>`. Async, returns `SceneResult<TResult>` with MangleMap and result property populated with `TResult`. Named `{Scenario}Scene`.
 
 5. **Queries** - Read-only data retrieval. Implement `IQuery<TRequest, TResult>`. Synchronous, no DB modifications. Named `{DataToRetrieve}Query`.
 

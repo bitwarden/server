@@ -127,8 +127,8 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 - Implement `IScene<TRequest>` or `IScene<TRequest, TResult>`
 - Create complete, realistic test scenarios
-- Handle ID mangling for test isolation
-- Return `SceneResult` with mangle map for test assertions
+- Handle uniqueness constraint mangling for test isolation
+- Return `SceneResult` with mangle map and optional additional operation result data for test assertions
 - Async operations
 - CAN modify database state
 
@@ -142,13 +142,15 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **When to use:** Need to READ existing seeded data for verification or follow-up operations.
 
+** Example:** Inviting a user to an organization produces a magic link to accept the invite, a query should be used to retrieve that link because it is easier than interfacing with an external smtp catcher.
+
 **Key characteristics:**
 
 - Implement `IQuery<TRequest, TResult>`
 - Synchronous operations (vs. async Scenes)
 - Read-only (no database modifications)
 - Return typed data for test assertions
-- Often used to verify Scene/Recipe results
+- Can be used to retrieve side effects due to tested flows
 
 **Naming:** `{DataToRetrieve}Query` class with `Execute(Request)` method (defined by interface)
 
