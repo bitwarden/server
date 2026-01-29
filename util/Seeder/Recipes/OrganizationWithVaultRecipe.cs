@@ -50,9 +50,8 @@ public class OrganizationWithVaultRecipe(
         var orgKeys = sdkService.GenerateOrganizationKeys();
 
         // Create organization via factory
-        var organization = OrganizationSeeder.CreateEnterprise(options.Name, options.Domain, seats);
-        organization.PublicKey = orgKeys.PublicKey;
-        organization.PrivateKey = orgKeys.PrivateKey;
+        var organization = OrganizationSeeder.CreateEnterprise(
+            options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner user via factory
         var ownerUser = UserSeeder.CreateUserWithSdkKeys($"owner@{options.Domain}", sdkService, passwordHasher);
