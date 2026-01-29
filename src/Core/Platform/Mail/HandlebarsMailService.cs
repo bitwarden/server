@@ -657,11 +657,11 @@ public class HandlebarsMailService : IMailService
         return;
 
         MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
-            new(CreateDefaultMessage($"Your Bitwarden account is claimed by {org.DisplayName()}", emailAddress),
+            new(CreateDefaultMessage($"Important update to your Bitwarden account", emailAddress),
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Your Bitwarden account is claimed by {org.DisplayName()}",
+                    TitleFirst = $"Important update to your Bitwarden account",
                     OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
                 });
     }

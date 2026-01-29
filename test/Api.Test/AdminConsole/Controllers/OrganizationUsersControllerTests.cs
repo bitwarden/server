@@ -734,7 +734,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task BulkReinvite_WhenFeatureFlagEnabled_UsesBulkResendOrganizationInvitesCommand(
+    public async Task BulkReinvite_UsesBulkResendOrganizationInvitesCommand(
         Guid organizationId,
         OrganizationUserBulkRequestModel bulkRequestModel,
         List<OrganizationUser> organizationUsers,
@@ -744,9 +744,6 @@ public class OrganizationUsersControllerTests
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.IncreaseBulkReinviteLimitForCloud)
-            .Returns(true);
 
         var expectedResults = organizationUsers.Select(u => Tuple.Create(u, "")).ToList();
         sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
@@ -762,37 +759,5 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
             .Received(1)
             .BulkResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task BulkReinvite_WhenFeatureFlagDisabled_UsesLegacyOrganizationService(
-        Guid organizationId,
-        OrganizationUserBulkRequestModel bulkRequestModel,
-        List<OrganizationUser> organizationUsers,
-        Guid userId,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.IncreaseBulkReinviteLimitForCloud)
-            .Returns(false);
-
-        var expectedResults = organizationUsers.Select(u => Tuple.Create(u, "")).ToList();
-        sutProvider.GetDependency<IOrganizationService>()
-            .ResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids)
-            .Returns(expectedResults);
-
-        // Act
-        var response = await sutProvider.Sut.BulkReinvite(organizationId, bulkRequestModel);
-
-        // Assert
-        Assert.Equal(organizationUsers.Count, response.Data.Count());
-
-        await sutProvider.GetDependency<IOrganizationService>()
-            .Received(1)
-            .ResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
     }
 }
