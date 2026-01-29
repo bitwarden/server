@@ -20,7 +20,6 @@
         <mj-style>
             p { margin: 0px !important; }
             .link { color: #175ddc; text-decoration: none; font-weight: 600; }
-            .icon-box { background: #dbe5f6; border-radius: 8px; }
             @media only screen and (max-width: 480px) {
                 .hide-mobile { display: none !important; }
             }
@@ -116,7 +115,7 @@
                     width="48px"
                     vertical-align="top">
                 <mj-image
-                        css-class="icon-box hide-mobile"
+                        css-class="hide-mobile"
                         src="https://assets.bitwarden.com/email/v1/icon-enterprise.png"
                         alt="Organization Icon"
                         width="48px"
@@ -152,7 +151,7 @@
                     width="48px"
                     vertical-align="top">
                 <mj-image
-                        css-class="icon-box hide-mobile"
+                        css-class="hide-mobile"
                         src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
                         alt="Share Icon"
                         width="48px"
