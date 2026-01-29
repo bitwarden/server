@@ -1,5 +1,8 @@
 <mjml>
     <mj-head>
+        <!-- Include shared head styles -->
+        <mj-include path="../../../components/head.mjml" />
+
         <mj-font
                 name="Inter"
                 href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
@@ -8,26 +11,20 @@
                 name="Roboto"
                 href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
         </mj-font>
+
         <mj-attributes>
             <mj-all
                     font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif" />
-            <mj-text
-                    color="#1B2029" />
-            <mj-body
-                    background-color="#e6e9ef"
-                    width="660px" />
         </mj-attributes>
+
         <mj-style>
-            p { margin: 0px !important; }
-            .link { color: #175ddc; text-decoration: none; font-weight: 600; }
             @media only screen and (max-width: 480px) {
                 .hide-mobile { display: none !important; }
             }
         </mj-style>
     </mj-head>
 
-    <mj-body
-            background-color="#e6e9ef">
+    <mj-body>
         <!-- Blue Header Section -->
         <mj-section
                 border-radius="10px 10px 0px 0px"
@@ -115,7 +112,7 @@
                     width="48px"
                     vertical-align="top">
                 <mj-image
-                        css-class="hide-mobile"
+                        css-class="icon-box hide-mobile"
                         src="https://assets.bitwarden.com/email/v1/icon-enterprise.png"
                         alt="Organization Icon"
                         width="48px"
@@ -151,7 +148,7 @@
                     width="48px"
                     vertical-align="top">
                 <mj-image
-                        css-class="hide-mobile"
+                        css-class="icon-box hide-mobile"
                         src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
                         alt="Share Icon"
                         width="48px"
