@@ -1,0 +1,43 @@
+<mjml>
+    <mj-head>
+        <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"></mj-font>
+        <mj-font name="Roboto" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"></mj-font>
+        <mj-attributes>
+            <mj-text font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif"></mj-text>
+            <mj-all font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif" />
+        </mj-attributes>
+        <mj-style>
+            p { margin: 0px 0px 0px 0px !important; }
+            .bw-text a { color: #175ddc; text-decoration: none; font-weight: 600; }
+            .bw-accountid p { background: #dbe5f6; border-radius: 99px; padding: 10px 15px; text-align: center; }
+        </mj-style>
+    </mj-head>
+    <mj-body background-color="#e6e9ef">
+        <mj-section border-radius="10px" padding="0px" background-color="#175ddc">
+            <mj-column width="55%" padding="40px">
+                <mj-text font-size="20px" line-height="30px" font-weight="700" padding="0px" align="left" color="#FEFFEA"> Unlock your next deal </mj-text>
+                <mj-spacer height="14px"></mj-spacer>
+                <mj-text font-size="14px" line-height="20px" padding="0px" align="left" color="#fff">Enjoy a special offer on your next purchase.</mj-text>
+                <mj-spacer height="18px"></mj-spacer>
+                <mj-button
+                        href="{{WebVaultUrl}}"
+                        background-color="#ffffff"
+                        color="#1A41AC"
+                        border-radius="20px"
+                        align="left"
+                        inner-padding="12px 24px"
+                        padding="12px 24px"
+                        font-size="16px"
+                        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+                        font-weight="700"
+                        line-height="24px"
+                >
+                    Log in
+                </mj-button>
+            </mj-column>
+            <mj-column vertical-align="bottom" width="45%">
+                <mj-image align="center" padding="0px" src="https://github.com/ricfreire/mautic-theme-fooddelivery/blob/main/assets/deal.png?raw=true"></mj-image>
+            </mj-column>
+        </mj-section>
+    </mj-body>
+</mjml>

@@ -1,0 +1,30 @@
+<mjml>
+    <mj-head>
+        <mj-title>Hello world</mj-title>
+        <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
+        <mj-attributes>
+            <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
+            <mj-text font-weight="300" font-size="16px" color="#616161" line-height="24px"></mj-text>
+            <mj-section padding="0px"></mj-section>
+        </mj-attributes>
+    </mj-head>
+    <mj-body>
+
+        <mj-section>
+
+            <mj-column width="25%">
+                <mj-image width="100px" href="http://projects.csail.mit.edu/soundnet/" src="https://static.mailjet.com/mjml-website/templates/recast-image2.png"></mj-image>
+            </mj-column>
+            <mj-column width="75%">
+                <mj-text>
+                    <h3 style="font-weight: bold; margin-top: 0; margin-bottom: 0"> <a href="http://projects.csail.mit.edu/soundnet/" style="color: #3498DB; text-decoration: none;">
+                        SoundNet - Learning sound representations from unlabeled video
+                    </a> </h3>
+                    <p style="font-size: 14px;">With a deep convolutional network created for sound recognition, the model recognizes objects and scenes only from sounds. </p>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+
+
+    </mj-body>
+</mjml>
