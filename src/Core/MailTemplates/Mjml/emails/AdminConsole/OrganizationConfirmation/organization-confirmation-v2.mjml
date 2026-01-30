@@ -110,9 +110,9 @@
                 background-color="#fff">
             <mj-column
                     width="48px"
+                    css-class="hide-mobile"
                     vertical-align="top">
                 <mj-image
-                        css-class="hide-mobile"
                         src="https://assets.bitwarden.com/email/v1/icon-enterprise.png"
                         alt="Organization Icon"
                         width="48px"
@@ -121,6 +121,7 @@
                 </mj-image>
             </mj-column>
             <mj-column
+                    css-class="hide-mobile"
                     width="5%">
                 <mj-spacer
                         height="1px">
@@ -146,9 +147,9 @@
                 background-color="#fff">
             <mj-column
                     width="48px"
+                    css-class="hide-mobile"
                     vertical-align="top">
                 <mj-image
-                        css-class="hide-mobile"
                         src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
                         alt="Share Icon"
                         width="48px"
@@ -157,6 +158,7 @@
                 </mj-image>
             </mj-column>
             <mj-column
+                    css-class="hide-mobile"
                     width="5%">
                 <mj-spacer
                         height="1px">
