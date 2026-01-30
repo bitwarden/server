@@ -97,9 +97,9 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <summary>
     /// Builds an action that verifies a user's email if not already verified.
     /// </summary>
-    /// <param name="user">The user entity to verify</param>
+    /// <param name="userId">The user ID to verify</param>
     /// <returns>An action that can be executed within a transaction</returns>
-    OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(User user);
+    OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(Guid userId);
 }
 
 public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,

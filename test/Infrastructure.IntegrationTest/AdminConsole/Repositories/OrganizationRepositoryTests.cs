@@ -320,7 +320,7 @@ public class OrganizationRepositoryTests
         {
             organizationRepository.BuildUpdateOrganizationAction(organization),
             organizationUserRepository.BuildConfirmOrganizationUserAction(organizationUser),
-            userRepository.BuildVerifyUserEmailAction(user)
+            userRepository.BuildVerifyUserEmailAction(user.Id)
         };
 
         var collection = new Collection
@@ -403,7 +403,7 @@ public class OrganizationRepositoryTests
         {
             organizationRepository.BuildUpdateOrganizationAction(organization),
             organizationUserRepository.BuildConfirmOrganizationUserAction(organizationUser),
-            userRepository.BuildVerifyUserEmailAction(user)
+            userRepository.BuildVerifyUserEmailAction(user.Id)
         };
 
         // Execute all updates in single transaction
@@ -453,7 +453,7 @@ public class OrganizationRepositoryTests
         {
             organizationRepository.BuildUpdateOrganizationAction(organization),
             organizationUserRepository.BuildConfirmOrganizationUserAction(organizationUser),
-            userRepository.BuildVerifyUserEmailAction(user),
+            userRepository.BuildVerifyUserEmailAction(user.Id),
             // Add a failing action to trigger rollback
             (Microsoft.Data.SqlClient.SqlConnection? _, Microsoft.Data.SqlClient.SqlTransaction? _, object? __) =>
             {

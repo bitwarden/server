@@ -576,17 +576,17 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(Core.Entities.User user)
+    public OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(Guid userId)
     {
         return async (SqlConnection? _, SqlTransaction? _, object? context) =>
         {
             var dbContext = (DatabaseContext)context!;
 
-            var efUser = await dbContext.Users.FindAsync(user.Id);
-            if (efUser != null && !efUser.EmailVerified)
+            var user = await dbContext.Users.FindAsync(userId);
+            if (user != null && !user.EmailVerified)
             {
-                efUser.EmailVerified = true;
-                efUser.RevisionDate = DateTime.UtcNow;
+                user.EmailVerified = true;
+                user.RevisionDate = DateTime.UtcNow;
 
                 await dbContext.SaveChangesAsync();
             }
