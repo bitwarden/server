@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 #nullable enable
 
@@ -92,6 +93,13 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="updateUserDataActions">Actions to update user data.</param>
     /// <returns>On success</returns>
     Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions);
+
+    /// <summary>
+    /// Builds an action that verifies a user's email if not already verified.
+    /// </summary>
+    /// <param name="userId">The user ID to verify</param>
+    /// <returns>An action that can be executed within a transaction</returns>
+    OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(Guid userId);
 }
 
 public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,

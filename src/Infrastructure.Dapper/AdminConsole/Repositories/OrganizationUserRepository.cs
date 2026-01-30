@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -708,5 +709,17 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             return result;
         }
+    }
+
+    public OrganizationInitializationUpdateAction BuildConfirmOrganizationUserAction(OrganizationUser organizationUser)
+    {
+        return async (SqlConnection? connection, SqlTransaction? transaction, object? context) =>
+        {
+            await connection!.ExecuteAsync(
+                "[dbo].[OrganizationUser_Update]",
+                organizationUser,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+        };
     }
 }

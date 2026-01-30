@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -546,5 +547,30 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             UnprotectData(user);
         }
+    }
+
+    public OrganizationInitializationUpdateAction BuildVerifyUserEmailAction(Guid userId)
+    {
+        return async (SqlConnection? connection, SqlTransaction? transaction, object? context) =>
+        {
+            var user = (await connection!.QueryAsync<User>(
+                "[dbo].[User_ReadById]",
+                new { Id = userId },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction)).SingleOrDefault();
+
+            if (user != null && !user.EmailVerified)
+            {
+                user.EmailVerified = true;
+                user.RevisionDate = DateTime.UtcNow;
+
+                ProtectData(user);
+                await connection!.ExecuteAsync(
+                    "[dbo].[User_Update]",
+                    user,
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+        };
     }
 }

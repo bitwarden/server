@@ -14,6 +14,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -302,7 +303,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("{organizationUserId}/accept-init")]
-    public async Task AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
+    public async Task<IResult> AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -310,9 +311,30 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit))
+        {
+            var request = new InitPendingOrganizationRequest
+            {
+                User = user,
+                OrganizationId = orgId,
+                OrganizationUserId = organizationUserId,
+                PublicKey = model.Keys.PublicKey,
+                PrivateKey = model.Keys.EncryptedPrivateKey,
+                CollectionName = model.CollectionName,
+                EmailToken = model.Token,
+                UserKey = model.Key
+            };
+
+            var result = await _initPendingOrganizationCommand.InitPendingOrganizationVNextAsync(request);
+
+            return Handle(result);
+        }
+
         await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
         await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
+
+        return TypedResults.Ok();
     }
 
     [HttpPost("{organizationUserId}/accept")]

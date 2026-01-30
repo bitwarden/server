@@ -2,9 +2,11 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -846,4 +848,30 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     public Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds,
         string defaultCollectionName) =>
         CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
+
+    public OrganizationInitializationUpdateAction BuildCreateDefaultCollectionAction(Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> users)
+    {
+        return async (SqlConnection? _, SqlTransaction? _, object? context) =>
+        {
+            var dbContext = (DatabaseContext)context!;
+
+            var efCollection = Mapper.Map<Collection>(collection);
+            await dbContext.Collections.AddAsync(efCollection);
+
+            foreach (var user in users)
+            {
+                var collectionUser = new CollectionUser
+                {
+                    CollectionId = collection.Id,
+                    OrganizationUserId = user.Id,
+                    HidePasswords = user.HidePasswords,
+                    ReadOnly = user.ReadOnly,
+                    Manage = user.Manage
+                };
+                await dbContext.CollectionUsers.AddAsync(collectionUser);
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
 }

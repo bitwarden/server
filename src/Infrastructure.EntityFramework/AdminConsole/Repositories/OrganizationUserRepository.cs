@@ -10,10 +10,12 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -977,6 +979,25 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var entity = await view.Run(dbContext).SingleOrDefaultAsync(ou => ou.OrganizationId == organizationId && ou.UserId == userId);
             return entity;
         }
+    }
+
+    public OrganizationInitializationUpdateAction BuildConfirmOrganizationUserAction(Core.Entities.OrganizationUser organizationUser)
+    {
+        return async (SqlConnection? _, SqlTransaction? _, object? context) =>
+        {
+            var dbContext = (DatabaseContext)context!;
+
+            var efOrganizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUser.Id);
+            if (efOrganizationUser != null)
+            {
+                efOrganizationUser.Status = organizationUser.Status;
+                efOrganizationUser.UserId = organizationUser.UserId;
+                efOrganizationUser.Key = organizationUser.Key;
+                efOrganizationUser.Email = organizationUser.Email;
+
+                await dbContext.SaveChangesAsync();
+            }
+        };
     }
 #nullable disable
 

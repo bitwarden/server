@@ -214,6 +214,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();
         services.AddScoped<IInviteUsersPasswordManagerValidator, InviteUsersPasswordManagerValidator>();
         services.AddScoped<IInviteUsersEnvironmentValidator, InviteUsersEnvironmentValidator>();
+        services.AddScoped<IInitPendingOrganizationValidator, InitPendingOrganizationValidator>();
         services.AddScoped<IInitPendingOrganizationCommand, InitPendingOrganizationCommand>();
         services.AddScoped<IImportOrganizationUsersAndGroupsCommand, ImportOrganizationUsersAndGroupsCommand>();
     }

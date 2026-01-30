@@ -9,8 +9,10 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using LinqToDB.Tools;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -439,5 +441,49 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+    }
+
+    public OrganizationInitializationUpdateAction BuildUpdateOrganizationAction(Core.AdminConsole.Entities.Organization organization)
+    {
+        return async (SqlConnection _, SqlTransaction _, object context) =>
+        {
+            var dbContext = (DatabaseContext)context;
+
+            var efOrganization = await dbContext.Organizations.FindAsync(organization.Id);
+            if (efOrganization != null)
+            {
+                efOrganization.Enabled = organization.Enabled;
+                efOrganization.Status = organization.Status;
+                efOrganization.PublicKey = organization.PublicKey;
+                efOrganization.PrivateKey = organization.PrivateKey;
+                efOrganization.RevisionDate = organization.RevisionDate;
+
+                await dbContext.SaveChangesAsync();
+            }
+        };
+    }
+
+    public async Task ExecuteOrganizationInitializationUpdatesAsync(IEnumerable<OrganizationInitializationUpdateAction> updateActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            foreach (var action in updateActions)
+            {
+                await action(null, null, dbContext);
+            }
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to initialize organization. Rolling back transaction.");
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

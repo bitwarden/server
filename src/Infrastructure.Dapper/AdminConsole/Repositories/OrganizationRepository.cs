@@ -5,6 +5,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -250,5 +251,40 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
             new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public OrganizationInitializationUpdateAction BuildUpdateOrganizationAction(Organization organization)
+    {
+        return async (SqlConnection? connection, SqlTransaction? transaction, object? context) =>
+        {
+            await connection!.ExecuteAsync(
+                "[dbo].[Organization_Update]",
+                organization,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+        };
+    }
+
+    public async Task ExecuteOrganizationInitializationUpdatesAsync(IEnumerable<OrganizationInitializationUpdateAction> updateActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+
+        try
+        {
+            foreach (var action in updateActions)
+            {
+                await action(connection, transaction);
+            }
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to initialize organization. Rolling back transaction.");
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
