@@ -70,6 +70,13 @@ public class PreviewInvoiceController(
             planType,
             billingAddress);
 
-        return Handle(result.Map(pair => new { pair.Tax, pair.Total, pair.Credit }));
+        return Handle(result.Map(proration => new
+        {
+            NewPlanProratedTotal = proration.NewPlanProratedAmount,
+            proration.Credit,
+            proration.Tax,
+            proration.Total,
+            proration.NewPlanProratedMonths
+        }));
     }
 }

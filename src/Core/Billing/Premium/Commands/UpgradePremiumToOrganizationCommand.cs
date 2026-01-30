@@ -88,13 +88,6 @@ public class UpgradePremiumToOrganizationCommand(
         // Build the list of subscription item updates
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
 
-        // Delete the user's specific password manager item
-        subscriptionItemOptions.Add(new SubscriptionItemOptions
-        {
-            Id = passwordManagerItem.Id,
-            Deleted = true
-        });
-
         // Delete the storage item if it exists for this user's plan
         var storageItem = currentSubscription.Items.Data.FirstOrDefault(i =>
             i.Price.Id == usersPremiumPlan.Storage.StripePriceId);
@@ -116,6 +109,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
             {
+                Id = passwordManagerItem.Id,
                 Price = targetPlan.PasswordManager.StripePlanId,
                 Quantity = 1
             });
@@ -124,6 +118,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
             {
+                Id = passwordManagerItem.Id,
                 Price = targetPlan.PasswordManager.StripeSeatPlanId,
                 Quantity = seats
             });
@@ -136,7 +131,8 @@ public class UpgradePremiumToOrganizationCommand(
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = subscriptionItemOptions,
-            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
+            ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice,
+            BillingCycleAnchor = SubscriptionBillingCycleAnchor.Unchanged,
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             Metadata = new Dictionary<string, string>
             {
@@ -149,11 +145,6 @@ public class UpgradePremiumToOrganizationCommand(
             }
         };
 
-        if (targetPlan.TrialPeriodDays.HasValue)
-        {
-            subscriptionUpdateOptions.TrialEnd = DateTime.UtcNow.AddDays((double)targetPlan.TrialPeriodDays);
-        }
-
         // Create the Organization entity
         var organization = new Organization
         {
@@ -161,7 +152,7 @@ public class UpgradePremiumToOrganizationCommand(
             Name = organizationName,
             BillingEmail = user.Email,
             PlanType = targetPlan.Type,
-            Seats = (short)seats,
+            Seats = seats,
             MaxCollections = targetPlan.PasswordManager.MaxCollections,
             MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
