@@ -10,7 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 
 public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 {
