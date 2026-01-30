@@ -11,6 +11,9 @@ public class PolicyRequirementQuery(
     : IPolicyRequirementQuery
 {
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
+        => (await GetAsync<T>([userId])).Single().Requirement;
+
+    public async Task<IEnumerable<(Guid UserId, T Requirement)>> GetAsync<T>(IEnumerable<Guid> userIds) where T : IPolicyRequirement
     {
         var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
         if (factory is null)
@@ -18,12 +21,15 @@ public class PolicyRequirementQuery(
             throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
         }
 
-        var policyDetails = await GetPolicyDetails(userId, factory.PolicyType);
-        var filteredPolicies = policyDetails
-            .Where(p => p.PolicyType == factory.PolicyType)
-            .Where(factory.Enforce);
-        var requirement = factory.Create(filteredPolicies);
-        return requirement;
+        var userIdList = userIds.ToList();
+
+        var policyDetailsByUser = (await GetPolicyDetails(userIdList, factory.PolicyType))
+            .Where(factory.Enforce)
+            .ToLookup(l => l.UserId);
+
+        var policyRequirements = userIdList.Select(u => (u, factory.Create(policyDetailsByUser[u])));
+
+        return policyRequirements;
     }
 
     public async Task<IEnumerable<Guid>> GetManyByOrganizationIdAsync<T>(Guid organizationId)
@@ -46,8 +52,8 @@ public class PolicyRequirementQuery(
         return eligibleOrganizationUserIds;
     }
 
-    private async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetails(Guid userId, PolicyType policyType)
-        => await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType([userId], policyType);
+    private async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetails(IEnumerable<Guid> userIds, PolicyType policyType)
+        => await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(userIds, policyType);
 
     private async Task<IEnumerable<OrganizationPolicyDetails>> GetOrganizationPolicyDetails(Guid organizationId, PolicyType policyType)
         => await policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, policyType);
