@@ -33,9 +33,9 @@ public record InitPendingOrganizationRequest
     public required string PrivateKey { get; init; }
 
     /// <summary>
-    /// The name of the default collection to create.
+    /// The name of the default collection to create. Optional - if null or empty, no collection is created.
     /// </summary>
-    public required string CollectionName { get; init; }
+    public string? CollectionName { get; init; }
 
     /// <summary>
     /// The email token for validating the invitation.
