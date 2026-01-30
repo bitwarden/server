@@ -22,8 +22,6 @@ namespace Bit.Seeder.Factories;
 /// </remarks>
 public class CipherSeeder
 {
-    private readonly RustSdkService _sdkService;
-
     private static readonly JsonSerializerOptions SdkJsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -36,12 +34,7 @@ public class CipherSeeder
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public CipherSeeder(RustSdkService sdkService)
-    {
-        _sdkService = sdkService;
-    }
-
-    public Cipher CreateOrganizationLoginCipher(
+    public static Cipher CreateOrganizationLoginCipher(
         Guid organizationId,
         string orgKeyBase64,
         string name,
@@ -67,7 +60,7 @@ public class CipherSeeder
         return EncryptAndTransform(cipherView, orgKeyBase64, organizationId);
     }
 
-    public Cipher CreateOrganizationLoginCipherWithFields(
+    public static Cipher CreateOrganizationLoginCipherWithFields(
         Guid organizationId,
         string orgKeyBase64,
         string name,
@@ -98,10 +91,10 @@ public class CipherSeeder
         return EncryptAndTransform(cipherView, orgKeyBase64, organizationId);
     }
 
-    private Cipher EncryptAndTransform(CipherViewDto cipherView, string keyBase64, Guid organizationId)
+    private static Cipher EncryptAndTransform(CipherViewDto cipherView, string keyBase64, Guid organizationId)
     {
         var viewJson = JsonSerializer.Serialize(cipherView, SdkJsonOptions);
-        var encryptedJson = _sdkService.EncryptCipher(viewJson, keyBase64);
+        var encryptedJson = RustSdkService.EncryptCipher(viewJson, keyBase64);
 
         var encryptedDto = JsonSerializer.Deserialize<EncryptedCipherDto>(encryptedJson, SdkJsonOptions)
             ?? throw new InvalidOperationException("Failed to parse encrypted cipher");

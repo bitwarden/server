@@ -11,7 +11,7 @@ public struct UserData
     public string Email;
 }
 
-public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Entities.User> passwordHasher, MangleId mangleId)
+public class UserSeeder(IPasswordHasher<Bit.Core.Entities.User> passwordHasher, MangleId mangleId)
 {
     private string MangleEmail(string email)
     {
@@ -21,7 +21,7 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
     public User CreateUser(string email, bool emailVerified = false, bool premium = false)
     {
         email = MangleEmail(email);
-        var keys = sdkService.GenerateUserKeys(email, DefaultPassword);
+        var keys = RustSdkService.GenerateUserKeys(email, DefaultPassword);
 
         var user = new User
         {
@@ -76,10 +76,9 @@ public class UserSeeder(RustSdkService sdkService, IPasswordHasher<Bit.Core.Enti
     /// </summary>
     public static User CreateUserWithSdkKeys(
         string email,
-        RustSdkService sdkService,
         IPasswordHasher<User> passwordHasher)
     {
-        var keys = sdkService.GenerateUserKeys(email, DefaultPassword);
+        var keys = RustSdkService.GenerateUserKeys(email, DefaultPassword);
         return CreateUserFromKeys(email, keys, passwordHasher);
     }
 

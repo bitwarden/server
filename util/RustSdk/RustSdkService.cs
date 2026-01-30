@@ -37,7 +37,7 @@ public class RustSdkService
         PropertyNameCaseInsensitive = true
     };
 
-    public unsafe UserKeys GenerateUserKeys(string email, string password)
+    public static unsafe UserKeys GenerateUserKeys(string email, string password)
     {
         var emailBytes = StringToRustString(email);
         var passwordBytes = StringToRustString(password);
@@ -53,7 +53,7 @@ public class RustSdkService
         }
     }
 
-    public unsafe OrganizationKeys GenerateOrganizationKeys()
+    public static unsafe OrganizationKeys GenerateOrganizationKeys()
     {
         var resultPtr = NativeMethods.generate_organization_keys();
 
@@ -62,7 +62,7 @@ public class RustSdkService
         return JsonSerializer.Deserialize<OrganizationKeys>(result, CaseInsensitiveOptions)!;
     }
 
-    public unsafe string GenerateUserOrganizationKey(string userKey, string orgKey)
+    public static unsafe string GenerateUserOrganizationKey(string userKey, string orgKey)
     {
         var userKeyBytes = StringToRustString(userKey);
         var orgKeyBytes = StringToRustString(orgKey);
@@ -78,7 +78,7 @@ public class RustSdkService
         }
     }
 
-    public unsafe string EncryptCipher(string cipherViewJson, string symmetricKeyBase64)
+    public static unsafe string EncryptCipher(string cipherViewJson, string symmetricKeyBase64)
     {
         var cipherViewBytes = StringToRustString(cipherViewJson);
         var keyBytes = StringToRustString(symmetricKeyBase64);
@@ -92,7 +92,7 @@ public class RustSdkService
         }
     }
 
-    public unsafe string DecryptCipher(string cipherJson, string symmetricKeyBase64)
+    public static unsafe string DecryptCipher(string cipherJson, string symmetricKeyBase64)
     {
         var cipherBytes = StringToRustString(cipherJson);
         var keyBytes = StringToRustString(symmetricKeyBase64);
@@ -110,7 +110,7 @@ public class RustSdkService
     /// Encrypts a plaintext string using the provided symmetric key.
     /// Returns an EncString in format "2.{iv}|{data}|{mac}".
     /// </summary>
-    public unsafe string EncryptString(string plaintext, string symmetricKeyBase64)
+    public static unsafe string EncryptString(string plaintext, string symmetricKeyBase64)
     {
         var plaintextBytes = StringToRustString(plaintext);
         var keyBytes = StringToRustString(symmetricKeyBase64);

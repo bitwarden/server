@@ -18,18 +18,17 @@ public class RustSdkCipherTests
     [Fact]
     public void EncryptDecrypt_LoginCipher_RoundtripPreservesPlaintext()
     {
-        var sdk = new RustSdkService();
-        var orgKeys = sdk.GenerateOrganizationKeys();
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         var originalCipher = CreateTestLoginCipher();
         var originalJson = JsonSerializer.Serialize(originalCipher, SdkJsonOptions);
 
-        var encryptedJson = sdk.EncryptCipher(originalJson, orgKeys.Key);
+        var encryptedJson = RustSdkService.EncryptCipher(originalJson, orgKeys.Key);
 
         Assert.DoesNotContain("\"error\"", encryptedJson);
         Assert.Contains("\"name\":\"2.", encryptedJson);
 
-        var decryptedJson = sdk.DecryptCipher(encryptedJson, orgKeys.Key);
+        var decryptedJson = RustSdkService.DecryptCipher(encryptedJson, orgKeys.Key);
 
         Assert.DoesNotContain("\"error\"", decryptedJson);
 
@@ -45,8 +44,7 @@ public class RustSdkCipherTests
     [Fact]
     public void EncryptCipher_WithUri_EncryptsAllFields()
     {
-        var sdk = new RustSdkService();
-        var orgKeys = sdk.GenerateOrganizationKeys();
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         var cipher = new CipherViewDto
         {
@@ -66,7 +64,7 @@ public class RustSdkCipherTests
         };
 
         var cipherJson = JsonSerializer.Serialize(cipher, SdkJsonOptions);
-        var encryptedJson = sdk.EncryptCipher(cipherJson, orgKeys.Key);
+        var encryptedJson = RustSdkService.EncryptCipher(cipherJson, orgKeys.Key);
 
         Assert.DoesNotContain("\"error\"", encryptedJson);
         Assert.DoesNotContain("Amazon Shopping", encryptedJson);
@@ -77,17 +75,16 @@ public class RustSdkCipherTests
     [Fact]
     public void DecryptCipher_WithWrongKey_FailsOrProducesGarbage()
     {
-        var sdk = new RustSdkService();
-        var encryptionKey = sdk.GenerateOrganizationKeys();
-        var differentKey = sdk.GenerateOrganizationKeys();
+        var encryptionKey = RustSdkService.GenerateOrganizationKeys();
+        var differentKey = RustSdkService.GenerateOrganizationKeys();
 
         var originalCipher = CreateTestLoginCipher();
         var cipherJson = JsonSerializer.Serialize(originalCipher, SdkJsonOptions);
 
-        var encryptedJson = sdk.EncryptCipher(cipherJson, encryptionKey.Key);
+        var encryptedJson = RustSdkService.EncryptCipher(cipherJson, encryptionKey.Key);
         Assert.DoesNotContain("\"error\"", encryptedJson);
 
-        var decryptedJson = sdk.DecryptCipher(encryptedJson, differentKey.Key);
+        var decryptedJson = RustSdkService.DecryptCipher(encryptedJson, differentKey.Key);
 
         var decryptionFailedWithError = decryptedJson.Contains("\"error\"");
         if (!decryptionFailedWithError)
@@ -100,8 +97,7 @@ public class RustSdkCipherTests
     [Fact]
     public void EncryptCipher_WithFields_EncryptsCustomFields()
     {
-        var sdk = new RustSdkService();
-        var orgKeys = sdk.GenerateOrganizationKeys();
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         var cipher = new CipherViewDto
         {
@@ -120,13 +116,13 @@ public class RustSdkCipherTests
         };
 
         var cipherJson = JsonSerializer.Serialize(cipher, SdkJsonOptions);
-        var encryptedJson = sdk.EncryptCipher(cipherJson, orgKeys.Key);
+        var encryptedJson = RustSdkService.EncryptCipher(cipherJson, orgKeys.Key);
 
         Assert.DoesNotContain("\"error\"", encryptedJson);
         Assert.DoesNotContain("sk-secret-api-key-12345", encryptedJson);
         Assert.DoesNotContain("client-id-xyz", encryptedJson);
 
-        var decryptedJson = sdk.DecryptCipher(encryptedJson, orgKeys.Key);
+        var decryptedJson = RustSdkService.DecryptCipher(encryptedJson, orgKeys.Key);
         var decrypted = JsonSerializer.Deserialize<CipherViewDto>(decryptedJson, SdkJsonOptions);
 
         Assert.NotNull(decrypted?.Fields);
@@ -138,13 +134,11 @@ public class RustSdkCipherTests
     [Fact]
     public void CipherSeeder_ProducesServerCompatibleFormat()
     {
-        var sdk = new RustSdkService();
-        var orgKeys = sdk.GenerateOrganizationKeys();
-        var seeder = new CipherSeeder(sdk);
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var orgId = Guid.NewGuid();
 
         // Create cipher using the seeder
-        var cipher = seeder.CreateOrganizationLoginCipher(
+        var cipher = CipherSeeder.CreateOrganizationLoginCipher(
             orgId,
             orgKeys.Key,
             name: "GitHub Account",
@@ -179,11 +173,9 @@ public class RustSdkCipherTests
     [Fact]
     public void CipherSeeder_WithFields_ProducesCorrectServerFormat()
     {
-        var sdk = new RustSdkService();
-        var orgKeys = sdk.GenerateOrganizationKeys();
-        var seeder = new CipherSeeder(sdk);
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
-        var cipher = seeder.CreateOrganizationLoginCipherWithFields(
+        var cipher = CipherSeeder.CreateOrganizationLoginCipherWithFields(
             Guid.NewGuid(),
             orgKeys.Key,
             name: "API Service",

@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.RustSDK;
 using Bit.Seeder.Recipes;
 using CommandDotNet;
 using Microsoft.AspNetCore.Identity;
@@ -37,7 +36,9 @@ public class Program
         var scopedServices = scope.ServiceProvider;
         var db = scopedServices.GetRequiredService<DatabaseContext>();
 
-        var recipe = new OrganizationWithUsersRecipe(db);
+        var mapper = scopedServices.GetRequiredService<IMapper>();
+        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
+        var recipe = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         recipe.Seed(name: name, domain: domain, users: users);
     }
 
@@ -56,7 +57,6 @@ public class Program
         var recipe = new OrganizationWithVaultRecipe(
             scopedServices.GetRequiredService<DatabaseContext>(),
             scopedServices.GetRequiredService<IMapper>(),
-            scopedServices.GetRequiredService<RustSdkService>(),
             scopedServices.GetRequiredService<IPasswordHasher<User>>());
 
         recipe.Seed(args.ToOptions());

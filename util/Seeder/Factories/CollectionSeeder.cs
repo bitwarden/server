@@ -3,15 +3,15 @@ using Bit.RustSDK;
 
 namespace Bit.Seeder.Factories;
 
-public class CollectionSeeder(RustSdkService sdkService)
+public class CollectionSeeder
 {
-    public Collection CreateCollection(Guid organizationId, string orgKey, string name)
+    public static Collection CreateCollection(Guid organizationId, string orgKey, string name)
     {
         return new Collection
         {
             Id = Guid.NewGuid(),
             OrganizationId = organizationId,
-            Name = sdkService.EncryptString(name, orgKey),
+            Name = RustSdkService.EncryptString(name, orgKey),
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow
         };
