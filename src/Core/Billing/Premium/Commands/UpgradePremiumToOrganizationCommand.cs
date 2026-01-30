@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -96,9 +95,6 @@ public class UpgradePremiumToOrganizationCommand(
         var storageItem = currentSubscription.Items.Data.FirstOrDefault(i =>
             i.Price.Id == usersPremiumPlan.Storage.StripePriceId);
 
-        // Capture the previous additional storage quantity for potential revert
-        var previousAdditionalStorage = storageItem?.Quantity ?? 0;
-
         if (storageItem != null)
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
@@ -133,14 +129,10 @@ public class UpgradePremiumToOrganizationCommand(
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = subscriptionItemOptions,
-            ProrationBehavior = StripeConstants.ProrationBehavior.None,
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
-                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = usersPremiumPlan.Seat.StripePriceId,
-                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty,
-                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = previousAdditionalStorage.ToString(),
-                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = user.Id.ToString(),
                 [StripeConstants.MetadataKeys.UserId] = string.Empty // Remove userId to unlink subscription from User
             }
         };
