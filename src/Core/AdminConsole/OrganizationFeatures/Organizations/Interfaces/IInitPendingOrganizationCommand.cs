@@ -19,6 +19,12 @@ public interface IInitPendingOrganizationCommand
     /// <summary>
     /// Initializes a pending organization and confirms the first owner with upfront validation.
     /// </summary>
+    /// <remarks>
+    /// The user initializing the organization is the first user to access it - there is no existing 
+    /// owner or provider who can change its settings. Therefore, validation in this command assumes 
+    /// a default state. For example, it does not enforce policies for this organization because none 
+    /// will be enabled yet.
+    /// </remarks>
     /// <returns>A CommandResult indicating success or specific validation errors.</returns>
     Task<CommandResult> InitPendingOrganizationVNextAsync(InitPendingOrganizationRequest request);
 }
