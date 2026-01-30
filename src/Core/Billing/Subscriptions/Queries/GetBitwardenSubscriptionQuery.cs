@@ -30,7 +30,7 @@ public interface IGetBitwardenSubscriptionQuery
     /// Currently only supports <see cref="User"/> subscribers. Future versions will support all
     /// <see cref="ISubscriber"/> types (User and Organization).
     /// </remarks>
-    Task<BitwardenSubscription> Run(User user);
+    Task<BitwardenSubscription?> Run(User user);
 }
 
 public class GetBitwardenSubscriptionQuery(
@@ -38,8 +38,13 @@ public class GetBitwardenSubscriptionQuery(
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetBitwardenSubscriptionQuery
 {
-    public async Task<BitwardenSubscription> Run(User user)
+    public async Task<BitwardenSubscription?> Run(User user)
     {
+        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
+        {
+            return null;
+        }
+
         var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
         {
             Expand =
