@@ -187,12 +187,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.SingleOrDefault();
         }
     }
-    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithSharedCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
-                "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]",
+                "[dbo].[OrganizationUserUserDetails_ReadWithSharedCollectionsById]",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
@@ -202,7 +202,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeSharedCollections)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -216,7 +216,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             var users = results.ToList();
 
-            if (!includeCollections && !includeGroups)
+            if (!includeSharedCollections && !includeGroups)
             {
                 return users;
             }
@@ -231,10 +231,10 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }
 
-            if (includeCollections)
+            if (includeSharedCollections)
             {
                 userCollections = (await connection.QueryAsync<CollectionUser>(
-                    "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
+                    "[dbo].[CollectionUser_ReadSharedCollectionsByOrganizationUserIds]",
                     new { OrganizationUserIds = orgUserIds },
                     commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
             }
@@ -267,7 +267,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups, bool includeSharedCollections)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -278,7 +278,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 {
                     OrganizationId = organizationId,
                     IncludeGroups = includeGroups,
-                    IncludeCollections = includeCollections
+                    IncludeCollections = includeSharedCollections
                 },
                 commandType: CommandType.StoredProcedure);
 
@@ -297,7 +297,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             // Read collection associations (third result set, if requested)
             Dictionary<Guid, List<CollectionAccessSelection>>? userCollectionMap = null;
-            if (includeCollections)
+            if (includeSharedCollections)
             {
                 var collectionUsers = await results.ReadAsync<CollectionUser>();
                 userCollectionMap = collectionUsers
