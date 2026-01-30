@@ -173,7 +173,7 @@
                         font-weight="400"
                         padding="0px 0px 0px 0px">
                     You can easily access and share passwords with your team.<br/>
-                    <a href="https://bitwarden.com/help/share-items/" class="link">Share passwords in Bitwarden</a>
+                    <a href="https://bitwarden.com/help/sharing" class="link">Share passwords in Bitwarden</a>
                 </mj-text>
             </mj-column>
         </mj-section>
