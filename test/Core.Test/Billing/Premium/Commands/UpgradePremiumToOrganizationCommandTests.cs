@@ -397,6 +397,9 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
                 opts.Metadata[StripeConstants.MetadataKeys.PreviousAdditionalStorage] == "0" &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UpgradedOrganizationId) &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousStoragePriceId) &&
+                opts.Metadata[StripeConstants.MetadataKeys.PreviousStoragePriceId] == "personal-storage-gb-annually" &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UserId) &&
                 opts.Metadata[StripeConstants.MetadataKeys.UserId] == string.Empty)); // Removes userId to unlink from User
     }
@@ -600,6 +603,8 @@ public class UpgradePremiumToOrganizationCommandTests
             Arg.Is<SubscriptionUpdateOptions>(opts =>
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
                 opts.Metadata[StripeConstants.MetadataKeys.PreviousAdditionalStorage] == "5" &&
+                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousStoragePriceId) &&
+                opts.Metadata[StripeConstants.MetadataKeys.PreviousStoragePriceId] == "personal-storage-gb-annually" &&
                 opts.Items.Count == 3 && // 2 deleted (premium + storage) + 1 new seat
                 opts.Items.Count(i => i.Deleted == true) == 2));
     }
