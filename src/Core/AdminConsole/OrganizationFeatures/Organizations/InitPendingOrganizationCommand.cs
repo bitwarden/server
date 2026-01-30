@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -30,7 +27,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
 {
-
     private readonly IOrganizationService _organizationService;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IOrganizationRepository _organizationRepository;
@@ -106,6 +102,10 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         }
 
         var org = await _organizationRepository.GetByIdAsync(organizationId);
+        if (org == null)
+        {
+            throw new BadRequestException("Organization not found.");
+        }
 
         if (org.Enabled)
         {
@@ -232,7 +232,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         return new None();
     }
 
-    private static Error ValidateUserEmail(OrganizationUser orgUser, User user)
+    private static Error? ValidateUserEmail(OrganizationUser orgUser, User user)
     {
         if (string.IsNullOrWhiteSpace(orgUser.Email) ||
             !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
@@ -243,7 +243,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         return null;
     }
 
-    private static Error ValidateOrganizationState(Organization org)
+    private static Error? ValidateOrganizationState(Organization org)
     {
         if (org.Enabled)
         {
@@ -263,7 +263,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         return null;
     }
 
-    private async Task<Error> ValidatePoliciesAsync(User user, Guid organizationId, Organization org, OrganizationUser orgUser)
+    private async Task<Error?> ValidatePoliciesAsync(User user, Guid organizationId, Organization org, OrganizationUser orgUser)
     {
         // Enforce Automatic User Confirmation Policy (when feature flag is enabled)
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
