@@ -149,21 +149,18 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var rangeToRemove = from ea in dbContext.EmergencyAccesses
+        var entitiesToRemove = from ea in dbContext.EmergencyAccesses
                             where emergencyAccessIds.Contains(ea.Id)
                             select ea;
-        dbContext.EmergencyAccesses.RemoveRange(rangeToRemove);
 
-        var granteeIds = rangeToRemove
+        var granteeIds = entitiesToRemove
             .Where(ea => ea.Status == EmergencyAccessStatusType.Confirmed)
             .Where(ea => ea.GranteeId.HasValue)
             .Select(ea => ea.GranteeId!.Value) // .Value is safe here due to the Where above
             .Distinct();
 
-        await dbContext.UserBumpManyAccountRevisionDatesAsync(
-            [.. granteeIds]
-        );
-
+        dbContext.EmergencyAccesses.RemoveRange(entitiesToRemove);
+        await dbContext.UserBumpManyAccountRevisionDatesAsync([.. granteeIds]);
         await dbContext.SaveChangesAsync();
     }
 }
