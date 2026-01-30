@@ -40,9 +40,8 @@
                         src="https://bitwarden.com/images/logo-horizontal-white.png">
                 </mj-image>
                 <mj-text
-
-                        font-size="24px"
-                        line-height="32px"
+                        font-size="20px"
+                        line-height="30px"
                         font-weight="400"
                         padding="0px 0px 24px 0px"
                         align="left"
