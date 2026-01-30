@@ -150,8 +150,8 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var entitiesToRemove = from ea in dbContext.EmergencyAccesses
-                            where emergencyAccessIds.Contains(ea.Id)
-                            select ea;
+                               where emergencyAccessIds.Contains(ea.Id)
+                               select ea;
 
         var granteeIds = entitiesToRemove
             .Where(ea => ea.Status == EmergencyAccessStatusType.Confirmed)

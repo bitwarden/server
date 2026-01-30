@@ -69,13 +69,16 @@ public class EmergencyAccessRepositoriesTests
             SecurityStamp = "stamp",
         });
 
-        var granteeUser2 = await userRepository.CreateAsync(new User
+        var invitedGranteeUser2 = await userRepository.CreateAsync(new User
         {
             Name = "Test Grantee User 2",
             Email = $"test+grantee{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
+
+        // The inmemory datetime has a precision issue, so we need to refresh the user to get the stored AccountRevisionDate
+        invitedGranteeUser2 = await userRepository.GetByIdAsync(invitedGranteeUser2.Id);
 
         var granteeUser3 = await userRepository.CreateAsync(new User
         {
@@ -95,7 +98,7 @@ public class EmergencyAccessRepositoriesTests
         var invitedEmergencyAccess = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
         {
             GrantorId = grantorUser.Id,
-            GranteeId = granteeUser2.Id,
+            GranteeId = invitedGranteeUser2.Id,
             Status = EmergencyAccessStatusType.Invited,
         });
 
@@ -106,6 +109,7 @@ public class EmergencyAccessRepositoriesTests
             Status = EmergencyAccessStatusType.Accepted,
         });
 
+
         // Act
         await emergencyAccessRepository.DeleteManyAsync([confirmedEmergencyAccess.Id, invitedEmergencyAccess.Id, acceptedEmergencyAccess.Id]);
 
@@ -115,15 +119,20 @@ public class EmergencyAccessRepositoriesTests
         Assert.Empty(grantorEmergencyAccess);
 
         // ensure Grantee records deleted
-        foreach (User grantee in (List<User>)[confirmedGranteeUser1, granteeUser2, granteeUser3])
+        foreach (var grantee in (List<User>)[confirmedGranteeUser1, invitedGranteeUser2, granteeUser3])
         {
             var granteeEmergencyAccess = await emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(grantee.Id);
             Assert.Empty(granteeEmergencyAccess);
         }
 
         // Only the Status.Confirmed grantee's AccountRevisionDate should be updated
-        var updatedGrantee = await userRepository.GetByIdAsync(confirmedGranteeUser1.Id);
-        Assert.NotNull(updatedGrantee);
-        Assert.NotEqual(updatedGrantee.AccountRevisionDate, confirmedGranteeUser1.AccountRevisionDate);
+        var updatedConfirmedGrantee = await userRepository.GetByIdAsync(confirmedGranteeUser1.Id);
+        Assert.NotNull(updatedConfirmedGrantee);
+        Assert.NotEqual(updatedConfirmedGrantee.AccountRevisionDate, confirmedGranteeUser1.AccountRevisionDate);
+
+        // Invited user should not have an updated AccountRevisionDate
+        var updatedInvitedGrantee = await userRepository.GetByIdAsync(invitedGranteeUser2.Id);
+        Assert.NotNull(updatedInvitedGrantee);
+        Assert.Equal(updatedInvitedGrantee.AccountRevisionDate, invitedGranteeUser2.AccountRevisionDate);
     }
 }
