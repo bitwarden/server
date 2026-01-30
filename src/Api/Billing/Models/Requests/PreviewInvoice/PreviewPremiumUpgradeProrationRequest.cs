@@ -2,17 +2,12 @@
 using System.Text.Json.Serialization;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
 
-namespace Bit.Api.Billing.Models.Requests.Premium;
+namespace Bit.Api.Billing.Models.Requests.PreviewInvoice;
 
-public class UpgradePremiumToOrganizationRequest
+public record PreviewPremiumUpgradeProrationRequest
 {
-    [Required]
-    public string OrganizationName { get; set; } = null!;
-
-    [Required]
-    public string Key { get; set; } = null!;
-
     [Required]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public required ProductTierType TargetProductTierType { get; set; }
@@ -39,6 +34,6 @@ public class UpgradePremiumToOrganizationRequest
         }
     }
 
-    public (string OrganizationName, string Key, PlanType PlanType, Core.Billing.Payment.Models.BillingAddress BillingAddress) ToDomain() =>
-        (OrganizationName, Key, PlanType, BillingAddress.ToDomain());
+    public (PlanType, BillingAddress) ToDomain() =>
+        (PlanType, BillingAddress.ToDomain());
 }
