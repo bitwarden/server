@@ -85,7 +85,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
-        Assert.Contains("email otp sent", content);
+        Assert.Contains("email and otp are required", content);
     }
 
     [Fact]
