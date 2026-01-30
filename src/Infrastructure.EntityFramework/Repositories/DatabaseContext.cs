@@ -119,6 +119,7 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
         var eOrganizationMemberBaseDetail = builder.Entity<OrganizationMemberBaseDetail>();
+        var eSend = builder.Entity<Send>();
 
         // Shadow property configurations go here
 
@@ -148,6 +149,7 @@ public class DatabaseContext : DbContext
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
         eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
         eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
+        eSend.Property(c => c.EmailHashes).HasConversion(dataProtectionConverter);
 
         if (Database.IsNpgsql())
         {

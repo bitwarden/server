@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
@@ -38,6 +40,10 @@ public class SendEmailOtpRequestValidator(
             // Request is the wrong shape and doesn't contain an email field.
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         }
+
+        // email hash must be in the list of email hashes in the EmailOtp array
+        byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(email));
+        string hashEmailHex = Convert.ToHexString(hashBytes).ToUpperInvariant();
         /*
          * This is somewhat contradictory to our process where a poor shape means invalid_request and invalid
          * data is invalid_grant.
@@ -45,7 +51,7 @@ public class SendEmailOtpRequestValidator(
          * as invalid requests. The response for a request with a correct email which needs an OTP and a request
          * that has an invalid email need to be the same otherwise an attacker could enumerate until a valid email is found.
         */
-        if (!authMethod.Emails.Contains(email))
+        if (!authMethod.EmailHashes.Contains(hashEmailHex))
         {
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
         }
