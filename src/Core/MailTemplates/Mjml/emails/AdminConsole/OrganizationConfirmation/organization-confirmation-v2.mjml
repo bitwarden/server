@@ -95,8 +95,9 @@
                 background-color="#fff">
             <mj-column>
                 <mj-text
-                        font-size="16px"
-                        line-height="24px"
+                        font-size="14px"
+                        line-height="20px"
+                        font-weight="400"
                         padding="0px">
                     As a member of <b>{{OrganizationName}}</b>:
                 </mj-text>
@@ -131,9 +132,9 @@
                     width="80%"
                     vertical-align="top">
                 <mj-text
-
-                        line-height="24px"
-                        font-size="16px"
+                        font-size="14px"
+                        line-height="20px"
+                        font-weight="400"
                         padding="0px 0px 0px 0px">
                     Your account is owned by {{OrganizationName}} and is subject to their security and management policies.
                 </mj-text>
@@ -168,9 +169,9 @@
                     width="80%"
                     vertical-align="top">
                 <mj-text
-
-                        line-height="24px"
-                        font-size="16px"
+                        font-size="14px"
+                        line-height="20px"
+                        font-weight="400"
                         padding="0px 0px 0px 0px">
                     You can easily access and share passwords with your team.<br/>
                     <a href="https://bitwarden.com/help/share-items/" class="link">Share passwords in Bitwarden</a>
@@ -204,8 +205,9 @@
                     Learn more about Bitwarden
                 </mj-text>
                 <mj-text
-                        line-height="20px"
                         font-size="14px"
+                        line-height="20px"
+                        font-weight="400"
                         padding="0px">
                     Find user guides, product documentation, and videos on the <a href="https://bitwarden.com/help/" class="link">Bitwarden help center</a>.
                 </mj-text>
