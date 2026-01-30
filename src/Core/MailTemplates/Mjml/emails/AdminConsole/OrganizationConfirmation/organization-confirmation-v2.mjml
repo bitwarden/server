@@ -40,7 +40,7 @@
                         src="https://bitwarden.com/images/logo-horizontal-white.png">
                 </mj-image>
                 <mj-text
-                        font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif"
+
                         font-size="24px"
                         line-height="32px"
                         font-weight="400"
@@ -58,7 +58,7 @@
                         inner-padding="12px 24px"
                         padding="0px"
                         font-size="16px"
-                        font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif"
+
                         font-weight="700"
                         line-height="24px">
                     Log in
@@ -131,7 +131,7 @@
                     width="80%"
                     vertical-align="top">
                 <mj-text
-                        font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif"
+
                         line-height="24px"
                         font-size="16px"
                         padding="0px 0px 0px 0px">
@@ -168,7 +168,7 @@
                     width="80%"
                     vertical-align="top">
                 <mj-text
-                        font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif"
+
                         line-height="24px"
                         font-size="16px"
                         padding="0px 0px 0px 0px">
