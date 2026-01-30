@@ -1,13 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -161,6 +155,11 @@ public class InitPendingOrganizationCommandTests
         var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(orgUser);
 
+        // Setup validator to accept the token for old InitPendingOrganizationAsync method
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateInviteToken(orgUser, Arg.Any<User>(), protectedToken)
+            .Returns(true);
+
         return protectedToken;
     }
 
@@ -248,12 +247,13 @@ public class InitPendingOrganizationCommandTests
         orgUser.Email = user.Email;
         var requestWithInvalidToken = request with { User = user, EmailToken = "invalid-token" };
 
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(requestWithInvalidToken.OrganizationUserId)
             .Returns(orgUser);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateInviteToken(orgUser, user, "invalid-token")
+            .Returns(false);
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(requestWithInvalidToken);
@@ -274,12 +274,19 @@ public class InitPendingOrganizationCommandTests
         orgUser.Email = "different@email.com";
         user.Email = "user@email.com";
 
-        var token = CreateToken(orgUser, request.OrganizationUserId, sutProvider);
-        var requestWithUser = request with { User = user, EmailToken = token };
+        var requestWithUser = request with { User = user, EmailToken = "valid-token" };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(requestWithUser.OrganizationUserId)
             .Returns(orgUser);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateInviteToken(orgUser, user, Arg.Any<string>())
+            .Returns(true);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateUserEmail(orgUser, user)
+            .Returns(new EmailMismatchError());
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(requestWithUser);
@@ -299,12 +306,19 @@ public class InitPendingOrganizationCommandTests
         // Arrange
         orgUser.Email = user.Email;
 
-        var token = CreateToken(orgUser, request.OrganizationUserId, sutProvider);
-        var requestWithUser = request with { User = user, EmailToken = token };
+        var requestWithUser = request with { User = user, EmailToken = "valid-token" };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(requestWithUser.OrganizationUserId)
             .Returns(orgUser);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateInviteToken(orgUser, user, Arg.Any<string>())
+            .Returns(true);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateUserEmail(orgUser, user)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(requestWithUser.OrganizationId)
@@ -330,16 +344,27 @@ public class InitPendingOrganizationCommandTests
         orgUser.Email = user.Email;
         orgUser.OrganizationId = Guid.NewGuid(); // Different from request
 
-        var token = CreateToken(orgUser, request.OrganizationUserId, sutProvider);
-        var requestWithUser = request with { User = user, EmailToken = token };
+        var requestWithUser = request with { User = user, EmailToken = "valid-token" };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(requestWithUser.OrganizationUserId)
             .Returns(orgUser);
 
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateInviteToken(orgUser, user, Arg.Any<string>())
+            .Returns(true);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateUserEmail(orgUser, user)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
+
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(requestWithUser.OrganizationId)
             .Returns(org);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationMatch(orgUser, requestWithUser.OrganizationId)
+            .Returns(new OrganizationMismatchError());
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(requestWithUser);
@@ -370,6 +395,14 @@ public class InitPendingOrganizationCommandTests
             .GetByIdAsync(updatedRequest.OrganizationId)
             .Returns(org);
 
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationMatch(orgUser, updatedRequest.OrganizationId)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationState(org)
+            .Returns(new OrganizationAlreadyEnabledError());
+
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(updatedRequest);
 
@@ -398,6 +431,14 @@ public class InitPendingOrganizationCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(updatedRequest.OrganizationId)
             .Returns(org);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationMatch(orgUser, updatedRequest.OrganizationId)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationState(org)
+            .Returns(new OrganizationNotPendingError());
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(updatedRequest);
@@ -428,6 +469,14 @@ public class InitPendingOrganizationCommandTests
             .GetByIdAsync(updatedRequest.OrganizationId)
             .Returns(org);
 
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationMatch(orgUser, updatedRequest.OrganizationId)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationState(org)
+            .Returns(new OrganizationHasKeysError());
+
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(updatedRequest);
 
@@ -457,6 +506,14 @@ public class InitPendingOrganizationCommandTests
             .GetByIdAsync(updatedRequest.OrganizationId)
             .Returns(org);
 
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationMatch(orgUser, updatedRequest.OrganizationId)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationState(org)
+            .Returns(new OrganizationHasKeysError());
+
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(updatedRequest);
 
@@ -476,9 +533,9 @@ public class InitPendingOrganizationCommandTests
         // Arrange
         var updatedRequest = SetupValidOrgAndOrgUser(user, org, orgUser, request, sutProvider);
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(true);
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidatePoliciesAsync(user, updatedRequest.OrganizationId)
+            .Returns(new SingleOrgPolicyViolationError());
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(updatedRequest);
@@ -499,33 +556,9 @@ public class InitPendingOrganizationCommandTests
         // Arrange
         var updatedRequest = SetupValidOrgAndOrgUser(user, org, orgUser, request, sutProvider);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Any<string>())
-            .Returns(false);
-
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(false);
-
-        // Create a PolicyDetails that requires 2FA for this organization
-        var policyDetails = new PolicyDetails
-        {
-            OrganizationId = updatedRequest.OrganizationId,
-            OrganizationUserId = updatedRequest.OrganizationUserId,
-            PolicyType = PolicyType.TwoFactorAuthentication,
-            OrganizationUserType = OrganizationUserType.Owner,
-            OrganizationUserStatus = OrganizationUserStatusType.Invited
-        };
-
-        var twoFactorReq = new RequireTwoFactorPolicyRequirement(new[] { policyDetails });
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(twoFactorReq);
-
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(false);
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidatePoliciesAsync(user, updatedRequest.OrganizationId)
+            .Returns(new TwoFactorRequiredError());
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(updatedRequest);
@@ -549,24 +582,13 @@ public class InitPendingOrganizationCommandTests
         org.PlanType = PlanType.Free;
         orgUser.Type = OrganizationUserType.Owner;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Any<string>())
-            .Returns(false);
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidatePoliciesAsync(user, updatedRequest.OrganizationId)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(false);
-
-        // Create a RequireTwoFactorPolicyRequirement with no policies (2FA not required)
-        var twoFactorReq = new RequireTwoFactorPolicyRequirement(Enumerable.Empty<PolicyDetails>());
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(twoFactorReq);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
-            .Returns(1);
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateBusinessRulesAsync(user, org, orgUser)
+            .Returns(new FreeOrgAdminLimitError());
 
         // Act
         var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(updatedRequest);
@@ -585,25 +607,14 @@ public class InitPendingOrganizationCommandTests
     {
         var updatedRequest = SetupValidOrgAndOrgUser(user, org, orgUser, request, sutProvider);
 
-        // Setup policy checks to pass
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Any<string>())
-            .Returns(false);
+        // Setup validator to pass all policy and business rule checks
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidatePoliciesAsync(user, updatedRequest.OrganizationId)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(false);
-
-        // Create a RequireTwoFactorPolicyRequirement with no policies (2FA not required)
-        var twoFactorReq = new RequireTwoFactorPolicyRequirement(Enumerable.Empty<PolicyDetails>());
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(twoFactorReq);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
-            .Returns(0);
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateBusinessRulesAsync(user, org, orgUser)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
         // Setup repositories to return update delegates
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -649,6 +660,15 @@ public class InitPendingOrganizationCommandTests
             .GetByIdAsync(updatedRequest.OrganizationId)
             .Returns(org);
 
+        // Setup validator for organization match and state
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationMatch(orgUser, updatedRequest.OrganizationId)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateOrganizationState(org)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
+
         return updatedRequest;
     }
 
@@ -660,12 +680,19 @@ public class InitPendingOrganizationCommandTests
     {
         orgUser.Email = user.Email;
 
-        var token = CreateToken(orgUser, request.OrganizationUserId, sutProvider);
-        var updatedRequest = request with { User = user, EmailToken = token };
+        var updatedRequest = request with { User = user, EmailToken = "valid-token" };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(updatedRequest.OrganizationUserId)
             .Returns(orgUser);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateInviteToken(orgUser, user, Arg.Any<string>())
+            .Returns(true);
+
+        sutProvider.GetDependency<IInitPendingOrganizationValidator>()
+            .ValidateUserEmail(orgUser, user)
+            .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
         return updatedRequest;
     }

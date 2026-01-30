@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -21,7 +20,6 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using OneOf.Types;
-using Error = Bit.Core.AdminConsole.Utilities.v2.Error;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -44,6 +42,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IInitPendingOrganizationValidator _validator;
 
     public InitPendingOrganizationCommand(
             IOrganizationService organizationService,
@@ -62,7 +61,8 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             IUserRepository userRepository,
             IPushNotificationService pushNotificationService,
             IPushRegistrationService pushRegistrationService,
-            IDeviceRepository deviceRepository
+            IDeviceRepository deviceRepository,
+            IInitPendingOrganizationValidator validator
             )
     {
         _organizationService = organizationService;
@@ -82,6 +82,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
         _deviceRepository = deviceRepository;
+        _validator = validator;
     }
 
     public async Task InitPendingOrganizationAsync(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken)
@@ -94,7 +95,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             throw new BadRequestException("User invalid.");
         }
 
-        var tokenValid = ValidateInviteToken(orgUser, user, emailToken);
+        var tokenValid = _validator.ValidateInviteToken(orgUser, user, emailToken);
 
         if (!tokenValid)
         {
@@ -170,14 +171,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         }
     }
 
-    private bool ValidateInviteToken(OrganizationUser orgUser, User user, string emailToken)
-    {
-        var tokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, emailToken, orgUser);
-
-        return tokenValid;
-    }
-
     public async Task<CommandResult> InitPendingOrganizationVNextAsync(InitPendingOrganizationRequest request)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(request.OrganizationUserId);
@@ -186,12 +179,12 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             return new OrganizationUserNotFoundError();
         }
 
-        if (!ValidateInviteToken(orgUser, request.User, request.EmailToken))
+        if (!_validator.ValidateInviteToken(orgUser, request.User, request.EmailToken))
         {
             return new InvalidTokenError();
         }
 
-        var validationError = ValidateUserEmail(orgUser, request.User);
+        var validationError = _validator.ValidateUserEmail(orgUser, request.User);
         if (validationError != null)
         {
             return validationError;
@@ -203,18 +196,25 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             return new OrganizationNotFoundError();
         }
 
-        if (orgUser.OrganizationId != request.OrganizationId)
-        {
-            return new OrganizationMismatchError();
-        }
-
-        validationError = ValidateOrganizationState(org);
+        validationError = _validator.ValidateOrganizationMatch(orgUser, request.OrganizationId);
         if (validationError != null)
         {
             return validationError;
         }
 
-        validationError = await ValidatePoliciesAsync(request.User, request.OrganizationId, org, orgUser);
+        validationError = _validator.ValidateOrganizationState(org);
+        if (validationError != null)
+        {
+            return validationError;
+        }
+
+        validationError = await _validator.ValidatePoliciesAsync(request.User, request.OrganizationId);
+        if (validationError != null)
+        {
+            return validationError;
+        }
+
+        validationError = await _validator.ValidateBusinessRulesAsync(request.User, org, orgUser);
         if (validationError != null)
         {
             return validationError;
@@ -224,82 +224,11 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         PrepareOrganizationUserForConfirmation(orgUser, request);
 
         var updateActions = BuildDatabaseUpdateActions(org, orgUser, request);
-
         await _organizationRepository.ExecuteOrganizationInitializationUpdatesAsync(updateActions);
 
         await SendNotificationsAsync(org, orgUser, request.User, request.OrganizationId);
 
         return new None();
-    }
-
-    private static Error? ValidateUserEmail(OrganizationUser orgUser, User user)
-    {
-        if (string.IsNullOrWhiteSpace(orgUser.Email) ||
-            !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
-        {
-            return new EmailMismatchError();
-        }
-
-        return null;
-    }
-
-    private static Error? ValidateOrganizationState(Organization org)
-    {
-        if (org.Enabled)
-        {
-            return new OrganizationAlreadyEnabledError();
-        }
-
-        if (org.Status != OrganizationStatusType.Pending)
-        {
-            return new OrganizationNotPendingError();
-        }
-
-        if (!string.IsNullOrEmpty(org.PublicKey) || !string.IsNullOrEmpty(org.PrivateKey))
-        {
-            return new OrganizationHasKeysError();
-        }
-
-        return null;
-    }
-
-    private async Task<Error?> ValidatePoliciesAsync(User user, Guid organizationId, Organization org, OrganizationUser orgUser)
-    {
-        // Enforce Automatic User Confirmation Policy (when feature flag is enabled)
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var autoConfirmReq = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
-            if (autoConfirmReq.CannotCreateNewOrganization())
-            {
-                return new SingleOrgPolicyViolationError();
-            }
-        }
-
-        // Enforce Single Organization Policy
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            return new SingleOrgPolicyViolationError();
-        }
-
-        var twoFactorReq = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-        if (twoFactorReq.IsTwoFactorRequiredForOrganization(organizationId) &&
-            !await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
-        {
-            return new TwoFactorRequiredError();
-        }
-
-        if (org.PlanType == PlanType.Free &&
-            (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin))
-        {
-            var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
-            if (adminCount > 0)
-            {
-                return new FreeOrgAdminLimitError();
-            }
-        }
-
-        return null;
     }
 
     private static void PrepareOrganizationForInitialization(Organization org, InitPendingOrganizationRequest request)
