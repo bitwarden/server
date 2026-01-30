@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.RustSDK;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -23,7 +22,6 @@ public static class ServiceCollectionExtension
             builder.AddFilter("Microsoft.EntityFrameworkCore.Model.Validation", LogLevel.Error);
         });
         services.AddSingleton(globalSettings);
-        services.AddSingleton<RustSdkService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
         // Add Data Protection services

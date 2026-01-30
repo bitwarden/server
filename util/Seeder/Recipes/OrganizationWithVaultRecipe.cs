@@ -27,12 +27,8 @@ namespace Bit.Seeder.Recipes;
 public class OrganizationWithVaultRecipe(
     DatabaseContext db,
     IMapper mapper,
-    RustSdkService sdkService,
     IPasswordHasher<User> passwordHasher)
 {
-    private readonly CollectionSeeder _collectionSeeder = new(sdkService);
-    private readonly CipherSeeder _cipherSeeder = new(sdkService);
-    private readonly FolderSeeder _folderSeeder = new(sdkService);
 
     /// <summary>
     /// Tracks a user with their symmetric key for folder encryption.
@@ -47,15 +43,15 @@ public class OrganizationWithVaultRecipe(
     public Guid Seed(OrganizationVaultOptions options)
     {
         var seats = Math.Max(options.Users + 1, 1000);
-        var orgKeys = sdkService.GenerateOrganizationKeys();
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         // Create organization via factory
         var organization = OrganizationSeeder.CreateEnterprise(
             options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner user via factory
-        var ownerUser = UserSeeder.CreateUserWithSdkKeys($"owner@{options.Domain}", sdkService, passwordHasher);
-        var ownerOrgKey = sdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
+        var ownerUser = UserSeeder.CreateUserWithSdkKeys($"owner@{options.Domain}", passwordHasher);
+        var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
 
@@ -67,7 +63,7 @@ public class OrganizationWithVaultRecipe(
         for (var i = 0; i < options.Users; i++)
         {
             var email = $"user{i}@{options.Domain}";
-            var userKeys = sdkService.GenerateUserKeys(email, UserSeeder.DefaultPassword);
+            var userKeys = RustSdkService.GenerateUserKeys(email, UserSeeder.DefaultPassword);
             var memberUser = UserSeeder.CreateUserFromKeys(email, userKeys, passwordHasher);
             memberUsersWithKeys.Add(new UserWithKey(memberUser, userKeys.Key));
 
@@ -77,7 +73,7 @@ public class OrganizationWithVaultRecipe(
 
             var memberOrgKey = (status == OrganizationUserStatusType.Confirmed ||
                                 status == OrganizationUserStatusType.Revoked)
-                ? sdkService.GenerateUserOrganizationKey(memberUser.PublicKey!, orgKeys.Key)
+                ? RustSdkService.GenerateUserOrganizationKey(memberUser.PublicKey!, orgKeys.Key)
                 : null;
 
             memberOrgUsers.Add(organization.CreateOrganizationUserWithKey(
@@ -124,12 +120,12 @@ public class OrganizationWithVaultRecipe(
         {
             var structure = OrgStructures.GetStructure(structureModel.Value);
             collections = structure.Units
-                .Select(unit => _collectionSeeder.CreateCollection(organizationId, orgKeyBase64, unit.Name))
+                .Select(unit => CollectionSeeder.CreateCollection(organizationId, orgKeyBase64, unit.Name))
                 .ToList();
         }
         else
         {
-            collections = [_collectionSeeder.CreateCollection(organizationId, orgKeyBase64, "Default Collection")];
+            collections = [CollectionSeeder.CreateCollection(organizationId, orgKeyBase64, "Default Collection")];
         }
 
         db.BulkCopy(collections);
@@ -191,7 +187,7 @@ public class OrganizationWithVaultRecipe(
             .Select(i =>
             {
                 var company = companies[i % companies.Length];
-                return _cipherSeeder.CreateOrganizationLoginCipher(
+                return CipherSeeder.CreateOrganizationLoginCipher(
                     organizationId,
                     orgKeyBase64,
                     name: $"{company.Name} ({company.Category})",
@@ -285,7 +281,7 @@ public class OrganizationWithVaultRecipe(
             {
                 var folderCount = GetFolderCountForUser(userIndex, usersWithKeys.Count, random);
                 return Enumerable.Range(0, folderCount)
-                    .Select(folderIndex => _folderSeeder.CreateFolder(
+                    .Select(folderIndex => FolderSeeder.CreateFolder(
                         uwk.User.Id,
                         uwk.SymmetricKey,
                         folderNameGenerator.GetFolderName(userIndex * 15 + folderIndex)));
