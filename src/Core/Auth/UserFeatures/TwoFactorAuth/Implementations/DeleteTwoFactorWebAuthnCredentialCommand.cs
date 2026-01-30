@@ -27,6 +27,9 @@ public class DeleteTwoFactorWebAuthnCredentialCommand : IDeleteTwoFactorWebAuthn
             return false;
         }
 
+        // Do not delete the last registered key credential.
+        // This prevents accidental account lockout (factor enabled, no credentials registered).
+        // To remove the last (or single) registered credential, disable the WebAuthn 2fa provider.
         if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) < 2)
         {
             return false;
