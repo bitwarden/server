@@ -1,5 +1,8 @@
-﻿using Bit.SharedWeb.Utilities;
+﻿using Bit.Core.Entities;
+using Bit.RustSDK;
+using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -13,8 +16,15 @@ public static class ServiceCollectionExtension
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
 
         // Register services
-        services.AddLogging(builder => builder.AddConsole());
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.SetMinimumLevel(LogLevel.Warning);
+            builder.AddFilter("Microsoft.EntityFrameworkCore.Model.Validation", LogLevel.Error);
+        });
         services.AddSingleton(globalSettings);
+        services.AddSingleton<RustSdkService>();
+        services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
         // Add Data Protection services
         services.AddDataProtection()
