@@ -11,6 +11,9 @@
 **/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-bre
 **/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-bre
 
+# Scanning tools
+.checkmarx/ @bitwarden/team-appsec
+
 ## BRE team owns these workflows ##
 .github/workflows/publish.yml @bitwarden/dept-bre
 
@@ -94,9 +97,7 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 .github/workflows/test-database.yml @bitwarden/team-platform-dev
 .github/workflows/test.yml @bitwarden/team-platform-dev
 **/*Platform* @bitwarden/team-platform-dev
-**/.dockerignore @bitwarden/team-platform-dev
-**/Dockerfile @bitwarden/team-platform-dev
-**/entrypoint.sh @bitwarden/team-platform-dev
+
 # The PushType enum is expected to be editted by anyone without need for Platform review
 src/Core/Platform/Push/PushType.cs
 
