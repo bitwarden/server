@@ -72,7 +72,7 @@ public class PreviewInvoiceController(
 
         return Handle(result.Map(proration => new
         {
-            NewPlanProratedTotal = proration.NewPlanProratedAmount,
+            proration.NewPlanProratedAmount,
             proration.Credit,
             proration.Tax,
             proration.Total,
