@@ -94,6 +94,8 @@ public class UpdatePaymentMethodCommand(
 
         await setupIntentCache.Set(subscriber.Id, setupIntent.Id);
 
+        _logger.LogInformation("{Command}: Successfully cached Setup Intent ({SetupIntentId}) for subscriber ({SubscriberID})", CommandName, setupIntent.Id, subscriber.Id);
+
         await UnlinkBraintreeCustomerAsync(customer);
 
         return MaskedPaymentMethod.From(setupIntent);

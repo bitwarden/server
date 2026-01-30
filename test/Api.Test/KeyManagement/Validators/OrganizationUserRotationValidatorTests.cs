@@ -70,6 +70,44 @@ public class OrganizationUserRotationValidatorTests
     }
 
     [Theory]
+    [BitAutoData([null])]
+    [BitAutoData("")]
+    public async Task ValidateAsync_OrgUsersWithNullOrEmptyResetPasswordKey_FiltersOutInvalidKeys(
+        string? invalidResetPasswordKey,
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        ResetPasswordWithOrgIdRequestModel validResetPasswordKey)
+    {
+        // Arrange
+        var existingUserResetPassword = new List<OrganizationUser>
+        {
+            // Valid org user with reset password key
+            new OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = validResetPasswordKey.OrganizationId,
+                ResetPasswordKey = validResetPasswordKey.ResetPasswordKey
+            },
+            // Invalid org user with null or empty reset password key - should be filtered out
+            new OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = Guid.NewGuid(),
+                ResetPasswordKey = invalidResetPasswordKey
+            }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
+            .Returns(existingUserResetPassword);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, new[] { validResetPasswordKey });
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal(validResetPasswordKey.OrganizationId, result[0].OrganizationId);
+    }
+
+    [Theory]
     [BitAutoData]
     public async Task ValidateAsync_MissingResetPassword_Throws(
         SutProvider<OrganizationUserRotationValidator> sutProvider, User user,

@@ -82,6 +82,15 @@ public class Send : ITableObject<Guid>
     public string? Emails { get; set; }
 
     /// <summary>
+    /// Comma-separated list of email **hashes** for OTP authentication.
+    /// </summary>
+    /// <remarks>
+    /// This field is mutually exclusive with <see cref="Password" />
+    /// </remarks>
+    [MaxLength(4000)]
+    public string? EmailHashes { get; set; }
+
+    /// <summary>
     /// The send becomes unavailable to API callers when
     /// <see cref="AccessCount"/>  &gt;= <see cref="MaxAccessCount"/>.
     /// </summary>
