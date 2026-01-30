@@ -1,0 +1,233 @@
+<mjml>
+    <mj-head>
+        <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"></mj-font>
+        <mj-font name="Roboto" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"></mj-font>
+        <mj-attributes>
+            <mj-text font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif"></mj-text>
+            <mj-all font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif" />
+        </mj-attributes>
+        <mj-style>
+            p { margin: 0px 0px 0px 0px !important; }
+            .bw-text a { color: #175ddc; text-decoration: none; font-weight: 600; }
+            .bw-accountid p { background: #dbe5f6; border-radius: 99px; padding: 10px 15px; text-align: center; }
+        </mj-style>
+    </mj-head>
+    <mj-body background-color="#e6e9ef">
+        <!-- Webview tag -->
+        <mj-section background-color="transparent" padding="20px 0px">
+            <mj-column width="100%">
+                <mj-text padding="0px" line-height="20px" align="center" color="#FEFFEA" font-size="12px" css-class="bw-text">Having trouble reading this email? Click here.</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Hero -->
+        <mj-section border-radius="10px" padding="0px" background-color="#175ddc">
+            <mj-column width="55%" padding="40px">
+                <mj-image padding="0px" align="left" width="120px" src="https://github.com/ricfreire/mautic-theme-fooddelivery/blob/main/assets/logo.png?raw=true"></mj-image>
+                <mj-spacer height="26px"></mj-spacer>
+                <mj-text font-size="20px" line-height="30px" font-weight="700" padding="0px" align="left" color="#FEFFEA">
+                    <p>Hello John,</p>
+                    <p>Thanks for your order!</p>
+                </mj-text>
+                <mj-spacer height="14px"></mj-spacer>
+                <mj-text font-size="14px" line-height="20px" padding="0px" align="left" color="#ffffff">Here are the receipt of your order.</mj-text>
+            </mj-column>
+            <mj-column vertical-align="bottom" width="45%">
+                <mj-image align="center" padding="0px" src="https://github.com/ricfreire/mautic-theme-fooddelivery/blob/main/assets/moto.png?raw=true"></mj-image>
+            </mj-column>
+        </mj-section>
+        <!-- Spacing -->
+        <mj-section padding="0px">
+            <mj-column padding="0px">
+                <mj-spacer height="14px"></mj-spacer>
+            </mj-column>
+        </mj-section>
+        <!-- Cart Head -->
+        <mj-section padding="30px 40px 26px 40px" border-radius="10px 10px 0px 0px" background-color="#ffffff">
+            <mj-column width="50%" vertical-align="middle">
+                <mj-text font-size="16px" color="#1B2029" font-weight="700" padding="0px">Products</mj-text>
+            </mj-column>
+            <mj-column width="2%">
+                <mj-spacer height="14px"></mj-spacer>
+            </mj-column>
+            <mj-column width="48%" vertical-align="middle">
+                <mj-text css-class="bw-accountid" color="#1B2029" font-size="10px" padding="0px">
+                    <p>Account ID: CE-PT203912983</p>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart -->
+        <!-- Cart > Product 1 -->
+        <mj-section padding="0px 40px 26px 40px" background-color="#ffffff">
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px" font-weight="700">x1</mj-text>
+            </mj-column>
+            <mj-column width="80%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">Pain au Chocolat</mj-text>
+            </mj-column>
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">3.00€</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Product 2 -->
+        <mj-section padding="0px 40px 26px 40px" background-color="#ffffff">
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px" font-weight="700">x1</mj-text>
+            </mj-column>
+            <mj-column width="80%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">Nutella Croissant</mj-text>
+            </mj-column>
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">3.50€</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Product 3 -->
+        <mj-section padding="0px 40px 26px 40px" background-color="#ffffff">
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px" font-weight="700">x1</mj-text>
+            </mj-column>
+            <mj-column width="80%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">Apple Juice</mj-text>
+            </mj-column>
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">2.50€</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Total of Products -->
+        <mj-section padding="26px 40px" background-color="#F3F6F9">
+            <mj-column width="90%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" color="#1B2029" font-weight="700" padding="0px">Total of products</mj-text>
+            </mj-column>
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">8.50€</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Delivery -->
+        <mj-section padding="0px 40px 26px 40px" background-color="#F3F6F9">
+            <mj-column width="90%" vertical-align="middle">
+                <mj-text font-size="14px" color="#1B2029" padding="0px">Delivery</mj-text>
+            </mj-column>
+            <mj-column width="10%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">2.99€</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Divider -->
+        <mj-section background-color="#F3F6F9" padding="0px 0px">
+            <mj-column>
+                <mj-divider border-style="dashed" padding="0px 40px" border-color="#e6e9ef" border-width="1.5px"></mj-divider>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Total Final -->
+        <mj-section padding="26px 40px 26px 40px" background-color="#F3F6F9">
+            <mj-column width="88%" vertical-align="middle">
+                <mj-text line-height="26px" font-size="16px" color="#1B2029" font-weight="700" padding="0px">Total</mj-text>
+            </mj-column>
+            <mj-column width="12%" vertical-align="middle">
+                <mj-text line-height="26px" font-size="16px" padding="0px">11.49€</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Payment Method -->
+        <mj-section padding="0px 40px 20px 40px" background-color="#F3F6F9">
+            <mj-column vertical-align="middle" width="10%">
+                <mj-image align="left" width="44px" src="https://github.com/ricfreire/mautic-theme-fooddelivery/blob/main/assets/visa.png?raw=true" padding="0px"></mj-image>
+            </mj-column>
+            <mj-column width="2%">
+                <mj-spacer height="14px"></mj-spacer>
+            </mj-column>
+            <mj-column vertical-align="middle" width="88%">
+                <mj-text line-height="20px" font-size="14px" padding="0px">Payed with a VISA card</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Legal -->
+        <mj-section border-radius="0px 0px 10px 10px" padding="0px 40px 26px 40px" background-color="#F3F6F9">
+            <mj-column>
+                <mj-text color="#5A6D91" line-height="16px" font-size="10px" padding="0px">The receipt prices include the obligatory country tax, in compliance with legal requirements.</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Spacing -->
+        <mj-section padding="0px">
+            <mj-column padding="0px">
+                <mj-spacer height="14px"></mj-spacer>
+            </mj-column>
+        </mj-section>
+        <!-- Delivery -->
+        <mj-section padding="30px 40px 26px 40px" border-radius="10px 10px 0px 0px" background-color="#ffffff">
+            <mj-column width="50%" vertical-align="middle">
+                <mj-text font-size="16px" color="#1B2029" font-weight="700" padding="0px">Delivery</mj-text>
+            </mj-column>
+            <mj-column width="2%">
+                <mj-spacer height="14px"></mj-spacer>
+            </mj-column>
+            <mj-column width="48%" vertical-align="middle">
+                <mj-text css-class="bw-accountid" color="#1B2029" font-size="10px" padding="0px">
+                    <p>Delivery ID: KW9AJ91B</p>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Delivery > From -->
+        <mj-section padding="0px 40px 26px 40px" background-color="#ffffff">
+            <mj-column width="14%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px" font-weight="700">From</mj-text>
+            </mj-column>
+            <mj-column width="86%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">Richard’s Pâtisserie</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Delivery > To -->
+        <mj-section padding="0px 40px 26px 40px" background-color="#ffffff">
+            <mj-column width="14%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px" font-weight="700">To</mj-text>
+            </mj-column>
+            <mj-column width="86%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">Colt Gardens 29</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Delivery > Details -->
+        <mj-section padding="0px 40px 26px 40px" background-color="#ffffff">
+            <mj-column width="10%" vertical-align="middle">
+                <mj-image align="left" width="42px" src="https://github.com/ricfreire/mautic-theme-fooddelivery/blob/main/assets/photo.png?raw=true" padding="0px"></mj-image>
+            </mj-column>
+            <mj-column width="2%">
+                <mj-spacer height="14px"></mj-spacer>
+            </mj-column>
+            <mj-column width="88%" vertical-align="middle">
+                <mj-text line-height="20px" font-size="14px" padding="0px">Delivered by Jack Jones</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Cart > Legal -->
+        <mj-section border-radius="0px 0px 10px 10px" padding="0px 40px 26px 40px" background-color="#ffffff">
+            <mj-column>
+                <mj-text color="#5A6D91" line-height="16px" font-size="10px" padding="0px">The order was placed at <b>1:19 p.m.</b> and delivered at <b>1:42 p.m.</b>, taking 23 minutes.</mj-text>
+            </mj-column>
+        </mj-section>
+        <!-- Spacing -->
+        <mj-section padding="0px">
+            <mj-column padding="0px">
+                <mj-spacer height="14px"></mj-spacer>
+            </mj-column>
+        </mj-section>
+        <!-- Unlock Deal -->
+        <mj-section border-radius="10px" padding="0px" background-color="#175ddc">
+            <mj-column width="55%" padding="40px">
+                <mj-text font-size="20px" line-height="30px" font-weight="700" padding="0px" align="left" color="#FEFFEA"> Unlock your next deal </mj-text>
+                <mj-spacer height="14px"></mj-spacer>
+                <mj-text font-size="14px" line-height="20px" padding="0px" align="left" color="#fff">Enjoy a special offer on your next purchase.</mj-text>
+                <mj-spacer height="18px"></mj-spacer>
+                <mj-button font-family="'Roboto','Helvetica Neue',Helvetica,Arial,sans-serif" border-radius="20px" inner-padding="6px 16px" font-size="16px" font-weight="700" background-color="#ffffff" color="#1A41AC" align="left" padding="0px" href="https://crafting.email">Claim offer</mj-button>
+            </mj-column>
+            <mj-column vertical-align="bottom" width="45%">
+                <mj-image align="center" padding="0px" src="https://github.com/ricfreire/mautic-theme-fooddelivery/blob/main/assets/deal.png?raw=true"></mj-image>
+            </mj-column>
+        </mj-section>
+        <!-- Footer -->
+        <mj-section background-color="transparent" padding="30px 0px">
+            <mj-column width="100%">
+                <mj-text padding="0px" line-height="20px" align="center" color="#FEFFEA" font-size="12px" css-class="bw-text">
+                    <p><b>Issues with your order?</b></p>
+                    <p>Contact us at <a href="mailto:help@crafting.email">help@crafting.email</a> or call <a href="tel:1100000">1100000</a>, Monday to Friday, 9:00- 18:00.</p>
+                </mj-text>
+                <mj-spacer height="16px"></mj-spacer>
+                <mj-text css-class="bw-text" padding="0px" line-height="20px" align="center" color="#FEFFEA" font-size="12px"> Crafted with love by <a href="https://github.com/ricfreire">Ricardo Freire</a>. </mj-text>
+            </mj-column>
+        </mj-section>
+    </mj-body>
+</mjml>
