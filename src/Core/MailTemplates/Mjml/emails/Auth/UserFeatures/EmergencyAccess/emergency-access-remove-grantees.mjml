@@ -15,7 +15,7 @@
                     <mj-text font-size="16px" line-height="24px" padding="10px 15px">
                         The following emergency contacts have been removed from your account:
                         <ul>
-                            {{#each RemovedGranteeNames}}
+                            {{#each RemovedGranteeEmails}}
                             <li>{{this}}</li>
                             {{/each}}
                         </ul>
