@@ -17,7 +17,9 @@ public interface IInitPendingOrganizationCommand
     Task InitPendingOrganizationAsync(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken);
 
     /// <summary>
-    /// Initializes a pending organization and confirms the first owner with upfront validation.
+    /// Initializes a pending organization created via the Bitwarden Portal on behalf of a Reseller.
+    /// See <see cref="ResellerClientOrganizationSignUpCommand"/>.
+    /// It also confirms the first owner.
     /// </summary>
     /// <remarks>
     /// The user initializing the organization is the first user to access it - there is no existing 
