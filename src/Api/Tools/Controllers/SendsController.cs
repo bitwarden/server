@@ -82,9 +82,7 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        /* This guard can be removed once feature flag is retired*/
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
             return new UnauthorizedResult();
         }
@@ -137,9 +135,7 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        /* This guard can be removed once feature flag is retired*/
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
             return new UnauthorizedResult();
         }
@@ -229,7 +225,6 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/")]
     public async Task<IActionResult> AccessUsingAuth()
     {
@@ -262,7 +257,6 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/file/{fileId}")]
     public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
@@ -274,6 +268,7 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
+        /* This guard can be removed once feature flag is retired*/
         var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
         if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
         {
