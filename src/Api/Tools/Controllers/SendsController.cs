@@ -240,6 +240,13 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            return new UnauthorizedResult();
+        }
+
         var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
@@ -265,6 +272,12 @@ public class SendsController : Controller
         if (send == null)
         {
             throw new BadRequestException("Could not locate send");
+        }
+
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            return new UnauthorizedResult();
         }
 
         var url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId);
