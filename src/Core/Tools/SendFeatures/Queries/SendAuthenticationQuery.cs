@@ -1,4 +1,5 @@
-﻿using Bit.Core.Tools.Models.Data;
+﻿using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 
@@ -36,18 +37,25 @@ public class SendAuthenticationQuery : ISendAuthenticationQuery
         SendAuthenticationMethod method = send switch
         {
             null => NEVER_AUTHENTICATE,
-            var s when s.AccessCount >= s.MaxAccessCount => NEVER_AUTHENTICATE,
-            var s when s.Emails is not null => emailOtp(s.Emails),
-            var s when s.Password is not null => new ResourcePassword(s.Password),
+            var s when s.Disabled => NEVER_AUTHENTICATE,
+            var s when s.AccessCount >= s.MaxAccessCount.GetValueOrDefault(int.MaxValue) => NEVER_AUTHENTICATE,
+            var s when s.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow => NEVER_AUTHENTICATE,
+            var s when s.DeletionDate <= DateTime.UtcNow => NEVER_AUTHENTICATE,
+            var s when s.AuthType == AuthType.Email && s.EmailHashes is not null => EmailOtp(s.EmailHashes),
+            var s when s.AuthType == AuthType.Password && s.Password is not null => new ResourcePassword(s.Password),
             _ => NOT_AUTHENTICATED
         };
 
         return method;
     }
 
-    private EmailOtp emailOtp(string emails)
+    private static EmailOtp EmailOtp(string? emailHashes)
     {
-        var list = emails.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (string.IsNullOrWhiteSpace(emailHashes))
+        {
+            return new EmailOtp([]);
+        }
+        var list = emailHashes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return new EmailOtp(list);
     }
 }

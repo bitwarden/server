@@ -6,6 +6,7 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
@@ -113,5 +114,65 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
         Assert.NotNull(result);
         Assert.NotEmpty(result.Item2.Groups);
         Assert.NotEmpty(result.Item2.Users);
+    }
+
+    [Fact]
+    public async Task List_ExcludesDefaultUserCollections_IncludesGroupsAndUsers()
+    {
+        // Arrange
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var groupRepository = _factory.GetService<IGroupRepository>();
+
+        var defaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "My Items",
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection, null, null);
+
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = _organization.Id,
+            Name = "Test Group",
+            ExternalId = $"test-group-{Guid.NewGuid()}",
+        });
+
+        var (_, user) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory,
+            _organization.Id,
+            OrganizationUserType.User);
+
+        var sharedCollection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory,
+            _organization.Id,
+            "Shared Collection with Access",
+            externalId: "shared-collection-with-access",
+            groups:
+            [
+                new CollectionAccessSelection { Id = group.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+            ],
+            users:
+            [
+                new CollectionAccessSelection { Id = user.Id, ReadOnly = true, HidePasswords = true, Manage = false }
+            ]);
+
+        // Act
+        var response = await _client.GetFromJsonAsync<ListResponseModel<CollectionResponseModel>>("public/collections");
+
+        // Assert
+        Assert.NotNull(response);
+
+        Assert.DoesNotContain(response.Data, c => c.Id == defaultCollection.Id);
+
+        var collectionResponse = response.Data.First(c => c.Id == sharedCollection.Id);
+        Assert.NotNull(collectionResponse.Groups);
+        Assert.Single(collectionResponse.Groups);
+
+        var groupResponse = collectionResponse.Groups.First();
+        Assert.Equal(group.Id, groupResponse.Id);
+        Assert.False(groupResponse.ReadOnly);
+        Assert.False(groupResponse.HidePasswords);
+        Assert.True(groupResponse.Manage);
     }
 }

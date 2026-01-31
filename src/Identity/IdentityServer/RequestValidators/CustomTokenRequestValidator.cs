@@ -194,17 +194,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     }
 
     [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
-    protected override void SetSsoResult(CustomTokenRequestValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        Debug.Assert(context.Result is not null);
-        context.Result.Error = "invalid_grant";
-        context.Result.ErrorDescription = "Sso authentication required.";
-        context.Result.IsError = true;
-        context.Result.CustomResponse = customResponse;
-    }
-
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetErrorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {

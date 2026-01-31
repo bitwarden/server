@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Queries;
@@ -42,12 +43,12 @@ public class SendAuthenticationQueryTests
     }
 
     [Theory]
-    [MemberData(nameof(EmailParsingTestCases))]
-    public async Task GetAuthenticationMethod_WithEmails_ParsesEmailsCorrectly(string emailString, string[] expectedEmails)
+    [MemberData(nameof(EmailHashesParsingTestCases))]
+    public async Task GetAuthenticationMethod_WithEmailHashes_ParsesEmailHashesCorrectly(string emailHashString, string[] expectedEmailHashes)
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: emailString, password: null);
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: emailHashString, password: null, AuthType.Email);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -55,15 +56,15 @@ public class SendAuthenticationQueryTests
 
         // Assert
         var emailOtp = Assert.IsType<EmailOtp>(result);
-        Assert.Equal(expectedEmails, emailOtp.Emails);
+        Assert.Equal(expectedEmailHashes, emailOtp.EmailHashes);
     }
 
     [Fact]
-    public async Task GetAuthenticationMethod_WithBothEmailsAndPassword_ReturnsEmailOtp()
+    public async Task GetAuthenticationMethod_WithBothEmailHashesAndPassword_ReturnsEmailOtp()
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: "test@example.com", password: "hashedpassword");
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: "hashedemail", password: "hashedpassword", AuthType.Email);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -78,7 +79,7 @@ public class SendAuthenticationQueryTests
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: null);
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: null, password: null, AuthType.None);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -105,31 +106,218 @@ public class SendAuthenticationQueryTests
     public static IEnumerable<object[]> AuthenticationMethodTestCases()
     {
         yield return new object[] { null, typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emails: null, password: null), typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emails: null, password: null), typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: "test@example.com", password: null), typeof(EmailOtp) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: "hashedpassword"), typeof(ResourcePassword) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: null), typeof(NotAuthenticated) };
+        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emailHashes: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
+        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emailHashes: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: "hashedemail", password: null, AuthType.Email), typeof(EmailOtp) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: null, password: "hashedpassword", AuthType.Password), typeof(ResourcePassword) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: null, password: null, AuthType.None), typeof(NotAuthenticated) };
     }
 
-    public static IEnumerable<object[]> EmailParsingTestCases()
+    [Fact]
+    public async Task GetAuthenticationMethod_WithDisabledSend_ReturnsNeverAuthenticate()
     {
-        yield return new object[] { "test@example.com", new[] { "test@example.com" } };
-        yield return new object[] { "test1@example.com,test2@example.com", new[] { "test1@example.com", "test2@example.com" } };
-        yield return new object[] { " test@example.com , other@example.com ", new[] { "test@example.com", "other@example.com" } };
-        yield return new object[] { "test@example.com,,other@example.com", new[] { "test@example.com", "other@example.com" } };
-        yield return new object[] { " , test@example.com,  ,other@example.com, ", new[] { "test@example.com", "other@example.com" } };
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            AccessCount = 0,
+            MaxAccessCount = 10,
+            EmailHashes = "hashedemail",
+            Password = null,
+            AuthType = AuthType.Email,
+            Disabled = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<NeverAuthenticate>(result);
     }
 
-    private static Send CreateSend(int accessCount, int? maxAccessCount, string? emails, string? password)
+    [Fact]
+    public async Task GetAuthenticationMethod_WithExpiredSend_ReturnsNeverAuthenticate()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            AccessCount = 0,
+            MaxAccessCount = 10,
+            EmailHashes = "hashedemail",
+            Password = null,
+            AuthType = AuthType.Email,
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(-1) // Expired yesterday
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<NeverAuthenticate>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_WithDeletionDatePassed_ReturnsNeverAuthenticate()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            AccessCount = 0,
+            MaxAccessCount = 10,
+            EmailHashes = "hashedemail",
+            Password = null,
+            AuthType = AuthType.Email,
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(-1), // Should have been deleted yesterday
+            ExpirationDate = null
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<NeverAuthenticate>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_WithDeletionDateEqualToNow_ReturnsNeverAuthenticate()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var send = new Send
+        {
+            Id = sendId,
+            AccessCount = 0,
+            MaxAccessCount = 10,
+            EmailHashes = "hashedemail",
+            Password = null,
+            AuthType = AuthType.Email,
+            Disabled = false,
+            DeletionDate = now, // DeletionDate <= DateTime.UtcNow
+            ExpirationDate = null
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<NeverAuthenticate>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_WithAccessCountEqualToMaxAccessCount_ReturnsNeverAuthenticate()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            AccessCount = 5,
+            MaxAccessCount = 5,
+            EmailHashes = "hashedemail",
+            Password = null,
+            AuthType = AuthType.Email,
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<NeverAuthenticate>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_WithNullMaxAccessCount_DoesNotRestrictAccess()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            AccessCount = 1000,
+            MaxAccessCount = null, // No limit
+            EmailHashes = "hashedemail",
+            Password = null,
+            AuthType = AuthType.Email,
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<EmailOtp>(result);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationMethod_WithNullExpirationDate_DoesNotExpire()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            AccessCount = 0,
+            MaxAccessCount = 10,
+            EmailHashes = "hashedemail",
+            Password = null,
+            AuthType = AuthType.Email,
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null // No expiration
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Act
+        var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
+
+        // Assert
+        Assert.IsType<EmailOtp>(result);
+    }
+
+    public static IEnumerable<object[]> EmailHashesParsingTestCases()
+    {
+        yield return new object[] { "hash1", new[] { "hash1" } };
+        yield return new object[] { "hash1,hash2", new[] { "hash1", "hash2" } };
+        yield return new object[] { " hash1 , hash2 ", new[] { "hash1", "hash2" } };
+        yield return new object[] { "hash1,,hash2", new[] { "hash1", "hash2" } };
+        yield return new object[] { " , hash1,  ,hash2, ", new[] { "hash1", "hash2" } };
+    }
+
+    private static Send CreateSend(int accessCount, int? maxAccessCount, string? emailHashes, string? password, AuthType? authType)
     {
         return new Send
         {
             Id = Guid.NewGuid(),
             AccessCount = accessCount,
             MaxAccessCount = maxAccessCount,
-            Emails = emails,
-            Password = password
+            EmailHashes = emailHashes,
+            Password = password,
+            AuthType = authType,
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null
         };
     }
 }

@@ -6,6 +6,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -44,6 +45,7 @@ public class SyncController : Controller
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
 
     public SyncController(
@@ -61,6 +63,7 @@ public class SyncController : Controller
         IFeatureService featureService,
         IApplicationCacheService applicationCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IWebAuthnCredentialRepository webAuthnCredentialRepository,
         IUserAccountKeysQuery userAccountKeysQuery)
     {
         _userService = userService;
@@ -77,6 +80,7 @@ public class SyncController : Controller
         _featureService = featureService;
         _applicationCacheService = applicationCacheService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userAccountKeysQuery = userAccountKeysQuery;
     }
 
@@ -120,6 +124,9 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var webAuthnCredentials = _featureService.IsEnabled(FeatureFlagKeys.PM2035PasskeyUnlock)
+            ? await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id)
+            : [];
 
         UserAccountKeysData userAccountKeys = null;
         // JIT TDE users and some broken/old users may not have a private key.
@@ -130,7 +137,7 @@ public class SyncController : Controller
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
         return response;
     }
 

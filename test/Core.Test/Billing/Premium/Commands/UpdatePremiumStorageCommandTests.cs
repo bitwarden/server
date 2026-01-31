@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
+using static Bit.Core.Billing.Constants.StripeConstants;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
@@ -15,16 +17,15 @@ namespace Bit.Core.Test.Billing.Premium.Commands;
 
 public class UpdatePremiumStorageCommandTests
 {
+    private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
-    private readonly PremiumPlan _premiumPlan;
     private readonly UpdatePremiumStorageCommand _command;
 
     public UpdatePremiumStorageCommandTests()
     {
-        // Setup default premium plan with standard pricing
-        _premiumPlan = new PremiumPlan
+        var premiumPlan = new PremiumPlan
         {
             Name = "Premium",
             Available = true,
@@ -32,29 +33,31 @@ public class UpdatePremiumStorageCommandTests
             Seat = new PremiumPurchasable { Price = 10M, StripePriceId = "price_premium", Provided = 1 },
             Storage = new PremiumPurchasable { Price = 4M, StripePriceId = "price_storage", Provided = 1 }
         };
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { _premiumPlan });
+        _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
 
         _command = new UpdatePremiumStorageCommand(
+            _braintreeService,
             _stripeAdapter,
             _userService,
             _pricingClient,
             Substitute.For<ILogger<UpdatePremiumStorageCommand>>());
     }
 
-    private Subscription CreateMockSubscription(string subscriptionId, int? storageQuantity = null)
+    private Subscription CreateMockSubscription(string subscriptionId, int? storageQuantity = null, bool isPayPal = false)
     {
-        var items = new List<SubscriptionItem>();
-
-        // Always add the seat item
-        items.Add(new SubscriptionItem
+        var items = new List<SubscriptionItem>
         {
-            Id = "si_seat",
-            Price = new Price { Id = "price_premium" },
-            Quantity = 1
-        });
+            // Always add the seat item
+            new()
+            {
+                Id = "si_seat",
+                Price = new Price { Id = "price_premium" },
+                Quantity = 1
+            }
+        };
 
         // Add storage item if quantity is provided
-        if (storageQuantity.HasValue && storageQuantity.Value > 0)
+        if (storageQuantity is > 0)
         {
             items.Add(new SubscriptionItem
             {
@@ -64,9 +67,17 @@ public class UpdatePremiumStorageCommandTests
             });
         }
 
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Metadata = isPayPal ? new Dictionary<string, string> { { MetadataKeys.BraintreeCustomerId, "braintree_123" } } : new Dictionary<string, string>()
+        };
+
         return new Subscription
         {
             Id = subscriptionId,
+            CustomerId = "cus_123",
+            Customer = customer,
             Items = new StripeList<SubscriptionItem>
             {
                 Data = items
@@ -98,7 +109,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, -5);
@@ -118,7 +129,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 100);
@@ -142,7 +153,7 @@ public class UpdatePremiumStorageCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("No access to storage.", badRequest.Response);
+        Assert.Equal("User has no access to storage.", badRequest.Response);
     }
 
     [Theory, BitAutoData]
@@ -155,7 +166,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 9);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 0);
@@ -177,7 +188,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 4);
@@ -186,7 +197,7 @@ public class UpdatePremiumStorageCommandTests
         Assert.True(result.IsT0);
 
         // Verify subscription was fetched but NOT updated
-        await _stripeAdapter.Received(1).GetSubscriptionAsync("sub_123");
+        await _stripeAdapter.Received(1).GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>());
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
     }
@@ -201,7 +212,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 9);
@@ -216,7 +227,7 @@ public class UpdatePremiumStorageCommandTests
                 opts.Items.Count == 1 &&
                 opts.Items[0].Id == "si_storage" &&
                 opts.Items[0].Quantity == 9 &&
-                opts.ProrationBehavior == "create_prorations"));
+                opts.ProrationBehavior == "always_invoice"));
 
         // Verify user was saved
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
@@ -233,8 +244,8 @@ public class UpdatePremiumStorageCommandTests
         user.Storage = 500L * 1024 * 1024;
         user.GatewaySubscriptionId = "sub_123";
 
-        var subscription = CreateMockSubscription("sub_123", null);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        var subscription = CreateMockSubscription("sub_123");
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 9);
@@ -263,7 +274,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 9);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 2);
@@ -292,7 +303,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 9);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 0);
@@ -321,7 +332,7 @@ public class UpdatePremiumStorageCommandTests
         user.GatewaySubscriptionId = "sub_123";
 
         var subscription = CreateMockSubscription("sub_123", 4);
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         // Act
         var result = await _command.Run(user, 99);
@@ -335,5 +346,201 @@ public class UpdatePremiumStorageCommandTests
                 opts.Items[0].Quantity == 99));
 
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 100));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_IncreaseStorage_PayPal_Success(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4, isPayPal: true);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var draftInvoice = new Invoice { Id = "in_draft" };
+        _stripeAdapter.CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>()).Returns(draftInvoice);
+
+        var finalizedInvoice = new Invoice
+        {
+            Id = "in_finalized",
+            Customer = new Customer { Id = "cus_123" }
+        };
+        _stripeAdapter.FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>()).Returns(finalizedInvoice);
+
+        // Act
+        var result = await _command.Run(user, 9);
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        // Verify subscription was updated with CreateProrations
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Count == 1 &&
+                opts.Items[0].Id == "si_storage" &&
+                opts.Items[0].Quantity == 9 &&
+                opts.ProrationBehavior == "create_prorations"));
+
+        // Verify draft invoice was created
+        await _stripeAdapter.Received(1).CreateInvoiceAsync(
+            Arg.Is<InvoiceCreateOptions>(opts =>
+                opts.Customer == "cus_123" &&
+                opts.Subscription == "sub_123" &&
+                opts.AutoAdvance == false &&
+                opts.CollectionMethod == "charge_automatically"));
+
+        // Verify invoice was finalized
+        await _stripeAdapter.Received(1).FinalizeInvoiceAsync(
+            "in_draft",
+            Arg.Is<InvoiceFinalizeOptions>(opts =>
+                opts.AutoAdvance == false &&
+                opts.Expand.Contains("customer")));
+
+        // Verify Braintree payment was processed
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), finalizedInvoice);
+
+        // Verify user was saved
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
+            u.Id == user.Id &&
+            u.MaxStorageGb == 10));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_AddStorageFromZero_PayPal_Success(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.MaxStorageGb = 1;
+        user.Storage = 500L * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", isPayPal: true);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var draftInvoice = new Invoice { Id = "in_draft" };
+        _stripeAdapter.CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>()).Returns(draftInvoice);
+
+        var finalizedInvoice = new Invoice
+        {
+            Id = "in_finalized",
+            Customer = new Customer { Id = "cus_123" }
+        };
+        _stripeAdapter.FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>()).Returns(finalizedInvoice);
+
+        // Act
+        var result = await _command.Run(user, 9);
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        // Verify subscription was updated with new storage item
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Count == 1 &&
+                opts.Items[0].Price == "price_storage" &&
+                opts.Items[0].Quantity == 9 &&
+                opts.ProrationBehavior == "create_prorations"));
+
+        // Verify invoice creation and payment flow
+        await _stripeAdapter.Received(1).CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>());
+        await _stripeAdapter.Received(1).FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>());
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), finalizedInvoice);
+
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 10));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_DecreaseStorage_PayPal_Success(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.MaxStorageGb = 10;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 9, isPayPal: true);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var draftInvoice = new Invoice { Id = "in_draft" };
+        _stripeAdapter.CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>()).Returns(draftInvoice);
+
+        var finalizedInvoice = new Invoice
+        {
+            Id = "in_finalized",
+            Customer = new Customer { Id = "cus_123" }
+        };
+        _stripeAdapter.FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>()).Returns(finalizedInvoice);
+
+        // Act
+        var result = await _command.Run(user, 2);
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        // Verify subscription was updated
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Count == 1 &&
+                opts.Items[0].Id == "si_storage" &&
+                opts.Items[0].Quantity == 2 &&
+                opts.ProrationBehavior == "create_prorations"));
+
+        // Verify invoice creation and payment flow
+        await _stripeAdapter.Received(1).CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>());
+        await _stripeAdapter.Received(1).FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>());
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), finalizedInvoice);
+
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 3));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_RemoveAllAdditionalStorage_PayPal_Success(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.MaxStorageGb = 10;
+        user.Storage = 500L * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 9, isPayPal: true);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var draftInvoice = new Invoice { Id = "in_draft" };
+        _stripeAdapter.CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>()).Returns(draftInvoice);
+
+        var finalizedInvoice = new Invoice
+        {
+            Id = "in_finalized",
+            Customer = new Customer { Id = "cus_123" }
+        };
+        _stripeAdapter.FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>()).Returns(finalizedInvoice);
+
+        // Act
+        var result = await _command.Run(user, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+
+        // Verify subscription item was deleted
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Items.Count == 1 &&
+                opts.Items[0].Id == "si_storage" &&
+                opts.Items[0].Deleted == true &&
+                opts.ProrationBehavior == "create_prorations"));
+
+        // Verify invoice creation and payment flow
+        await _stripeAdapter.Received(1).CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>());
+        await _stripeAdapter.Received(1).FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>());
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), finalizedInvoice);
+
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 1));
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -9,6 +11,8 @@ using OneOf.Types;
 using Stripe;
 
 namespace Bit.Core.Billing.Premium.Commands;
+
+using static StripeConstants;
 
 /// <summary>
 /// Updates the storage allocation for a premium user's subscription.
@@ -26,6 +30,7 @@ public interface IUpdatePremiumStorageCommand
 }
 
 public class UpdatePremiumStorageCommand(
+    IBraintreeService braintreeService,
     IStripeAdapter stripeAdapter,
     IUserService userService,
     IPricingClient pricingClient,
@@ -34,19 +39,22 @@ public class UpdatePremiumStorageCommand(
 {
     public Task<BillingCommandResult<None>> Run(User user, short additionalStorageGb) => HandleAsync<None>(async () =>
     {
-        if (!user.Premium)
+        if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
         {
             return new BadRequest("User does not have a premium subscription.");
         }
 
         if (!user.MaxStorageGb.HasValue)
         {
-            return new BadRequest("No access to storage.");
+            return new BadRequest("User has no access to storage.");
         }
 
         // Fetch all premium plans and the user's subscription to find which plan they're on
         var premiumPlans = await pricingClient.ListPremiumPlans();
-        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+        {
+            Expand = ["customer"]
+        });
 
         // Find the password manager subscription item (seat, not storage) and match it to a plan
         var passwordManagerItem = subscription.Items.Data.FirstOrDefault(i =>
@@ -54,7 +62,7 @@ public class UpdatePremiumStorageCommand(
 
         if (passwordManagerItem == null)
         {
-            return new BadRequest("Premium subscription item not found.");
+            return new Conflict("Premium subscription does not have a Password Manager line item.");
         }
 
         var premiumPlan = premiumPlans.First(p => p.Seat.StripePriceId == passwordManagerItem.Price.Id);
@@ -66,20 +74,20 @@ public class UpdatePremiumStorageCommand(
             return new BadRequest("Additional storage cannot be negative.");
         }
 
-        var newTotalStorageGb = (short)(baseStorageGb + additionalStorageGb);
+        var maxStorageGb = (short)(baseStorageGb + additionalStorageGb);
 
-        if (newTotalStorageGb > 100)
+        if (maxStorageGb > 100)
         {
             return new BadRequest("Maximum storage is 100 GB.");
         }
 
         // Idempotency check: if user already has the requested storage, return success
-        if (user.MaxStorageGb == newTotalStorageGb)
+        if (user.MaxStorageGb == maxStorageGb)
         {
             return new None();
         }
 
-        var remainingStorage = user.StorageBytesRemaining(newTotalStorageGb);
+        var remainingStorage = user.StorageBytesRemaining(maxStorageGb);
         if (remainingStorage < 0)
         {
             return new BadRequest(
@@ -124,21 +132,46 @@ public class UpdatePremiumStorageCommand(
             });
         }
 
-        // Update subscription with prorations
-        // Storage is billed annually, so we create prorations and invoice immediately
-        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
-        {
-            Items = subscriptionItemOptions,
-            ProrationBehavior = Core.Constants.CreateProrations
-        };
+        var usingPayPal = subscription.Customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
 
-        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, subscriptionUpdateOptions);
+        if (usingPayPal)
+        {
+            var options = new SubscriptionUpdateOptions
+            {
+                Items = subscriptionItemOptions,
+                ProrationBehavior = ProrationBehavior.CreateProrations
+            };
+
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+
+            var draftInvoice = await stripeAdapter.CreateInvoiceAsync(new InvoiceCreateOptions
+            {
+                Customer = subscription.CustomerId,
+                Subscription = subscription.Id,
+                AutoAdvance = false,
+                CollectionMethod = CollectionMethod.ChargeAutomatically
+            });
+
+            var finalizedInvoice = await stripeAdapter.FinalizeInvoiceAsync(draftInvoice.Id,
+                new InvoiceFinalizeOptions { AutoAdvance = false, Expand = ["customer"] });
+
+            await braintreeService.PayInvoice(new UserId(user.Id), finalizedInvoice);
+        }
+        else
+        {
+            var options = new SubscriptionUpdateOptions
+            {
+                Items = subscriptionItemOptions,
+                ProrationBehavior = ProrationBehavior.AlwaysInvoice
+            };
+
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+        }
 
         // Update the user's max storage
-        user.MaxStorageGb = newTotalStorageGb;
+        user.MaxStorageGb = maxStorageGb;
         await userService.SaveUserAsync(user);
 
-        // No payment intent needed - the subscription update will automatically create and finalize the invoice
         return new None();
     });
 }

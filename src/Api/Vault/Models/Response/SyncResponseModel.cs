@@ -6,6 +6,9 @@ using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.KeyManagement.Models.Data;
@@ -39,7 +42,8 @@ public class SyncResponseModel() : ResponseModel("sync")
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersDict,
         bool excludeDomains,
         IEnumerable<Policy> policies,
-        IEnumerable<Send> sends)
+        IEnumerable<Send> sends,
+        IEnumerable<WebAuthnCredential> webAuthnCredentials)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
@@ -57,6 +61,16 @@ public class SyncResponseModel() : ResponseModel("sync")
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         Sends = sends.Select(s => new SendResponseModel(s));
+        var webAuthnPrfOptions = webAuthnCredentials
+            .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
+            .Select(c => new WebAuthnPrfDecryptionOption(
+                c.EncryptedPrivateKey,
+                c.EncryptedUserKey,
+                c.CredentialId,
+                [] // transports as empty array
+            ))
+            .ToArray();
+
         UserDecryption = new UserDecryptionResponseModel
         {
             MasterPasswordUnlock = user.HasMasterPassword()
@@ -72,7 +86,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                     MasterKeyEncryptedUserKey = user.Key!,
                     Salt = user.Email.ToLowerInvariant()
                 }
-                : null
+                : null,
+            WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null
         };
     }
 
