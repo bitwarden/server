@@ -4,7 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -19,7 +19,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class SendOrganizationInvitesCommand(
     IUserRepository userRepository,
     ISsoConfigRepository ssoConfigurationRepository,
-    IPolicyRepository policyRepository,
+    IPolicyQuery policyQuery,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
     IMailService mailService) : ISendOrganizationInvitesCommand
@@ -58,7 +58,7 @@ public class SendOrganizationInvitesCommand(
         // need to check the policy if the org has SSO enabled.
         var orgSsoLoginRequiredPolicyEnabled = orgSsoEnabled &&
                                                organization.UsePolicies &&
-                                               (await policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso))?.Enabled == true;
+                                               (await policyQuery.RunAsync(organization.Id, PolicyType.RequireSso)).Enabled;
 
         // Generate the list of org users and expiring tokens
         // create helper function to create expiring tokens

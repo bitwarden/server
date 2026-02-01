@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimed
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -120,7 +119,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true, planType: PlanType.EnterpriseAnnually)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -137,8 +136,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Key = "test-key"
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -280,7 +279,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         Guid userId,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -303,8 +302,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             PolicyType = PolicyType.TwoFactorAuthentication
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -334,7 +333,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -351,8 +350,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Key = "test-key"
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -389,7 +388,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -406,8 +405,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Key = "test-key"
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -448,7 +447,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -465,8 +464,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Key = "test-key"
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -501,7 +500,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         SutProvider<AutomaticallyConfirmOrganizationUsersValidator> sutProvider,
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
-        Guid userId)
+        Guid userId,
+        [Policy(PolicyType.AutomaticUserConfirmation, false)] PolicyStatus policy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -518,9 +518,9 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Key = "test-key"
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
-            .Returns((Policy)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(policy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -545,7 +545,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: false)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         Guid userId,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = userId;
@@ -562,8 +562,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Key = "test-key"
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -589,7 +589,7 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
         [Organization(useAutomaticUserConfirmation: true)] Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser organizationUser,
         User user,
-        [Policy(PolicyType.AutomaticUserConfirmation)] Policy autoConfirmPolicy)
+        [Policy(PolicyType.AutomaticUserConfirmation)] PolicyStatus autoConfirmPolicy)
     {
         // Arrange
         organizationUser.UserId = user.Id;
@@ -606,8 +606,8 @@ public class AutomaticallyConfirmOrganizationUsersValidatorTests
             Key = "test-key"
         };
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
             .Returns(autoConfirmPolicy);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
