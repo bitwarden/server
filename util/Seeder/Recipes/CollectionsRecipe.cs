@@ -14,7 +14,7 @@ public class CollectionsRecipe(DatabaseContext db)
     /// <param name="collections">The number of collections to add.</param>
     /// <param name="organizationUserIds">The IDs of the users to create relationships with.</param>
     /// <param name="maxUsersWithRelationships">The maximum number of users to create relationships with.</param>
-    public List<Guid> AddToOrganization(Guid organizationId, int collections, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
+    public List<Guid> Seed(Guid organizationId, int collections, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
     {
         var collectionList = CreateAndSaveCollections(organizationId, collections);
 
