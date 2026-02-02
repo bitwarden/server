@@ -9,6 +9,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
@@ -34,6 +35,7 @@ public class SubscriberService(
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
+    IPricingClient pricingClient,
     IProviderRepository providerRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
@@ -57,6 +59,16 @@ public class SubscriberService(
             throw new BillingException();
         }
 
+        // Check if this is a Premium-to-Organization upgrade that can be reverted
+        if (subscriber is Organization organization)
+        {
+            if (IsPremiumUpgradeReversion(subscription, organization))
+            {
+                await RevertPremiumUpgradeAsync(subscription, organization);
+                return;
+            }
+        }
+
         var metadata = new Dictionary<string, string>
         {
             { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
@@ -75,7 +87,7 @@ public class SubscriberService(
 
         if (cancelImmediately)
         {
-            if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
+            if (subscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId))
             {
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
@@ -959,6 +971,207 @@ public class SubscriberService(
                     "Failed to delete replaced payment method for Braintree customer ({ID}) - outdated payment method still exists | Error: {Error}",
                     customer.Id, deletePaymentMethodResult.Message);
             }
+        }
+    }
+
+    /// <summary>
+    /// Determines if a subscription represents a Premium-to-Organization upgrade that can be reverted
+    /// by validating the subscription metadata and organization match.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to check</param>
+    /// <param name="organization">The organization attempting to cancel</param>
+    /// <returns>True if this is a revertible Premium upgrade, false otherwise</returns>
+    private bool IsPremiumUpgradeReversion(Subscription subscription, Organization organization)
+    {
+        // Extract all metadata once
+        var metadata = subscription.Metadata;
+
+        // Check if subscription has the premium upgrade metadata
+        if (!metadata.TryGetValue(MetadataKeys.PreviousPremiumPriceId, out _) ||
+            !metadata.TryGetValue(MetadataKeys.UpgradedOrganizationId, out var upgradedOrganizationIdStr) ||
+            !metadata.TryGetValue(MetadataKeys.PreviousPremiumUserId, out _))
+        {
+            logger.LogDebug("Subscription {SubscriptionId} does not have premium upgrade metadata", subscription.Id);
+            return false;
+        }
+
+        // Parse IDs once
+        if (!Guid.TryParse(upgradedOrganizationIdStr, out var upgradedOrganizationId))
+        {
+            logger.LogWarning("Invalid GUID format in premium upgrade metadata for subscription {SubscriptionId}", subscription.Id);
+            return false;
+        }
+
+        // Verify that this is the organization that was upgraded
+        if (upgradedOrganizationId != organization.Id)
+        {
+            logger.LogWarning(
+                "Organization {OrganizationId} attempted to revert subscription {SubscriptionId} that belongs to organization {ActualOrganizationId}",
+                organization.Id, subscription.Id, upgradedOrganizationId);
+            return false;
+        }
+
+        // Verify subscription is in trial - reversion only allowed during trial period
+        if (subscription.Status != SubscriptionStatus.Trialing)
+        {
+            logger.LogWarning(
+                "Cannot revert subscription {SubscriptionId} - not in trial period (current status: {Status})",
+                subscription.Id, subscription.Status);
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Reverts a Premium-to-Organization upgrade by restoring the subscription to the original Premium plan.
+    /// This method should only be called after IsPremiumUpgradeReversion returns true.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to revert</param>
+    /// <param name="organization">The organization whose subscription is being reverted</param>
+    /// <exception cref="BillingException">Thrown if the reversion fails</exception>
+    private async Task RevertPremiumUpgradeAsync(Subscription subscription, Organization organization)
+    {
+        var metadata = subscription.Metadata;
+
+        // Extract required metadata values (we know they exist from IsPremiumUpgradeReversion)
+        var previousPremiumPriceId = metadata[MetadataKeys.PreviousPremiumPriceId];
+        var previousPremiumUserIdStr = metadata[MetadataKeys.PreviousPremiumUserId];
+
+        if (!Guid.TryParse(previousPremiumUserIdStr, out var previousPremiumUserId))
+        {
+            logger.LogError("Invalid GUID format for previous premium user ID in subscription {SubscriptionId}", subscription.Id);
+            throw new BillingException("Invalid premium upgrade metadata");
+        }
+
+        try
+        {
+            logger.LogInformation("Reverting Premium-to-Organization upgrade for organization {OrganizationId}", organization.Id);
+
+            // STEP 1: Validate user exists BEFORE making any Stripe changes
+            var user = await userRepository.GetByIdAsync(previousPremiumUserId);
+            if (user == null)
+            {
+                logger.LogError("Cannot revert subscription - user {UserId} not found", previousPremiumUserId);
+                throw new BillingException(message: "Cannot revert subscription - original Premium user not found");
+            }
+
+            // STEP 2: Get the current Premium plan details from pricing client
+            // Note: GetAvailablePremiumPlan() will throw NotFoundException if no Premium plan exists
+            var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+            if (!premiumPlan.Available)
+            {
+                logger.LogError("Cannot revert subscription - Premium plan exists but is not available");
+                throw new BillingException("Premium plan is not currently available");
+            }
+
+            // STEP 3: Parse additional metadata
+            // Restore the user's original Premium expiration date from before they upgraded to Organization
+            DateTime? periodEnd = null;
+            if (metadata.TryGetValue(MetadataKeys.PreviousPeriodEndDate, out var periodEndStr) &&
+                DateTime.TryParse(periodEndStr, out var parsedPeriodEnd))
+            {
+                periodEnd = parsedPeriodEnd;
+            }
+
+            int additionalStorageGb = 0;
+            if (metadata.TryGetValue(MetadataKeys.PreviousAdditionalStorage, out var storageStr) &&
+                int.TryParse(storageStr, out var storage))
+            {
+                additionalStorageGb = storage;
+            }
+
+            // Get previous storage price ID (if available) or fallback to current
+            string storagePriceId = premiumPlan.Storage.StripePriceId; // Default to current
+            if (metadata.TryGetValue(MetadataKeys.PreviousStoragePriceId, out var previousStoragePriceId))
+            {
+                storagePriceId = previousStoragePriceId; // Use historical price if available
+            }
+
+            // STEP 4: Build subscription items - delete all existing organization items and add Premium items
+            var subscriptionItemOptions = new List<SubscriptionItemOptions>();
+
+            // Delete all existing organization subscription items
+            foreach (var existingItem in subscription.Items.Data)
+            {
+                subscriptionItemOptions.Add(new SubscriptionItemOptions
+                {
+                    Id = existingItem.Id,
+                    Deleted = true
+                });
+            }
+
+            // Add Premium seat item - use the original price from metadata
+            subscriptionItemOptions.Add(new SubscriptionItemOptions
+            {
+                Price = previousPremiumPriceId,
+                Quantity = 1
+            });
+
+            // Add storage item if user had additional storage
+            if (additionalStorageGb > 0)
+            {
+                subscriptionItemOptions.Add(new SubscriptionItemOptions
+                {
+                    Price = storagePriceId,
+                    Quantity = additionalStorageGb
+                });
+
+                logger.LogInformation("Restoring {StorageGb}GB additional storage for user {UserId}", additionalStorageGb, previousPremiumUserId);
+            }
+
+            // STEP 5: Preserve important metadata and remove premium upgrade metadata
+            var updatedMetadata = new Dictionary<string, string>(metadata);
+            updatedMetadata.Remove(MetadataKeys.PreviousPremiumPriceId);
+            updatedMetadata.Remove(MetadataKeys.PreviousPeriodEndDate);
+            updatedMetadata.Remove(MetadataKeys.UpgradedOrganizationId);
+            updatedMetadata.Remove(MetadataKeys.PreviousPremiumUserId);
+            updatedMetadata.Remove(MetadataKeys.PreviousAdditionalStorage);
+            updatedMetadata.Remove(MetadataKeys.PreviousStoragePriceId);
+
+            // Ensure user ID is in metadata
+            updatedMetadata[MetadataKeys.UserId] = previousPremiumUserId.ToString();
+            updatedMetadata.Remove(MetadataKeys.OrganizationId);
+
+            // STEP 6: Update Stripe subscription
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+            {
+                Items = subscriptionItemOptions,
+                TrialEnd = periodEnd,
+                Metadata = updatedMetadata
+            });
+
+            // STEP 7: Update user's Premium status and storage
+            user.Premium = true;
+            user.PremiumExpirationDate = periodEnd;
+            user.Gateway = GatewayType.Stripe;
+            user.GatewaySubscriptionId = subscription.Id;
+            user.GatewayCustomerId = subscription.CustomerId; // Ensure user's customer ID matches subscription
+            user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + additionalStorageGb);
+
+            await userRepository.ReplaceAsync(user);
+
+            // STEP 8: Clear organization's gateway references and disable it
+            // NOTE: The organization entity itself is NOT deleted. It remains in the database with:
+            // - GatewayCustomerId set to null (no gateway customer)
+            // - GatewaySubscriptionId set to null (no active subscription)
+            // - Enabled set to false (organization is disabled)
+            // - All existing data (vaults, members, etc.) preserved
+            organization.GatewayCustomerId = null;
+            organization.GatewaySubscriptionId = null;
+            organization.Enabled = false;
+            await organizationRepository.ReplaceAsync(organization);
+
+            logger.LogInformation(
+                "Successfully reverted Premium-to-Organization upgrade for organization {OrganizationId}. Subscription {SubscriptionId} restored to user {UserId}",
+                organization.Id, subscription.Id, previousPremiumUserId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to revert Premium-to-Organization upgrade for organization {OrganizationId}", organization.Id);
+            throw new BillingException(
+                message: "Failed to revert subscription upgrade",
+                innerException: ex);
         }
     }
 
