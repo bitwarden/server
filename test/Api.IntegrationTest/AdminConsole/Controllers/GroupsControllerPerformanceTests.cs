@@ -1,11 +1,14 @@
 ﻿using System.Net;
 using System.Text;
 using System.Text.Json;
+using AutoMapper;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
+using Bit.Core.Entities;
 using Bit.Seeder.Recipes;
+using Microsoft.AspNetCore.Identity;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +29,9 @@ public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -34,8 +39,8 @@ public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        var collectionIds = collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
-        var groupIds = groupsSeeder.AddToOrganization(orgId, 1, orgUserIds, 0);
+        var collectionIds = collectionsSeeder.Seed(orgId, collectionCount, orgUserIds, 0);
+        var groupIds = groupsSeeder.Seed(orgId, 1, orgUserIds, 0);
 
         var groupId = groupIds.First();
 

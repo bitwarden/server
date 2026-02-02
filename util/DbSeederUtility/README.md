@@ -28,13 +28,23 @@ DbSeeder.exe <command> [options]
 
 ```bash
 # Generate an organization called "seeded" with 10000 users using the @large.test email domain.
-# Login using "admin@large.test" with password "asdfasdfasdf"
+# Login using "owner@large.test" with password "asdfasdfasdf"
 DbSeeder.exe organization -n seeded -u 10000 -d large.test
+
+# Generate an organization with 5 users and 100 encrypted ciphers
+DbSeeder.exe vault-organization -n TestOrg -u 5 -d test.com -c 100
+
+# Generate with Spotify-style collections (tribes, chapters, guilds)
+DbSeeder.exe vault-organization -n TestOrg -u 10 -d test.com -c 50 -o Spotify
+
+# Generate a small test organization with ciphers for manual testing
+DbSeeder.exe vault-organization -n DevOrg -u 2 -d dev.local -c 10
 ```
 
 ## Dependencies
 
 This utility depends on:
+
 - The Seeder class library
 - CommandDotNet for command-line parsing
 - .NET 8.0 runtime
