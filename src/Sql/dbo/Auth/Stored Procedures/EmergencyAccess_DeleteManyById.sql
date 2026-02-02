@@ -5,20 +5,20 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @UserIds AS [GuidIdArray];
+    DECLARE @BatchSize INT = 100
 
     INSERT INTO @UserIds
     SELECT DISTINCT
         [GranteeId]
     FROM
         [dbo].[EmergencyAccess] EA
-    INNER JOIN
+        INNER JOIN
         @EmergencyAccessIds EAI ON EAI.[Id] = EA.[Id]
     WHERE
-        EA.[Status] = 2
-    AND
+        EA.[Status] = 2 -- 2 = Bit.Core.Auth.Enums.EmergencyAccessStatusType.Confirmed
+        AND
         EA.[GranteeId] IS NOT NULL
 
-    DECLARE @BatchSize INT = 100
 
     -- Delete EmergencyAccess Records
     WHILE @BatchSize > 0
@@ -27,7 +27,7 @@ BEGIN
         DELETE TOP(@BatchSize) EA
         FROM
             [dbo].[EmergencyAccess] EA
-        INNER JOIN
+            INNER JOIN
             @EmergencyAccessIds EAI ON EAI.[Id] = EA.[Id]
 
         SET @BatchSize = @@ROWCOUNT
