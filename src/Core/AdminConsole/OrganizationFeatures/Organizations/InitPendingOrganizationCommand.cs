@@ -274,7 +274,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         var collection = new Collection
         {
             Id = CoreHelpers.GenerateComb(),
-            Name = request.CollectionName,
+            Name = request.CollectionName!,
             OrganizationId = request.OrganizationId,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow
