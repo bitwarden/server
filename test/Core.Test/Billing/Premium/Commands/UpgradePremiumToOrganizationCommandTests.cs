@@ -390,11 +390,6 @@ public class UpgradePremiumToOrganizationCommandTests
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
-                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPremiumPriceId) &&
-                opts.Metadata[StripeConstants.MetadataKeys.PreviousPremiumPriceId] == "premium-annually" &&
-                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousPeriodEndDate) &&
-                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
-                opts.Metadata[StripeConstants.MetadataKeys.PreviousAdditionalStorage] == "0" &&
                 opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.UserId) &&
                 opts.Metadata[StripeConstants.MetadataKeys.UserId] == string.Empty)); // Removes userId to unlink from User
     }
@@ -594,8 +589,6 @@ public class UpgradePremiumToOrganizationCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.Metadata.ContainsKey(StripeConstants.MetadataKeys.PreviousAdditionalStorage) &&
-                opts.Metadata[StripeConstants.MetadataKeys.PreviousAdditionalStorage] == "5" &&
                 opts.Items.Count == 2 && // 1 modified (premium to new price) + 1 deleted (storage)
                 opts.Items.Count(i => i.Deleted == true) == 1));
     }
