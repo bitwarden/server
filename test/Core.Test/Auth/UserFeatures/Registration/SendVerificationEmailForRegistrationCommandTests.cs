@@ -235,10 +235,6 @@ public class SendVerificationEmailForRegistrationCommandTests
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blockedcompany.com")
             .Returns(true);
@@ -265,10 +261,6 @@ public class SendVerificationEmailForRegistrationCommandTests
 
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("allowedcompany.com")
@@ -297,10 +289,6 @@ public class SendVerificationEmailForRegistrationCommandTests
 
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>

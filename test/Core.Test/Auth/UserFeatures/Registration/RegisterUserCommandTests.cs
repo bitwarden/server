@@ -975,10 +975,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1001,10 +997,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "user@allowed-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("allowed-domain.com")
@@ -1071,10 +1063,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1102,10 +1090,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1130,10 +1114,6 @@ public class RegisterUserCommandTests
         user.Email = "user@blocked-domain.com";
         emergencyAccess.Email = user.Email;
         emergencyAccess.Id = acceptEmergencyAccessId;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
@@ -1183,10 +1163,6 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IGlobalSettings>()
             .OrganizationInviteExpirationHours.Returns(120); // 5 days
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1213,10 +1189,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "invalid-email-format";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUser(user));
@@ -1231,10 +1203,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "invalid-email-format";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
             .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
@@ -1406,10 +1374,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", organization.Id)
             .Returns(true);
@@ -1428,10 +1392,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "user@company-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         // Domain is claimed by THIS organization, so it should be allowed
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -1460,10 +1420,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "user@unclaimed-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("unclaimed-domain.com", organization.Id)
