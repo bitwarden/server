@@ -28,8 +28,7 @@ public class UpgradePremiumToOrganizationCommandTests
             string? stripePlanId = null,
             string? stripeSeatPlanId = null,
             string? stripePremiumAccessPlanId = null,
-            string? stripeStoragePlanId = null,
-            int? trialPeriodDays = null)
+            string? stripeStoragePlanId = null)
         {
             Type = planType;
             ProductTier = ProductTierType.Teams;
@@ -38,7 +37,6 @@ public class UpgradePremiumToOrganizationCommandTests
             NameLocalizationKey = "";
             DescriptionLocalizationKey = "";
             CanBeUsedByBusiness = true;
-            TrialPeriodDays = trialPeriodDays;
             HasSelfHost = false;
             HasPolicies = false;
             HasGroups = false;
@@ -87,9 +85,8 @@ public class UpgradePremiumToOrganizationCommandTests
         string? stripePlanId = null,
         string? stripeSeatPlanId = null,
         string? stripePremiumAccessPlanId = null,
-        string? stripeStoragePlanId = null,
-        int? trialPeriodDays = null) =>
-        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId, trialPeriodDays);
+        string? stripeStoragePlanId = null) =>
+        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId);
 
     private static PremiumPlan CreateTestPremiumPlan(
         string seatPriceId = "premium-annually",
