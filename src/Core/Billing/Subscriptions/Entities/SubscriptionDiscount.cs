@@ -12,7 +12,7 @@ public class SubscriptionDiscount : ITableObject<Guid>, IRevisable, IValidatable
     public Guid Id { get; set; }
     [MaxLength(50)]
     public string StripeCouponId { get; set; } = null!;
-    public string? StripeProductIds { get; set; }
+    public ICollection<string>? StripeProductIds { get; set; }
     public decimal? PercentOff { get; set; }
     public long? AmountOff { get; set; }
     [MaxLength(10)]

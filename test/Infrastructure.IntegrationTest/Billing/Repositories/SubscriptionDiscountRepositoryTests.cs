@@ -9,7 +9,7 @@ public class SubscriptionDiscountRepositoryTests
 {
     private static SubscriptionDiscount CreateTestDiscount(
         string? stripeCouponId = null,
-        string? stripeProductIds = null,
+        ICollection<string>? stripeProductIds = null,
         decimal? percentOff = null,
         long? amountOff = null,
         string? currency = null,
@@ -90,7 +90,7 @@ public class SubscriptionDiscountRepositoryTests
         var discount = await subscriptionDiscountRepository.CreateAsync(
             CreateTestDiscount(
                 stripeCouponId: couponId,
-                stripeProductIds: "[\"prod_123\", \"prod_456\"]",
+                stripeProductIds: new List<string> { "prod_123", "prod_456" },
                 percentOff: 20.00m,
                 duration: "repeating",
                 durationInMonths: 3,
@@ -126,7 +126,7 @@ public class SubscriptionDiscountRepositoryTests
         // Arrange
         var discount = CreateTestDiscount(
             stripeCouponId: $"test-create-{Guid.NewGuid()}",
-            stripeProductIds: "[\"prod_789\"]",
+            stripeProductIds: new List<string> { "prod_789" },
             amountOff: 500,
             currency: "usd",
             name: "Fixed Amount Discount");

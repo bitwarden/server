@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -15,6 +16,12 @@ public class SubscriptionDiscountEntityTypeConfiguration : IEntityTypeConfigurat
         builder
             .HasIndex(sd => sd.StripeCouponId)
             .IsUnique();
+
+        builder
+            .Property(sd => sd.StripeProductIds)
+            .HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => v == null ? null : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null));
 
         var dateRangeIndex = builder
             .HasIndex(sd => new { sd.StartDate, sd.EndDate })
