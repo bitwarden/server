@@ -1,7 +1,5 @@
 ﻿using System.Globalization;
 using Bit.Core.Settings;
-using Bit.Seeder;
-using Bit.Seeder.Factories;
 using Bit.SeederApi.Extensions;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
@@ -37,11 +35,7 @@ public class Startup
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
 
-        services.AddScoped<UserSeeder>();
-
         services.AddSeederApiServices();
-
-        services.AddScoped<MangleId>(_ => new MangleId());
         services.AddScenes();
         services.AddQueries();
 

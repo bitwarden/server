@@ -102,8 +102,8 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 - Implement `IScene<TRequest>` or `IScene<TRequest, TResult>`
 - Create complete, realistic test scenarios
-- Handle uniqueness constraint mangling for test isolation
-- Return `SceneResult` with mangle map and optional additional operation result data for test assertions
+- Use `EmailMangler` for uniqueness—each Scene creates its own instance for test isolation
+- Return `SceneResult` with MangleMap (original→mangled) for test assertions
 - Async operations
 - CAN modify database state
 
@@ -117,7 +117,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **When to use:** Need to READ existing seeded data for verification or follow-up operations.
 
-** Example:** Inviting a user to an organization produces a magic link to accept the invite, a query should be used to retrieve that link because it is easier than interfacing with an external smtp catcher.
+**Example:** Inviting a user to an organization produces a magic link to accept the invite, a query should be used to retrieve that link because it is easier than interfacing with an external smtp catcher.
 
 **Key characteristics:**
 
@@ -143,6 +143,22 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Deterministic (seeded randomness for reproducibility)
 - Composable across regions
 - Enums provide the public API (CompanyType, PasswordStrength, etc.)
+
+**Folder structure:** See `Data/README.md` for Generators and Distributions details.
+
+- `Static/` - Read-only data arrays (Companies, Passwords, Names, OrgStructures)
+- `Generators/` - Seeded data generators via `GeneratorContext`
+- `Distributions/` - Percentage-based selection via `Distribution<T>`
+- `Enums/` - Public API enums
+
+#### Helpers
+
+**Purpose:** Shared utilities for seeding operations.
+
+- `EmailMangler` - Unique prefix per instance for test isolation, returns MangleMap for assertions
+- `StableHash` - Deterministic hash from strings for seed generation (domain → seed)
+
+---
 
 ## Rust SDK Integration
 
