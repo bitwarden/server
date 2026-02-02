@@ -7,7 +7,6 @@ using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -43,6 +42,7 @@ public class PoliciesController : Controller
     private readonly IUserService _userService;
     private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
+    private readonly IPolicyQuery _policyQuery;
 
     public PoliciesController(IPolicyRepository policyRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -54,7 +54,8 @@ public class PoliciesController : Controller
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
         ISavePolicyCommand savePolicyCommand,
-        IVNextSavePolicyCommand vNextSavePolicyCommand)
+        IVNextSavePolicyCommand vNextSavePolicyCommand,
+        IPolicyQuery policyQuery)
     {
         _policyRepository = policyRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -68,27 +69,24 @@ public class PoliciesController : Controller
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _savePolicyCommand = savePolicyCommand;
         _vNextSavePolicyCommand = vNextSavePolicyCommand;
+        _policyQuery = policyQuery;
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyDetailResponseModel> Get(Guid orgId, int type)
+    public async Task<PolicyStatusResponseModel> Get(Guid orgId, PolicyType type)
     {
         if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
-        if (policy == null)
-        {
-            return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
-        }
 
+        var policy = await _policyQuery.RunAsync(orgId, type);
         if (policy.Type is PolicyType.SingleOrg)
         {
-            return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
+            return await policy.GetSingleOrgPolicyStatusResponseAsync(_organizationHasVerifiedDomainsQuery);
         }
 
-        return new PolicyDetailResponseModel(policy);
+        return new PolicyStatusResponseModel(policy);
     }
 
     [HttpGet("")]

@@ -48,7 +48,7 @@ public class OrganizationService : IOrganizationService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
@@ -75,7 +75,7 @@ public class OrganizationService : IOrganizationService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
@@ -102,7 +102,7 @@ public class OrganizationService : IOrganizationService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
@@ -835,9 +835,8 @@ public class OrganizationService : IOrganizationService
         }
 
         // Make sure the organization has the policy enabled
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }
