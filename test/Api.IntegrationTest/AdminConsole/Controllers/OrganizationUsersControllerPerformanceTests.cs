@@ -1,13 +1,16 @@
 ﻿using System.Net;
 using System.Text;
 using System.Text.Json;
+using AutoMapper;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Seeder.Recipes;
+using Microsoft.AspNetCore.Identity;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +31,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -37,8 +42,8 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
-        groupsSeeder.AddToOrganization(orgId, 5, orgUserIds);
+        collectionsSeeder.Seed(orgId, 10, orgUserIds);
+        groupsSeeder.Seed(orgId, 5, orgUserIds);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -64,7 +69,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -72,8 +79,8 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: seats);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        collectionsSeeder.AddToOrganization(orgId, 10, orgUserIds);
-        groupsSeeder.AddToOrganization(orgId, 5, orgUserIds);
+        collectionsSeeder.Seed(orgId, 10, orgUserIds);
+        groupsSeeder.Seed(orgId, 5, orgUserIds);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -98,14 +105,16 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var groupsSeeder = new GroupsRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserId = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).FirstOrDefault();
-        groupsSeeder.AddToOrganization(orgId, 2, [orgUserId]);
+        groupsSeeder.Seed(orgId, 2, [orgUserId]);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -130,7 +139,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
@@ -163,7 +174,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
@@ -211,7 +224,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
@@ -251,7 +266,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
@@ -295,7 +312,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
@@ -339,7 +358,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -350,7 +371,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
             users: userCount,
             usersStatus: OrganizationUserStatusType.Confirmed);
 
-        domainSeeder.AddVerifiedDomainToOrganization(orgId, domain);
+        domainSeeder.Seed(orgId, domain);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -384,7 +405,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -392,8 +415,8 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        var collectionIds = collectionsSeeder.AddToOrganization(orgId, 3, orgUserIds, 0);
-        var groupIds = groupsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
+        var collectionIds = collectionsSeeder.Seed(orgId, 3, orgUserIds, 0);
+        var groupIds = groupsSeeder.Seed(orgId, 2, orgUserIds, 0);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -434,7 +457,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
@@ -471,7 +496,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -481,7 +508,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
             users: 2,
             usersStatus: OrganizationUserStatusType.Confirmed);
 
-        domainSeeder.AddVerifiedDomainToOrganization(orgId, domain);
+        domainSeeder.Seed(orgId, domain);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -512,14 +539,16 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
         var collectionsSeeder = new CollectionsRecipe(db);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: 1);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        var collectionIds = collectionsSeeder.AddToOrganization(orgId, 2, orgUserIds, 0);
+        var collectionIds = collectionsSeeder.Seed(orgId, 2, orgUserIds, 0);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -560,7 +589,9 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
         var orgId = orgSeeder.Seed(
