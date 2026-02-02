@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Settings;

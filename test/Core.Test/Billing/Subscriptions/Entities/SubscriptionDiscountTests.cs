@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Xunit;

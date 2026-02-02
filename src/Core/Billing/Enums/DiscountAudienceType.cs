@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Enums;
+﻿namespace Bit.Core.Billing.Enums;
 
 /// <summary>
 /// Defines the target audience for subscription discounts using an extensible strategy pattern.
