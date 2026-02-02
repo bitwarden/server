@@ -13,7 +13,7 @@ public class GroupsRecipe(DatabaseContext db)
     /// <param name="groups">The number of groups to add.</param>
     /// <param name="organizationUserIds">The IDs of the users to create relationships with.</param>
     /// <param name="maxUsersWithRelationships">The maximum number of users to create relationships with.</param>
-    public List<Guid> AddToOrganization(Guid organizationId, int groups, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
+    public List<Guid> Seed(Guid organizationId, int groups, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
     {
         var groupList = CreateAndSaveGroups(organizationId, groups);
 

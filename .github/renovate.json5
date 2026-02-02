@@ -22,12 +22,6 @@
       reviewers: ["team:team-admin-console-dev"],
     },
     {
-      matchFileNames: ["src/Admin/package.json", "src/Sso/package.json"],
-      description: "Admin & SSO npm packages",
-      commitMessagePrefix: "[deps] Auth:",
-      reviewers: ["team:team-auth-dev"],
-    },
-    {
       matchPackageNames: [
         "DuoUniversal",
         "Fido2.AspNet",
@@ -181,6 +175,14 @@
       matchManagers: ["github-actions"],
       matchUpdateTypes: ["minor"],
       addLabels: ["hold"],
+    },
+    {
+      groupName: "Admin and SSO npm dependencies",
+      matchFileNames: ["src/Admin/package.json", "src/Sso/package.json"],
+      matchUpdateTypes: ["minor", "patch"],
+      description: "Admin & SSO npm packages",
+      commitMessagePrefix: "[deps] Auth:",
+      reviewers: ["team:team-auth-dev"],
     },
     {
       matchPackageNames: ["/^Microsoft\\.EntityFrameworkCore\\./", "/^dotnet-ef/"],

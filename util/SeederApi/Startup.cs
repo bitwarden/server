@@ -37,7 +37,6 @@ public class Startup
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
 
-        services.AddSingleton<RustSDK.RustSdkService>();
         services.AddScoped<UserSeeder>();
 
         services.AddSeederApiServices();
