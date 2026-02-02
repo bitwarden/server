@@ -2,12 +2,16 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -30,6 +34,8 @@ public class MembersController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommandV2;
+    private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -42,7 +48,9 @@ public class MembersController : Controller
         IOrganizationRepository organizationRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IRevokeOrganizationUserCommand revokeOrganizationUserCommandV2,
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -55,6 +63,8 @@ public class MembersController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _revokeOrganizationUserCommandV2 = revokeOrganizationUserCommandV2;
+        _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
     }
 
     /// <summary>
@@ -256,6 +266,61 @@ public class MembersController : Controller
             return new NotFoundResult();
         }
         await _resendOrganizationInviteCommand.ResendInviteAsync(_currentContext.OrganizationId!.Value, null, id);
+        return new OkResult();
+    }
+
+    /// <summary>
+    /// Revoke a member's access to an organization.
+    /// </summary>
+    /// <param name="id">The ID of the member to be revoked.</param>
+    [HttpPost("{id}/revoke")]
+    [ProducesResponseType((int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<IActionResult> Revoke(Guid id)
+    {
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != _currentContext.OrganizationId)
+        {
+            return new NotFoundResult();
+        }
+
+        var request = new RevokeOrganizationUsersRequest(
+            _currentContext.OrganizationId!.Value,
+            [id],
+            new SystemUser(EventSystemUser.PublicApi)
+        );
+
+        var results = await _revokeOrganizationUserCommandV2.RevokeUsersAsync(request);
+        var result = results.Single();
+
+        return result.Result.Match<IActionResult>(
+            error => new BadRequestObjectResult(new ErrorResponseModel(error.Message)),
+            _ => new OkResult()
+        );
+    }
+
+    /// <summary>
+    /// Restore a member.
+    /// </summary>
+    /// <remarks>
+    /// Restores a previously revoked member of the organization.
+    /// </remarks>
+    /// <param name="id">The identifier of the member to be restored.</param>
+    [HttpPost("{id}/restore")]
+    [ProducesResponseType((int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
+    [ProducesResponseType((int)HttpStatusCode.NotFound)]
+    public async Task<IActionResult> Restore(Guid id)
+    {
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != _currentContext.OrganizationId)
+        {
+            return new NotFoundResult();
+        }
+
+        await _restoreOrganizationUserCommand.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi);
+
         return new OkResult();
     }
 }
