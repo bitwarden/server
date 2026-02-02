@@ -106,8 +106,13 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Id = Guid.NewGuid();
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.Id = Guid.NewGuid();
         organization.Name = "Test Organization";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -134,6 +139,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
+
         var expectedError = new IdentityError();
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -161,8 +172,13 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.PlanType = planType;
         organization.Name = "Enterprise Org";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -192,6 +208,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
+
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
@@ -220,7 +242,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
@@ -247,6 +274,12 @@ public class RegisterUserCommandTests
         [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(false);
 
@@ -350,6 +383,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(true);
 
@@ -388,6 +427,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(false);
 
@@ -541,6 +586,10 @@ public class RegisterUserCommandTests
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
         var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
         sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
@@ -644,6 +693,12 @@ public class RegisterUserCommandTests
     public async Task RegisterUserViaEmailVerificationToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
@@ -721,6 +776,12 @@ public class RegisterUserCommandTests
         string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
@@ -811,6 +872,12 @@ public class RegisterUserCommandTests
         string masterPasswordHash, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
@@ -931,6 +998,8 @@ public class RegisterUserCommandTests
         User user, string masterPasswordHash, Guid providerUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
         // Start with plaintext
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
         var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
@@ -949,6 +1018,10 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IDataProtectionProvider>()
             .CreateProtector("ProviderServiceDataProtector")
             .Returns(mockDataProtector);
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
 
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
@@ -1030,8 +1103,13 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.PlanType = planType;
         organization.Name = "Family Org";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -1229,8 +1307,13 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
@@ -1278,10 +1361,15 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         Organization organization = new Organization
         {
             Name = null
         };
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -1316,9 +1404,14 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
         organization.PlanType = PlanType.EnterpriseAnnually;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)

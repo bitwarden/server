@@ -59,9 +59,11 @@ public class SendVerificationEmailForRegistrationCommandTests
     [Theory]
     [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenFromMarketingIsPremium_SendsEmailWithMarketingParameterAndReturnsNull(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails)
+        string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(email)
             .ReturnsNull();
@@ -167,9 +169,15 @@ public class SendVerificationEmailForRegistrationCommandTests
     [Theory]
     [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenOpenRegistrationDisabled_ThrowsBadRequestException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails)
+        string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = true;
 
