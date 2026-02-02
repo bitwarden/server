@@ -18,6 +18,12 @@
         </mj-attributes>
 
         <mj-style>
+            .ac-link {
+                text-decoration: none;
+                color: #175ddc;
+                font-weight: 700;
+            }
+
             @media only screen and (max-width: 480px) {
                 .hide-mobile { display: none !important; }
             }
@@ -173,7 +179,7 @@
                         font-weight="400"
                         padding="0px 0px 0px 0px">
                     You can easily share passwords with friends, family, or coworkers.<br/>
-                    <a href="https://bitwarden.com/help/sharing" class="link">Share passwords in Bitwarden</a>
+                    <a href="https://bitwarden.com/help/sharing" class="ac-link">Share passwords in Bitwarden</a>
                 </mj-text>
             </mj-column>
         </mj-section>
@@ -205,10 +211,10 @@
                         font-weight="400"
                         line-height="24px"
                         padding="0 0 24px 0">
-                    Already using the <a href="https://bitwarden.com/download/" style="text-decoration: none; color: #175ddc; font-weight: 700;">browser extension</a>?
+                    Already using the <a href="https://bitwarden.com/download/" class="ac-link">browser extension</a>?
                     Download the Bitwarden mobile app from the
-                    <a href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744" style="text-decoration: none; color: #175ddc; font-weight: 700;">App Store</a>
-                    or <a href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden" style="text-decoration: none; color: #175ddc; font-weight: 700;">Google Play</a>
+                    <a href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744" class="ac-link">App Store</a>
+                    or <a href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden" class="ac-link">Google Play</a>
                     to quickly save logins and autofill forms on the go.
                 </mj-text>
             </mj-column>
@@ -269,7 +275,7 @@
                         line-height="20px"
                         font-weight="400"
                         padding="0px">
-                    Find user guides, product documentation, and videos on the <a href="https://bitwarden.com/help/" class="link">Bitwarden help center</a>.
+                    Find user guides, product documentation, and videos on the <a href="https://bitwarden.com/help/" class="ac-link">Bitwarden help center</a>.
                 </mj-text>
             </mj-column>
             <mj-column
