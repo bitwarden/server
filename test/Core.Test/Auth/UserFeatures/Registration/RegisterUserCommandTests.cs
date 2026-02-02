@@ -502,10 +502,6 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Mock the new overload that excludes the organization - it should return true (domain IS blocked by another org)
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", orgUser.OrganizationId)
@@ -548,10 +544,6 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         // Mock the new overload - it should return false (domain is NOT blocked by OTHER orgs)
         sutProvider.GetDependency<IOrganizationDomainRepository>()
