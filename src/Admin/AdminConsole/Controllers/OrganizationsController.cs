@@ -9,6 +9,7 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -59,6 +60,7 @@ public class OrganizationsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IOrganizationAutoConfirmEnabledNotificationCommand _organizationAutoConfirmEnabledNotificationCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -84,7 +86,8 @@ public class OrganizationsController : Controller
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
         IPricingClient pricingClient,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
-        IOrganizationBillingService organizationBillingService)
+        IOrganizationBillingService organizationBillingService,
+        IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -110,6 +113,7 @@ public class OrganizationsController : Controller
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _organizationBillingService = organizationBillingService;
+        _organizationAutoConfirmEnabledNotificationCommand = organizationAutoConfirmEnabledNotificationCommand;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -292,6 +296,18 @@ public class OrganizationsController : Controller
         await _organizationRepository.ReplaceAsync(organization);
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && organization.UseAutomaticUserConfirmation)
+        {
+            var emailsToNotify =
+                (await _organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id))
+                .Where(x => x.Type == OrganizationUserType.Admin || x.Type == OrganizationUserType.Owner ||
+                            x.GetPermissions().ManageUsers)
+                .Select(x => x.Email);
+
+            await _organizationAutoConfirmEnabledNotificationCommand.SendEmailAsync(
+                new OrganizationAutoConfirmEnabledNotificationRequest(organization, [.. emailsToNotify]));
+        }
 
         // Sync name/email changes to Stripe
         if (existingOrganizationData.Name != organization.Name || existingOrganizationData.BillingEmail != organization.BillingEmail)
