@@ -174,20 +174,6 @@ public class DuoUniversalTokenService(
                normalizedHost.EndsWith("bitwarden.pw");
     }
 
-    private static bool IsLocalRequestHost(string host)
-    {
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            return false;
-        }
-
-        var normalizedHost = host.ToLowerInvariant();
-        return normalizedHost == "localhost" ||
-               normalizedHost == "127.0.0.1" ||
-               normalizedHost == "::1" ||
-               normalizedHost.EndsWith(".localhost");
-    }
-
     private static DuoDeeplinkScheme? GetDeeplinkSchemeOverride(HttpContext httpContext)
     {
         if (httpContext == null)
@@ -195,16 +181,9 @@ public class DuoUniversalTokenService(
             return null;
         }
 
-        var host = httpContext.Request?.Host.Host;
-        // Only allow overrides when developing/testing locally to avoid abuse in production
-        if (!IsLocalRequestHost(host))
-        {
-            return null;
-        }
-
         // Querystring has precedence over header for manual local testing
-        var overrideFromQuery = httpContext.Request?.Query["deeplinkScheme"].FirstOrDefault();
-        var overrideFromHeader = httpContext.Request?.Headers["Bitwarden-Deeplink-Scheme"].FirstOrDefault();
+        var overrideFromQuery = httpContext.Request.Query["deeplinkScheme"].FirstOrDefault();
+        var overrideFromHeader = httpContext.Request.Headers["Bitwarden-Deeplink-Scheme"].FirstOrDefault();
         var candidate = (overrideFromQuery ?? overrideFromHeader)?.Trim();
 
         // Allow only the two supported values
