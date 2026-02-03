@@ -819,7 +819,7 @@ public class SubscriptionUpdatedHandlerTests
                     {
                         Data =
                         [
-                            new SubscriptionItem { Plan = new Plan { Id = "secrets-manager-teams-seat-annually" } },
+                            new SubscriptionItem { Plan = new Stripe.Plan { Id = "secrets-manager-teams-seat-annually" } },
                         ]
                     }
                 })

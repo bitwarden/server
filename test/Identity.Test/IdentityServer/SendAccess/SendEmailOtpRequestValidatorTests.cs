@@ -5,6 +5,7 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 using NSubstitute;
@@ -105,7 +106,8 @@ public class SendEmailOtpRequestValidatorTests
                 expectedUniqueId)
             .Returns(generatedToken);
 
-        emailOtp = emailOtp with { Emails = [email] };
+        var emailHash = CryptographyHelper.HashAndEncode(email);
+        emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         // Act
         var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
@@ -144,7 +146,8 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        var emailHash = CryptographyHelper.HashAndEncode(email);
+        emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
@@ -179,7 +182,8 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        var emailHash = CryptographyHelper.HashAndEncode(email);
+        emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
@@ -231,7 +235,8 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        emailOtp = emailOtp with { Emails = [email] };
+        var emailHash = CryptographyHelper.HashAndEncode(email);
+        emailOtp = emailOtp with { EmailHashes = [emailHash] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
@@ -265,10 +270,8 @@ public class SendEmailOtpRequestValidatorTests
         // Arrange
         var otpTokenProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         var mailService = Substitute.For<IMailService>();
-        var featureService = Substitute.For<IFeatureService>();
-
         // Act
-        var validator = new SendEmailOtpRequestValidator(featureService, otpTokenProvider, mailService);
+        var validator = new SendEmailOtpRequestValidator(otpTokenProvider, mailService);
 
         // Assert
         Assert.NotNull(validator);
