@@ -23,7 +23,7 @@ public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetail
     /// Returns true if the user cannot grant emergency access because they are in an
     /// auto-confirm organization with status Accepted, Confirmed, or Revoked.
     /// </summary>
-    public bool CannotGrantEmergencyAccess() => policyDetails.Any(p =>
+    public bool GrantorCannotGrantEmergencyAccess() => policyDetails.Any(p =>
         p.OrganizationUserStatus is
             OrganizationUserStatusType.Accepted or
             OrganizationUserStatusType.Confirmed or
@@ -33,7 +33,7 @@ public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetail
     /// Returns true if the user cannot be granted emergency access because they are in an
     /// auto-confirm organization with status Accepted, Confirmed, or Revoked.
     /// </summary>
-    public bool CannotBeGrantedEmergencyAccess() => policyDetails.Any(p =>
+    public bool GranteeCannotBeGrantedEmergencyAccess() => policyDetails.Any(p =>
         p.OrganizationUserStatus is
             OrganizationUserStatusType.Accepted or
             OrganizationUserStatusType.Confirmed or

@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
@@ -21,7 +20,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 
-namespace Bit.Core.Auth.Services;
+namespace Bit.Core.Auth.UserFeatures.EmergencyAccess;
 
 public class EmergencyAccessService : IEmergencyAccessService
 {
@@ -69,7 +68,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _policyRequirementQuery = policyRequirementQuery;
     }
 
-    public async Task<EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime)
+    public async Task<Entities.EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime)
     {
         if (!await _userService.CanAccessPremium(grantorUser))
         {
@@ -86,13 +85,13 @@ public class EmergencyAccessService : IEmergencyAccessService
             var requirement = await _policyRequirementQuery
                 .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
 
-            if (requirement.CannotGrantEmergencyAccess())
+            if (requirement.GrantorCannotGrantEmergencyAccess())
             {
                 throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
             }
         }
 
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Entities.EmergencyAccess
         {
             GrantorId = grantorUser.Id,
             Email = emergencyContactEmail.ToLowerInvariant(),
@@ -132,7 +131,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         await SendInviteAsync(emergencyAccess, NameOrEmail(grantorUser));
     }
 
-    public async Task<EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User granteeUser, string token, IUserService userService)
+    public async Task<Entities.EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User granteeUser, string token, IUserService userService)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
         if (emergencyAccess == null)
@@ -155,7 +154,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             var requirement = await _policyRequirementQuery
                 .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
 
-            if (requirement.CannotBeGrantedEmergencyAccess())
+            if (requirement.GranteeCannotBeGrantedEmergencyAccess())
             {
                 throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
             }
@@ -205,7 +204,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         await _emergencyAccessRepository.DeleteAsync(emergencyAccess);
     }
 
-    public async Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid grantorId)
+    public async Task<Entities.EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid grantorId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
         if (emergencyAccess == null || emergencyAccess.Status != EmergencyAccessStatusType.Accepted ||
@@ -231,7 +230,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         return emergencyAccess;
     }
 
-    public async Task SaveAsync(EmergencyAccess emergencyAccess, User grantorUser)
+    public async Task SaveAsync(Entities.EmergencyAccess emergencyAccess, User grantorUser)
     {
         if (!await _userService.CanAccessPremium(grantorUser))
         {
@@ -341,7 +340,7 @@ public class EmergencyAccessService : IEmergencyAccessService
     }
 
     // TODO PM-21687: rename this to something like InitiateRecoveryTakeoverAsync
-    public async Task<(EmergencyAccess, User)> TakeoverAsync(Guid emergencyAccessId, User granteeUser)
+    public async Task<(Entities.EmergencyAccess, User)> TakeoverAsync(Guid emergencyAccessId, User granteeUser)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
@@ -459,7 +458,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
     }
 
-    private async Task SendInviteAsync(EmergencyAccess emergencyAccess, string invitingUsersName)
+    private async Task SendInviteAsync(Entities.EmergencyAccess emergencyAccess, string invitingUsersName)
     {
         var token = _dataProtectorTokenizer.Protect(new EmergencyAccessInviteTokenable(emergencyAccess, _globalSettings.OrganizationInviteExpirationHours));
         await _mailService.SendEmergencyAccessInviteEmailAsync(emergencyAccess, invitingUsersName, token);
@@ -479,7 +478,7 @@ public class EmergencyAccessService : IEmergencyAccessService
      */
     //TODO PM-21687: this IsValidRequest() checks the validity based on the granteeUser. There should be a complementary method for the grantorUser
     private static bool IsValidRequest(
-        EmergencyAccess availableAccess,
+        Entities.EmergencyAccess availableAccess,
         User requestingUser,
         EmergencyAccessType requestedAccessType)
     {

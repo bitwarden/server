@@ -31,9 +31,10 @@ public class RestoreOrganizationUserCommand(
     IOrganizationService organizationService,
     IFeatureService featureService,
     IPolicyRequirementQuery policyRequirementQuery,
+    ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator) : IRestoreOrganizationUserCommand
 {
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
+    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
         if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
         {
@@ -46,7 +47,7 @@ public class RestoreOrganizationUserCommand(
             throw new BadRequestException("Only owners can restore other owners.");
         }
 
-        await RepositoryRestoreUserAsync(organizationUser);
+        await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
         if (organizationUser.UserId.HasValue)
@@ -57,7 +58,7 @@ public class RestoreOrganizationUserCommand(
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
     {
-        await RepositoryRestoreUserAsync(organizationUser);
+        await RepositoryRestoreUserAsync(organizationUser, null); // users stored by a system user will not get a default collection at this point.
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored,
             systemUser);
 
@@ -67,7 +68,7 @@ public class RestoreOrganizationUserCommand(
         }
     }
 
-    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser)
+    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, string defaultCollectionName)
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
@@ -104,7 +105,17 @@ public class RestoreOrganizationUserCommand(
 
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
-        organizationUser.Status = status;
+        if (organizationUser.UserId.HasValue
+           && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId
+               .Value)).State == OrganizationDataOwnershipState.Enabled
+           && status == OrganizationUserStatusType.Confirmed
+           && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
+           && !string.IsNullOrWhiteSpace(defaultCollectionName))
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
+                [organizationUser.Id],
+                defaultCollectionName);
+        }
     }
 
     private async Task CheckUserForOtherFreeOrganizationOwnershipAsync(OrganizationUser organizationUser)
@@ -156,7 +167,8 @@ public class RestoreOrganizationUserCommand(
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService)
+        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService,
+        string defaultCollectionName)
     {
         var orgUsers = await organizationUserRepository.GetManyAsync(organizationUserIds);
         var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
@@ -187,6 +199,9 @@ public class RestoreOrganizationUserCommand(
         var orgUsersAndOrgs = await GetRelatedOrganizationUsersAndOrganizationsAsync(filteredUsers);
 
         var result = new List<Tuple<OrganizationUser, string>>();
+        var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId))
+            .ToList();
 
         foreach (var organizationUser in filteredUsers)
         {
@@ -223,12 +238,23 @@ public class RestoreOrganizationUserCommand(
                 var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
                 await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
-                organizationUser.Status = status;
-                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+
                 if (organizationUser.UserId.HasValue)
                 {
+                    if (organizationUsersDataOwnershipEnabled.Contains(organizationUser.Id)
+                        && status == OrganizationUserStatusType.Confirmed
+                        && !string.IsNullOrWhiteSpace(defaultCollectionName)
+                        && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore))
+                    {
+                        await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
+                            [organizationUser.Id],
+                            defaultCollectionName);
+                    }
+
                     await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
+
+                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
                 result.Add(Tuple.Create(organizationUser, ""));
             }

@@ -4,12 +4,11 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -21,7 +20,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Auth.Services;
+namespace Bit.Core.Test.Auth.UserFeatures.EmergencyAccess;
 
 [SutProviderCustomize]
 public class EmergencyAccessServiceTests
@@ -72,13 +71,13 @@ public class EmergencyAccessServiceTests
         Assert.Equal(EmergencyAccessStatusType.Invited, result.Status);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
                          .Received(1)
-                         .CreateAsync(Arg.Any<EmergencyAccess>());
+                         .CreateAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
         sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
                    .Received(1)
                    .Protect(Arg.Any<EmergencyAccessInviteTokenable>());
         await sutProvider.GetDependency<IMailService>()
                          .Received(1)
-                         .SendEmergencyAccessInviteEmailAsync(Arg.Any<EmergencyAccess>(), Arg.Any<string>(), Arg.Any<string>());
+                         .SendEmergencyAccessInviteEmailAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -102,7 +101,7 @@ public class EmergencyAccessServiceTests
         User invitingUser,
         Guid emergencyAccessId)
     {
-        EmergencyAccess emergencyAccess = null;
+        Core.Auth.Entities.EmergencyAccess emergencyAccess = null;
 
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
@@ -123,7 +122,7 @@ public class EmergencyAccessServiceTests
         User invitingUser,
         Guid emergencyAccessId)
     {
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Status = EmergencyAccessStatusType.Invited,
             GrantorId = Guid.NewGuid(),
@@ -152,7 +151,7 @@ public class EmergencyAccessServiceTests
         User invitingUser,
         Guid emergencyAccessId)
     {
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Status = statusType,
             GrantorId = invitingUser.Id,
@@ -176,7 +175,7 @@ public class EmergencyAccessServiceTests
         User invitingUser,
         Guid emergencyAccessId)
     {
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Status = EmergencyAccessStatusType.Invited,
             GrantorId = invitingUser.Id,
@@ -198,7 +197,7 @@ public class EmergencyAccessServiceTests
     public async Task AcceptUserAsync_EmergencyAccessNull_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider, User acceptingUser, string token)
     {
-        EmergencyAccess emergencyAccess = null;
+        Core.Auth.Entities.EmergencyAccess emergencyAccess = null;
         sutProvider.GetDependency<IEmergencyAccessRepository>()
                 .GetByIdAsync(Arg.Any<Guid>())
                 .Returns(emergencyAccess);
@@ -213,7 +212,7 @@ public class EmergencyAccessServiceTests
     public async Task AcceptUserAsync_CannotUnprotectToken_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string token)
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
@@ -234,8 +233,8 @@ public class EmergencyAccessServiceTests
     public async Task AcceptUserAsync_TokenDataInvalid_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
-        EmergencyAccess emergencyAccess,
-        EmergencyAccess wrongEmergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess wrongEmergencyAccess,
         string token)
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
@@ -261,7 +260,7 @@ public class EmergencyAccessServiceTests
     public async Task AcceptUserAsync_AcceptedStatus_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string token)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.Accepted;
@@ -288,7 +287,7 @@ public class EmergencyAccessServiceTests
     public async Task AcceptUserAsync_NotInvitedStatus_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string token)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.Confirmed;
@@ -315,7 +314,7 @@ public class EmergencyAccessServiceTests
     public async Task AcceptUserAsync_EmergencyAccessEmailDoesNotMatch_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string token)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.Invited;
@@ -343,7 +342,7 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
         User invitingUser,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string token)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.Invited;
@@ -368,7 +367,7 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
                 .Received(1)
-                .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
+                .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
 
         await sutProvider.GetDependency<IMailService>()
                 .Received(1)
@@ -379,11 +378,11 @@ public class EmergencyAccessServiceTests
     public async Task DeleteAsync_EmergencyAccessNull_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User invitingUser,
-        EmergencyAccess emergencyAccess)
+        Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
                 .GetByIdAsync(Arg.Any<Guid>())
-                .Returns((EmergencyAccess)null);
+                .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, invitingUser.Id));
@@ -395,7 +394,7 @@ public class EmergencyAccessServiceTests
     public async Task DeleteAsync_EmergencyAccessGrantorIdNotEqual_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User invitingUser,
-        EmergencyAccess emergencyAccess)
+        Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         emergencyAccess.GrantorId = Guid.NewGuid();
         sutProvider.GetDependency<IEmergencyAccessRepository>()
@@ -412,7 +411,7 @@ public class EmergencyAccessServiceTests
     public async Task DeleteAsync_EmergencyAccessGranteeIdNotEqual_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User invitingUser,
-        EmergencyAccess emergencyAccess)
+        Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         emergencyAccess.GranteeId = Guid.NewGuid();
         sutProvider.GetDependency<IEmergencyAccessRepository>()
@@ -429,7 +428,7 @@ public class EmergencyAccessServiceTests
     public async Task DeleteAsync_EmergencyAccessIsDeleted_Success(
     SutProvider<EmergencyAccessService> sutProvider,
     User user,
-    EmergencyAccess emergencyAccess)
+    Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         emergencyAccess.GranteeId = user.Id;
         emergencyAccess.GrantorId = user.Id;
@@ -447,7 +446,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task ConfirmUserAsync_EmergencyAccessNull_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string key,
         User grantorUser)
     {
@@ -455,7 +454,7 @@ public class EmergencyAccessServiceTests
         emergencyAccess.Status = EmergencyAccessStatusType.RecoveryInitiated;
         sutProvider.GetDependency<IEmergencyAccessRepository>()
                 .GetByIdAsync(Arg.Any<Guid>())
-                .Returns((EmergencyAccess)null);
+                .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(emergencyAccess.Id, key, grantorUser.Id));
@@ -467,7 +466,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task ConfirmUserAsync_EmergencyAccessStatusIsNotAccepted_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string key,
         User grantorUser)
     {
@@ -488,7 +487,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task ConfirmUserAsync_EmergencyAccessGrantorIdNotEqualToConfirmingUserId_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string key,
         User grantorUser)
     {
@@ -509,7 +508,7 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider, User confirmingUser, string key)
     {
         confirmingUser.UsesKeyConnector = true;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Status = EmergencyAccessStatusType.Accepted,
             GrantorId = confirmingUser.Id,
@@ -534,7 +533,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task ConfirmUserAsync_ConfirmsAndReplacesEmergencyAccess_Success(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         string key,
         User grantorUser,
         User granteeUser)
@@ -557,7 +556,7 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
                 .Received(1)
-                .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Confirmed));
+                .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Confirmed));
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -568,7 +567,7 @@ public class EmergencyAccessServiceTests
     public async Task SaveAsync_PremiumCannotUpdate_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider, User savingUser)
     {
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Type = EmergencyAccessType.Takeover,
             GrantorId = savingUser.Id,
@@ -590,7 +589,7 @@ public class EmergencyAccessServiceTests
     SutProvider<EmergencyAccessService> sutProvider, User savingUser)
     {
         savingUser.Premium = true;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Type = EmergencyAccessType.Takeover,
             GrantorId = new Guid(),
@@ -615,7 +614,7 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider, User grantorUser)
     {
         grantorUser.UsesKeyConnector = true;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Type = EmergencyAccessType.Takeover,
             GrantorId = grantorUser.Id,
@@ -637,7 +636,7 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider, User grantorUser)
     {
         grantorUser.UsesKeyConnector = true;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Type = EmergencyAccessType.View,
             GrantorId = grantorUser.Id,
@@ -659,7 +658,7 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider, User grantorUser)
     {
         grantorUser.UsesKeyConnector = false;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Type = EmergencyAccessType.Takeover,
             GrantorId = grantorUser.Id,
@@ -682,7 +681,7 @@ public class EmergencyAccessServiceTests
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
-            .Returns((EmergencyAccess)null);
+            .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InitiateAsync(new Guid(), initiatingUser));
@@ -696,7 +695,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task InitiateAsync_EmergencyAccessGranteeIdNotEqual_ThrowBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User initiatingUser)
     {
         emergencyAccess.GranteeId = new Guid();
@@ -716,7 +715,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task InitiateAsync_EmergencyAccessStatusIsNotConfirmed_ThrowBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User initiatingUser)
     {
         emergencyAccess.GranteeId = initiatingUser.Id;
@@ -739,7 +738,7 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider, User initiatingUser, User grantor)
     {
         grantor.UsesKeyConnector = true;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Status = EmergencyAccessStatusType.Confirmed,
             GranteeId = initiatingUser.Id,
@@ -768,7 +767,7 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider, User initiatingUser, User grantor)
     {
         grantor.UsesKeyConnector = true;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Status = EmergencyAccessStatusType.Confirmed,
             GranteeId = initiatingUser.Id,
@@ -787,14 +786,14 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.RecoveryInitiated));
+            .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.RecoveryInitiated));
     }
 
     [Theory, BitAutoData]
     public async Task InitiateAsync_RequestIsCorrect_Success(
         SutProvider<EmergencyAccessService> sutProvider, User initiatingUser, User grantor)
     {
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             Status = EmergencyAccessStatusType.Confirmed,
             GranteeId = initiatingUser.Id,
@@ -813,7 +812,7 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.RecoveryInitiated));
+            .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.RecoveryInitiated));
     }
 
     [Theory, BitAutoData]
@@ -822,7 +821,7 @@ public class EmergencyAccessServiceTests
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
-            .Returns((EmergencyAccess)null);
+            .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ApproveAsync(new Guid(), null));
@@ -833,7 +832,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task ApproveAsync_EmergencyAccessGrantorIdNotEquatToApproving_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User grantorUser)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.RecoveryInitiated;
@@ -855,7 +854,7 @@ public class EmergencyAccessServiceTests
     public async Task ApproveAsync_EmergencyAccessStatusNotRecoveryInitiated_ThrowsBadRequest(
         EmergencyAccessStatusType statusType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User grantorUser)
     {
         emergencyAccess.GrantorId = grantorUser.Id;
@@ -873,7 +872,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task ApproveAsync_Success(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User grantorUser,
         User granteeUser)
     {
@@ -889,20 +888,20 @@ public class EmergencyAccessServiceTests
         await sutProvider.Sut.ApproveAsync(emergencyAccess.Id, grantorUser);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.RecoveryApproved));
+            .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.RecoveryApproved));
     }
 
     [Theory, BitAutoData]
     public async Task RejectAsync_EmergencyAccessIdNull_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User GrantorUser)
     {
         emergencyAccess.GrantorId = GrantorUser.Id;
         emergencyAccess.Status = EmergencyAccessStatusType.Accepted;
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
-            .Returns((EmergencyAccess)null);
+            .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RejectAsync(emergencyAccess.Id, GrantorUser));
@@ -913,7 +912,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task RejectAsync_EmergencyAccessGrantorIdNotEqualToRequestUser_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User GrantorUser)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.Accepted;
@@ -934,7 +933,7 @@ public class EmergencyAccessServiceTests
     public async Task RejectAsync_EmergencyAccessStatusNotValid_ThrowsBadRequest(
         EmergencyAccessStatusType statusType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User GrantorUser)
     {
         emergencyAccess.GrantorId = GrantorUser.Id;
@@ -955,7 +954,7 @@ public class EmergencyAccessServiceTests
     public async Task RejectAsync_Success(
         EmergencyAccessStatusType statusType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User GrantorUser,
         User GranteeUser)
     {
@@ -972,7 +971,7 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
-            .ReplaceAsync(Arg.Is<EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Confirmed));
+            .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Confirmed));
     }
 
     [Theory, BitAutoData]
@@ -981,7 +980,7 @@ public class EmergencyAccessServiceTests
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
-            .Returns((EmergencyAccess)null);
+            .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.GetPoliciesAsync(default, default));
@@ -996,7 +995,7 @@ public class EmergencyAccessServiceTests
     public async Task GetPoliciesAsync_RequestNotValidStatusType_ThrowsBadRequest(
         EmergencyAccessStatusType statusType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;
@@ -1014,7 +1013,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_RequestNotValidType_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;
@@ -1036,7 +1035,7 @@ public class EmergencyAccessServiceTests
     public async Task GetPoliciesAsync_OrganizationUserTypeNotOwner_ReturnsNull(
         OrganizationUserType userType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser,
         User grantorUser,
         OrganizationUser grantorOrganizationUser)
@@ -1066,7 +1065,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_OrganizationUserEmpty_ReturnsNull(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser,
         User grantorUser)
     {
@@ -1094,7 +1093,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task GetPoliciesAsync_ReturnsNotNull(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser,
         User grantorUser,
         OrganizationUser grantorOrganizationUser)
@@ -1131,7 +1130,7 @@ public class EmergencyAccessServiceTests
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
-            .Returns((EmergencyAccess)null);
+            .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.TakeoverAsync(default, default));
@@ -1142,7 +1141,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task TakeoverAsync_RequestNotValid_GranteeNotEqualToRequestingUser_ThrowsBadRequest(
     SutProvider<EmergencyAccessService> sutProvider,
-    EmergencyAccess emergencyAccess,
+    Core.Auth.Entities.EmergencyAccess emergencyAccess,
     User granteeUser)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
@@ -1165,7 +1164,7 @@ public class EmergencyAccessServiceTests
     public async Task TakeoverAsync_RequestNotValid_StatusType_ThrowsBadRequest(
         EmergencyAccessStatusType statusType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;
@@ -1184,7 +1183,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task TakeoverAsync_RequestNotValid_TypeIsView_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;
@@ -1207,7 +1206,7 @@ public class EmergencyAccessServiceTests
         User grantor)
     {
         grantor.UsesKeyConnector = true;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             GrantorId = grantor.Id,
             GranteeId = granteeUser.Id,
@@ -1236,7 +1235,7 @@ public class EmergencyAccessServiceTests
     User grantor)
     {
         grantor.UsesKeyConnector = false;
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             GrantorId = grantor.Id,
             GranteeId = granteeUser.Id,
@@ -1264,7 +1263,7 @@ public class EmergencyAccessServiceTests
     {
         sutProvider.GetDependency<IEmergencyAccessRepository>()
             .GetByIdAsync(Arg.Any<Guid>())
-            .Returns((EmergencyAccess)null);
+            .Returns((Core.Auth.Entities.EmergencyAccess)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.PasswordAsync(default, default, default, default));
@@ -1275,7 +1274,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task PasswordAsync_RequestNotValid_GranteeNotEqualToRequestingUser_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
@@ -1298,7 +1297,7 @@ public class EmergencyAccessServiceTests
     public async Task PasswordAsync_RequestNotValid_StatusType_ThrowsBadRequest(
         EmergencyAccessStatusType statusType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;
@@ -1317,7 +1316,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task PasswordAsync_RequestNotValid_TypeIsView_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;
@@ -1336,7 +1335,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task PasswordAsync_NonOrgUser_Success(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser,
         User grantorUser,
         string key,
@@ -1371,7 +1370,7 @@ public class EmergencyAccessServiceTests
     public async Task PasswordAsync_OrgUser_NotOrganizationOwner_RemovedFromOrganization_Success(
         OrganizationUserType userType,
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser,
         User grantorUser,
         OrganizationUser organizationUser,
@@ -1412,7 +1411,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task PasswordAsync_OrgUser_IsOrganizationOwner_NotRemovedFromOrganization_Success(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser,
         User grantorUser,
         OrganizationUser organizationUser,
@@ -1463,7 +1462,7 @@ public class EmergencyAccessServiceTests
                 Enabled = true
             }
         });
-        var emergencyAccess = new EmergencyAccess
+        var emergencyAccess = new Core.Auth.Entities.EmergencyAccess
         {
             GrantorId = grantor.Id,
             GranteeId = requestingUser.Id,
@@ -1488,7 +1487,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task ViewAsync_EmergencyAccessTypeNotView_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        EmergencyAccess emergencyAccess,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
         User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;
@@ -1504,7 +1503,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task GetAttachmentDownloadAsync_EmergencyAccessTypeNotView_ThrowsBadRequest(
     SutProvider<EmergencyAccessService> sutProvider,
-    EmergencyAccess emergencyAccess,
+    Core.Auth.Entities.EmergencyAccess emergencyAccess,
     User granteeUser)
     {
         emergencyAccess.GranteeId = granteeUser.Id;

@@ -7,7 +7,7 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
-using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

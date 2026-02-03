@@ -26,7 +26,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
 
         var sut = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
 
-        Assert.True(sut.CannotGrantEmergencyAccess());
+        Assert.True(sut.GrantorCannotGrantEmergencyAccess());
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
 
         var sut = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
 
-        Assert.False(sut.CannotGrantEmergencyAccess());
+        Assert.False(sut.GrantorCannotGrantEmergencyAccess());
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
     {
         var sut = new AutomaticUserConfirmationPolicyRequirement([]);
 
-        Assert.False(sut.CannotGrantEmergencyAccess());
+        Assert.False(sut.GrantorCannotGrantEmergencyAccess());
     }
 
     [Theory]
@@ -73,7 +73,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
 
         var sut = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
 
-        Assert.True(sut.CannotBeGrantedEmergencyAccess());
+        Assert.True(sut.GranteeCannotBeGrantedEmergencyAccess());
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
 
         var sut = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
 
-        Assert.False(sut.CannotBeGrantedEmergencyAccess());
+        Assert.False(sut.GranteeCannotBeGrantedEmergencyAccess());
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
     {
         var sut = new AutomaticUserConfirmationPolicyRequirement([]);
 
-        Assert.False(sut.CannotBeGrantedEmergencyAccess());
+        Assert.False(sut.GranteeCannotBeGrantedEmergencyAccess());
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
 
         var sut = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
 
-        Assert.True(sut.CannotGrantEmergencyAccess());
+        Assert.True(sut.GrantorCannotGrantEmergencyAccess());
     }
 
     [Fact]
@@ -147,6 +147,6 @@ public class AutomaticUserConfirmationPolicyRequirementTests
 
         var sut = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
 
-        Assert.True(sut.CannotBeGrantedEmergencyAccess());
+        Assert.True(sut.GranteeCannotBeGrantedEmergencyAccess());
     }
 }
