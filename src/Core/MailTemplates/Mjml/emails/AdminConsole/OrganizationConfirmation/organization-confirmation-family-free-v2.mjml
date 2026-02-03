@@ -64,12 +64,11 @@
                         href="{{WebVaultUrl}}"
                         background-color="#ffffff"
                         color="#1A41AC"
-                        border-radius="20px"
+                        border-radius="9999px"
                         align="left"
                         inner-padding="12px 24px"
                         padding="0px"
                         font-size="16px"
-
                         font-weight="700"
                         line-height="24px">
                     Log in
