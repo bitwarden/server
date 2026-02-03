@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -143,4 +144,20 @@ public interface ISubscriberService
     /// <returns><see langword="true"/> if the gateway subscription ID is valid or empty; <see langword="false"/> if the subscription doesn't exist in the gateway.</returns>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
     Task<bool> IsValidGatewaySubscriptionIdAsync(ISubscriber subscriber);
+
+    /// <summary>
+    /// Disables a subscriber based on the <paramref name="subscriberId"/> type.
+    /// For users, this disables premium. For organizations and providers, this disables the entity.
+    /// </summary>
+    /// <param name="subscriberId">The subscriber identifier (UserId, OrganizationId, or ProviderId).</param>
+    /// <param name="currentPeriodEnd">The current billing period end date to set as the expiration date.</param>
+    Task DisableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd);
+
+    /// <summary>
+    /// Enables a subscriber based on the <paramref name="subscriberId"/> type.
+    /// For users, this enables premium. For organizations and providers, this enables the entity.
+    /// </summary>
+    /// <param name="subscriberId">The subscriber identifier (UserId, OrganizationId, or ProviderId).</param>
+    /// <param name="currentPeriodEnd">The current billing period end date to set as the expiration date.</param>
+    Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd);
 }

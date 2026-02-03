@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Caches.Implementations;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Notifications;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
@@ -31,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
+        services.AddTransient<IPushNotificationAdapter, PushNotificationAdapter>();
         services.AddLicenseServices();
         services.AddLicenseOperations();
         services.AddPricingClient();

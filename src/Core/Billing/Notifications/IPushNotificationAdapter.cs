@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 
-namespace Bit.Billing.Services;
+namespace Bit.Core.Billing.Notifications;
 
 public interface IPushNotificationAdapter
 {

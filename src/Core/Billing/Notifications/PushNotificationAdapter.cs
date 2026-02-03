@@ -6,7 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 
-namespace Bit.Billing.Services.Implementations;
+namespace Bit.Core.Billing.Notifications;
 
 public class PushNotificationAdapter(
     IProviderUserRepository providerUserRepository,

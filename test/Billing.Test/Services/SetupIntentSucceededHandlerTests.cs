@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Notifications;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using NSubstitute;
