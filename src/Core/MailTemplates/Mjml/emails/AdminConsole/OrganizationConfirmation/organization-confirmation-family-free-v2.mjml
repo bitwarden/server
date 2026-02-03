@@ -82,7 +82,7 @@
                     css-class="hide-mobile"
                     vertical-align="top">
                 <mj-image
-                        src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
+                        src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
                         alt="Group Users Icon"
                         width="48px"
                         border-radius="8px"
@@ -137,7 +137,7 @@
                 <mj-text
                         mj-class="ac-text"
                         padding="0px 0px 0px 0px">
-                    You can easily share passwords with friends, family, or coworkers.<br/>
+                    You can easily share passwords with friends, family, or coworkers.
                     <a href="https://bitwarden.com/help/sharing" class="ac-link">Share passwords in Bitwarden</a>
                 </mj-text>
             </mj-column>

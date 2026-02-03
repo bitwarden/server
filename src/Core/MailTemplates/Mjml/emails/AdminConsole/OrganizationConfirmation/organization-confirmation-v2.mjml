@@ -137,7 +137,7 @@
                 <mj-text
                         mj-class="ac-text"
                         padding="0px 0px 0px 0px">
-                    You can easily access and share passwords with your team.<br/>
+                    You can easily access and share passwords with your team.
                     <a href="https://bitwarden.com/help/sharing" class="ac-link">Share passwords in Bitwarden</a>
                 </mj-text>
             </mj-column>
