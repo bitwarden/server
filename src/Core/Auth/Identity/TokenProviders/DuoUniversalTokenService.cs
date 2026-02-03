@@ -205,9 +205,14 @@ public class DuoUniversalTokenService(
         // for security reasons.
         if (clientType == ClientType.Mobile)
         {
-            var requestHost = _currentContext.HttpContext.Request.Host.Host;
-            var deeplinkScheme = GetDeeplinkSchemeOverride(_currentContext.HttpContext) ??
-                (IsBitwardenCloudHost(requestHost) ? DuoDeeplinkScheme.Https : DuoDeeplinkScheme.Bitwarden);
+            // TODO: Ticket 31669
+            // var requestHost = _currentContext.HttpContext.Request.Host.Host;
+
+            // var deeplinkScheme =
+            //     IsBitwardenCloudHost(requestHost) ? DuoDeeplinkScheme.Https : DuoDeeplinkScheme.Bitwarden;
+
+            var deeplinkScheme = GetDeeplinkSchemeOverride(_currentContext.HttpContext) ?? DuoDeeplinkScheme.Bitwarden;
+
             return string.Format(CultureInfo.InvariantCulture,
                 "{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
                 _globalSettings.BaseServiceUri.Vault, clientName, deeplinkScheme.ToString().ToLowerInvariant());
