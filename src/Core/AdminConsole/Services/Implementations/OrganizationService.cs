@@ -506,7 +506,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, invitingUserId);
 
         if (systemUser.HasValue)
         {
@@ -526,7 +526,8 @@ public class OrganizationService : IOrganizationService
     private async
         Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)>
         SaveUsersSendInvitesAsync(Guid organizationId,
-            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+            Guid? invitingUserId)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -678,7 +679,7 @@ public class OrganizationService : IOrganizationService
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
 
-            await SendInvitesAsync(allOrgUsers, organization);
+            await SendInvitesAsync(allOrgUsers, organization, invitingUserId);
         }
         catch (Exception e)
         {
@@ -717,14 +718,15 @@ public class OrganizationService : IOrganizationService
         return (allOrgUsers, events);
     }
 
-    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
-        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
+    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization, Guid? invitingUserId = null) =>
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization, invitingUserId));
 
-    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization) =>
+    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization, Guid? invitingUserId = null) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
             users: [orgUser],
             organization: organization,
-            initOrganization: initOrganization));
+            initOrganization: initOrganization,
+            invitingUserId: invitingUserId));
 
     public async Task<(bool canScale, string failureReason)> CanScaleAsync(
         Organization organization,
