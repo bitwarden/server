@@ -76,7 +76,7 @@ public class SendEmailOtpRequestValidator(
                 token,
                 string.Format(SendAccessConstants.OtpEmail.Subject, token));
 
-            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent);
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
         }
 
         // validate request otp
