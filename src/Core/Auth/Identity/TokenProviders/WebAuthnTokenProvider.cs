@@ -147,16 +147,12 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return keys;
         }
 
-        // Support up to 5 keys
-        for (var i = 1; i <= 5; i++)
+        // Load all WebAuthn credentials stored in metadata. The number of allowed credentials
+        // is controlled by credential registration.
+        foreach (var kvp in provider.MetaData.Where(k => k.Key.StartsWith("Key")))
         {
-            var keyName = $"Key{i}";
-            if (provider.MetaData.TryGetValue(keyName, out var value))
-            {
-                var key = new TwoFactorProvider.WebAuthnData((dynamic)value);
-
-                keys.Add(new Tuple<string, TwoFactorProvider.WebAuthnData>(keyName, key));
-            }
+            var key = new TwoFactorProvider.WebAuthnData((dynamic)kvp.Value);
+            keys.Add(new Tuple<string, TwoFactorProvider.WebAuthnData>(kvp.Key, key));
         }
 
         return keys;

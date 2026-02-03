@@ -11,7 +11,7 @@ public class Program
     {
         var builder = Host
             .CreateDefaultBuilder(args)
-            .ConfigureCustomAppConfiguration(args)
+            .UseBitwardenSdk()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.UseStartup<Startup>();

@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
-using Bit.Core;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
@@ -11,7 +12,6 @@ using Duende.IdentityServer.Validation;
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
 public class SendEmailOtpRequestValidator(
-    IFeatureService featureService,
     IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider,
     IMailService mailService) : ISendAuthenticationMethodValidator<EmailOtp>
 {
@@ -40,8 +40,10 @@ public class SendEmailOtpRequestValidator(
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         }
 
-        // email must be in the list of emails in the EmailOtp array
-        if (!authMethod.Emails.Contains(email))
+        // email hash must be in the list of email hashes in the EmailOtp array
+        byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(email));
+        string hashEmailHex = Convert.ToHexString(hashBytes).ToUpperInvariant();
+        if (!authMethod.EmailHashes.Contains(hashEmailHex))
         {
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailInvalid);
         }
@@ -62,20 +64,12 @@ public class SendEmailOtpRequestValidator(
             {
                 return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
             }
-            if (featureService.IsEnabled(FeatureFlagKeys.MJMLBasedEmailTemplates))
-            {
-                await mailService.SendSendEmailOtpEmailv2Async(
-                    email,
-                    token,
-                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
-            }
-            else
-            {
-                await mailService.SendSendEmailOtpEmailAsync(
-                    email,
-                    token,
-                    string.Format(SendAccessConstants.OtpEmail.Subject, token));
-            }
+
+            await mailService.SendSendEmailOtpEmailAsync(
+                email,
+                token,
+                string.Format(SendAccessConstants.OtpEmail.Subject, token));
+
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpSent);
         }
 

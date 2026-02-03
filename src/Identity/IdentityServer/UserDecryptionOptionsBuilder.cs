@@ -64,8 +64,12 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     {
         if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
         {
-            _options.WebAuthnPrfOption =
-                new WebAuthnPrfDecryptionOption(credential.EncryptedPrivateKey, credential.EncryptedUserKey);
+            _options.WebAuthnPrfOption = new WebAuthnPrfDecryptionOption(
+                credential.EncryptedPrivateKey,
+                credential.EncryptedUserKey,
+                credential.CredentialId,
+                [] // Stored credentials currently lack Transports, just send an empty array for now
+            );
         }
 
         return this;
