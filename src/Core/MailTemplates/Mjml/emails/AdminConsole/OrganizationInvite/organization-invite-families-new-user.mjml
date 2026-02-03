@@ -1,0 +1,62 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+  </mj-head>
+
+  <mj-body css-class="border-fix">
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-hero
+        img-src="https://assets.bitwarden.com/email/v1/spot-family-homes.png"
+        title="<b>{{OrganizationName}}</b> set up a Bitwarden password manager account for you."
+        button-text="<b>{{ButtonText}}</b>"
+        button-url="{{Url}}"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-section background-color="#fff" padding="15px 10px 10px 10px">
+        <mj-column>
+          <mj-text font-size="16px" line-height="24px" padding="10px 15px">
+            <b>{{OrganizationName}}</b> is using Bitwarden to simplify password sharing and protect your sensitive data. Once you finish account setup, you can:
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-bw-icon-row
+        icon-src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
+        icon-alt="Store Icon"
+        text="Store logins securely so you never forget your passwords."
+      />
+      <mj-bw-icon-row
+        icon-src="https://assets.bitwarden.com/email/v1/icon-autofill.png"
+        icon-alt="Autofill Icon"
+        text="Sign in to accounts quickly by filling passwords with one click."
+      />
+      <mj-bw-icon-row
+        icon-src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
+        icon-alt="Share Icon"
+        text="Share logins easily with your friends, family, or coworkers."
+      />
+      <mj-section background-color="#fff" padding="15px 20px">
+        <mj-column>
+          <mj-text font-size="14px" line-height="20px" color="#6A6E7B">
+            {{#if InviterEmail}}
+            This invitation was sent by <a href="mailto:{{InviterEmail}}" style="color: #175ddc; text-decoration: none;">{{InviterEmail}}</a> and expires <b>{{ExpirationDate}}</b>.
+            {{else}}
+            This invitation expires <b>{{ExpirationDate}}</b>.
+            {{/if}}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>
