@@ -1,0 +1,56 @@
+<mj-font
+        name="Inter"
+        href="https://fonts.googleapgis.com/css2?family=Inter:wght@400;600;700&display=swap">
+</mj-font>
+<mj-font
+        name="Roboto"
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+</mj-font>
+
+<mj-attributes>
+    <mj-all
+            font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif" />
+    <mj-class
+            name="ac-text"
+            font-size="16px"
+            font-weight="400"
+            line-height="24px"
+    />
+    <mj-class
+            name="ac-heading"
+            font-size="20px"
+            font-weight="700"
+            line-height="30px"
+    />
+    <mj-class
+            name="ac-hero-text"
+            font-size="20px"
+            font-weight="400"
+            line-height="30px"
+            align="left"
+            color="#ffffff"
+    />
+    <mj-class
+            name="ac-button"
+            background-color="#ffffff"
+            color="#1A41AC"
+            border-radius="9999px"
+            align="left"
+            inner-padding="12px 24px"
+            font-size="16px"
+            font-weight="700"
+            line-height="24px"
+    />
+</mj-attributes>
+
+<mj-style>
+    .ac-link {
+        text-decoration: none;
+        color: #175ddc;
+        font-weight: 700;
+    }
+
+    @media only screen and (max-width: 480px) {
+        .hide-mobile { display: none !important; }
+    }
+</mj-style>
