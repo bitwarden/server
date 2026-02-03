@@ -15,4 +15,7 @@ public abstract class OrganizationInviteBaseView : BaseMailView
     public required bool InitOrganization { get; set; }
     public string? InviterEmail { get; set; }
     public required string WebVaultUrl { get; set; }
+    public required string TitleFirst { get; set; }
+    public required string TitleSecondBold { get; set; }
+    public required string TitleThird { get; set; }
 }
