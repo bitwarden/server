@@ -1,4 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <Sdk Name="Bitwarden.Server.Sdk" />
+
   <PropertyGroup>
     <UserSecretsId>bitwarden-Api</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>

@@ -27,7 +27,6 @@ public interface IOrganizationService
         OrganizationUserInvite invite, string externalId);
     Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
-    Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
