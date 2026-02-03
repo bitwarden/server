@@ -4,6 +4,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -23,6 +24,7 @@ public interface IUpdatePaymentMethodCommand
 
 public class UpdatePaymentMethodCommand(
     IBraintreeGateway braintreeGateway,
+    IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
     ILogger<UpdatePaymentMethodCommand> logger,
     ISetupIntentCache setupIntentCache,
@@ -123,12 +125,10 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        Braintree.Customer braintreeCustomer;
+        var braintreeCustomer = await braintreeService.GetCustomer(customer);
 
-        if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
+        if (braintreeCustomer != null)
         {
-            braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
             await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
         }
         else

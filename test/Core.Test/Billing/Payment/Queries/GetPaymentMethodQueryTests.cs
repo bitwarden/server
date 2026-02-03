@@ -3,10 +3,9 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Extensions;
 using Braintree;
-using Braintree.Exceptions;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
@@ -20,7 +19,7 @@ using static StripeConstants;
 
 public class GetPaymentMethodQueryTests
 {
-    private readonly IBraintreeGateway _braintreeGateway = Substitute.For<IBraintreeGateway>();
+    private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
     private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
@@ -29,8 +28,7 @@ public class GetPaymentMethodQueryTests
     public GetPaymentMethodQueryTests()
     {
         _query = new GetPaymentMethodQuery(
-            _braintreeGateway,
-            Substitute.For<ILogger<GetPaymentMethodQuery>>(),
+            _braintreeService,
             _setupIntentCache,
             _stripeAdapter,
             _subscriberService);
@@ -70,6 +68,34 @@ public class GetPaymentMethodQueryTests
         _subscriberService.GetCustomer(organization,
             Arg.Is<CustomerGetOptions>(options =>
                 options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).Returns(customer);
+
+        var maskedPaymentMethod = await _query.Run(organization);
+
+        Assert.Null(maskedPaymentMethod);
+    }
+
+    [Fact]
+    public async Task Run_NoPaymentMethod_BraintreeCustomerNotFound_ReturnsNull()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid()
+        };
+
+        var customer = new Customer
+        {
+            InvoiceSettings = new CustomerInvoiceSettings(),
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.BraintreeCustomerId] = "non_existent_braintree_customer_id"
+            }
+        };
+
+        _subscriberService.GetCustomer(organization,
+            Arg.Is<CustomerGetOptions>(options =>
+                options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).Returns(customer);
+
+        _braintreeService.GetCustomer(customer).ReturnsNull();
 
         var maskedPaymentMethod = await _query.Run(organization);
 
@@ -329,14 +355,12 @@ public class GetPaymentMethodQueryTests
             Arg.Is<CustomerGetOptions>(options =>
                 options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).Returns(customer);
 
-        var customerGateway = Substitute.For<ICustomerGateway>();
         var braintreeCustomer = Substitute.For<Braintree.Customer>();
         var payPalAccount = Substitute.For<PayPalAccount>();
         payPalAccount.Email.Returns("user@gmail.com");
         payPalAccount.IsDefault.Returns(true);
         braintreeCustomer.PaymentMethods.Returns([payPalAccount]);
-        customerGateway.FindAsync("braintree_customer_id").Returns(braintreeCustomer);
-        _braintreeGateway.Customer.Returns(customerGateway);
+        _braintreeService.GetCustomer(customer).Returns(braintreeCustomer);
 
         var maskedPaymentMethod = await _query.Run(organization);
 
@@ -344,35 +368,5 @@ public class GetPaymentMethodQueryTests
         Assert.True(maskedPaymentMethod.IsT2);
         var maskedPayPalAccount = maskedPaymentMethod.AsT2;
         Assert.Equal("user@gmail.com", maskedPayPalAccount.Email);
-    }
-
-    [Fact]
-    public async Task Run_BraintreeCustomerNotFound_ReturnsNull()
-    {
-        var organization = new Organization
-        {
-            Id = Guid.NewGuid()
-        };
-
-        var customer = new Customer
-        {
-            InvoiceSettings = new CustomerInvoiceSettings(),
-            Metadata = new Dictionary<string, string>
-            {
-                [MetadataKeys.BraintreeCustomerId] = "non_existent_braintree_customer_id"
-            }
-        };
-
-        _subscriberService.GetCustomer(organization,
-            Arg.Is<CustomerGetOptions>(options =>
-                options.HasExpansions("default_source", "invoice_settings.default_payment_method"))).Returns(customer);
-
-        var customerGateway = Substitute.For<ICustomerGateway>();
-        customerGateway.FindAsync("non_existent_braintree_customer_id").Returns<Braintree.Customer>(_ => throw new NotFoundException());
-        _braintreeGateway.Customer.Returns(customerGateway);
-
-        var maskedPaymentMethod = await _query.Run(organization);
-
-        Assert.Null(maskedPaymentMethod);
     }
 }
