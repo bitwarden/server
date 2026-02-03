@@ -633,16 +633,19 @@ public class HandlebarsMailService : IMailService
     public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
-            CreateMessage(email, emailList.Organization)));
+            CreateMessage(email, emailList.Organization, emailList.DomainName)));
         return;
 
-        MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
+        MailQueueMessage CreateMessage(string emailAddress, Organization org, string domainName) =>
             new(CreateDefaultMessage($"Important update to your Bitwarden account", emailAddress),
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
                     TitleFirst = $"Important update to your Bitwarden account",
-                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
+                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false),
+                    DomainName = domainName,
+                    EmailDomain = emailAddress.Split('@').LastOrDefault() ?? "",
+                    UserEmail = emailAddress
                 });
     }
 
