@@ -719,7 +719,7 @@ public class OrganizationService : IOrganizationService
     }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization, Guid? invitingUserId = null) =>
-        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization, invitingUserId));
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization, initOrganization: false, invitingUserId: invitingUserId));
 
     private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization, Guid? invitingUserId = null) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(

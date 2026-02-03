@@ -1,17 +1,22 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Mail.Mailer.OrganizationInvite;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -22,13 +27,39 @@ public class SendOrganizationInvitesCommand(
     IPolicyQuery policyQuery,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
-    IMailService mailService) : ISendOrganizationInvitesCommand
+    IMailService mailService,
+    IMailer mailer,
+    IFeatureService featureService,
+    GlobalSettings globalSettings) : ISendOrganizationInvitesCommand
 {
+    // New user (no existing account) email constants
+    private const string _newUserSubject = "set up a Bitwarden account for you";
+    private const string _newUserTitle = "set up a Bitwarden password manager account for you.";
+    private const string _newUserButton = "Finish account setup";
+
+    // Existing user email constants
+    private const string _existingUserSubject = "invited you to their Bitwarden organization";
+    private const string _existingUserTitle = "invited you to join them on Bitwarden";
+    private const string _existingUserButton = "Accept invitation";
+
+    // Free organization email constants
+    private const string _freeOrgNewUserSubject = "You have been invited to Bitwarden Password Manager";
+    private const string _freeOrgExistingUserSubject = "You have been invited to a Bitwarden Organization";
+    private const string _freeOrgTitle = "You have been invited to Bitwarden Password Manager";
+
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
         var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(request.Users, request.Organization, request.InitOrganization);
 
-        await mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
+        if (featureService.IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate))
+        {
+            var inviterEmail = await GetInviterEmailAsync(request.InvitingUserId);
+            await SendNewInviteEmailsAsync(orgInvitesInfo, inviterEmail);
+        }
+        else
+        {
+            await mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
+        }
     }
 
     private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(IEnumerable<OrganizationUser> orgUsers,
@@ -80,4 +111,279 @@ public class SendOrganizationInvitesCommand(
             initOrganization
         );
     }
+
+    private async Task SendNewInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo, string inviterEmail)
+    {
+        var organizationCategory = GetOrganizationCategory(orgInvitesInfo.PlanType);
+
+        foreach (var (orgUser, token) in orgInvitesInfo.OrgUserTokenPairs)
+        {
+            var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id];
+
+            await SendInviteEmailAsync(
+                organizationCategory,
+                userHasExistingUser,
+                orgInvitesInfo,
+                orgUser,
+                token,
+                inviterEmail
+            );
+        }
+    }
+
+    private async Task SendInviteEmailAsync(
+        OrganizationCategory category,
+        bool userHasExistingUser,
+        OrganizationInvitesInfo orgInvitesInfo,
+        OrganizationUser orgUser,
+        ExpiringToken token,
+        string inviterEmail)
+    {
+        switch ((category, userHasExistingUser))
+        {
+            case (OrganizationCategory.EnterpriseTeams, false):
+                await SendEnterpriseTeamsNewUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
+                break;
+            case (OrganizationCategory.EnterpriseTeams, true):
+                await SendEnterpriseTeamsExistingUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
+                break;
+            case (OrganizationCategory.Families, false):
+                await SendFamiliesNewUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
+                break;
+            case (OrganizationCategory.Families, true):
+                await SendFamiliesExistingUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
+                break;
+            case (OrganizationCategory.Free, _):
+                await SendFreeOrganizationInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail, userHasExistingUser);
+                break;
+            default:
+                throw new ArgumentException("Invalid organization category or user status");
+        }
+    }
+
+    private async Task SendEnterpriseTeamsNewUserInviteAsync(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        var mail = new OrganizationInviteEnterpriseTeamsNewUser
+        {
+            ToEmails = [orgUser.Email],
+            Subject = $"{organizationName} {_newUserSubject}",
+            View = CreateEnterpriseTeamsNewUserView(orgInvitesInfo, orgUser, token, inviterEmail)
+        };
+        await mailer.SendEmail(mail);
+    }
+
+    private async Task SendEnterpriseTeamsExistingUserInviteAsync(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        var mail = new OrganizationInviteEnterpriseTeamsExistingUser
+        {
+            ToEmails = [orgUser.Email],
+            Subject = $"{organizationName} {_existingUserSubject}",
+            View = CreateEnterpriseTeamsExistingUserView(orgInvitesInfo, orgUser, token, inviterEmail)
+        };
+        await mailer.SendEmail(mail);
+    }
+
+    private async Task SendFamiliesNewUserInviteAsync(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        var mail = new OrganizationInviteFamiliesNewUser
+        {
+            ToEmails = [orgUser.Email],
+            Subject = $"{organizationName} {_newUserSubject}",
+            View = CreateFamiliesNewUserView(orgInvitesInfo, orgUser, token, inviterEmail)
+        };
+        await mailer.SendEmail(mail);
+    }
+
+    private async Task SendFamiliesExistingUserInviteAsync(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        var mail = new OrganizationInviteFamiliesExistingUser
+        {
+            ToEmails = [orgUser.Email],
+            Subject = $"{organizationName} {_existingUserSubject}",
+            View = CreateFamiliesExistingUserView(orgInvitesInfo, orgUser, token, inviterEmail)
+        };
+        await mailer.SendEmail(mail);
+    }
+
+    private async Task SendFreeOrganizationInviteAsync(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail, bool userHasExistingUser)
+    {
+        var mail = new OrganizationInviteFree
+        {
+            ToEmails = [orgUser.Email],
+            Subject = userHasExistingUser ? _freeOrgExistingUserSubject : _freeOrgNewUserSubject,
+            View = CreateFreeView(orgInvitesInfo, orgUser, token, inviterEmail)
+        };
+        await mailer.SendEmail(mail);
+    }
+
+    private OrganizationInviteEnterpriseTeamsNewUserView CreateEnterpriseTeamsNewUserView(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        return new OrganizationInviteEnterpriseTeamsNewUserView
+        {
+            OrganizationName = organizationName,
+            OrganizationId = orgUser.OrganizationId.ToString(),
+            OrganizationUserId = orgUser.Id.ToString(),
+            Email = orgUser.Email,
+            Token = token.Token,
+            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
+            ButtonText = _newUserButton,
+            InitOrganization = orgInvitesInfo.InitOrganization,
+            InviterEmail = inviterEmail,
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
+            TitleFirst = $"{organizationName} ",
+            TitleSecondBold = _newUserTitle,
+            TitleThird = string.Empty
+        };
+    }
+
+    private OrganizationInviteEnterpriseTeamsExistingUserView CreateEnterpriseTeamsExistingUserView(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        return new OrganizationInviteEnterpriseTeamsExistingUserView
+        {
+            OrganizationName = organizationName,
+            OrganizationId = orgUser.OrganizationId.ToString(),
+            OrganizationUserId = orgUser.Id.ToString(),
+            Email = orgUser.Email,
+            Token = token.Token,
+            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
+            ButtonText = _existingUserButton,
+            InitOrganization = orgInvitesInfo.InitOrganization,
+            InviterEmail = inviterEmail,
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
+            TitleFirst = $"{organizationName} ",
+            TitleSecondBold = _existingUserTitle,
+            TitleThird = string.Empty
+        };
+    }
+
+    private OrganizationInviteFamiliesNewUserView CreateFamiliesNewUserView(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        return new OrganizationInviteFamiliesNewUserView
+        {
+            OrganizationName = organizationName,
+            OrganizationId = orgUser.OrganizationId.ToString(),
+            OrganizationUserId = orgUser.Id.ToString(),
+            Email = orgUser.Email,
+            Token = token.Token,
+            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
+            ButtonText = _newUserButton,
+            InitOrganization = orgInvitesInfo.InitOrganization,
+            InviterEmail = inviterEmail,
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
+            TitleFirst = $"{organizationName} ",
+            TitleSecondBold = _newUserTitle,
+            TitleThird = string.Empty
+        };
+    }
+
+    private OrganizationInviteFamiliesExistingUserView CreateFamiliesExistingUserView(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        return new OrganizationInviteFamiliesExistingUserView
+        {
+            OrganizationName = organizationName,
+            OrganizationId = orgUser.OrganizationId.ToString(),
+            OrganizationUserId = orgUser.Id.ToString(),
+            Email = orgUser.Email,
+            Token = token.Token,
+            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
+            ButtonText = _existingUserButton,
+            InitOrganization = orgInvitesInfo.InitOrganization,
+            InviterEmail = inviterEmail,
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
+            TitleFirst = $"{organizationName} ",
+            TitleSecondBold = _existingUserTitle,
+            TitleThird = string.Empty
+        };
+    }
+
+    private OrganizationInviteFreeView CreateFreeView(
+        OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token, string inviterEmail)
+    {
+        var organizationName = WebUtility.HtmlDecode(orgInvitesInfo.OrganizationName);
+        return new OrganizationInviteFreeView
+        {
+            OrganizationName = organizationName,
+            OrganizationId = orgUser.OrganizationId.ToString(),
+            OrganizationUserId = orgUser.Id.ToString(),
+            Email = orgUser.Email,
+            Token = token.Token,
+            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
+            ButtonText = _existingUserButton,
+            InitOrganization = orgInvitesInfo.InitOrganization,
+            InviterEmail = inviterEmail,
+            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
+            TitleFirst = _freeOrgTitle,
+            TitleSecondBold = string.Empty,
+            TitleThird = string.Empty
+        };
+    }
+
+    private string BuildInvitationUrl(OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token)
+    {
+        var baseUrl = $"{globalSettings.BaseServiceUri.VaultWithHash}/accept-organization";
+        var queryParams = new List<string>
+        {
+            $"organizationId={orgUser.OrganizationId}",
+            $"organizationUserId={orgUser.Id}",
+            $"email={WebUtility.UrlEncode(orgUser.Email)}",
+            $"organizationName={WebUtility.UrlEncode(orgInvitesInfo.OrganizationName)}",
+            $"token={WebUtility.UrlEncode(token.Token)}",
+            $"initOrganization={orgInvitesInfo.InitOrganization}",
+            $"orgUserHasExistingUser={orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id]}"
+        };
+
+        if (orgInvitesInfo.OrgSsoEnabled && orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled)
+        {
+            queryParams.Add($"orgSsoIdentifier={orgInvitesInfo.OrgSsoIdentifier}");
+        }
+
+        return $"{baseUrl}?{string.Join("&", queryParams)}";
+    }
+
+    private async Task<string> GetInviterEmailAsync(Guid? invitingUserId)
+    {
+        if (!invitingUserId.HasValue)
+        {
+            return null;
+        }
+
+        var invitingUser = await userRepository.GetByIdAsync(invitingUserId.Value);
+        return invitingUser?.Email;
+    }
+
+    private enum OrganizationCategory { EnterpriseTeams, Families, Free }
+
+    private static OrganizationCategory GetOrganizationCategory(PlanType planType) =>
+        planType switch
+        {
+            PlanType.FamiliesAnnually or
+            PlanType.FamiliesAnnually2019 or
+            PlanType.FamiliesAnnually2025 => OrganizationCategory.Families,
+
+            PlanType.Free => OrganizationCategory.Free,
+
+            _ => OrganizationCategory.EnterpriseTeams
+        };
 }
