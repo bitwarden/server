@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260203082432_AddSubscriptionDiscountTable")]
+    [Migration("20260203083641_AddSubscriptionDiscountTable")]
     partial class AddSubscriptionDiscountTable
     {
         /// <inheritdoc />
