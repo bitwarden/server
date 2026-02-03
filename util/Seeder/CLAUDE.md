@@ -1,10 +1,10 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# Bitwarden Seeder Library - Claude Code Configuration
 
 ## Quick Reference
 
 **For detailed pattern descriptions (Factories, Recipes, Models, Scenes, Queries, Data), read `README.md`.**
+
+**For detailed usages of the Seeder library, read `util/DbSeederUtility/README.md` and `util/SeederApi/README.md`**
 
 ## Commands
 
@@ -47,6 +47,7 @@ Recipes follow strict rules:
 **Critical:** Unencrypted vault data never leaves the client. The server never sees plaintext.
 
 The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarden client:
+
 1. Generate encryption keys (like client account setup)
 2. Encrypt vault data client-side (same SDK as real clients)
 3. Store only encrypted result
@@ -62,7 +63,7 @@ Shared logic: `CipherEncryption.cs`, `EncryptedCipherDtoExtensions.cs`
 ## Rust SDK Version Alignment
 
 | Component   | Version Source                            |
-|-------------|-------------------------------------------|
+| ----------- | ----------------------------------------- |
 | Server Shim | `util/RustSdk/rust/Cargo.toml` git rev    |
 | Clients     | `@bitwarden/sdk-internal` in clients repo |
 
@@ -71,6 +72,7 @@ Before modifying SDK integration, run `RustSdkCipherTests` to validate roundtrip
 ## Deterministic Data Generation
 
 Same domain = same seed = reproducible data:
+
 ```csharp
 _seed = options.Seed ?? StableHash.ToInt32(options.Domain);
 ```
