@@ -232,19 +232,11 @@ public class SendOrganizationInvitesCommand(
         return new OrganizationInviteEnterpriseTeamsNewUserView
         {
             OrganizationName = organizationName,
-            OrganizationId = orgUser.OrganizationId.ToString(),
-            OrganizationUserId = orgUser.Id.ToString(),
             Email = orgUser.Email,
-            Token = token.Token,
             ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _newUserButton,
-            InitOrganization = orgInvitesInfo.InitOrganization,
-            InviterEmail = inviterEmail,
-            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
-            TitleFirst = $"{organizationName} ",
-            TitleSecondBold = _newUserTitle,
-            TitleThird = string.Empty
+            InviterEmail = inviterEmail
         };
     }
 
@@ -255,19 +247,11 @@ public class SendOrganizationInvitesCommand(
         return new OrganizationInviteEnterpriseTeamsExistingUserView
         {
             OrganizationName = organizationName,
-            OrganizationId = orgUser.OrganizationId.ToString(),
-            OrganizationUserId = orgUser.Id.ToString(),
             Email = orgUser.Email,
-            Token = token.Token,
             ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _existingUserButton,
-            InitOrganization = orgInvitesInfo.InitOrganization,
-            InviterEmail = inviterEmail,
-            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
-            TitleFirst = $"{organizationName} ",
-            TitleSecondBold = _existingUserTitle,
-            TitleThird = string.Empty
+            InviterEmail = inviterEmail
         };
     }
 
@@ -278,19 +262,11 @@ public class SendOrganizationInvitesCommand(
         return new OrganizationInviteFamiliesNewUserView
         {
             OrganizationName = organizationName,
-            OrganizationId = orgUser.OrganizationId.ToString(),
-            OrganizationUserId = orgUser.Id.ToString(),
             Email = orgUser.Email,
-            Token = token.Token,
             ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _newUserButton,
-            InitOrganization = orgInvitesInfo.InitOrganization,
-            InviterEmail = inviterEmail,
-            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
-            TitleFirst = $"{organizationName} ",
-            TitleSecondBold = _newUserTitle,
-            TitleThird = string.Empty
+            InviterEmail = inviterEmail
         };
     }
 
@@ -301,19 +277,11 @@ public class SendOrganizationInvitesCommand(
         return new OrganizationInviteFamiliesExistingUserView
         {
             OrganizationName = organizationName,
-            OrganizationId = orgUser.OrganizationId.ToString(),
-            OrganizationUserId = orgUser.Id.ToString(),
             Email = orgUser.Email,
-            Token = token.Token,
             ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _existingUserButton,
-            InitOrganization = orgInvitesInfo.InitOrganization,
-            InviterEmail = inviterEmail,
-            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
-            TitleFirst = $"{organizationName} ",
-            TitleSecondBold = _existingUserTitle,
-            TitleThird = string.Empty
+            InviterEmail = inviterEmail
         };
     }
 
@@ -324,19 +292,11 @@ public class SendOrganizationInvitesCommand(
         return new OrganizationInviteFreeView
         {
             OrganizationName = organizationName,
-            OrganizationId = orgUser.OrganizationId.ToString(),
-            OrganizationUserId = orgUser.Id.ToString(),
             Email = orgUser.Email,
-            Token = token.Token,
             ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _existingUserButton,
-            InitOrganization = orgInvitesInfo.InitOrganization,
-            InviterEmail = inviterEmail,
-            WebVaultUrl = globalSettings.BaseServiceUri.VaultWithHash,
-            TitleFirst = _freeOrgTitle,
-            TitleSecondBold = string.Empty,
-            TitleThird = string.Empty
+            InviterEmail = inviterEmail
         };
     }
 
