@@ -641,7 +641,7 @@ public class HandlebarsMailService : IMailService
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Important update to your Bitwarden account",
+                    TitleFirst = $"Important update to your<br>Bitwarden account",
                     OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false),
                     DomainName = domainName,
                     EmailDomain = emailAddress.Split('@').LastOrDefault() ?? "",
