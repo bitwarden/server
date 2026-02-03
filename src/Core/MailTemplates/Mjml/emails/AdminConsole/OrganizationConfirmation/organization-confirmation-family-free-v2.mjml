@@ -21,6 +21,31 @@
                     font-weight="400"
                     line-height="24px"
             />
+            <mj-class
+                    name="ac-heading"
+                    font-size="20px"
+                    font-weight="700"
+                    line-height="30px"
+            />
+            <mj-class
+                    name="ac-hero-text"
+                    font-size="20px"
+                    font-weight="400"
+                    line-height="30px"
+                    align="left"
+                    color="#ffffff"
+            />
+            <mj-class
+                    name="ac-button"
+                    background-color="#ffffff"
+                    color="#1A41AC"
+                    border-radius="9999px"
+                    align="left"
+                    inner-padding="12px 24px"
+                    font-size="16px"
+                    font-weight="700"
+                    line-height="24px"
+            />
         </mj-attributes>
 
         <mj-style>
@@ -52,25 +77,14 @@
                         src="https://bitwarden.com/images/logo-horizontal-white.png">
                 </mj-image>
                 <mj-text
-                        font-size="20px"
-                        line-height="30px"
-                        font-weight="400"
-                        padding="0px 0px 24px 0px"
-                        align="left"
-                        color="#ffffff">
+                        mj-class="ac-hero-text"
+                        padding="0px 0px 24px 0px">
                     <p>You can now share passwords with members of <strong>{{OrganizationName}}!</strong></p>
                 </mj-text>
                 <mj-button
+                        mj-class="ac-button"
                         href="{{WebVaultUrl}}"
-                        background-color="#ffffff"
-                        color="#1A41AC"
-                        border-radius="9999px"
-                        align="left"
-                        inner-padding="12px 24px"
-                        padding="0px"
-                        font-size="16px"
-                        font-weight="700"
-                        line-height="24px">
+                        padding="0px">
                     Log in
                 </mj-button>
             </mj-column>
@@ -261,9 +275,7 @@
             <mj-column
                     width="70%">
                 <mj-text
-                        line-height="30px"
-                        font-size="20px"
-                        font-weight="700"
+                        mj-class="ac-heading"
                         padding="0px 0px 8px 0px">
                     Learn more about Bitwarden
                 </mj-text>
