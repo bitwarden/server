@@ -10,7 +10,7 @@ CREATE TABLE [dbo].[SubscriptionDiscount] (
     [Name]                  NVARCHAR (100)   NULL,
     [StartDate]             DATETIME2 (7)    NOT NULL,
     [EndDate]               DATETIME2 (7)    NOT NULL,
-    [AudienceType]          INT              NOT NULL,
+    [AudienceType]          INT              NOT NULL CONSTRAINT [DF_SubscriptionDiscount_AudienceType] DEFAULT (0),
     [CreationDate]          DATETIME2 (7)    NOT NULL,
     [RevisionDate]          DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_SubscriptionDiscount] PRIMARY KEY CLUSTERED ([Id] ASC),

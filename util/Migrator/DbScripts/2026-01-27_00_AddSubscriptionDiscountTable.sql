@@ -13,7 +13,7 @@ BEGIN
         [Name] NVARCHAR(100) NULL,
         [StartDate] DATETIME2(7) NOT NULL,
         [EndDate] DATETIME2(7) NOT NULL,
-        [AudienceType] INT NOT NULL DEFAULT 0,
+        [AudienceType] INT NOT NULL CONSTRAINT [DF_SubscriptionDiscount_AudienceType] DEFAULT (0),
         [CreationDate] DATETIME2(7) NOT NULL,
         [RevisionDate] DATETIME2(7) NOT NULL,
         CONSTRAINT [PK_SubscriptionDiscount] PRIMARY KEY CLUSTERED ([Id] ASC),
@@ -34,7 +34,20 @@ GO
 CREATE OR ALTER VIEW [dbo].[SubscriptionDiscountView]
 AS
 SELECT
-    *
+    [Id],
+    [StripeCouponId],
+    [StripeProductIds],
+    [PercentOff],
+    [AmountOff],
+    [Currency],
+    [Duration],
+    [DurationInMonths],
+    [Name],
+    [StartDate],
+    [EndDate],
+    [AudienceType],
+    [CreationDate],
+    [RevisionDate]
 FROM
     [dbo].[SubscriptionDiscount]
 GO
