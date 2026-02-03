@@ -255,21 +255,6 @@ public class HandlebarsMailServiceTests
     }
 
     [Fact]
-    public async Task SendSendEmailOtpEmailAsync_SendsEmail()
-    {
-        // Arrange
-        var email = "test@example.com";
-        var token = "aToken";
-        var subject = string.Format("Your Bitwarden Send verification code is {0}", token);
-
-        // Act
-        await _sut.SendSendEmailOtpEmailAsync(email, token, subject);
-
-        // Assert
-        await _mailDeliveryService.Received(1).SendEmailAsync(Arg.Any<MailMessage>());
-    }
-
-    [Fact]
     public async Task SendIndividualUserWelcomeEmailAsync_SendsCorrectEmail()
     {
         // Arrange
