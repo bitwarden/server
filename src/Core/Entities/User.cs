@@ -51,7 +51,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? Key { get; set; }
     /// <summary>
     /// The raw public key, without a signature from the user's signature key.
-    /// </summary> 
+    /// </summary>
     public string? PublicKey { get; set; }
     /// <summary>
     /// User key wrapped private key.
