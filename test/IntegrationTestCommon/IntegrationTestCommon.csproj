@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Identity\Identity.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
+    <ProjectReference Include="..\..\util\Seeder\Seeder.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 </Project>

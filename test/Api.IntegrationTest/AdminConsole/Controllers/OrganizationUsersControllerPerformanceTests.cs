@@ -34,7 +34,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
@@ -73,7 +73,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
@@ -110,7 +110,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -145,7 +145,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -181,7 +181,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -232,7 +232,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -275,7 +275,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -322,7 +322,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -369,7 +369,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
@@ -417,7 +417,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
@@ -470,7 +470,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
@@ -510,7 +510,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var domainSeeder = new OrganizationDomainRecipe(db);
 
@@ -554,7 +554,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
 
@@ -605,7 +605,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var manglerService = new NoOpManglerService();
+        var manglerService = factory.GetService<IManglerService>();
         var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
 
         var domain = OrganizationTestHelpers.GenerateRandomDomain();
