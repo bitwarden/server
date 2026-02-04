@@ -38,7 +38,7 @@ public class SendEmailOtpRequestValidator(
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         }
 
-        if (!authMethod.anonAccessEmails.Contains(email))
+        if (!authMethod.emails.Contains(email))
         {
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailInvalid);
         }

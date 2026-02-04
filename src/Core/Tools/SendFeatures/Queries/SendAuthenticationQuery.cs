@@ -41,7 +41,7 @@ public class SendAuthenticationQuery : ISendAuthenticationQuery
             var s when s.AccessCount >= s.MaxAccessCount.GetValueOrDefault(int.MaxValue) => NEVER_AUTHENTICATE,
             var s when s.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow => NEVER_AUTHENTICATE,
             var s when s.DeletionDate <= DateTime.UtcNow => NEVER_AUTHENTICATE,
-            var s when s.AuthType == AuthType.Email && s.AnonAccessEmails is not null => EmailOtp(s.AnonAccessEmails),
+            var s when s.AuthType == AuthType.Email && s.Emails is not null => EmailOtp(s.Emails),
             var s when s.AuthType == AuthType.Password && s.Password is not null => new ResourcePassword(s.Password),
             _ => NOT_AUTHENTICATED
         };
@@ -49,13 +49,13 @@ public class SendAuthenticationQuery : ISendAuthenticationQuery
         return method;
     }
 
-    private static EmailOtp EmailOtp(string? anonAccessEmails)
+    private static EmailOtp EmailOtp(string? emails)
     {
-        if (string.IsNullOrWhiteSpace(anonAccessEmails))
+        if (string.IsNullOrWhiteSpace(emails))
         {
             return new EmailOtp([]);
         }
-        var list = anonAccessEmails.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var list = emails.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return new EmailOtp(list);
     }
 }

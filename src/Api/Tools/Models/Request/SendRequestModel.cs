@@ -100,20 +100,12 @@ public class SendRequestModel
 
     /// <summary>
     /// Comma-separated list of emails that may access the send using OTP
-    /// authentication, encrypted by the send key.
+    /// authentication
     /// Mutually exclusive with <see cref="Password"/>.
     /// </summary>
     [EncryptedString]
     [EncryptedStringLength(4000)]
     public string Emails { get; set; }
-
-    /// <summary>
-    /// Comma-separated list of emails that may access the send using OTP
-    /// authentication, encrypted by the server key.
-    /// Mutually exclusive with <see cref="Password"/>.
-    /// </summary>
-    [StringLength(4000)]
-    public string AnonAccessEmails { get; set; }
 
     /// <summary>
     /// When <see langword="true"/>, send access is disabled.
@@ -263,7 +255,7 @@ public class SendRequestModel
             // normalize encoding
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
             existingSend.Emails = string.Join(",", emails);
-            existingSend.AnonAccessEmails = AnonAccessEmails;
+            existingSend.Emails = Emails;
             existingSend.Password = null;
             existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
         }

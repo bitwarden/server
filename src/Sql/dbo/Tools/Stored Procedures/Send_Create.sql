@@ -18,8 +18,7 @@
 --  FIXME: remove null default value once this argument has been
 --         in 2 server releases
     @Emails NVARCHAR(4000) = NULL,
-    @AuthType TINYINT = NULL,
-    @AnonAccessEmails NVARCHAR(4000) = NULL
+    @AuthType TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -43,8 +42,7 @@ BEGIN
         [HideEmail],
         [CipherId],
         [Emails],
-        [AuthType],
-        [AnonAccessEmails]
+        [AuthType]
     )
     VALUES
     (
@@ -65,8 +63,7 @@ BEGIN
         @HideEmail,
         @CipherId,
         @Emails,
-        @AuthType,
-        @AnonAccessEmails
+        @AuthType
     )
 
     IF @UserId IS NOT NULL
