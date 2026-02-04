@@ -304,22 +304,18 @@ function Initialize-SecretsFile {
 
         Set-Content secrets.json $secretsContent -NoNewline
 
-        $configNeeded = @()
+        # Certificate thumbprint is required - fail if missing
         if (-not $CertificateThumbprint) {
-            $configNeeded += "Certificate thumbprints (run certificate creation script)"
+            Write-ErrorLog "Certificate thumbprint is required but was not generated."
+            Write-InfoLog "Run the certificate creation script to generate certificates."
+            exit 1
         }
-        $configNeeded += "(SELF HOST) Installation ID and Key (get from: https://bitwarden.com/host)"
-        $configNeeded += "(SELF HOST) License directory path (full path to a directory for license files)"
 
-        if ($configNeeded.Count -gt 0) {
-            Write-WarningLog "IMPORTANT: You may need to configure the following in secrets.json:"
-            $counter = 1
-            foreach ($item in $configNeeded) {
-                Write-InfoLog "  $counter. $item"
-                $counter++
-            }
-            Write-Host ""
-        }
+        # Installation ID/Key and License directory are only needed for self-host
+        Write-InfoLog "NOTE: For SELF-HOST mode, you will need to configure in secrets.json:"
+        Write-InfoLog "  1. Installation ID and Key (get from: https://bitwarden.com/host)"
+        Write-InfoLog "  2. License directory path (full path to a directory for license files)"
+        Write-Host ""
     } else {
         Write-InfoLog "secrets.json already exists"
 
@@ -550,19 +546,28 @@ function Start-Installation {
     Write-SuccessLog "======================================"
     Write-Host ""
     Write-InfoLog "Next steps:"
-    Write-InfoLog "1. To start the Identity service:"
+    Write-InfoLog "1. Download and install the Licensing Certificate - Dev:"
+    Write-InfoLog "   Go to: https://vault.bitwarden.com/#/vault?itemId=7123e5d3-f837-4a8c-810a-a7ca00fe1fdd&action=view"
+    Write-InfoLog "   - Log in to your company-issued Bitwarden account"
+    Write-InfoLog "   - View attachments and download both files (dev.cer and dev.pfx)"
+    Write-InfoLog "   - Double-click the downloaded certificate to install it"
+    Write-InfoLog "   - Mac users: In Keychain Access, select 'Default Keychain > login' when saving"
+    Write-InfoLog "   - Set the dev.cer certificate to 'Always Trust' in Keychain Access"
+    Write-InfoLog "   - The dev.pfx file password can be found in the Licensing Certificate - Dev vault item"
+    Write-Host ""
+    Write-InfoLog "2. To start the Identity service:"
     Write-InfoLog "   cd $RepoRoot/src/Identity"
     Write-InfoLog "   dotnet run"
     Write-InfoLog "   Access at: http://localhost:33656/.well-known/openid-configuration"
     Write-Host ""
-    Write-InfoLog "2. To start the API service:"
+    Write-InfoLog "3. To start the API service:"
     Write-InfoLog "   cd $RepoRoot/src/Api"
     Write-InfoLog "   dotnet run"
     Write-InfoLog "   Access at: http://localhost:4000/alive"
     Write-Host ""
-    Write-InfoLog "3. View emails at: http://localhost:1080"
+    Write-InfoLog "4. View emails at: http://localhost:1080"
     Write-Host ""
-    Write-InfoLog "4. Azure Storage Emulator (Azurite) is running at:"
+    Write-InfoLog "5. Azure Storage Emulator (Azurite) is running at:"
     Write-InfoLog "   - Blob: http://localhost:10000"
     Write-InfoLog "   - Queue: http://localhost:10001"
     Write-InfoLog "   - Table: http://localhost:10002"
