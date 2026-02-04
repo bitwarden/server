@@ -38,13 +38,13 @@
         icon-alt="Share Icon"
         text="Share logins easily with your team."
       />
-      <mj-section background-color="#fff" padding="15px 20px">
+      <mj-section background-color="#fff" padding="10px">
         <mj-column>
-          <mj-text font-size="14px" line-height="20px" color="#6A6E7B">
+          <mj-text font-size="12px" line-height="16px" color="#1B2029" padding="10px 15px">
             {{#if InviterEmail}}
-            This invitation was sent by <a href="mailto:{{InviterEmail}}" style="color: #175ddc; text-decoration: none;">{{InviterEmail}}</a> and expires <b>{{ExpirationDate}}</b>.
+            This invitation was sent by <a href="mailto:{{InviterEmail}}" style="color: #175ddc; text-decoration: none;">{{InviterEmail}}</a> and expires {{ExpirationDate}}.
             {{else}}
-            This invitation expires <b>{{ExpirationDate}}</b>.
+            This invitation expires {{ExpirationDate}}.
             {{/if}}
           </mj-text>
         </mj-column>
@@ -53,12 +53,12 @@
 
     <!-- Policy Warning Section -->
     <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-section background-color="#fff" padding="20px 20px 20px 20px">
+      <mj-section background-color="#fff" padding="20px 10px">
         <mj-column>
-          <mj-text font-size="16px" line-height="24px" font-weight="bold" padding="0 0 10px 0">
+          <mj-text font-size="18px" line-height="28px" font-weight="600" padding="0 15px 10px 15px">
             Your existing account will be owned by {{OrganizationName}}
           </mj-text>
-          <mj-text font-size="14px" line-height="20px" color="#6A6E7B">
+          <mj-text font-size="16px" line-height="24px" padding="10px 15px">
             By accepting this invitation, your account ({{Email}}) will be owned by <b>{{OrganizationName}}</b> and will be subject to their security and management policies. Contact your administrator with any questions or concerns.
           </mj-text>
         </mj-column>
