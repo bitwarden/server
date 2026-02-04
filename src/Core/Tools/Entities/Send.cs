@@ -73,7 +73,7 @@ public class Send : ITableObject<Guid>
     public string? Password { get; set; }
 
     /// <summary>
-    /// Comma-separated list of emails for OTP authentication
+    /// Comma-separated list of emails for OTP authentication.
     /// </summary>
     /// <remarks>
     /// This field is mutually exclusive with <see cref="Password" />

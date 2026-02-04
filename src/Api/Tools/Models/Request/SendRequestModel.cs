@@ -100,8 +100,7 @@ public class SendRequestModel
 
     /// <summary>
     /// Comma-separated list of emails that may access the send using OTP
-    /// authentication
-    /// Mutually exclusive with <see cref="Password"/>.
+    /// authentication. Mutually exclusive with <see cref="Password"/>.
     /// </summary>
     [EncryptedString]
     [EncryptedStringLength(4000)]
@@ -255,7 +254,6 @@ public class SendRequestModel
             // normalize encoding
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
             existingSend.Emails = string.Join(",", emails);
-            existingSend.Emails = Emails;
             existingSend.Password = null;
             existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
         }
