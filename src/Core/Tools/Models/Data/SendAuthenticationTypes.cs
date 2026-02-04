@@ -44,7 +44,7 @@ public record ResourcePassword(string Hash) : SendAuthenticationMethod;
 /// <summary>
 /// Create a send claim by requesting a one time password (OTP) confirmation code.
 /// </summary>
-/// <param name="EmailHashes">
-/// The list of email address **hashes**  permitted access to the send.
+/// <param name="anonAccessEmails">
+/// The list of email addresses permitted access to the send.
 /// </param>
-public record EmailOtp(string[] EmailHashes) : SendAuthenticationMethod;
+public record EmailOtp(string[] anonAccessEmails) : SendAuthenticationMethod;

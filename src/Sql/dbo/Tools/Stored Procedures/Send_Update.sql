@@ -17,7 +17,7 @@
     @CipherId UNIQUEIDENTIFIER = NULL,
     @Emails NVARCHAR(4000) = NULL,
     @AuthType TINYINT = NULL,
-    @EmailHashes NVARCHAR(4000) = NULL
+    @AnonAccessEmails NVARCHAR(4000) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -42,7 +42,7 @@ BEGIN
         [CipherId] = @CipherId,
         [Emails] = @Emails,
         [AuthType] = @AuthType,
-        [EmailHashes] = @EmailHashes
+        [AnonAccessEmails] = @AnonAccessEmails
     WHERE
         [Id] = @Id
 

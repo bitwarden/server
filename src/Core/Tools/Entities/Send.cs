@@ -73,7 +73,8 @@ public class Send : ITableObject<Guid>
     public string? Password { get; set; }
 
     /// <summary>
-    /// Comma-separated list of emails for OTP authentication.
+    /// Comma-separated list of emails for OTP authentication,
+    /// encrypted with the send key
     /// </summary>
     /// <remarks>
     /// This field is mutually exclusive with <see cref="Password" />
@@ -82,13 +83,14 @@ public class Send : ITableObject<Guid>
     public string? Emails { get; set; }
 
     /// <summary>
-    /// Comma-separated list of email **hashes** for OTP authentication.
+    /// Comma-separated list of emails for OTP authentication,
+    /// encrypted with the server key
     /// </summary>
     /// <remarks>
     /// This field is mutually exclusive with <see cref="Password" />
     /// </remarks>
     [MaxLength(4000)]
-    public string? EmailHashes { get; set; }
+    public string? AnonAccessEmails { get; set; }
 
     /// <summary>
     /// The send becomes unavailable to API callers when

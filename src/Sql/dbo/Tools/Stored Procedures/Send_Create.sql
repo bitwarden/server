@@ -19,7 +19,7 @@
 --         in 2 server releases
     @Emails NVARCHAR(4000) = NULL,
     @AuthType TINYINT = NULL,
-    @EmailHashes NVARCHAR(4000) = NULL
+    @AnonAccessEmails NVARCHAR(4000) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -44,7 +44,7 @@ BEGIN
         [CipherId],
         [Emails],
         [AuthType],
-        [EmailHashes]
+        [AnonAccessEmails]
     )
     VALUES
     (
@@ -66,7 +66,7 @@ BEGIN
         @CipherId,
         @Emails,
         @AuthType,
-        @EmailHashes
+        @AnonAccessEmails
     )
 
     IF @UserId IS NOT NULL

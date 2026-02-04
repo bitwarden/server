@@ -43,12 +43,12 @@ public class SendAuthenticationQueryTests
     }
 
     [Theory]
-    [MemberData(nameof(EmailHashesParsingTestCases))]
-    public async Task GetAuthenticationMethod_WithEmailHashes_ParsesEmailHashesCorrectly(string emailHashString, string[] expectedEmailHashes)
+    [MemberData(nameof(AnonAccessEmailsParsingTestCases))]
+    public async Task GetAuthenticationMethod_WithAnonAccessEmails_ParsesAnonAccessEmailsCorrectly(string anonAccessEmailString, string[] expectedAnonAccessEmails)
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: emailHashString, password: null, AuthType.Email);
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, anonAccessEmails: anonAccessEmailString, password: null, AuthType.Email);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -56,15 +56,15 @@ public class SendAuthenticationQueryTests
 
         // Assert
         var emailOtp = Assert.IsType<EmailOtp>(result);
-        Assert.Equal(expectedEmailHashes, emailOtp.EmailHashes);
+        Assert.Equal(expectedAnonAccessEmails, emailOtp.anonAccessEmails);
     }
 
     [Fact]
-    public async Task GetAuthenticationMethod_WithBothEmailHashesAndPassword_ReturnsEmailOtp()
+    public async Task GetAuthenticationMethod_WithBothAnonAccessEmailsAndPassword_ReturnsEmailOtp()
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: "hashedemail", password: "hashedpassword", AuthType.Email);
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, anonAccessEmails: "person@company.com", password: "hashedpassword", AuthType.Email);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -79,7 +79,7 @@ public class SendAuthenticationQueryTests
     {
         // Arrange
         var sendId = Guid.NewGuid();
-        var send = CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: null, password: null, AuthType.None);
+        var send = CreateSend(accessCount: 0, maxAccessCount: 10, anonAccessEmails: null, password: null, AuthType.None);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
 
         // Act
@@ -106,11 +106,11 @@ public class SendAuthenticationQueryTests
     public static IEnumerable<object[]> AuthenticationMethodTestCases()
     {
         yield return new object[] { null, typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emailHashes: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emailHashes: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: "hashedemail", password: null, AuthType.Email), typeof(EmailOtp) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: null, password: "hashedpassword", AuthType.Password), typeof(ResourcePassword) };
-        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emailHashes: null, password: null, AuthType.None), typeof(NotAuthenticated) };
+        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, anonAccessEmails: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
+        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, anonAccessEmails: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, anonAccessEmails: "person@company.com", password: null, AuthType.Email), typeof(EmailOtp) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, anonAccessEmails: null, password: "hashedpassword", AuthType.Password), typeof(ResourcePassword) };
+        yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, anonAccessEmails: null, password: null, AuthType.None), typeof(NotAuthenticated) };
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class SendAuthenticationQueryTests
             Id = sendId,
             AccessCount = 0,
             MaxAccessCount = 10,
-            EmailHashes = "hashedemail",
+            AnonAccessEmails = "person@company.com",
             Password = null,
             AuthType = AuthType.Email,
             Disabled = true,
@@ -149,7 +149,7 @@ public class SendAuthenticationQueryTests
             Id = sendId,
             AccessCount = 0,
             MaxAccessCount = 10,
-            EmailHashes = "hashedemail",
+            AnonAccessEmails = "person@company.com",
             Password = null,
             AuthType = AuthType.Email,
             Disabled = false,
@@ -175,7 +175,7 @@ public class SendAuthenticationQueryTests
             Id = sendId,
             AccessCount = 0,
             MaxAccessCount = 10,
-            EmailHashes = "hashedemail",
+            AnonAccessEmails = "person@company.com",
             Password = null,
             AuthType = AuthType.Email,
             Disabled = false,
@@ -202,7 +202,7 @@ public class SendAuthenticationQueryTests
             Id = sendId,
             AccessCount = 0,
             MaxAccessCount = 10,
-            EmailHashes = "hashedemail",
+            AnonAccessEmails = "person@company.com",
             Password = null,
             AuthType = AuthType.Email,
             Disabled = false,
@@ -228,7 +228,7 @@ public class SendAuthenticationQueryTests
             Id = sendId,
             AccessCount = 5,
             MaxAccessCount = 5,
-            EmailHashes = "hashedemail",
+            AnonAccessEmails = "person@company.com",
             Password = null,
             AuthType = AuthType.Email,
             Disabled = false,
@@ -254,7 +254,7 @@ public class SendAuthenticationQueryTests
             Id = sendId,
             AccessCount = 1000,
             MaxAccessCount = null, // No limit
-            EmailHashes = "hashedemail",
+            AnonAccessEmails = "person@company.com",
             Password = null,
             AuthType = AuthType.Email,
             Disabled = false,
@@ -280,7 +280,7 @@ public class SendAuthenticationQueryTests
             Id = sendId,
             AccessCount = 0,
             MaxAccessCount = 10,
-            EmailHashes = "hashedemail",
+            AnonAccessEmails = "person@company.com",
             Password = null,
             AuthType = AuthType.Email,
             Disabled = false,
@@ -296,23 +296,23 @@ public class SendAuthenticationQueryTests
         Assert.IsType<EmailOtp>(result);
     }
 
-    public static IEnumerable<object[]> EmailHashesParsingTestCases()
+    public static IEnumerable<object[]> AnonAccessEmailsParsingTestCases()
     {
-        yield return new object[] { "hash1", new[] { "hash1" } };
-        yield return new object[] { "hash1,hash2", new[] { "hash1", "hash2" } };
-        yield return new object[] { " hash1 , hash2 ", new[] { "hash1", "hash2" } };
-        yield return new object[] { "hash1,,hash2", new[] { "hash1", "hash2" } };
-        yield return new object[] { " , hash1,  ,hash2, ", new[] { "hash1", "hash2" } };
+        yield return new object[] { "person@company.com", new[] { "person@company.com" } };
+        yield return new object[] { "person1@company.com,person2@company.com", new[] { "person1@company.com", "person2@company.com" } };
+        yield return new object[] { " person1@company.com , person2@company.com ", new[] { "person1@company.com", "person2@company.com" } };
+        yield return new object[] { "person1@company.com,,person2@company.com", new[] { "person1@company.com", "person2@company.com" } };
+        yield return new object[] { " , person1@company.com,  ,person2@company.com, ", new[] { "person1@company.com", "person2@company.com" } };
     }
 
-    private static Send CreateSend(int accessCount, int? maxAccessCount, string? emailHashes, string? password, AuthType? authType)
+    private static Send CreateSend(int accessCount, int? maxAccessCount, string? anonAccessEmails, string? password, AuthType? authType)
     {
         return new Send
         {
             Id = Guid.NewGuid(),
             AccessCount = accessCount,
             MaxAccessCount = maxAccessCount,
-            EmailHashes = emailHashes,
+            AnonAccessEmails = anonAccessEmails,
             Password = password,
             AuthType = authType,
             Disabled = false,

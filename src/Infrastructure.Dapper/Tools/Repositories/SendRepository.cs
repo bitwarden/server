@@ -154,7 +154,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         }
 
         // Capture original value
-        var originalEmailHashes = send.EmailHashes;
+        var anonAccessEmails = send.AnonAccessEmails;
 
         // Protect value
         ProtectData(send);
@@ -163,15 +163,15 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         await saveTask();
 
         // Restore original value
-        send.EmailHashes = originalEmailHashes;
+        send.AnonAccessEmails = anonAccessEmails;
     }
 
     private void ProtectData(Send send)
     {
-        if (!send.EmailHashes?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        if (!send.AnonAccessEmails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            send.EmailHashes = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(send.EmailHashes!));
+            send.AnonAccessEmails = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(send.AnonAccessEmails!));
         }
     }
 
@@ -182,10 +182,10 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             return;
         }
 
-        if (send.EmailHashes?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        if (send.AnonAccessEmails?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            send.EmailHashes = _dataProtector.Unprotect(
-                send.EmailHashes.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+            send.AnonAccessEmails = _dataProtector.Unprotect(
+                send.AnonAccessEmails.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
         }
     }
 

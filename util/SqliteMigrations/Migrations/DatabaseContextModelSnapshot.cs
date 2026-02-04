@@ -1660,6 +1660,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("AccessCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AnonAccessEmails")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
                     b.Property<byte?>("AuthType")
                         .HasColumnType("INTEGER");
 
@@ -1677,10 +1681,6 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("EmailHashes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("Emails")
                         .HasMaxLength(4000)

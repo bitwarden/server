@@ -18,7 +18,7 @@
     [HideEmail]      BIT              NULL,
     [CipherId]       UNIQUEIDENTIFIER NULL,
     [AuthType]       TINYINT          NULL,
-    [EmailHashes]    NVARCHAR(4000)   NULL,
+    [AnonAccessEmails]    NVARCHAR(4000)   NULL,
     CONSTRAINT [PK_Send] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Send_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Send_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
