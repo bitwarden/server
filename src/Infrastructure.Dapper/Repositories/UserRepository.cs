@@ -35,6 +35,34 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         return user;
     }
 
+    public async Task<User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewayCustomerId]",
+                new { GatewayCustomerId = gatewayCustomerId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewaySubscriptionId]",
+                new { GatewaySubscriptionId = gatewaySubscriptionId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<User?> GetByEmailAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
