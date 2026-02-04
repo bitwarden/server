@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 #nullable enable
 
@@ -64,4 +65,18 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="requestDate">When the action was performed</param>
     /// <returns></returns>
     Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
+
+    /// <summary>
+    /// Builds an action that updates an organization for initialization (sets keys, status, and enabled state).
+    /// </summary>
+    /// <param name="organization">The organization entity with updated properties</param>
+    /// <returns>An action that can be executed within a transaction</returns>
+    OrganizationInitializationUpdateAction BuildUpdateOrganizationAction(Organization organization);
+
+    /// <summary>
+    /// Executes organization initialization updates within a single transaction.
+    /// </summary>
+    /// <param name="updateActions">Collection of initialization update delegates to execute</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    Task ExecuteOrganizationInitializationUpdatesAsync(IEnumerable<OrganizationInitializationUpdateAction> updateActions);
 }

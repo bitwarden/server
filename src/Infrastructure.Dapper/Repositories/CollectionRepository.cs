@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -528,5 +529,22 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
         [DisallowNull]
         public DataTable? Users { get; set; }
+    }
+
+    public OrganizationInitializationUpdateAction BuildCreateDefaultCollectionAction(Collection collection, IEnumerable<CollectionAccessSelection> users)
+    {
+        return async (SqlConnection? connection, SqlTransaction? transaction, object? context) =>
+        {
+            var collectionWithAccess = new CollectionWithGroupsAndUsers(
+                collection,
+                Enumerable.Empty<CollectionAccessSelection>(),
+                users);
+
+            await connection!.ExecuteAsync(
+                "[dbo].[Collection_CreateWithGroupsAndUsers]",
+                collectionWithAccess,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+        };
     }
 }

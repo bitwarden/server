@@ -1,7 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
@@ -282,5 +285,244 @@ public class OrganizationRepositoryTests
 
         // Annul
         await sutRepository.DeleteAsync(organization);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializePendingOrganizationAsync_Success_AllEntitiesUpdated(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository, emailVerified: false);
+
+        var id = Guid.NewGuid();
+        var publicKey = $"public-key-{id}";
+        var privateKey = $"private-key-{id}";
+        var userKey = $"user-key-{id}";
+        var collectionName = $"Default Collection {id}";
+
+        // Prepare entity updates
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = publicKey;
+        organization.PrivateKey = privateKey;
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = userKey;
+        organizationUser.Email = null;
+
+        // Build delegate list
+        var updateActions = new List<OrganizationInitializationUpdateAction>
+        {
+            organizationRepository.BuildUpdateOrganizationAction(organization),
+            organizationUserRepository.BuildConfirmOrganizationUserAction(organizationUser),
+            userRepository.BuildVerifyUserEmailAction(user.Id)
+        };
+
+        var collection = new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            Name = collectionName,
+            OrganizationId = organization.Id,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow
+        };
+
+        var collectionUsers = new[]
+        {
+            new CollectionAccessSelection
+            {
+                Id = organizationUser.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            }
+        };
+
+        updateActions.Add(collectionRepository.BuildCreateDefaultCollectionAction(collection, collectionUsers));
+
+        // Execute all updates in single transaction
+        await organizationRepository.ExecuteOrganizationInitializationUpdatesAsync(updateActions);
+
+        var updatedOrg = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(updatedOrg);
+        Assert.True(updatedOrg.Enabled);
+        Assert.Equal(OrganizationStatusType.Created, updatedOrg.Status);
+        Assert.Equal(publicKey, updatedOrg.PublicKey);
+        Assert.Equal(privateKey, updatedOrg.PrivateKey);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, updatedOrgUser.Status);
+        Assert.Equal(user.Id, updatedOrgUser.UserId);
+        Assert.Equal(userKey, updatedOrgUser.Key);
+        Assert.Null(updatedOrgUser.Email);
+
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.True(updatedUser.EmailVerified);
+
+        var collections = await collectionRepository.GetManyByOrganizationIdAsync(organization.Id);
+        Assert.Single(collections);
+        Assert.Equal(collectionName, collections.First().Name);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializePendingOrganizationAsync_WithoutCollection_Success(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository, emailVerified: true);
+
+        var id = Guid.NewGuid();
+        var publicKey = $"public-key-{id}";
+        var privateKey = $"private-key-{id}";
+        var userKey = $"user-key-{id}";
+
+        // Prepare entity updates
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = publicKey;
+        organization.PrivateKey = privateKey;
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = userKey;
+        organizationUser.Email = null;
+
+        // Build delegate list (without collection)
+        var updateActions = new List<OrganizationInitializationUpdateAction>
+        {
+            organizationRepository.BuildUpdateOrganizationAction(organization),
+            organizationUserRepository.BuildConfirmOrganizationUserAction(organizationUser),
+            userRepository.BuildVerifyUserEmailAction(user.Id)
+        };
+
+        // Execute all updates in single transaction
+        await organizationRepository.ExecuteOrganizationInitializationUpdatesAsync(updateActions);
+
+        var updatedOrg = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(updatedOrg);
+        Assert.True(updatedOrg.Enabled);
+        Assert.Equal(OrganizationStatusType.Created, updatedOrg.Status);
+
+        var collections = await collectionRepository.GetManyByOrganizationIdAsync(organization.Id);
+        Assert.Empty(collections);
+
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.True(updatedUser.EmailVerified);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ExecuteOrganizationInitializationUpdatesAsync_WhenActionFails_RollsBackAllChanges(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange - create pending organization with user
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository, emailVerified: false);
+
+        var id = Guid.NewGuid();
+        var publicKey = $"public-key-{id}";
+        var privateKey = $"private-key-{id}";
+        var userKey = $"user-key-{id}";
+
+        // Prepare entity updates
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = publicKey;
+        organization.PrivateKey = privateKey;
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = userKey;
+        organizationUser.Email = null;
+
+        // Build delegate list with a failing action at the end
+        var updateActions = new List<OrganizationInitializationUpdateAction>
+        {
+            organizationRepository.BuildUpdateOrganizationAction(organization),
+            organizationUserRepository.BuildConfirmOrganizationUserAction(organizationUser),
+            userRepository.BuildVerifyUserEmailAction(user.Id),
+            // Add a failing action to trigger rollback
+            (Microsoft.Data.SqlClient.SqlConnection? _, Microsoft.Data.SqlClient.SqlTransaction? _, object? __) =>
+            {
+                throw new Exception("Simulated failure to test rollback");
+            }
+        };
+
+        // Act & Assert - should throw the exception
+        await Assert.ThrowsAsync<Exception>(async () =>
+            await organizationRepository.ExecuteOrganizationInitializationUpdatesAsync(updateActions));
+
+        // Verify rollback - organization should still be in original state
+        var orgAfter = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(orgAfter);
+        Assert.False(orgAfter.Enabled);
+        Assert.Equal(OrganizationStatusType.Pending, orgAfter.Status);
+        Assert.Null(orgAfter.PublicKey);
+        Assert.Null(orgAfter.PrivateKey);
+
+        // Verify rollback - org user should not be confirmed
+        var orgUserAfter = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(orgUserAfter);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUserAfter.Status);
+        Assert.Null(orgUserAfter.UserId);
+        Assert.Null(orgUserAfter.Key);
+        Assert.Equal(user.Email, orgUserAfter.Email);
+
+        // Verify rollback - user email should not be verified
+        var userAfter = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(userAfter);
+        Assert.False(userAfter.EmailVerified);
+
+        // Cleanup
+        await organizationRepository.DeleteAsync(organization);
+        await userRepository.DeleteAsync(user);
+    }
+
+    private static async Task<(User user, Organization organization, OrganizationUser organizationUser)>
+        CreatePendingOrganizationWithUserAsync(
+            IUserRepository userRepository,
+            IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository,
+            bool emailVerified = false)
+    {
+        var id = Guid.NewGuid();
+
+        var user = await userRepository.CreateTestUserAsync();
+        user.EmailVerified = emailVerified;
+        await userRepository.ReplaceAsync(user);
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Pending Org {id}",
+            BillingEmail = user.Email,
+            Plan = "Teams",
+            Status = OrganizationStatusType.Pending,
+            Enabled = false,
+            PublicKey = null,
+            PrivateKey = null
+        });
+
+        var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Email = user.Email,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Owner
+        });
+
+        return (user, organization, organizationUser);
     }
 }

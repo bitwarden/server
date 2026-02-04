@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 #nullable enable
 
@@ -82,4 +83,11 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
     Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
+    /// <summary>
+    /// Builds an action that creates a default collection with user access.
+    /// </summary>
+    /// <param name="collection">The collection entity to create</param>
+    /// <param name="users">Collection access selections for users</param>
+    /// <returns>An action that can be executed within a transaction</returns>
+    OrganizationInitializationUpdateAction BuildCreateDefaultCollectionAction(Collection collection, IEnumerable<CollectionAccessSelection> users);
 }
