@@ -10,7 +10,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Mailer;
@@ -114,14 +114,11 @@ public class SendOrganizationInvitesCommand(
 
     private async Task SendNewInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo, string inviterEmail)
     {
-        var organizationCategory = GetOrganizationCategory(orgInvitesInfo.PlanType);
-
         foreach (var (orgUser, token) in orgInvitesInfo.OrgUserTokenPairs)
         {
             var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id];
 
             await SendInviteEmailAsync(
-                organizationCategory,
                 userHasExistingUser,
                 orgInvitesInfo,
                 orgUser,
@@ -132,32 +129,38 @@ public class SendOrganizationInvitesCommand(
     }
 
     private async Task SendInviteEmailAsync(
-        OrganizationCategory category,
         bool userHasExistingUser,
         OrganizationInvitesInfo orgInvitesInfo,
         OrganizationUser orgUser,
         ExpiringToken token,
         string inviterEmail)
     {
-        switch ((category, userHasExistingUser))
+        if (PlanConstants.EnterprisePlanTypes.Contains(orgInvitesInfo.PlanType) || PlanConstants.TeamsPlanTypes.Contains(orgInvitesInfo.PlanType))
         {
-            case (OrganizationCategory.EnterpriseTeams, false):
-                await SendEnterpriseTeamsNewUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
-                break;
-            case (OrganizationCategory.EnterpriseTeams, true):
+            if (userHasExistingUser)
+            {
                 await SendEnterpriseTeamsExistingUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
-                break;
-            case (OrganizationCategory.Families, false):
-                await SendFamiliesNewUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
-                break;
-            case (OrganizationCategory.Families, true):
+            }
+            else
+            {
+                await SendEnterpriseTeamsNewUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
+            }
+        }
+        else if (PlanConstants.FamiliesPlanTypes.Contains(orgInvitesInfo.PlanType))
+        {
+            if (userHasExistingUser)
+            {
                 await SendFamiliesExistingUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
-                break;
-            case (OrganizationCategory.Free, _):
-                await SendFreeOrganizationInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail, userHasExistingUser);
-                break;
-            default:
-                throw new ArgumentException("Invalid organization category or user status");
+            }
+            else
+            {
+                await SendFamiliesNewUserInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail);
+            }
+        }
+        else
+        {
+            // Free plan (default)
+            await SendFreeOrganizationInviteAsync(orgInvitesInfo, orgUser, token, inviterEmail, userHasExistingUser);
         }
     }
 
@@ -233,7 +236,7 @@ public class SendOrganizationInvitesCommand(
         {
             OrganizationName = organizationName,
             Email = orgUser.Email,
-            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            ExpirationDate = FormatExpirationDate(token.ExpirationDate),
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _newUserButton,
             InviterEmail = inviterEmail
@@ -248,7 +251,7 @@ public class SendOrganizationInvitesCommand(
         {
             OrganizationName = organizationName,
             Email = orgUser.Email,
-            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            ExpirationDate = FormatExpirationDate(token.ExpirationDate),
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _existingUserButton,
             InviterEmail = inviterEmail
@@ -263,7 +266,7 @@ public class SendOrganizationInvitesCommand(
         {
             OrganizationName = organizationName,
             Email = orgUser.Email,
-            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            ExpirationDate = FormatExpirationDate(token.ExpirationDate),
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _newUserButton,
             InviterEmail = inviterEmail
@@ -278,7 +281,7 @@ public class SendOrganizationInvitesCommand(
         {
             OrganizationName = organizationName,
             Email = orgUser.Email,
-            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            ExpirationDate = FormatExpirationDate(token.ExpirationDate),
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _existingUserButton,
             InviterEmail = inviterEmail
@@ -293,7 +296,7 @@ public class SendOrganizationInvitesCommand(
         {
             OrganizationName = organizationName,
             Email = orgUser.Email,
-            ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+            ExpirationDate = FormatExpirationDate(token.ExpirationDate),
             Url = BuildInvitationUrl(orgInvitesInfo, orgUser, token),
             ButtonText = _existingUserButton,
             InviterEmail = inviterEmail
@@ -333,17 +336,6 @@ public class SendOrganizationInvitesCommand(
         return invitingUser?.Email;
     }
 
-    private enum OrganizationCategory { EnterpriseTeams, Families, Free }
-
-    private static OrganizationCategory GetOrganizationCategory(PlanType planType) =>
-        planType switch
-        {
-            PlanType.FamiliesAnnually or
-            PlanType.FamiliesAnnually2019 or
-            PlanType.FamiliesAnnually2025 => OrganizationCategory.Families,
-
-            PlanType.Free => OrganizationCategory.Free,
-
-            _ => OrganizationCategory.EnterpriseTeams
-        };
+    private static string FormatExpirationDate(DateTime expirationDate) =>
+        $"{expirationDate.ToLongDateString()} {expirationDate.ToShortTimeString()} UTC";
 }
