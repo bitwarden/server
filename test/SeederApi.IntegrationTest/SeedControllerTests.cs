@@ -45,7 +45,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
 
         Assert.NotNull(result);
         Assert.NotNull(result.MangleMap);
-        Assert.Null(result.Result);
+        Assert.NotNull(result.Result);
     }
 
     [Fact]
