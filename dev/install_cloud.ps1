@@ -308,32 +308,17 @@ function Initialize-SecretsFile {
         if (-not $CertificateThumbprint) {
             $configNeeded += "Certificate thumbprints (run certificate creation script)"
         }
-        $configNeeded += "Installation ID and Key (get from: https://bitwarden.com/host)"
-        $configNeeded += "License directory path (full path to a directory for license files)"
+        $configNeeded += "(SELF HOST) Installation ID and Key (get from: https://bitwarden.com/host)"
+        $configNeeded += "(SELF HOST) License directory path (full path to a directory for license files)"
 
         if ($configNeeded.Count -gt 0) {
-            Write-WarningLog "IMPORTANT: You need to configure the following in secrets.json:"
+            Write-WarningLog "IMPORTANT: You may need to configure the following in secrets.json:"
             $counter = 1
             foreach ($item in $configNeeded) {
                 Write-InfoLog "  $counter. $item"
                 $counter++
             }
             Write-Host ""
-        }
-
-        $response = Read-Host "Press Enter to open secrets.json (or type 'skip' to edit manually later)"
-        if ($response -ne "skip") {
-            if ($IsWindows -or $PSVersionTable.PSVersion.Major -lt 6) {
-                notepad secrets.json
-            } else {
-                if (Test-CommandExists "code") {
-                    code secrets.json
-                } elseif (Test-CommandExists "nano") {
-                    nano secrets.json
-                } else {
-                    Write-InfoLog "Please edit secrets.json manually"
-                }
-            }
         }
     } else {
         Write-InfoLog "secrets.json already exists"
