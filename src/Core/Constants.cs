@@ -144,6 +144,7 @@ public static class FeatureFlagKeys
     public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
+    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
