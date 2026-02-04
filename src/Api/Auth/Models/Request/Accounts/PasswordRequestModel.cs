@@ -1,7 +1,5 @@
-﻿#nullable enable
-
-using System.ComponentModel.DataAnnotations;
-using Bit.Api.KeyManagement.Models.Requests;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
