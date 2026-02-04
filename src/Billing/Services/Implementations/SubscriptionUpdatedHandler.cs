@@ -1,6 +1,8 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -20,9 +22,13 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
-    private readonly IPricingClient _pricingClient;
-    private readonly ISubscriberService _subscriberService;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationEnableCommand _organizationEnableCommand;
+    private readonly IOrganizationDisableCommand _organizationDisableCommand;
+    private readonly IPricingClient _pricingClient;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IProviderService _providerService;
+    private readonly IPushNotificationAdapter _pushNotificationAdapter;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -31,19 +37,29 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IStripeFacade stripeFacade,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
+        IOrganizationRepository organizationRepository,
+        IOrganizationEnableCommand organizationEnableCommand,
+        IOrganizationDisableCommand organizationDisableCommand,
         IPricingClient pricingClient,
-        ISubscriberService subscriberService,
-        IOrganizationRepository organizationRepository)
+        IProviderRepository providerRepository,
+        IProviderService providerService,
+        IPushNotificationAdapter pushNotificationAdapter)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationService = organizationService;
+        _providerService = providerService;
         _stripeFacade = stripeFacade;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
-        _pricingClient = pricingClient;
-        _subscriberService = subscriberService;
         _organizationRepository = organizationRepository;
+        _providerRepository = providerRepository;
+        _organizationEnableCommand = organizationEnableCommand;
+        _organizationDisableCommand = organizationDisableCommand;
+        _pricingClient = pricingClient;
+        _providerRepository = providerRepository;
+        _providerService = providerService;
+        _pushNotificationAdapter = pushNotificationAdapter;
     }
 
     public async Task HandleAsync(Event parsedEvent)
@@ -55,12 +71,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         if (SubscriptionWentUnpaid(parsedEvent, subscription))
         {
-            await _subscriberService.DisableSubscriberAsync(subscriberId, currentPeriodEnd);
+            await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
             await SetSubscriptionToCancelAsync(subscription);
         }
         else if (SubscriptionBecameActive(parsedEvent, subscription))
         {
-            await _subscriberService.EnableSubscriberAsync(subscriberId, currentPeriodEnd);
+            await EnableSubscriberAsync(subscriberId, currentPeriodEnd);
             await RemovePendingCancellationAsync(subscription);
         }
 
@@ -108,6 +124,50 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             Status: SubscriptionStatus.Active,
             LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
         };
+
+    private Task DisableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
+        subscriberId.Match(
+            userId => _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd),
+            async organizationId =>
+            {
+                await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
+                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+                if (organization != null)
+                {
+                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+                }
+            },
+            async providerId =>
+            {
+                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+                if (provider != null)
+                {
+                    provider.Enabled = false;
+                    await _providerService.UpdateAsync(provider);
+                }
+            });
+
+    private Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
+        subscriberId.Match(
+            userId => _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd),
+            async organizationId =>
+            {
+                await _organizationEnableCommand.EnableAsync(organizationId.Value, currentPeriodEnd);
+                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+                if (organization != null)
+                {
+                    await _pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
+                }
+            },
+            async providerId =>
+            {
+                var provider = await _providerRepository.GetByIdAsync(providerId.Value);
+                if (provider != null)
+                {
+                    provider.Enabled = true;
+                    await _providerService.UpdateAsync(provider);
+                }
+            });
 
     private async Task SetSubscriptionToCancelAsync(Subscription subscription)
     {

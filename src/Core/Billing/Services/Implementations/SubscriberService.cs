@@ -3,23 +3,18 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Notifications;
-using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -38,17 +33,12 @@ public class SubscriberService(
     IBraintreeGateway braintreeGateway,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
-    IOrganizationDisableCommand organizationDisableCommand,
-    IOrganizationEnableCommand organizationEnableCommand,
     IOrganizationRepository organizationRepository,
     IProviderRepository providerRepository,
-    IProviderService providerService,
-    IPushNotificationAdapter pushNotificationAdapter,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ITaxService taxService,
-    IUserRepository userRepository,
-    IUserService userService) : ISubscriberService
+    IUserRepository userRepository) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -826,50 +816,6 @@ public class SubscriberService(
             return false;
         }
     }
-
-    public Task DisableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
-        subscriberId.Match(
-            userId => userService.DisablePremiumAsync(userId.Value, currentPeriodEnd),
-            async organizationId =>
-            {
-                await organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
-                var organization = await organizationRepository.GetByIdAsync(organizationId.Value);
-                if (organization != null)
-                {
-                    await pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
-                }
-            },
-            async providerId =>
-            {
-                var provider = await providerRepository.GetByIdAsync(providerId.Value);
-                if (provider != null)
-                {
-                    provider.Enabled = false;
-                    await providerService.UpdateAsync(provider);
-                }
-            });
-
-    public Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
-        subscriberId.Match(
-            userId => userService.EnablePremiumAsync(userId.Value, currentPeriodEnd),
-            async organizationId =>
-            {
-                await organizationEnableCommand.EnableAsync(organizationId.Value, currentPeriodEnd);
-                var organization = await organizationRepository.GetByIdAsync(organizationId.Value);
-                if (organization != null)
-                {
-                    await pushNotificationAdapter.NotifyEnabledChangedAsync(organization);
-                }
-            },
-            async providerId =>
-            {
-                var provider = await providerRepository.GetByIdAsync(providerId.Value);
-                if (provider != null)
-                {
-                    provider.Enabled = true;
-                    await providerService.UpdateAsync(provider);
-                }
-            });
 
     #region Shared Utilities
 
