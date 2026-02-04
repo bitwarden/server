@@ -181,6 +181,7 @@
             <mj-group>
                 <mj-column width="159px">
                     <mj-image
+                            css-class="hide-mobile"
                             href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744"
                             src="https://assets.bitwarden.com/email/v1/ac-apple-store.png"
                             alt="Download on the App Store"
@@ -189,8 +190,9 @@
                             padding="0 24px 0 0"
                     />
                 </mj-column>
-                <mj-column  width="140px">
+                <mj-column width="140px">
                     <mj-image
+                            css-class="hide-mobile"
                             href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden"
                             src="https://assets.bitwarden.com/email/v1/ac-google-play.png"
                             alt="Get it on Google Play"
