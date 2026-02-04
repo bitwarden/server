@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
 using Bit.RustSDK;
 using Microsoft.AspNetCore.Identity;
 
@@ -25,7 +24,6 @@ public class UserSeeder(IPasswordHasher<Bit.Core.Entities.User> passwordHasher, 
 
         var user = new User
         {
-            Id = CoreHelpers.GenerateComb(),
             Email = email,
             EmailVerified = emailVerified,
             MasterPassword = null,
@@ -57,7 +55,6 @@ public class UserSeeder(IPasswordHasher<Bit.Core.Entities.User> passwordHasher, 
     {
         return new User
         {
-            Id = Guid.NewGuid(),
             Email = email,
             MasterPassword = "AQAAAAIAAYagAAAAEBATmF66OHMpHuHKc1CsGZQ1ltHUHyhYK+7e4re3bVFi16SOpLpDfzdFswnvFQs2Rg==",
             SecurityStamp = "4830e359-e150-4eae-be2a-996c81c5e609",
@@ -94,7 +91,6 @@ public class UserSeeder(IPasswordHasher<Bit.Core.Entities.User> passwordHasher, 
     {
         var user = new User
         {
-            Id = CoreHelpers.GenerateComb(),
             Email = email,
             EmailVerified = true,
             MasterPassword = null,

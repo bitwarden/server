@@ -18,4 +18,12 @@ public class MangleId
     }
 
     public override string ToString() => Value;
+
+    public string MangleEmail(string email) => $"{Value}+{email}";
+
+    public static string ExtractDomain(string email)
+    {
+        var atIndex = email.IndexOf('@');
+        return atIndex >= 0 ? email[(atIndex + 1)..] : "test.local";
+    }
 }

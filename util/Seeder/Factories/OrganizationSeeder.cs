@@ -7,7 +7,50 @@ namespace Bit.Seeder.Factories;
 
 public class OrganizationSeeder
 {
+    public static Organization CreateFree(string name, string domain, string? publicKey = null, string? privateKey = null)
+    {
+        return new Organization
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            BillingEmail = $"billing@{domain}",
+            Plan = "Free",
+            PlanType = PlanType.Free,
+            Seats = 2,
+            UseCustomPermissions = false,
+            UseOrganizationDomains = false,
+            UseSecretsManager = false,
+            UseGroups = false,
+            UseDirectory = false,
+            UseEvents = false,
+            UseTotp = false,
+            Use2fa = false,
+            UseApi = false,
+            UseResetPassword = false,
+            UsePasswordManager = true,
+            UseAutomaticUserConfirmation = false,
+            SelfHost = false,
+            UsersGetPremium = false,
+            LimitCollectionCreation = true,
+            LimitCollectionDeletion = true,
+            LimitItemDeletion = true,
+            AllowAdminAccessToAllCollectionItems = true,
+            UseRiskInsights = false,
+            UseAdminSponsoredFamilies = false,
+            SyncSeats = false,
+            Status = OrganizationStatusType.Created,
+            MaxStorageGb = 0,
+            PublicKey = publicKey,
+            PrivateKey = privateKey
+        };
+    }
+
     public static Organization CreateEnterprise(string name, string domain, int seats, string? publicKey = null, string? privateKey = null)
+    {
+        return CreateEnterprise(name, domain, seats, useSecretsManager: true, publicKey, privateKey);
+    }
+
+    public static Organization CreateEnterprise(string name, string domain, int seats, bool useSecretsManager, string? publicKey = null, string? privateKey = null)
     {
         return new Organization
         {
@@ -19,7 +62,7 @@ public class OrganizationSeeder
             Seats = seats,
             UseCustomPermissions = true,
             UseOrganizationDomains = true,
-            UseSecretsManager = true,
+            UseSecretsManager = useSecretsManager,
             UseGroups = true,
             UseDirectory = true,
             UseEvents = true,
