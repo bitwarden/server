@@ -102,8 +102,7 @@ public class SendRequestModel
     /// Comma-separated list of emails that may access the send using OTP
     /// authentication. Mutually exclusive with <see cref="Password"/>.
     /// </summary>
-    [EncryptedString]
-    [EncryptedStringLength(4000)]
+    [StringLength(4000)]
     public string Emails { get; set; }
 
     /// <summary>
