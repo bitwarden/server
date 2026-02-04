@@ -1694,10 +1694,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Disabled")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("EmailHashes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
                     b.Property<string>("Emails")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
