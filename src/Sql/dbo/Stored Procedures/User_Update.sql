@@ -44,7 +44,8 @@
     @VerifyDevices BIT = 1,
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
-    @SignedPublicKey VARCHAR(MAX) = NULL
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @MasterPasswordSalt NVARCHAR(256)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -97,7 +98,8 @@ BEGIN
         [SecurityState] = @SecurityState,
         [SecurityVersion] = @SecurityVersion,
         [SignedPublicKey] = @SignedPublicKey,
-        [MaxStorageGbIncreased] = @MaxStorageGb
+        [MaxStorageGbIncreased] = @MaxStorageGb,
+        [MasterPasswordSalt] = COALESCE(@MasterPasswordSalt, LOWER(LTRIM(RTRIM(@Email))))
     WHERE
         [Id] = @Id
 END

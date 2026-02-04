@@ -46,6 +46,7 @@
     [SecurityVersion]                  INT              NULL,
     [SignedPublicKey]                  VARCHAR (MAX)   NULL,
     [MaxStorageGbIncreased]            SMALLINT         NULL,
+    [MasterPasswordSalt]               NVARCHAR (256)   NOT NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
