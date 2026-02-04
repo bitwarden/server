@@ -1,11 +1,14 @@
 ﻿using Bit.Core.Billing.Subscriptions.Models;
-using Stripe;
+using Braintree;
 
 namespace Bit.Core.Services;
 
 public interface IBraintreeService
 {
+    Task<Customer?> GetCustomer(
+        Stripe.Customer customer);
+
     Task PayInvoice(
         SubscriberId subscriberId,
-        Invoice invoice);
+        Stripe.Invoice invoice);
 }
