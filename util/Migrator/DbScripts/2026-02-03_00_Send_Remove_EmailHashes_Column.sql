@@ -74,13 +74,13 @@ BEGIN
     )
 
     IF @UserId IS NOT NULL
-BEGIN
+    BEGIN
         IF @Type = 1 --File
-BEGIN
-EXEC [dbo].[User_UpdateStorage] @UserId
-END
-EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
-END
+        BEGIN
+            EXEC [dbo].[User_UpdateStorage] @UserId
+        END
+        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    END
     -- TODO: OrganizationId bump?
 END
 GO
@@ -109,33 +109,33 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-UPDATE
-    [dbo].[Send]
-SET
-    [UserId] = @UserId,
-    [OrganizationId] = @OrganizationId,
-    [Type] = @Type,
-    [Data] = @Data,
-    [Key] = @Key,
-    [Password] = @Password,
-    [MaxAccessCount] = @MaxAccessCount,
-    [AccessCount] = @AccessCount,
-    [CreationDate] = @CreationDate,
-    [RevisionDate] = @RevisionDate,
-    [ExpirationDate] = @ExpirationDate,
-    [DeletionDate] = @DeletionDate,
-    [Disabled] = @Disabled,
-    [HideEmail] = @HideEmail,
-    [CipherId] = @CipherId,
-    [Emails] = @Emails,
-    [AuthType] = @AuthType
-WHERE
-    [Id] = @Id
+    UPDATE
+        [dbo].[Send]
+    SET
+        [UserId] = @UserId,
+        [OrganizationId] = @OrganizationId,
+        [Type] = @Type,
+        [Data] = @Data,
+        [Key] = @Key,
+        [Password] = @Password,
+        [MaxAccessCount] = @MaxAccessCount,
+        [AccessCount] = @AccessCount,
+        [CreationDate] = @CreationDate,
+        [RevisionDate] = @RevisionDate,
+        [ExpirationDate] = @ExpirationDate,
+        [DeletionDate] = @DeletionDate,
+        [Disabled] = @Disabled,
+        [HideEmail] = @HideEmail,
+        [CipherId] = @CipherId,
+        [Emails] = @Emails,
+        [AuthType] = @AuthType
+    WHERE
+        [Id] = @Id
 
     IF @UserId IS NOT NULL
-BEGIN
-EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
-END
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    END
     -- TODO: OrganizationId bump?
 END
 GO
