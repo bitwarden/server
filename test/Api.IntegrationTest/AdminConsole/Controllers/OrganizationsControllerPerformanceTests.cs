@@ -11,6 +11,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Bit.Seeder.Recipes;
+using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 using Xunit.Abstractions;
@@ -34,7 +35,8 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
+        var manglerService = new NoOpManglerService();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -84,7 +86,8 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
+        var manglerService = new NoOpManglerService();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 

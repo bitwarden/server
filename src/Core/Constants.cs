@@ -160,7 +160,6 @@ public static class FeatureFlagKeys
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
-    public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
@@ -168,6 +167,7 @@ public static class FeatureFlagKeys
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
+    public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
 
     /* Autofill Team */
     public const string SSHAgent = "ssh-agent";
@@ -253,6 +253,7 @@ public static class FeatureFlagKeys
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
+    public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
