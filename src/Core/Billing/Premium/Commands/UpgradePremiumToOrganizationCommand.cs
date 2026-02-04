@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -28,12 +27,14 @@ public interface IUpgradePremiumToOrganizationCommand
     /// <param name="organizationName">The name for the new organization.</param>
     /// <param name="key">The encrypted organization key for the owner.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
+    /// <param name="billingAddress">The billing address for tax calculation.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
         string organizationName,
         string key,
-        PlanType targetPlanType);
+        PlanType targetPlanType,
+        Payment.Models.BillingAddress billingAddress);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -51,7 +52,8 @@ public class UpgradePremiumToOrganizationCommand(
         User user,
         string organizationName,
         string key,
-        PlanType targetPlanType) => HandleAsync<None>(async () =>
+        PlanType targetPlanType,
+        Payment.Models.BillingAddress billingAddress) => HandleAsync<None>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -74,7 +76,7 @@ public class UpgradePremiumToOrganizationCommand(
 
         if (passwordManagerItem == null)
         {
-            return new BadRequest("Premium subscription item not found.");
+            return new BadRequest("Premium subscription password manager item not found.");
         }
 
         var usersPremiumPlan = premiumPlans.First(p => p.Seat.StripePriceId == passwordManagerItem.Price.Id);
@@ -85,19 +87,9 @@ public class UpgradePremiumToOrganizationCommand(
         // Build the list of subscription item updates
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
 
-        // Delete the user's specific password manager item
-        subscriptionItemOptions.Add(new SubscriptionItemOptions
-        {
-            Id = passwordManagerItem.Id,
-            Deleted = true
-        });
-
         // Delete the storage item if it exists for this user's plan
         var storageItem = currentSubscription.Items.Data.FirstOrDefault(i =>
             i.Price.Id == usersPremiumPlan.Storage.StripePriceId);
-
-        // Capture the previous additional storage quantity for potential revert
-        var previousAdditionalStorage = storageItem?.Quantity ?? 0;
 
         if (storageItem != null)
         {
@@ -113,6 +105,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
             {
+                Id = passwordManagerItem.Id,
                 Price = targetPlan.PasswordManager.StripePlanId,
                 Quantity = 1
             });
@@ -121,6 +114,7 @@ public class UpgradePremiumToOrganizationCommand(
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
             {
+                Id = passwordManagerItem.Id,
                 Price = targetPlan.PasswordManager.StripeSeatPlanId,
                 Quantity = seats
             });
@@ -133,14 +127,12 @@ public class UpgradePremiumToOrganizationCommand(
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = subscriptionItemOptions,
-            ProrationBehavior = StripeConstants.ProrationBehavior.None,
+            ProrationBehavior = StripeConstants.ProrationBehavior.AlwaysInvoice,
+            BillingCycleAnchor = SubscriptionBillingCycleAnchor.Unchanged,
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             Metadata = new Dictionary<string, string>
             {
                 [StripeConstants.MetadataKeys.OrganizationId] = organizationId.ToString(),
-                [StripeConstants.MetadataKeys.PreviousPremiumPriceId] = usersPremiumPlan.Seat.StripePriceId,
-                [StripeConstants.MetadataKeys.PreviousPeriodEndDate] = currentSubscription.GetCurrentPeriodEnd()?.ToString("O") ?? string.Empty,
-                [StripeConstants.MetadataKeys.PreviousAdditionalStorage] = previousAdditionalStorage.ToString(),
-                [StripeConstants.MetadataKeys.PreviousPremiumUserId] = user.Id.ToString(),
                 [StripeConstants.MetadataKeys.UserId] = string.Empty // Remove userId to unlink subscription from User
             }
         };
@@ -152,7 +144,7 @@ public class UpgradePremiumToOrganizationCommand(
             Name = organizationName,
             BillingEmail = user.Email,
             PlanType = targetPlan.Type,
-            Seats = (short)seats,
+            Seats = seats,
             MaxCollections = targetPlan.PasswordManager.MaxCollections,
             MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
@@ -181,6 +173,16 @@ public class UpgradePremiumToOrganizationCommand(
             GatewayCustomerId = user.GatewayCustomerId,
             GatewaySubscriptionId = currentSubscription.Id
         };
+
+        // Update customer billing address for tax calculation
+        await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode
+            }
+        });
 
         // Update the subscription in Stripe
         await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
