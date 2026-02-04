@@ -11,6 +11,7 @@ using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Mailer;
@@ -135,7 +136,11 @@ public class SendOrganizationInvitesCommand(
         ExpiringToken token,
         string inviterEmail)
     {
-        if (PlanConstants.EnterprisePlanTypes.Contains(orgInvitesInfo.PlanType) || PlanConstants.TeamsPlanTypes.Contains(orgInvitesInfo.PlanType))
+        if (PlanConstants.EnterprisePlanTypes.Contains(orgInvitesInfo.PlanType) ||
+            PlanConstants.TeamsPlanTypes.Contains(orgInvitesInfo.PlanType) ||
+            orgInvitesInfo.PlanType == PlanType.TeamsStarter ||
+            orgInvitesInfo.PlanType == PlanType.TeamsStarter2023 ||
+            orgInvitesInfo.PlanType == PlanType.Custom)
         {
             if (userHasExistingUser)
             {
