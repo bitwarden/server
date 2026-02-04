@@ -37,6 +37,13 @@ public class SendEmailOtpRequestValidator(
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         }
 
+        /*
+         * This is somewhat contradictory to our process where a poor shape means invalid_request and invalid
+         * data is invalid_grant.
+         * In this case the shape is correct and the data is invalid but to protect against enumeration we treat incorrect emails
+         * as invalid requests. The response for a request with a correct email which needs an OTP and a request
+         * that has an invalid email need to be the same otherwise an attacker could enumerate until a valid email is found.
+         */
         if (!authMethod.emails.Contains(email))
         {
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
