@@ -1,6 +1,6 @@
 ﻿using Bit.Seeder.Data.Enums;
 
-namespace Bit.Seeder.Data;
+namespace Bit.Seeder.Data.Static;
 
 internal sealed record OrgUnit(string Name, string[]? SubUnits = null);
 
@@ -11,7 +11,7 @@ internal sealed record OrgStructure(OrgStructureModel Model, OrgUnit[] Units);
 /// </summary>
 internal static class OrgStructures
 {
-    public static readonly OrgStructure Traditional = new(OrgStructureModel.Traditional,
+    internal static readonly OrgStructure Traditional = new(OrgStructureModel.Traditional,
     [
         new("Executive", ["CEO Office", "Strategy", "Board Relations"]),
         new("Finance", ["Accounting", "FP&A", "Treasury", "Tax", "Audit"]),
@@ -27,7 +27,7 @@ internal static class OrgStructures
         new("Product", ["Product Management", "UX Design", "User Research", "Product Analytics"])
     ]);
 
-    public static readonly OrgStructure Spotify = new(OrgStructureModel.Spotify,
+    internal static readonly OrgStructure Spotify = new(OrgStructureModel.Spotify,
     [
         // Tribes
         new("Payments Tribe", ["Checkout Squad", "Fraud Prevention Squad", "Billing Squad", "Payment Methods Squad"]),
@@ -48,7 +48,7 @@ internal static class OrgStructures
         new("Developer Experience Guild")
     ]);
 
-    public static readonly OrgStructure Modern = new(OrgStructureModel.Modern,
+    internal static readonly OrgStructure Modern = new(OrgStructureModel.Modern,
     [
         // Feature Teams
         new("Auth Team", ["Identity", "SSO", "MFA", "Passwordless"]),
@@ -72,9 +72,9 @@ internal static class OrgStructures
         new("Quality", ["Testing Strategy", "Release Quality", "Production Health"])
     ]);
 
-    public static readonly OrgStructure[] All = [Traditional, Spotify, Modern];
+    internal static readonly OrgStructure[] All = [Traditional, Spotify, Modern];
 
-    public static OrgStructure GetStructure(OrgStructureModel model) => model switch
+    internal static OrgStructure GetStructure(OrgStructureModel model) => model switch
     {
         OrgStructureModel.Traditional => Traditional,
         OrgStructureModel.Spotify => Spotify,

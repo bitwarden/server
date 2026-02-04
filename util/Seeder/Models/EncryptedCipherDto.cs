@@ -25,6 +25,18 @@ public class EncryptedCipherDto
     [JsonPropertyName("login")]
     public EncryptedLoginDto? Login { get; set; }
 
+    [JsonPropertyName("card")]
+    public EncryptedCardDto? Card { get; set; }
+
+    [JsonPropertyName("identity")]
+    public EncryptedIdentityDto? Identity { get; set; }
+
+    [JsonPropertyName("secureNote")]
+    public EncryptedSecureNoteDto? SecureNote { get; set; }
+
+    [JsonPropertyName("sshKey")]
+    public EncryptedSshKeyDto? SshKey { get; set; }
+
     [JsonPropertyName("fields")]
     public List<EncryptedFieldDto>? Fields { get; set; }
 
@@ -93,4 +105,100 @@ public class EncryptedFieldDto
 
     [JsonPropertyName("linkedId")]
     public int? LinkedId { get; set; }
+}
+
+public class EncryptedCardDto
+{
+    [JsonPropertyName("cardholderName")]
+    public string? CardholderName { get; set; }
+
+    [JsonPropertyName("brand")]
+    public string? Brand { get; set; }
+
+    [JsonPropertyName("number")]
+    public string? Number { get; set; }
+
+    [JsonPropertyName("expMonth")]
+    public string? ExpMonth { get; set; }
+
+    [JsonPropertyName("expYear")]
+    public string? ExpYear { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+}
+
+public class EncryptedIdentityDto
+{
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; set; }
+
+    [JsonPropertyName("middleName")]
+    public string? MiddleName { get; set; }
+
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; set; }
+
+    [JsonPropertyName("address1")]
+    public string? Address1 { get; set; }
+
+    [JsonPropertyName("address2")]
+    public string? Address2 { get; set; }
+
+    [JsonPropertyName("address3")]
+    public string? Address3 { get; set; }
+
+    [JsonPropertyName("city")]
+    public string? City { get; set; }
+
+    [JsonPropertyName("state")]
+    public string? State { get; set; }
+
+    [JsonPropertyName("postalCode")]
+    public string? PostalCode { get; set; }
+
+    [JsonPropertyName("country")]
+    public string? Country { get; set; }
+
+    [JsonPropertyName("company")]
+    public string? Company { get; set; }
+
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
+
+    [JsonPropertyName("phone")]
+    public string? Phone { get; set; }
+
+    [JsonPropertyName("ssn")]
+    public string? SSN { get; set; }
+
+    [JsonPropertyName("username")]
+    public string? Username { get; set; }
+
+    [JsonPropertyName("passportNumber")]
+    public string? PassportNumber { get; set; }
+
+    [JsonPropertyName("licenseNumber")]
+    public string? LicenseNumber { get; set; }
+}
+
+public class EncryptedSecureNoteDto
+{
+    [JsonPropertyName("type")]
+    public int Type { get; set; }
+}
+
+public class EncryptedSshKeyDto
+{
+    [JsonPropertyName("privateKey")]
+    public string? PrivateKey { get; set; }
+
+    [JsonPropertyName("publicKey")]
+    public string? PublicKey { get; set; }
+
+    [JsonPropertyName("fingerprint")]
+    public string? Fingerprint { get; set; }
 }
