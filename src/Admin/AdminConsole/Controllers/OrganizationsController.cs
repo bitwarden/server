@@ -254,7 +254,8 @@ public class OrganizationsController : Controller
             BillingEmail = organization.BillingEmail,
             Status = organization.Status,
             PlanType = organization.PlanType,
-            Seats = organization.Seats
+            Seats = organization.Seats,
+            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
         };
 
         if (model.PlanType.HasValue)
