@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Test.Common.AutoFixture.Attributes;
 

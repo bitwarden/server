@@ -105,13 +105,13 @@ public class RegisterFinishRequestModel : IValidatableObject
         // https://bitwarden.atlassian.net/browse/PM-27326
         return new RegisterFinishData
         {
-            MasterPasswordUnlockData = MasterPasswordUnlock?.ToData() ?? 
+            MasterPasswordUnlockData = MasterPasswordUnlock?.ToData() ??
                 new MasterPasswordUnlockData
                 {
                     Kdf = new KdfSettings
                     {
                         KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
-                        Iterations = KdfIterations  ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+                        Iterations = KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
                         // KdfMemory and KdfParallelism are optional (only used for Argon2id)
                         Memory = KdfMemory,
                         Parallelism = KdfParallelism,
@@ -120,14 +120,14 @@ public class RegisterFinishRequestModel : IValidatableObject
                     // PM-28827 To be added when MasterPasswordSalt is added to the user column
                     Salt = Email.ToLowerInvariant().Trim(),
                 },
-            UserAccountKeysData = AccountKeys?.ToAccountKeysData() ?? 
+            UserAccountKeysData = AccountKeys?.ToAccountKeysData() ??
                 new UserAccountKeysData
                 {
                     PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData
                     (
-                        UserAsymmetricKeys?.EncryptedPrivateKey ?? 
-                            throw new Exception("WrappedPrivateKey couldn't be found in either AccountKeys or UserAsymmetricKeys."), 
-                        UserAsymmetricKeys?.PublicKey ?? 
+                        UserAsymmetricKeys?.EncryptedPrivateKey ??
+                            throw new Exception("WrappedPrivateKey couldn't be found in either AccountKeys or UserAsymmetricKeys."),
+                        UserAsymmetricKeys?.PublicKey ??
                             throw new Exception("PublicKey couldn't be found in either AccountKeys or UserAsymmetricKeys")
                     ),
                 },
@@ -137,7 +137,7 @@ public class RegisterFinishRequestModel : IValidatableObject
                     Kdf = new KdfSettings
                     {
                         KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
-                        Iterations = KdfIterations  ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+                        Iterations = KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
                         // KdfMemory and KdfParallelism are optional (only used for Argon2id)
                         Memory = KdfMemory,
                         Parallelism = KdfParallelism,
@@ -257,7 +257,7 @@ public class RegisterFinishRequestModel : IValidatableObject
         if (AccountKeys == null && UserAsymmetricKeys == null)
         {
             yield return new ValidationResult(
-                $"{nameof(AccountKeys.PublicKeyEncryptionKeyPair.PublicKey)} and {nameof(AccountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey)} not found in RequestModel", 
+                $"{nameof(AccountKeys.PublicKeyEncryptionKeyPair.PublicKey)} and {nameof(AccountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey)} not found in RequestModel",
                 [nameof(AccountKeys.PublicKeyEncryptionKeyPair.PublicKey), nameof(AccountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey)]);
         }
 

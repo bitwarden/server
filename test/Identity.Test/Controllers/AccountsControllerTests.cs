@@ -24,8 +24,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
-using SignatureKeyPairRequestModelCustomizeAttribute = Bit.Test.Common.AutoFixture.SignatureKeyPairRequestModelCustomizeAttribute;
 using Xunit;
+using SignatureKeyPairRequestModelCustomizeAttribute = Bit.Test.Common.AutoFixture.SignatureKeyPairRequestModelCustomizeAttribute;
 
 namespace Bit.Identity.Test.Controllers;
 
@@ -396,7 +396,7 @@ public class AccountsControllerTests : IDisposable
             u.KdfParallelism == legacyUser.KdfParallelism &&
             u.Key == legacyUser.Key
         ), legacyData, orgInviteToken, organizationUserId);
-        
+
         Assert.NotNull(newResult);
         await _registerUserCommand.Received(1).RegisterUserViaOrganizationInviteToken(Arg.Is<User>(u =>
             u.Email == newUser.Email &&
@@ -479,7 +479,7 @@ public class AccountsControllerTests : IDisposable
 
         _registerUserCommand.RegisterUserViaOrganizationInviteToken(Arg.Is<User>(u =>
                 u.Email == newUser.Email &&
-                u.MasterPasswordHint == newUser.MasterPasswordHint             
+                u.MasterPasswordHint == newUser.MasterPasswordHint
             ), newData, orgInviteToken, organizationUserId)
             .Returns(Task.FromResult(failedIdentityResult));
 
@@ -825,7 +825,7 @@ public class AccountsControllerTests : IDisposable
         _registerUserCommand
             .RegisterUserViaEmailVerificationToken(Arg.Any<User>(), legacyData, emailVerificationToken)
             .Returns(Task.FromResult(IdentityResult.Success));
-            
+
         _registerUserCommand
             .RegisterUserViaEmailVerificationToken(Arg.Any<User>(), newData, emailVerificationToken)
             .Returns(Task.FromResult(IdentityResult.Success));
@@ -937,7 +937,7 @@ public class AccountsControllerTests : IDisposable
         _registerUserCommand
             .RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), newData, orgInviteToken, organizationUserId)
             .Returns(Task.FromResult(IdentityResult.Success));
-            
+
         _registerUserCommand
             .RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), legacyData, orgInviteToken, organizationUserId)
             .Returns(Task.FromResult(IdentityResult.Success));

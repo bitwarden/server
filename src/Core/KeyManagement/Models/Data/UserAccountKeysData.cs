@@ -1,4 +1,4 @@
-namespace Bit.Core.KeyManagement.Models.Data;
+﻿namespace Bit.Core.KeyManagement.Models.Data;
 
 /// <summary>
 /// Represents an expanded account cryptographic state for a user. Expanded here means

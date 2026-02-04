@@ -298,7 +298,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             }
 
             // Force valid signature algorithm and encrypted strings to avoid model validation failure.
-            requestModel.AccountKeys = new AccountKeysRequestModel 
+            requestModel.AccountKeys = new AccountKeysRequestModel
             {
                 UserKeyEncryptedAccountPrivateKey = DefaultEncryptedString,
                 AccountPublicKey = keys.AccountPublicKey,

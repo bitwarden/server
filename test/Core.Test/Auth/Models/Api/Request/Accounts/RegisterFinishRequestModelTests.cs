@@ -208,7 +208,7 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(legacyData.MasterPasswordAuthenticationData.Kdf.Parallelism, kdfParallelism);
         Assert.Equal(legacyData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
         Assert.Equal(legacyData.MasterPasswordAuthenticationData.Salt, email.ToLowerInvariant().Trim());
-        
+
 
         Assert.True(newData.IsV2Encryption());
         Assert.Equal(newData.MasterPasswordUnlockData.Kdf, kdfRequest.ToData());
@@ -223,8 +223,8 @@ public class RegisterFinishRequestModelTests
     [Theory]
     [BitAutoData]
     [SignatureKeyPairRequestModelCustomize]
-    public void ToUser_Returns_User(string email, string masterPasswordHint, AccountKeysRequestModel accountKeysRequest, 
-        KdfRequestModel kdfRequest, string masterPasswordAuthenticationHash, string userSymmetricKey, 
+    public void ToUser_Returns_User(string email, string masterPasswordHint, AccountKeysRequestModel accountKeysRequest,
+        KdfRequestModel kdfRequest, string masterPasswordAuthenticationHash, string userSymmetricKey,
         KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         // Arrange

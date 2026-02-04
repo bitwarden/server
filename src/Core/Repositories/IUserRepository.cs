@@ -92,7 +92,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="updateUserDataActions">Actions to update user data.</param>
     /// <returns>On success</returns>
     Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions);
-    
+
     UpdateUserData SetRegisterFinishUserData(Guid userId, RegisterFinishData registerFinishData);
 }
 
