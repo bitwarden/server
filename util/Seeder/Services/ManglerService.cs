@@ -1,4 +1,6 @@
-﻿namespace Bit.Seeder.Services;
+﻿using System.Globalization;
+
+namespace Bit.Seeder.Services;
 
 /// <summary>
 /// Scoped stateful implementation that mangles strings with a unique prefix.
@@ -26,4 +28,16 @@ public class ManglerService : IManglerService
     }
 
     public bool IsEnabled => true;
+
+    /// <summary>
+    /// Helper for generating unique identifier suffixes to prevent collisions in test data.
+    /// "Mangling" adds a random suffix to test data identifiers (usernames, emails, org names, etc.)
+    /// to ensure uniqueness across multiple test runs and parallel test executions.
+    /// </summary>
+    private class MangleId
+    {
+        private readonly string _value = Random.Shared.NextInt64().ToString("x", CultureInfo.InvariantCulture)[..8];
+
+        public override string ToString() => _value;
+    }
 }
