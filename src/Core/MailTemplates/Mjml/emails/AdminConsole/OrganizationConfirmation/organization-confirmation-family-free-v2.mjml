@@ -43,7 +43,7 @@
                         padding="0px"
                         width="155px"
                         alt="Business Building"
-                        src="https://assets.bitwarden.com/email/v1/spot-enterprise.png">
+                        src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png">
                 </mj-image>
             </mj-column>
         </mj-section>
@@ -182,7 +182,7 @@
                 <mj-column width="159px">
                     <mj-image
                             href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744"
-                            src="https://assets.bitwarden.com/email/v1/App-store.png"
+                            src="https://assets.bitwarden.com/email/v1/ac-apple-store.png"
                             alt="Download on the App Store"
                             width="135px"
                             height="40px"
@@ -192,7 +192,7 @@
                 <mj-column  width="140px">
                     <mj-image
                             href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden"
-                            src="https://assets.bitwarden.com/email/v1/google-play-badge.png"
+                            src="https://assets.bitwarden.com/email/v1/ac-google-play.png"
                             alt="Get it on Google Play"
                             width="140px"
                             height="40px"
