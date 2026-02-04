@@ -1,7 +1,7 @@
-﻿
+﻿using System.Security.Cryptography;
+using System.Text;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Generators;
-using Bit.Seeder.Helpers;
 using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Data;
@@ -36,9 +36,19 @@ internal sealed class GeneratorContext
     /// </summary>
     public static GeneratorContext FromOptions(OrganizationVaultOptions options)
     {
-        var seed = options.Seed ?? StableHash.ToInt32(options.Domain);
+        var seed = options.Seed ?? DeriveStableSeed(options.Domain);
         var region = options.Region ?? GeographicRegion.Global;
         return new GeneratorContext(seed, region, options);
+    }
+
+    /// <summary>
+    /// Derives a stable 32-bit seed from a domain string using SHA256.
+    /// Same input always produces same output for deterministic generation.
+    /// </summary>
+    private static int DeriveStableSeed(string domain)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(domain));
+        return BitConverter.ToInt32(bytes, 0);
     }
 
     /// <summary>

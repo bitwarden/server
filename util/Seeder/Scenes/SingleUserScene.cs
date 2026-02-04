@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Seeder.Factories;
-using Bit.Seeder.Helpers;
+using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Scenes;
@@ -23,7 +23,8 @@ public struct SingleUserSceneResult
 /// </summary>
 public class SingleUserScene(
     IPasswordHasher<User> passwordHasher,
-    IUserRepository userRepository) : IScene<SingleUserScene.Request, SingleUserSceneResult>
+    IUserRepository userRepository,
+    IManglerService manglerService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
     {
@@ -35,12 +36,11 @@ public class SingleUserScene(
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
     {
-        var mangler = new EmailMangler();
-        var mangledEmail = mangler.Mangle(request.Email);
-
+        // Pass service to factory - factory will call Mangle()
         var user = UserSeeder.Create(
-            mangledEmail,
+            request.Email,
             passwordHasher,
+            manglerService,
             request.EmailVerified,
             request.Premium);
 
@@ -57,6 +57,6 @@ public class SingleUserScene(
                 PrivateKey = user.PrivateKey!,
                 ApiKey = user.ApiKey!,
             },
-            mangleMap: mangler.GetMangleMap());
+            mangleMap: manglerService.GetMangleMap());
     }
 }

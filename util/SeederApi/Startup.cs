@@ -30,6 +30,7 @@ public class Startup
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
         services.AddTestPlayIdTracking(globalSettings);
+        services.AddManglerService(globalSettings);
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 

@@ -12,6 +12,7 @@ using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
+using Bit.Seeder.Services;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
@@ -32,7 +33,8 @@ namespace Bit.Seeder.Recipes;
 public class OrganizationWithVaultRecipe(
     DatabaseContext db,
     IMapper mapper,
-    IPasswordHasher<User> passwordHasher)
+    IPasswordHasher<User> passwordHasher,
+    IManglerService manglerService)
 {
     private const int _minimumOrgSeats = 1000;
 
@@ -60,7 +62,7 @@ public class OrganizationWithVaultRecipe(
             options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner user via factory
-        var ownerUser = UserSeeder.Create($"owner@{options.Domain}", passwordHasher);
+        var ownerUser = UserSeeder.Create($"owner@{options.Domain}", passwordHasher, manglerService);
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -73,8 +75,9 @@ public class OrganizationWithVaultRecipe(
         for (var i = 0; i < options.Users; i++)
         {
             var email = $"user{i}@{options.Domain}";
-            var userKeys = RustSdkService.GenerateUserKeys(email, UserSeeder.DefaultPassword);
-            var memberUser = UserSeeder.Create(email, passwordHasher, keys: userKeys);
+            var mangledEmail = manglerService.Mangle(email);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, UserSeeder.DefaultPassword);
+            var memberUser = UserSeeder.Create(mangledEmail, passwordHasher, manglerService, keys: userKeys);
             memberUsersWithKeys.Add(new UserWithKey(memberUser, userKeys.Key));
 
             var status = useRealisticMix

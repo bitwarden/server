@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
+using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Factories;
@@ -13,16 +14,20 @@ internal static class UserSeeder
     internal static User Create(
         string email,
         IPasswordHasher<User> passwordHasher,
+        IManglerService manglerService,
         bool emailVerified = true,
         bool premium = false,
         UserKeys? keys = null)
     {
-        keys ??= RustSdkService.GenerateUserKeys(email, DefaultPassword);
+        // When keys are provided, caller owns email/key consistency - don't mangle
+        var mangledEmail = keys == null ? manglerService.Mangle(email) : email;
+
+        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, DefaultPassword);
 
         var user = new User
         {
             Id = CoreHelpers.GenerateComb(),
-            Email = email,
+            Email = mangledEmail,
             EmailVerified = emailVerified,
             MasterPassword = null,
             SecurityStamp = Guid.NewGuid().ToString(),
@@ -32,7 +37,7 @@ internal static class UserSeeder
             Premium = premium,
             ApiKey = Guid.NewGuid().ToString("N")[..30],
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 5_000,
+            KdfIterations = 5_000
         };
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);

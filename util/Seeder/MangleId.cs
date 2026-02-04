@@ -9,13 +9,7 @@ namespace Bit.Seeder;
 /// </summary>
 public class MangleId
 {
-    public readonly string Value;
-
-    public MangleId()
-    {
-        // Generate a short random string (6 char) to use as the mangle ID
-        Value = Random.Shared.NextInt64().ToString("x", CultureInfo.InvariantCulture).Substring(0, 8);
-    }
+    public readonly string Value = Random.Shared.NextInt64().ToString("x", CultureInfo.InvariantCulture)[..8];
 
     public override string ToString() => Value;
 }

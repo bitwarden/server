@@ -102,7 +102,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 - Implement `IScene<TRequest>` or `IScene<TRequest, TResult>`
 - Create complete, realistic test scenarios
-- Use `EmailMangler` for uniqueness—each Scene creates its own instance for test isolation
+- Receive `IManglerService` via DI for test isolation—service handles mangling automatically
 - Return `SceneResult` with MangleMap (original→mangled) for test assertions
 - Async operations
 - CAN modify database state
@@ -151,12 +151,25 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - `Distributions/` - Percentage-based selection via `Distribution<T>`
 - `Enums/` - Public API enums
 
-#### Helpers
+#### Services
 
-**Purpose:** Shared utilities for seeding operations.
+**Purpose:** Injectable services that provide cross-cutting functionality via dependency injection.
 
-- `EmailMangler` - Unique prefix per instance for test isolation, returns MangleMap for assertions
-- `StableHash` - Deterministic hash from strings for seed generation (domain → seed)
+**`IManglerService`** - Context-aware string mangling for test isolation:
+
+- `Mangle(string)` - Transforms strings with unique prefixes for collision-free test data
+- `GetMangleMap()` - Returns dictionary of original → mangled mappings for assertions
+- `IsEnabled` - Indicates whether mangling is active
+
+**Implementations:**
+
+- `ManglerService` - Scoped stateful service that adds unique prefixes (`{prefix}+user@domain` for emails, `{prefix}-value` for strings)
+- `NoOpManglerService` - Singleton no-op service that returns values unchanged
+
+**Configuration:**
+
+- SeederApi: Enabled when `GlobalSettings.TestPlayIdTrackingEnabled` is true
+- DbSeederUtility: Enabled with `--mangle` CLI flag
 
 ---
 
