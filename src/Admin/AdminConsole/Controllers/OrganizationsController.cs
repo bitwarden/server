@@ -302,11 +302,12 @@ public class OrganizationsController : Controller
             var emailsToNotify =
                 (await _organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id))
                 .Where(x => x.Type == OrganizationUserType.Admin || x.Type == OrganizationUserType.Owner ||
-                            x.GetPermissions().ManageUsers)
-                .Select(x => x.Email);
+                            x.GetPermissions()?.ManageUsers == true)
+                .Select(x => x.Email)
+                .ToList();
 
             await _organizationAutoConfirmEnabledNotificationCommand.SendEmailAsync(
-                new OrganizationAutoConfirmEnabledNotificationRequest(organization, [.. emailsToNotify]));
+                new OrganizationAutoConfirmEnabledNotificationRequest(organization, emailsToNotify));
         }
 
         // Sync name/email changes to Stripe
