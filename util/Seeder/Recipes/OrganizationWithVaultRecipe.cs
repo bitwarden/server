@@ -1,12 +1,18 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Data;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Data.Generators;
+using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
+using Bit.Seeder.Services;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
@@ -27,8 +33,12 @@ namespace Bit.Seeder.Recipes;
 public class OrganizationWithVaultRecipe(
     DatabaseContext db,
     IMapper mapper,
-    IPasswordHasher<User> passwordHasher)
+    IPasswordHasher<User> passwordHasher,
+    IManglerService manglerService)
 {
+    private const int _minimumOrgSeats = 1000;
+
+    private GeneratorContext _ctx = null!;
 
     /// <summary>
     /// Tracks a user with their symmetric key for folder encryption.
@@ -42,15 +52,17 @@ public class OrganizationWithVaultRecipe(
     /// <returns>The organization ID.</returns>
     public Guid Seed(OrganizationVaultOptions options)
     {
-        var seats = Math.Max(options.Users + 1, 1000);
+        _ctx = GeneratorContext.FromOptions(options);
+
+        var seats = Math.Max(options.Users + 1, _minimumOrgSeats);
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         // Create organization via factory
-        var organization = OrganizationSeeder.CreateEnterprise(
+        var organization = OrganizationSeeder.Create(
             options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner user via factory
-        var ownerUser = UserSeeder.CreateUserWithSdkKeys($"owner@{options.Domain}", passwordHasher);
+        var ownerUser = UserSeeder.Create($"owner@{options.Domain}", passwordHasher, manglerService);
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -63,12 +75,13 @@ public class OrganizationWithVaultRecipe(
         for (var i = 0; i < options.Users; i++)
         {
             var email = $"user{i}@{options.Domain}";
-            var userKeys = RustSdkService.GenerateUserKeys(email, UserSeeder.DefaultPassword);
-            var memberUser = UserSeeder.CreateUserFromKeys(email, userKeys, passwordHasher);
+            var mangledEmail = manglerService.Mangle(email);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, UserSeeder.DefaultPassword);
+            var memberUser = UserSeeder.Create(mangledEmail, passwordHasher, manglerService, keys: userKeys);
             memberUsersWithKeys.Add(new UserWithKey(memberUser, userKeys.Key));
 
             var status = useRealisticMix
-                ? GetRealisticStatus(i, options.Users)
+                ? UserStatusDistributions.Realistic.Select(i, options.Users)
                 : OrganizationUserStatusType.Confirmed;
 
             var memberOrgKey = (status == OrganizationUserStatusType.Confirmed ||
@@ -102,7 +115,7 @@ public class OrganizationWithVaultRecipe(
 
         var collectionIds = CreateCollections(organization.Id, orgKeys.Key, options.StructureModel, confirmedOrgUserIds);
         CreateGroups(organization.Id, options.Groups, confirmedOrgUserIds);
-        CreateCiphers(organization.Id, orgKeys.Key, collectionIds, options.Ciphers, options.UsernamePattern, options.PasswordStrength, options.Region);
+        CreateCiphers(organization.Id, orgKeys.Key, collectionIds, options.Ciphers, options.PasswordDistribution, options.CipherTypeDistribution);
         CreateFolders(memberUsersWithKeys);
 
         return organization.Id;
@@ -120,12 +133,12 @@ public class OrganizationWithVaultRecipe(
         {
             var structure = OrgStructures.GetStructure(structureModel.Value);
             collections = structure.Units
-                .Select(unit => CollectionSeeder.CreateCollection(organizationId, orgKeyBase64, unit.Name))
+                .Select(unit => CollectionSeeder.Create(organizationId, orgKeyBase64, unit.Name))
                 .ToList();
         }
         else
         {
-            collections = [CollectionSeeder.CreateCollection(organizationId, orgKeyBase64, "Default Collection")];
+            collections = [CollectionSeeder.Create(organizationId, orgKeyBase64, "Default Collection")];
         }
 
         db.BulkCopy(collections);
@@ -138,7 +151,7 @@ public class OrganizationWithVaultRecipe(
                 {
                     var maxAssignments = Math.Min((userIndex % 3) + 1, collections.Count);
                     return Enumerable.Range(0, maxAssignments)
-                        .Select(j => CollectionSeeder.CreateCollectionUser(
+                        .Select(j => CollectionUserSeeder.Create(
                             collections[(userIndex + j) % collections.Count].Id,
                             orgUserId,
                             readOnly: j > 0,
@@ -154,7 +167,7 @@ public class OrganizationWithVaultRecipe(
     private void CreateGroups(Guid organizationId, int groupCount, List<Guid> orgUserIds)
     {
         var groupList = Enumerable.Range(0, groupCount)
-            .Select(i => GroupSeeder.CreateGroup(organizationId, $"Group {i + 1}"))
+            .Select(i => GroupSeeder.Create(organizationId, $"Group {i + 1}"))
             .ToList();
 
         db.BulkCopy(groupList);
@@ -163,7 +176,7 @@ public class OrganizationWithVaultRecipe(
         if (groupList.Count > 0 && orgUserIds.Count > 0)
         {
             var groupUsers = orgUserIds
-                .Select((orgUserId, i) => GroupSeeder.CreateGroupUser(
+                .Select((orgUserId, i) => GroupUserSeeder.Create(
                     groupList[i % groupList.Count].Id,
                     orgUserId))
                 .ToList();
@@ -176,24 +189,29 @@ public class OrganizationWithVaultRecipe(
         string orgKeyBase64,
         List<Guid> collectionIds,
         int cipherCount,
-        UsernamePatternType usernamePattern,
-        PasswordStrength passwordStrength,
-        GeographicRegion? region)
+        Distribution<PasswordStrength> passwordDistribution,
+        Distribution<CipherType> typeDistribution)
     {
+        if (cipherCount == 0)
+        {
+            return;
+        }
+
         var companies = Companies.All;
-        var usernameGenerator = new CipherUsernameGenerator(organizationId.GetHashCode(), usernamePattern, region);
 
         var cipherList = Enumerable.Range(0, cipherCount)
             .Select(i =>
             {
-                var company = companies[i % companies.Length];
-                return CipherSeeder.CreateOrganizationLoginCipher(
-                    organizationId,
-                    orgKeyBase64,
-                    name: $"{company.Name} ({company.Category})",
-                    username: usernameGenerator.GenerateVaried(company, i),
-                    password: Passwords.GetPassword(passwordStrength, i),
-                    uri: $"https://{company.Domain}");
+                var cipherType = typeDistribution.Select(i, cipherCount);
+                return cipherType switch
+                {
+                    CipherType.Login => CreateLoginCipher(i, organizationId, orgKeyBase64, companies, cipherCount, passwordDistribution),
+                    CipherType.Card => CreateCardCipher(i, organizationId, orgKeyBase64),
+                    CipherType.Identity => CreateIdentityCipher(i, organizationId, orgKeyBase64),
+                    CipherType.SecureNote => CreateSecureNoteCipher(i, organizationId, orgKeyBase64),
+                    CipherType.SSHKey => CreateSshKeyCipher(i, organizationId, orgKeyBase64),
+                    _ => throw new ArgumentException($"Unsupported cipher type: {cipherType}")
+                };
             })
             .ToList();
 
@@ -224,46 +242,77 @@ public class OrganizationWithVaultRecipe(
                     };
                 }
 
-                return new[] { primary };
+                return [primary];
             }).ToList();
 
             db.BulkCopy(collectionCiphers);
         }
     }
-
-    /// <summary>
-    /// Returns a realistic user status based on index position.
-    /// Distribution: 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked.
-    /// </summary>
-    private static OrganizationUserStatusType GetRealisticStatus(int index, int totalUsers)
+    private Cipher CreateLoginCipher(
+        int index,
+        Guid organizationId,
+        string orgKeyBase64,
+        Company[] companies,
+        int cipherCount,
+        Distribution<PasswordStrength> passwordDistribution)
     {
-        // Calculate bucket boundaries
-        var confirmedCount = (int)(totalUsers * 0.85);
-        var invitedCount = (int)(totalUsers * 0.05);
-        var acceptedCount = (int)(totalUsers * 0.05);
-        // Revoked gets the remainder
+        var company = companies[index % companies.Length];
+        return LoginCipherSeeder.Create(
+            orgKeyBase64,
+            name: $"{company.Name} ({company.Category})",
+            organizationId: organizationId,
+            username: _ctx.Username.GenerateByIndex(index, totalHint: _ctx.CipherCount, domain: company.Domain),
+            password: Passwords.GetPassword(index, cipherCount, passwordDistribution),
+            uri: $"https://{company.Domain}");
+    }
 
-        if (index < confirmedCount)
+    private Cipher CreateCardCipher(int index, Guid organizationId, string orgKeyBase64)
+    {
+        var card = _ctx.Card.GenerateByIndex(index);
+        return CardCipherSeeder.Create(
+            orgKeyBase64,
+            name: $"{card.CardholderName}'s {card.Brand}",
+            card: card,
+            organizationId: organizationId);
+    }
+
+    private Cipher CreateIdentityCipher(int index, Guid organizationId, string orgKeyBase64)
+    {
+        var identity = _ctx.Identity.GenerateByIndex(index);
+        var name = $"{identity.FirstName} {identity.LastName}";
+        if (!string.IsNullOrEmpty(identity.Company))
         {
-            return OrganizationUserStatusType.Confirmed;
+            name += $" ({identity.Company})";
         }
+        return IdentityCipherSeeder.Create(
+            orgKeyBase64,
+            name: name,
+            identity: identity,
+            organizationId: organizationId);
+    }
 
-        if (index < confirmedCount + invitedCount)
-        {
-            return OrganizationUserStatusType.Invited;
-        }
+    private Cipher CreateSecureNoteCipher(int index, Guid organizationId, string orgKeyBase64)
+    {
+        var (name, notes) = _ctx.SecureNote.GenerateByIndex(index);
+        return SecureNoteCipherSeeder.Create(
+            orgKeyBase64,
+            name: name,
+            organizationId: organizationId,
+            notes: notes);
+    }
 
-        if (index < confirmedCount + invitedCount + acceptedCount)
-        {
-            return OrganizationUserStatusType.Accepted;
-        }
-
-        return OrganizationUserStatusType.Revoked;
+    private Cipher CreateSshKeyCipher(int index, Guid organizationId, string orgKeyBase64)
+    {
+        var sshKey = SshKeyDataGenerator.GenerateByIndex(index);
+        return SshKeyCipherSeeder.Create(
+            orgKeyBase64,
+            name: $"SSH Key {index + 1}",
+            sshKey: sshKey,
+            organizationId: organizationId);
     }
 
     /// <summary>
     /// Creates personal vault folders for users with realistic distribution.
-    /// Folders are encrypted with each user's individual symmetric key.
     /// </summary>
     private void CreateFolders(List<UserWithKey> usersWithKeys)
     {
@@ -272,19 +321,15 @@ public class OrganizationWithVaultRecipe(
             return;
         }
 
-        var seed = usersWithKeys[0].User.Id.GetHashCode();
-        var random = new Random(seed);
-        var folderNameGenerator = new FolderNameGenerator(seed);
-
         var allFolders = usersWithKeys
             .SelectMany((uwk, userIndex) =>
             {
-                var folderCount = GetFolderCountForUser(userIndex, usersWithKeys.Count, random);
+                var folderCount = GetFolderCountForUser(userIndex, usersWithKeys.Count, _ctx.Seed);
                 return Enumerable.Range(0, folderCount)
-                    .Select(folderIndex => FolderSeeder.CreateFolder(
+                    .Select(folderIndex => FolderSeeder.Create(
                         uwk.User.Id,
                         uwk.SymmetricKey,
-                        folderNameGenerator.GetFolderName(userIndex * 15 + folderIndex)));
+                        _ctx.Folder.GetFolderName(userIndex * 15 + folderIndex)));
             })
             .ToList();
 
@@ -295,32 +340,24 @@ public class OrganizationWithVaultRecipe(
         }
     }
 
-    /// <summary>
-    /// Returns folder count based on user index position in the distribution.
-    /// Distribution: 35% Zero, 35% Few (1-3), 20% Some (4-7), 10% TooMany (10-15)
-    /// </summary>
-    private static int GetFolderCountForUser(int userIndex, int totalUsers, Random random)
+    private static int GetFolderCountForUser(int userIndex, int totalUsers, int seed)
     {
-        var zeroCount = (int)(totalUsers * 0.35);
-        var fewCount = (int)(totalUsers * 0.35);
-        var someCount = (int)(totalUsers * 0.20);
-        // TooMany gets the remainder
+        var (min, max) = FolderCountDistributions.Realistic.Select(userIndex, totalUsers);
+        return GetDeterministicValueInRange(userIndex, seed, min, max);
+    }
 
-        if (userIndex < zeroCount)
+    /// <summary>
+    /// Returns a deterministic value in [min, max) based on index and seed.
+    /// </summary>
+    private static int GetDeterministicValueInRange(int index, int seed, int min, int max)
+    {
+        unchecked
         {
-            return 0; // Zero folders
+            var hash = seed;
+            hash = hash * 397 ^ index;
+            hash = hash * 397 ^ min;
+            var range = max - min;
+            return min + ((hash % range) + range) % range;
         }
-
-        if (userIndex < zeroCount + fewCount)
-        {
-            return random.Next(1, 4); // Few: 1-3 folders
-        }
-
-        if (userIndex < zeroCount + fewCount + someCount)
-        {
-            return random.Next(4, 8); // Some: 4-7 folders
-        }
-
-        return random.Next(10, 16); // TooMany: 10-15 folders
     }
 }
