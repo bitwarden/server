@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
 using Event = Stripe.Event;

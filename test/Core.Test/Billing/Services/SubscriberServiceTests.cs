@@ -6,7 +6,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Enums;
-using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -19,7 +18,6 @@ using Xunit;
 using static Bit.Core.Test.Billing.Utilities;
 using Address = Stripe.Address;
 using Customer = Stripe.Customer;
-using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
