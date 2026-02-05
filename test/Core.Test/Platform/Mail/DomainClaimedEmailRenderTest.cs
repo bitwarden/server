@@ -16,7 +16,6 @@ public class DomainClaimedEmailRenderTest
     [Fact]
     public async Task RenderDomainClaimedEmail_ToVerifyTemplate()
     {
-        // Arrange
         var globalSettings = new GlobalSettings
         {
             Mail = new GlobalSettings.MailSettings
@@ -65,13 +64,10 @@ public class DomainClaimedEmailRenderTest
             "acme.com"
         );
 
-        // Act
         await mailService.SendClaimedDomainUserEmailAsync(emailList);
 
-        // Assert - Verify emails were sent
         await mailDeliveryService.Received(3).SendEmailAsync(Arg.Any<Bit.Core.Models.Mail.MailMessage>());
 
-        // Capture all the emails that were sent and verify content
         var calls = mailDeliveryService.ReceivedCalls()
             .Where(call => call.GetMethodInfo().Name == "SendEmailAsync")
             .ToList();
@@ -85,7 +81,6 @@ public class DomainClaimedEmailRenderTest
 
             var recipient = mailMessage.ToEmails.First();
 
-            // Verify key content is present in each email
             Assert.Contains("@acme.com", mailMessage.HtmlContent);
             Assert.Contains(recipient, mailMessage.HtmlContent);
             Assert.DoesNotContain("[at]", mailMessage.HtmlContent);
@@ -96,7 +91,6 @@ public class DomainClaimedEmailRenderTest
     [Fact(Skip = "For local development - requires MailCatcher at localhost:10250")]
     public async Task SendDomainClaimedEmail_ToMailCatcher()
     {
-        // Arrange
         var globalSettings = new GlobalSettings
         {
             Mail = new GlobalSettings.MailSettings
@@ -105,7 +99,7 @@ public class DomainClaimedEmailRenderTest
                 Smtp = new GlobalSettings.MailSettings.SmtpSettings
                 {
                     Host = "localhost",
-                    Port = 10250, // MailCatcher SMTP port from docker-compose.yml
+                    Port = 10250,
                     StartTls = false,
                     Ssl = false
                 }
@@ -145,24 +139,12 @@ public class DomainClaimedEmailRenderTest
             "acme.com"
         );
 
-        // Act
         await mailService.SendClaimedDomainUserEmailAsync(emailList);
-
-        // Assert
-        // Manual verification: View emails at http://localhost:1080
-        // Verify the emails contain:
-        //   - @acme.com (with proper @ and . characters)
-        //   - Full email addresses (alice@acme.com, bob@acme.com)
-        //   - NO [at] or [dot] replacements
-        //   - Roboto font styling
-        //   - Buildings icon at 155x155
-        //   - Bitwarden logo in blue header
     }
 
     [Fact(Skip = "This test sends actual emails and is for manual template verification only")]
     public async Task RenderDomainClaimedEmail_WithSpecialCharacters()
     {
-        // Arrange
         var globalSettings = new GlobalSettings
         {
             Mail = new GlobalSettings.MailSettings
@@ -208,10 +190,6 @@ public class DomainClaimedEmailRenderTest
             "example.com"
         );
 
-        // Act
         await mailService.SendClaimedDomainUserEmailAsync(emailList);
-
-        // Assert
-        // Manual verification: Check MailCatcher to verify @ and . are displayed correctly
     }
 }
