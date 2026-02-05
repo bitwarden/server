@@ -4,7 +4,6 @@
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Tax.Models;
@@ -123,28 +122,6 @@ public class PremiumUserBillingService(
         user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + (storage ?? 0));
 
         await userRepository.ReplaceAsync(user);
-    }
-
-    public async Task UpdatePaymentMethod(
-        User user,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        if (string.IsNullOrEmpty(user.GatewayCustomerId))
-        {
-            var customer = await CreateCustomerAsync(user,
-                new CustomerSetup { TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation });
-
-            user.Gateway = GatewayType.Stripe;
-            user.GatewayCustomerId = customer.Id;
-
-            await userRepository.ReplaceAsync(user);
-        }
-        else
-        {
-            await subscriberService.UpdatePaymentSource(user, tokenizedPaymentSource);
-            await subscriberService.UpdateTaxInformation(user, taxInformation);
-        }
     }
 
     private async Task<Customer> CreateCustomerAsync(
