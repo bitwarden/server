@@ -1,6 +1,6 @@
 ﻿using Bit.Seeder.Data.Enums;
 
-namespace Bit.Seeder.Data;
+namespace Bit.Seeder.Data.Static;
 
 internal sealed record Company(
     string Domain,
@@ -14,7 +14,7 @@ internal sealed record Company(
 /// </summary>
 internal static class Companies
 {
-    public static readonly Company[] NorthAmerica =
+    internal static readonly Company[] NorthAmerica =
     [
         // CRM & Sales
         new("salesforce.com", "Salesforce", CompanyCategory.CRM, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
@@ -47,7 +47,7 @@ internal static class Companies
         new("spotify.com", "Spotify", CompanyCategory.Streaming, CompanyType.Consumer, GeographicRegion.NorthAmerica)
     ];
 
-    public static readonly Company[] Europe =
+    internal static readonly Company[] Europe =
     [
         // Enterprise Software
         new("sap.com", "SAP", CompanyCategory.FinanceERP, CompanyType.Enterprise, GeographicRegion.Europe),
@@ -72,7 +72,7 @@ internal static class Companies
         new("adyen.com", "Adyen", CompanyCategory.Financial, CompanyType.Enterprise, GeographicRegion.Europe)
     ];
 
-    public static readonly Company[] AsiaPacific =
+    internal static readonly Company[] AsiaPacific =
     [
         // Chinese Tech Giants
         new("alibaba.com", "Alibaba", CompanyCategory.ECommerce, CompanyType.Hybrid, GeographicRegion.AsiaPacific),
@@ -96,9 +96,9 @@ internal static class Companies
         new("flipkart.com", "Flipkart", CompanyCategory.ECommerce, CompanyType.Consumer, GeographicRegion.AsiaPacific)
     ];
 
-    public static readonly Company[] All = [.. NorthAmerica, .. Europe, .. AsiaPacific];
+    internal static readonly Company[] All = [.. NorthAmerica, .. Europe, .. AsiaPacific];
 
-    public static Company[] Filter(
+    internal static Company[] Filter(
         CompanyType? type = null,
         GeographicRegion? region = null,
         CompanyCategory? category = null)
