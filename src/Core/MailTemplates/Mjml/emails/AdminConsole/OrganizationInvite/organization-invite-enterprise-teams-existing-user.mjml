@@ -15,10 +15,10 @@
     </mj-wrapper>
 
     <!-- Main Content -->
-    <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-section background-color="#fff" padding="10px 10px 10px 10px">
+    <mj-wrapper padding="5px 20px 8px 20px">
+      <mj-section background-color="#fff" padding="10px 10px 16px 10px">
         <mj-column>
-          <mj-text font-size="16px" line-height="24px" padding="15px 15px">
+          <mj-text font-size="16px" line-height="24px" padding="15px 15px 0px 15px">
             <b>{{OrganizationName}}</b> is rolling out Bitwarden to increase security and protect your sensitive data. Once you accept this invitation, you can:
           </mj-text>
         </mj-column>
@@ -38,9 +38,9 @@
         icon-alt="Share Icon"
         text="Share logins easily with your team."
       />
-      <mj-section background-color="#fff" padding="10px 10px 10px 10px">
+      <mj-section background-color="#fff" padding="0px 10px 12px 10px">
         <mj-column>
-          <mj-text font-size="12px" line-height="16px" color="#1B2029" padding="15px 15px">
+          <mj-text font-size="12px" line-height="16px" color="#1B2029" padding="0px 15px 15px 15px">
             {{#if InviterEmail}}
             This invitation was sent by <a href="mailto:{{InviterEmail}}" style="color: #175ddc; text-decoration: none;">{{InviterEmail}}</a> and expires {{ExpirationDate}}
             {{else}}
@@ -52,10 +52,10 @@
     </mj-wrapper>
 
     <!-- Policy Warning Section -->
-    <mj-wrapper padding="5px 20px 5px 20px">
+    <mj-wrapper padding="8px 20px 8px 20px">
       <mj-section background-color="#fff" padding="10px 10px">
         <mj-column>
-          <mj-text font-size="18px" line-height="28px" font-weight="500" padding="15px 15px 10px 15px">
+          <mj-text font-size="18px" line-height="28px" font-weight="500" padding="15px 15px 8px 15px">
             Your existing account will be owned by {{OrganizationName}}
           </mj-text>
           <mj-text font-size="16px" line-height="24px" padding="0px 15px 15px 15px">
@@ -66,7 +66,7 @@
     </mj-wrapper>
 
     <!-- Learn More Section -->
-    <mj-wrapper padding="5px 20px 10px 20px">
+    <mj-wrapper padding="8px 20px 10px 20px">
       <mj-bw-learn-more-footer />
     </mj-wrapper>
 
