@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
@@ -519,10 +518,11 @@ public class SubscriberServiceTests
             }
         };
 
-        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns(setupIntent.Id);
-
-        sutProvider.GetDependency<IStripeAdapter>().GetSetupIntentAsync(setupIntent.Id,
-            Arg.Is<SetupIntentGetOptions>(options => options.Expand.Contains("payment_method"))).Returns(setupIntent);
+        sutProvider.GetDependency<IStripeAdapter>().ListSetupIntentsAsync(
+            Arg.Is<SetupIntentListOptions>(options =>
+                options.Customer == customer.Id &&
+                options.Expand.Contains("data.payment_method")))
+            .Returns([setupIntent]);
 
         var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 

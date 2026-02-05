@@ -40,6 +40,7 @@
   - [Task 13: Update StripeEventService](#task-13-update-stripeeventservice)
   - [Task 14: Update GetPaymentMethodQuery](#task-14-update-getpaymentmethodquery)
   - [Task 15: Update HasPaymentMethodQuery](#task-15-update-haspaymentmethodquery)
+  - [Task 15a: Update SubscriberService.GetPaymentSourceAsync](#task-15a-update-subscriberservicegetpaymentsourceasync)
 - [Phase 5: Update SetupIntent Customer Assignment](#phase-5-update-setupintent-customer-assignment)
   - [Task 16: Update OrganizationBillingService.CreateCustomerAsync](#task-16-update-organizationbillingservicecreatecustomerasync)
   - [Task 17: Update ProviderBillingService.SetupCustomer](#task-17-update-providerbillingservicesetupcustomer)
@@ -1040,6 +1041,73 @@ git commit -m "refactor(billing): update HasPaymentMethodQuery to query Stripe b
 
 ---
 
+### Task 15a: Update SubscriberService.GetPaymentSourceAsync
+
+**Files:**
+- Modify: `src/Core/Billing/Services/Implementations/SubscriberService.cs`
+- Modify: `test/Core.Test/Billing/Services/SubscriberServiceTests.cs`
+
+**Step 1: Update GetPaymentSourceAsync to query Stripe by customer ID**
+
+Replace the cache-based lookup with a customer-based Stripe query:
+
+```csharp
+// Old:
+var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriberId);
+
+if (string.IsNullOrEmpty(setupIntentId))
+{
+    return null;
+}
+
+var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
+{
+    Expand = ["payment_method"]
+});
+
+return PaymentSource.From(setupIntent);
+
+// New:
+var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
+{
+    Customer = customer.Id,
+    Expand = ["data.payment_method"]
+});
+
+var unverifiedBankAccount = setupIntents?.FirstOrDefault(si => si.IsUnverifiedBankAccount());
+
+return unverifiedBankAccount != null ? PaymentSource.From(unverifiedBankAccount) : null;
+```
+
+**Step 2: Remove subscriberId parameter from method signature**
+
+The method currently takes `subscriberId` but it's no longer needed since we use `customer.Id`:
+
+```csharp
+// Old:
+private async Task<PaymentSource> GetPaymentSourceAsync(Guid subscriberId, Customer customer)
+
+// New:
+private async Task<PaymentSource> GetPaymentSourceAsync(Customer customer)
+```
+
+Update the caller at line 341 to remove the `subscriber.Id` argument.
+
+**Step 3: Update tests**
+
+**Step 4: Run tests**
+
+Run: `dotnet test test/Core.Test --filter "FullyQualifiedName~SubscriberService"`
+
+**Step 5: Commit**
+
+```bash
+git add src/Core/Billing/Services/Implementations/SubscriberService.cs test/Core.Test/Billing/Services/SubscriberServiceTests.cs
+git commit -m "refactor(billing): update SubscriberService.GetPaymentSourceAsync to query Stripe by customer ID"
+```
+
+---
+
 ## Phase 5: Update SetupIntent Customer Assignment
 
 ### Task 16: Update OrganizationBillingService.CreateCustomerAsync
@@ -1404,14 +1472,15 @@ Verify expected files changed.
 12. `refactor(billing):` update StripeEventService to use repository instead of cache
 13. `refactor(billing):` update GetPaymentMethodQuery to query Stripe by customer ID
 14. `refactor(billing):` update HasPaymentMethodQuery to query Stripe by customer ID
-15. `refactor(billing):` update OrganizationBillingService to set customer on SetupIntent
-16. `refactor(billing):` update ProviderBillingService.SetupCustomer to set customer on SetupIntent
-17. `refactor(billing):` update ProviderBillingService.SetupSubscription to query Stripe by customer
-18. `refactor(billing):` update UpdatePaymentMethodCommand to set customer on SetupIntent
-19. `refactor(billing):` remove bank account support from CreatePremiumCloudHostedSubscriptionCommand
-20. `refactor(billing):` remove SubscriberService.UpdatePaymentSource dead code
-21. `refactor(billing):` remove OrganizationBillingService.UpdatePaymentMethod dead code
-22. `refactor(billing):` remove ProviderBillingService.UpdatePaymentMethod dead code
-23. `refactor(billing):` remove PremiumUserBillingService dead methods, keep only Credit
-24. `refactor(billing):` remove UserService.SignUpPremiumAsync and ReplacePaymentMethodAsync dead code
-25. `refactor(billing):` remove ISetupIntentCache and SetupIntentDistributedCache
+15. `refactor(billing):` update SubscriberService.GetPaymentSourceAsync to query Stripe by customer ID
+16. `refactor(billing):` update OrganizationBillingService to set customer on SetupIntent
+17. `refactor(billing):` update ProviderBillingService.SetupCustomer to set customer on SetupIntent
+18. `refactor(billing):` update ProviderBillingService.SetupSubscription to query Stripe by customer
+19. `refactor(billing):` update UpdatePaymentMethodCommand to set customer on SetupIntent
+20. `refactor(billing):` remove bank account support from CreatePremiumCloudHostedSubscriptionCommand
+21. `refactor(billing):` remove SubscriberService.UpdatePaymentSource dead code
+22. `refactor(billing):` remove OrganizationBillingService.UpdatePaymentMethod dead code
+23. `refactor(billing):` remove ProviderBillingService.UpdatePaymentMethod dead code
+24. `refactor(billing):` remove PremiumUserBillingService dead methods, keep only Credit
+25. `refactor(billing):` remove UserService.SignUpPremiumAsync and ReplacePaymentMethodAsync dead code
+26. `refactor(billing):` remove ISetupIntentCache and SetupIntentDistributedCache

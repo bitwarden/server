@@ -4,7 +4,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -35,7 +34,6 @@ public class SubscriberService(
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
     IProviderRepository providerRepository,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ITaxService taxService,
     IUserRepository userRepository) : ISubscriberService
@@ -338,7 +336,7 @@ public class SubscriberService(
             Expand = ["default_source", "invoice_settings.default_payment_method"]
         });
 
-        return await GetPaymentSourceAsync(subscriber.Id, customer);
+        return await GetPaymentSourceAsync(customer);
     }
 
     public async Task<Subscription> GetSubscription(
@@ -695,9 +693,7 @@ public class SubscriberService(
 
     #region Shared Utilities
 
-    private async Task<PaymentSource> GetPaymentSourceAsync(
-        Guid subscriberId,
-        Customer customer)
+    private async Task<PaymentSource> GetPaymentSourceAsync(Customer customer)
     {
         if (customer.Metadata != null)
         {
@@ -720,21 +716,17 @@ public class SubscriberService(
 
         /*
          * attachedPaymentMethodDTO being null represents a case where we could be looking for the SetupIntent for an unverified "us_bank_account".
-         * We store the ID of this SetupIntent in the cache when we originally update the payment method.
+         * Query Stripe for SetupIntents associated with this customer.
          */
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriberId);
-
-        if (string.IsNullOrEmpty(setupIntentId))
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
         {
-            return null;
-        }
-
-        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
-        {
-            Expand = ["payment_method"]
+            Customer = customer.Id,
+            Expand = ["data.payment_method"]
         });
 
-        return PaymentSource.From(setupIntent);
+        var unverifiedBankAccount = setupIntents?.FirstOrDefault(si => si.IsUnverifiedBankAccount());
+
+        return unverifiedBankAccount != null ? PaymentSource.From(unverifiedBankAccount) : null;
     }
 
     #endregion
