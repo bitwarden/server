@@ -17,7 +17,6 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -68,7 +67,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
     private readonly IFeatureService _featureService;
-    private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
@@ -105,7 +103,6 @@ public class UserService : UserManager<User>, IUserService
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
         IFeatureService featureService,
-        IPremiumUserBillingService premiumUserBillingService,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
@@ -146,7 +143,6 @@ public class UserService : UserManager<User>, IUserService
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _featureService = featureService;
-        _premiumUserBillingService = premiumUserBillingService;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
@@ -882,78 +878,6 @@ public class UserService : UserManager<User>, IUserService
         await CheckPoliciesOnTwoFactorRemovalAsync(user);
 
         return true;
-    }
-
-    public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-        PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
-        TaxInfo taxInfo)
-    {
-        if (user.Premium)
-        {
-            throw new BadRequestException("Already a premium user.");
-        }
-
-        if (additionalStorageGb < 0)
-        {
-            throw new BadRequestException("You can't subtract storage!");
-        }
-
-        string paymentIntentClientSecret = null;
-        IStripePaymentService paymentService = null;
-        if (_globalSettings.SelfHosted)
-        {
-            if (license == null || !_licenseService.VerifyLicense(license))
-            {
-                throw new BadRequestException("Invalid license.");
-            }
-
-            var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
-
-            if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
-            {
-                throw new BadRequestException(exceptionMessage);
-            }
-
-            var dir = $"{_globalSettings.LicenseDirectory}/user";
-            Directory.CreateDirectory(dir);
-            using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
-            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
-        }
-        else
-        {
-            var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
-            await _premiumUserBillingService.Finalize(sale);
-        }
-
-        user.Premium = true;
-        user.RevisionDate = DateTime.UtcNow;
-
-        if (_globalSettings.SelfHosted)
-        {
-            user.MaxStorageGb = Constants.SelfHostedMaxStorageGb;
-            user.LicenseKey = license.LicenseKey;
-            user.PremiumExpirationDate = license.Expires;
-        }
-        else
-        {
-            user.LicenseKey = CoreHelpers.SecureRandomString(20);
-        }
-
-        try
-        {
-            await SaveUserAsync(user);
-            await _pushService.PushSyncVaultAsync(user.Id);
-        }
-        catch when (!_globalSettings.SelfHosted)
-        {
-            await paymentService.CancelAndRecoverChargesAsync(user);
-            throw;
-        }
-
-
-
-        return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
-            paymentIntentClientSecret);
     }
 
     public async Task UpdateLicenseAsync(User user, UserLicense license)
