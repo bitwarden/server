@@ -8,19 +8,11 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Bit.Core.Test.Platform.Mail;
 
 public class DomainClaimedEmailRenderTest
 {
-    private readonly ITestOutputHelper _output;
-
-    public DomainClaimedEmailRenderTest(ITestOutputHelper output)
-    {
-        _output = output;
-    }
-
     [Fact]
     public async Task RenderDomainClaimedEmail_ToVerifyTemplate()
     {
@@ -79,66 +71,25 @@ public class DomainClaimedEmailRenderTest
         // Assert - Verify emails were sent
         await mailDeliveryService.Received(3).SendEmailAsync(Arg.Any<Bit.Core.Models.Mail.MailMessage>());
 
-        // Capture all the emails that were sent
+        // Capture all the emails that were sent and verify content
         var calls = mailDeliveryService.ReceivedCalls()
             .Where(call => call.GetMethodInfo().Name == "SendEmailAsync")
             .ToList();
 
-        _output.WriteLine("✅ Emails enqueued successfully!");
-        _output.WriteLine($"Total emails sent: {calls.Count}");
-        _output.WriteLine("");
+        Assert.Equal(3, calls.Count);
 
-        // Output each email's content
-        int emailIndex = 0;
         foreach (var call in calls)
         {
             var mailMessage = call.GetArguments()[0] as Bit.Core.Models.Mail.MailMessage;
-            if (mailMessage != null)
-            {
-                emailIndex++;
-                _output.WriteLine($"📧 Email #{emailIndex} to: {string.Join(", ", mailMessage.ToEmails)}");
-                _output.WriteLine($"Subject: {mailMessage.Subject}");
-                _output.WriteLine("");
+            Assert.NotNull(mailMessage);
 
-                // Output full HTML content to see what's actually being rendered
-                _output.WriteLine("Full HTML Content:");
-                _output.WriteLine("---");
-                if (!string.IsNullOrEmpty(mailMessage.HtmlContent))
-                {
-                    _output.WriteLine(mailMessage.HtmlContent);
-                }
-                _output.WriteLine("---");
-                _output.WriteLine("");
+            var recipient = mailMessage.ToEmails.First();
 
-                _output.WriteLine("Full Text Content:");
-                _output.WriteLine("---");
-                if (!string.IsNullOrEmpty(mailMessage.TextContent))
-                {
-                    _output.WriteLine(mailMessage.TextContent);
-                }
-                _output.WriteLine("---");
-                _output.WriteLine("");
-
-                // Verify key content is present in each email
-                var recipient = mailMessage.ToEmails.First();
-
-                // Check if expected content exists
-                var hasAtAcme = mailMessage.HtmlContent?.Contains("@acme.com") ?? false;
-                var hasRecipient = mailMessage.HtmlContent?.Contains(recipient) ?? false;
-                var hasBracketAt = mailMessage.HtmlContent?.Contains("[at]") ?? false;
-                var hasBracketDot = mailMessage.HtmlContent?.Contains("[dot]") ?? false;
-
-                _output.WriteLine($"Content check for {recipient}:");
-                _output.WriteLine($"  - Contains '@acme.com': {hasAtAcme}");
-                _output.WriteLine($"  - Contains '{recipient}': {hasRecipient}");
-                _output.WriteLine($"  - Contains '[at]': {hasBracketAt}");
-                _output.WriteLine($"  - Contains '[dot]': {hasBracketDot}");
-
-                if (!hasAtAcme || !hasRecipient || hasBracketAt || hasBracketDot)
-                {
-                    _output.WriteLine($"⚠️ EMAIL CONTENT VALIDATION FAILED");
-                }
-            }
+            // Verify key content is present in each email
+            Assert.Contains("@acme.com", mailMessage.HtmlContent);
+            Assert.Contains(recipient, mailMessage.HtmlContent);
+            Assert.DoesNotContain("[at]", mailMessage.HtmlContent);
+            Assert.DoesNotContain("[dot]", mailMessage.HtmlContent);
         }
     }
 
@@ -198,18 +149,14 @@ public class DomainClaimedEmailRenderTest
         await mailService.SendClaimedDomainUserEmailAsync(emailList);
 
         // Assert
-        _output.WriteLine("✅ Emails sent to MailCatcher!");
-        _output.WriteLine($"Total emails sent: {testEmails.Count}");
-        _output.WriteLine("");
-        _output.WriteLine("🌐 View emails at: http://localhost:1080");
-        _output.WriteLine("");
-        _output.WriteLine("Verify the emails contain:");
-        _output.WriteLine("  - @acme.com (with proper @ and . characters)");
-        _output.WriteLine("  - Full email addresses (alice@acme.com, bob@acme.com)");
-        _output.WriteLine("  - NO [at] or [dot] replacements");
-        _output.WriteLine("  - Roboto font styling");
-        _output.WriteLine("  - Buildings icon at 155x155");
-        _output.WriteLine("  - Bitwarden logo in blue header");
+        // Manual verification: View emails at http://localhost:1080
+        // Verify the emails contain:
+        //   - @acme.com (with proper @ and . characters)
+        //   - Full email addresses (alice@acme.com, bob@acme.com)
+        //   - NO [at] or [dot] replacements
+        //   - Roboto font styling
+        //   - Buildings icon at 155x155
+        //   - Bitwarden logo in blue header
     }
 
     [Fact(Skip = "This test sends actual emails and is for manual template verification only")]
@@ -265,7 +212,6 @@ public class DomainClaimedEmailRenderTest
         await mailService.SendClaimedDomainUserEmailAsync(emailList);
 
         // Assert
-        _output.WriteLine("✅ Email with special characters sent!");
-        _output.WriteLine("Check MailCatcher to verify @ and . are displayed correctly");
+        // Manual verification: Check MailCatcher to verify @ and . are displayed correctly
     }
 }
