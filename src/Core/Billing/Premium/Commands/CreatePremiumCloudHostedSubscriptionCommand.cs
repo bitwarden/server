@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Commands;
@@ -52,7 +51,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     IBraintreeGateway braintreeGateway,
     IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     IUserService userService,
@@ -209,21 +207,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         var tokenizedPaymentMethod = paymentMethod.AsTokenized;
         switch (tokenizedPaymentMethod.Type)
         {
-            case TokenizablePaymentMethodType.BankAccount:
-                {
-                    var setupIntent =
-                        (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = tokenizedPaymentMethod.Token }))
-                        .FirstOrDefault();
-
-                    if (setupIntent == null)
-                    {
-                        _logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
-                        throw new BillingException();
-                    }
-
-                    await setupIntentCache.Set(user.Id, setupIntent.Id);
-                    break;
-                }
             case TokenizablePaymentMethodType.Card:
                 {
                     customerCreateOptions.PaymentMethod = tokenizedPaymentMethod.Token;
@@ -258,11 +241,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (tokenizedPaymentMethod.Type)
             {
-                case TokenizablePaymentMethodType.BankAccount:
-                    {
-                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
-                        break;
-                    }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
                     {
                         await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
