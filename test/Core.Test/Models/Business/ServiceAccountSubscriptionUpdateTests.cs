@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Stripe;
 using Xunit;
@@ -27,7 +27,7 @@ public class ServiceAccountSubscriptionUpdateTests
 
     public void UpgradeItemsOptions_ReturnsCorrectOptions(PlanType planType, Organization organization)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         organization.PlanType = planType;
         var subscription = new Subscription
         {
@@ -69,7 +69,7 @@ public class ServiceAccountSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually)]
     public void RevertItemsOptions_ReturnsCorrectOptions(PlanType planType, Organization organization)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = MockPlans.Get(planType);
         organization.PlanType = planType;
         var quantity = 5;
         var subscription = new Subscription

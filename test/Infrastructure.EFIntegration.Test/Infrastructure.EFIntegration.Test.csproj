@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
@@ -30,7 +32,6 @@
 
     <ItemGroup>
       <Folder Include="AutoFixture" />
-      <Folder Include="Tools\Repositories\" />
     </ItemGroup>
 
 </Project>

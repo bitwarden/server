@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.Auth.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -8,6 +9,7 @@ using Bit.Core.Settings;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -26,6 +28,7 @@ public class DeviceValidatorTests
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IDistributedCache _distributedCache;
+    private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly Logger<DeviceValidator> _logger;
 
     private readonly DeviceValidator _sut;
@@ -39,6 +42,7 @@ public class DeviceValidatorTests
         _currentContext = Substitute.For<ICurrentContext>();
         _userService = Substitute.For<IUserService>();
         _distributedCache = Substitute.For<IDistributedCache>();
+        _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _logger = new Logger<DeviceValidator>(Substitute.For<ILoggerFactory>());
         _sut = new DeviceValidator(
             _deviceService,
@@ -48,6 +52,7 @@ public class DeviceValidatorTests
             _currentContext,
             _userService,
             _distributedCache,
+            _twoFactorEmailService,
             _logger);
     }
 
@@ -320,14 +325,26 @@ public class DeviceValidatorTests
         Assert.True(result);
     }
 
-    [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_IsAuthRequest_SavesDevice_ReturnsTrue(
+    [Theory]
+    [BitAutoData(false, false)]
+    [BitAutoData(true, false)]
+    [BitAutoData(true, true)]
+    [BitAutoData(true, false)]
+
+    public async void ValidateRequestDeviceAsync_IsAuthRequest_UnknownDevice_Errors(
+        bool twoFactoRequired, bool ssoRequired,
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
         // Arrange
-        context.KnownDevice = false;
-        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        request.GrantType = GrantType.ResourceOwnerPassword;
+        context.TwoFactorRequired = twoFactoRequired;
+        context.SsoRequired = ssoRequired;
+        if (context.User != null)
+        {
+            context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(365);
+        }
+
         AddValidDeviceToRequest(request);
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
@@ -338,8 +355,53 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _deviceService.Received(1).SaveAsync(context.Device);
-        Assert.True(result);
+        Assert.False(result);
+        Assert.NotNull(context.CustomResponse["ErrorModel"]);
+        var expectedErrorMessage = "auth request flow unsupported on unknown device";
+        var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
+        Assert.Equal(expectedErrorMessage, actualResponse.Message);
+        await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
+    }
+
+    [Theory]
+    [BitAutoData(false, false)]
+    [BitAutoData(true, false)]
+    [BitAutoData(true, true)]
+    [BitAutoData(true, false)]
+    public async void ValidateRequestDeviceAsync_IsAuthRequest_NewDeviceOtp_Errors(
+        bool twoFactoRequired, bool ssoRequired,
+        CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        request.GrantType = GrantType.ResourceOwnerPassword;
+        context.TwoFactorRequired = twoFactoRequired;
+        context.SsoRequired = ssoRequired;
+        if (context.User != null)
+        {
+            context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(365);
+        }
+
+        AddValidDeviceToRequest(request);
+
+        request.Raw.Add("AuthRequest", "authRequest");
+        // Simulate a new device OTP being present in the request in addition to the auth request
+        // We don't check known device if an new device OTP is present, but we still
+        // want to ensure that the auth request attempt is rejected
+        var newDeviceOtp = "123456";
+        request.Raw.Add("NewDeviceOtp", newDeviceOtp);
+
+        // Act
+        var result = await _sut.ValidateRequestDeviceAsync(request, context);
+
+        // Assert
+        Assert.False(result);
+        Assert.NotNull(context.CustomResponse["ErrorModel"]);
+        var expectedErrorMessage = "auth request flow unsupported on unknown device";
+        var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
+        Assert.Equal(expectedErrorMessage, actualResponse.Message);
+        await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
+        await _deviceRepository.DidNotReceive().GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -580,7 +642,7 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
+        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
         await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
 
         Assert.False(result);
@@ -598,7 +660,7 @@ public class DeviceValidatorTests
         // Autodata arranges
 
         // Act
-        var result = DeviceValidator.NewDeviceOtpRequest(request);
+        var result = DeviceValidator.RequestHasNewDeviceVerificationOtp(request);
 
         // Assert
         Assert.False(result);
@@ -612,7 +674,7 @@ public class DeviceValidatorTests
         request.Raw["NewDeviceOtp"] = "123456";
 
         // Act
-        var result = DeviceValidator.NewDeviceOtpRequest(request);
+        var result = DeviceValidator.RequestHasNewDeviceVerificationOtp(request);
 
         // Assert
         Assert.True(result);
@@ -636,7 +698,7 @@ public class DeviceValidatorTests
         ValidatedTokenRequest request)
     {
         context.KnownDevice = false;
-        request.GrantType = "password";
+        request.GrantType = GrantType.ResourceOwnerPassword;
         context.TwoFactorRequired = false;
         context.SsoRequired = false;
         if (context.User != null)

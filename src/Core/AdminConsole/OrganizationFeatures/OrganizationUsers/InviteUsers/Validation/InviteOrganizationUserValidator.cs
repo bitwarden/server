@@ -2,11 +2,10 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Billing.Services;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using OrganizationUserInvite = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
@@ -16,7 +15,7 @@ public class InviteOrganizationUsersValidator(
     IOrganizationRepository organizationRepository,
     IInviteUsersPasswordManagerValidator inviteUsersPasswordManagerValidator,
     IUpdateSecretsManagerSubscriptionCommand secretsManagerSubscriptionCommand,
-    IPaymentService paymentService) : IInviteUsersValidator
+    IStripePaymentService paymentService) : IInviteUsersValidator
 {
     public async Task<ValidationResult<InviteOrganizationUsersValidationRequest>> ValidateAsync(
         InviteOrganizationUsersValidationRequest request)
@@ -38,7 +37,7 @@ public class InviteOrganizationUsersValidator(
             request = new InviteOrganizationUsersValidationRequest(request)
             {
                 Invites = request.Invites
-                    .Select(x => new OrganizationUserInvite(x, accessSecretsManager: true))
+                    .Select(x => new OrganizationUserInviteCommandModel(x, accessSecretsManager: true))
                     .ToArray()
             };
         }
@@ -60,9 +59,12 @@ public class InviteOrganizationUsersValidator(
     {
         try
         {
+            var organization = await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId);
+
+            organization!.Seats = subscriptionUpdate.UpdatedSeatTotal;
 
             var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
-                organization: await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId),
+                organization: organization,
                 plan: request.InviteOrganization.Plan,
                 autoscaling: true);
 

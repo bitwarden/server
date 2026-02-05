@@ -1,4 +1,6 @@
-﻿using Bit.Core;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -111,7 +113,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
             }
 
-            var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            var customer = await _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
                 Email = organization.BillingEmail,
@@ -134,46 +136,41 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
-            var setNonUSBusinessUseToReverseCharge = _featureService.IsEnabled(FeatureFlagKeys.PM21092_SetNonUSBusinessUseToReverseCharge);
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
-            if (setNonUSBusinessUseToReverseCharge)
-            {
-                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-            }
-            else if (customer.HasRecognizedTaxLocation())
-            {
-                subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = customer.Address.Country == "US" ||
-                              customer.TaxIds.Any()
-                };
-            }
-
-            var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await _stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
+            organization.Enabled = true;
 
             await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
         else if (organization.IsStripeEnabled())
         {
-            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+            var subscription = await _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
+            {
+                Expand = ["customer"]
+            });
             if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
                 return;
             }
 
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.UpdateCustomerAsync(subscription.CustomerId, new CustomerUpdateOptions
             {
-                Coupon = string.Empty,
                 Email = organization.BillingEmail
             });
 
-            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
+            if (subscription.Customer.Discount?.Coupon != null)
+            {
+                await _stripeAdapter.DeleteCustomerDiscountAsync(subscription.CustomerId);
+            }
+
+            await _stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
             {
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
-                DaysUntilDue = 30
+                DaysUntilDue = 30,
             });
 
             await _subscriberService.RemovePaymentSource(organization);

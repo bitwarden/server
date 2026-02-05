@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using Bit.Core.Platform.MailDelivery;
+using Bit.Core.Platform.Mail.Delivery;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;

@@ -1,10 +1,13 @@
 ﻿using AspNetCoreRateLimit;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Push;
-using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -45,7 +48,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </remarks>
     public bool ManagesDatabase { get; set; } = true;
 
-    private readonly List<Action<IServiceCollection>> _configureTestServices = new();
+    protected readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
 
     public void SubstituteService<TService>(Action<TService> mockService)
@@ -192,6 +195,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 TestDatabase.Migrate(services);
             }
 
+            // Register NoOpManglerService for test data seeding (no mangling in tests)
+            services.TryAddSingleton<IManglerService, NoOpManglerService>();
+
             // QUESTION: The normal licensing service should run fine on developer machines but not in CI
             // should we have a fork here to leave the normal service for developers?
             // TODO: Eventually add the license file to CI
@@ -228,7 +234,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
 
             // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
-            Replace(services, Substitute.For<IPaymentService>());
+            Replace(services, Substitute.For<IStripePaymentService>());
 
             Replace(services, Substitute.For<IOrganizationBillingService>());
         });

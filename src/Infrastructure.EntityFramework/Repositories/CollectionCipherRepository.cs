@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,21 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                               join c in dbContext.Collections
                                   on cc.CollectionId equals c.Id
                               where c.OrganizationId == organizationId
+                              select cc).ToArrayAsync();
+            return data;
+        }
+    }
+
+    public async Task<ICollection<CollectionCipher>> GetManySharedByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var data = await (from cc in dbContext.CollectionCiphers
+                              join c in dbContext.Collections
+                                  on cc.CollectionId equals c.Id
+                              where c.OrganizationId == organizationId
+                                    && c.Type == Core.Enums.CollectionType.SharedCollection
                               select cc).ToArrayAsync();
             return data;
         }
@@ -130,9 +146,11 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availableCollections = await (from c in dbContext.Collections
-                                              where c.OrganizationId == organizationId
-                                              select c).ToListAsync();
+
+            var availableCollectionIds = await (from c in dbContext.Collections
+                                                where c.OrganizationId == organizationId
+                                                && c.Type != CollectionType.DefaultUserCollection
+                                                select c.Id).ToListAsync();
 
             var currentCollectionCiphers = await (from cc in dbContext.CollectionCiphers
                                                   where cc.CipherId == cipherId
@@ -140,6 +158,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
 
             foreach (var requestedCollectionId in collectionIds)
             {
+                if (!availableCollectionIds.Contains(requestedCollectionId)) continue;
+
                 var requestedCollectionCipher = currentCollectionCiphers
                     .FirstOrDefault(cc => cc.CollectionId == requestedCollectionId);
 
@@ -153,7 +173,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 }
             }
 
-            dbContext.RemoveRange(currentCollectionCiphers.Where(cc => !collectionIds.Contains(cc.CollectionId)));
+            dbContext.RemoveRange(currentCollectionCiphers.Where(cc => availableCollectionIds.Contains(cc.CollectionId) && !collectionIds.Contains(cc.CollectionId)));
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
             await dbContext.SaveChangesAsync();
         }

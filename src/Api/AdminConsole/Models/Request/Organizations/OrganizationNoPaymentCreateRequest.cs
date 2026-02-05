@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -107,9 +110,8 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
         };
-
-        Keys?.ToOrganizationSignup(orgSignup);
 
         return orgSignup;
     }

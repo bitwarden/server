@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
@@ -270,7 +273,7 @@ public class TwoFactorWebAuthnDeleteRequestModel : SecretVerificationRequestMode
             yield return validationResult;
         }
 
-        if (!Id.HasValue || Id < 0 || Id > 5)
+        if (!Id.HasValue)
         {
             yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
         }

@@ -17,7 +17,9 @@
     @CipherId UNIQUEIDENTIFIER = NULL,
 --  FIXME: remove null default value once this argument has been
 --         in 2 server releases
-    @Emails NVARCHAR(1024) = NULL
+    @Emails NVARCHAR(4000) = NULL,
+    @AuthType TINYINT = NULL,
+    @EmailHashes NVARCHAR(4000) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -40,7 +42,9 @@ BEGIN
         [Disabled],
         [HideEmail],
         [CipherId],
-        [Emails]
+        [Emails],
+        [AuthType],
+        [EmailHashes]
     )
     VALUES
     (
@@ -60,7 +64,9 @@ BEGIN
         @Disabled,
         @HideEmail,
         @CipherId,
-        @Emails
+        @Emails,
+        @AuthType,
+        @EmailHashes
     )
 
     IF @UserId IS NOT NULL

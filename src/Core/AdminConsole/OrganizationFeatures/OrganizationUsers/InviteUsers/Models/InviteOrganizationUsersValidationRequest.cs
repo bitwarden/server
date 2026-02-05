@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Models.Business;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.Models.Business;
 
@@ -29,7 +32,7 @@ public class InviteOrganizationUsersValidationRequest
         SecretsManagerSubscriptionUpdate = smSubscriptionUpdate;
     }
 
-    public OrganizationUserInvite[] Invites { get; init; } = [];
+    public OrganizationUserInviteCommandModel[] Invites { get; init; } = [];
     public InviteOrganization InviteOrganization { get; init; }
     public Guid PerformedBy { get; init; }
     public DateTimeOffset PerformedAt { get; init; }

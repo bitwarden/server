@@ -1,34 +1,24 @@
-﻿#nullable enable
-using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Core.KeyManagement.Models.Data;
 
+/// <summary>
+/// Use this datatype when interfacing with commands, queries, services to create a separation of concern.
+/// See <see cref="MasterPasswordUnlockDataRequestModel"/> to use for requests.
+/// </summary>
 public class MasterPasswordUnlockData
 {
-    public KdfType KdfType { get; set; }
-    public int KdfIterations { get; set; }
-    public int? KdfMemory { get; set; }
-    public int? KdfParallelism { get; set; }
+    public required KdfSettings Kdf { get; init; }
+    public required string MasterKeyWrappedUserKey { get; init; }
+    public required string Salt { get; init; }
 
-    public required string Email { get; set; }
-    public required string MasterKeyAuthenticationHash { get; set; }
-    public required string MasterKeyEncryptedUserKey { get; set; }
-    public string? MasterPasswordHint { get; set; }
-
-    public bool ValidateForUser(User user)
+    public void ValidateSaltUnchangedForUser(User user)
     {
-        if (KdfType != user.Kdf || KdfMemory != user.KdfMemory || KdfParallelism != user.KdfParallelism || KdfIterations != user.KdfIterations)
+        if (user.GetMasterPasswordSalt() != Salt)
         {
-            return false;
-        }
-        else if (Email != user.Email)
-        {
-            return false;
-        }
-        else
-        {
-            return true;
+            throw new BadRequestException("Invalid master password salt.");
         }
     }
 }

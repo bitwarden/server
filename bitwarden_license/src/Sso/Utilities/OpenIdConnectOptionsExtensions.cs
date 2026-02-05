@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace Bit.Sso.Utilities;

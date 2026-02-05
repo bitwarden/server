@@ -6,5 +6,6 @@ public enum DeviceValidationResultType : byte
     InvalidUser = 1,
     InvalidNewDeviceOtp = 2,
     NewDeviceVerificationRequired = 3,
-    NoDeviceInformationProvided = 4
+    NoDeviceInformationProvided = 4,
+    AuthRequestFlowUnknownDevice = 5,
 }

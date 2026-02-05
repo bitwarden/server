@@ -1,8 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Models.Mail;
-using Bit.Core.Platform.MailDelivery;
-using Bit.Core.Platform.X509ChainCustomization;
+using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Settings;
 using MailKit.Security;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,8 +105,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions()),
-            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
+            Options.Create(new SmtpMailOptions())
         );
 
         await Assert.ThrowsAsync<SslHandshakeException>(
@@ -118,119 +116,6 @@ public class MailKitSmtpMailDeliveryServiceTests
                 TextContent = "Hi",
             }, new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token)
         );
-    }
-
-    [Fact]
-    public async Task SendEmailAsync_SmtpServerUsingSelfSignedCert_CertInCustomLocation_Works()
-    {
-        // If an SMTP server is using a self signed cert we will in the future
-        // allow a custom location for certificates to be stored and the certitifactes 
-        // stored there will also be trusted.
-        var port = RandomPort();
-        var behavior = new DefaultServerBehaviour(false, port, _selfSignedCert);
-        using var smtpServer = new SmtpServer(behavior);
-        smtpServer.Start();
-
-        var globalSettings = GetSettings(gs =>
-        {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = true;
-        });
-
-        var x509ChainOptions = new X509ChainOptions
-        {
-            AdditionalCustomTrustCertificates =
-            [
-                _selfSignedCert,
-            ],
-        };
-
-        var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(x509ChainOptions),
-            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
-        );
-
-        var tcs = new TaskCompletionSource();
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        cts.Token.Register(() => _ = tcs.TrySetCanceled());
-
-        behavior.MessageReceivedEventHandler += (sender, args) =>
-        {
-            if (args.Message.Recipients.Contains("test1@example.com"))
-            {
-                tcs.SetResult();
-            }
-            return Task.CompletedTask;
-        };
-
-        await mailKitDeliveryService.SendEmailAsync(new MailMessage
-        {
-            Subject = "Test",
-            ToEmails = ["test1@example.com"],
-            TextContent = "Hi",
-        }, cts.Token);
-
-        // Wait for email
-        await tcs.Task;
-    }
-
-    [Fact]
-    public async Task SendEmailAsync_SmtpServerUsingSelfSignedCert_CertInCustomLocation_WithUnrelatedCerts_Works()
-    {
-        // If an SMTP server is using a self signed cert we will in the future
-        // allow a custom location for certificates to be stored and the certitifactes 
-        // stored there will also be trusted.
-        var port = RandomPort();
-        var behavior = new DefaultServerBehaviour(false, port, _selfSignedCert);
-        using var smtpServer = new SmtpServer(behavior);
-        smtpServer.Start();
-
-        var globalSettings = GetSettings(gs =>
-        {
-            gs.Mail.Smtp.Port = port;
-            gs.Mail.Smtp.Ssl = true;
-        });
-
-        var x509ChainOptions = new X509ChainOptions
-        {
-            AdditionalCustomTrustCertificates =
-            [
-                _selfSignedCert,
-                CreateSelfSignedCert("example.com"),
-            ],
-        };
-
-        var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
-            globalSettings,
-            NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(x509ChainOptions),
-            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
-        );
-
-        var tcs = new TaskCompletionSource();
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        cts.Token.Register(() => _ = tcs.TrySetCanceled());
-
-        behavior.MessageReceivedEventHandler += (sender, args) =>
-        {
-            if (args.Message.Recipients.Contains("test1@example.com"))
-            {
-                tcs.SetResult();
-            }
-            return Task.CompletedTask;
-        };
-
-        await mailKitDeliveryService.SendEmailAsync(new MailMessage
-        {
-            Subject = "Test",
-            ToEmails = ["test1@example.com"],
-            TextContent = "Hi",
-        }, cts.Token);
-
-        // Wait for email
-        await tcs.Task;
     }
 
     [Fact]
@@ -254,8 +139,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions()),
-            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
+            Options.Create(new SmtpMailOptions())
         );
 
         var tcs = new TaskCompletionSource();
@@ -302,8 +186,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions()),
-            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
+            Options.Create(new SmtpMailOptions())
         );
 
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -339,7 +222,6 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions()),
             Options.Create(new SmtpMailOptions())
         );
 
@@ -407,8 +289,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
             globalSettings,
             NullLogger<MailKitSmtpMailDeliveryService>.Instance,
-            Options.Create(new X509ChainOptions()),
-            Options.Create(new Platform.MailDelivery.SmtpMailOptions())
+            Options.Create(new SmtpMailOptions())
         );
 
         var tcs = new TaskCompletionSource();

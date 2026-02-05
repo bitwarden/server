@@ -1,9 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -115,6 +121,38 @@ public class PolicyServiceTests
             .AnyPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserStatusType.Invited);
 
         Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMasterPasswordPolicyForUserAsync_WithFeatureFlagEnabled_EvaluatesPolicyRequirement(User user, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(user.Id, sutProvider);
+        var policyRequirement = new MasterPasswordPolicyRequirement
+        {
+            Enabled = true,
+            EnforcedOptions = new MasterPasswordPolicyData()
+        };
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<MasterPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
+
+        var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.PolicyRequirements);
+        await sutProvider.GetDependency<IPolicyRepository>().DidNotReceive().GetManyByUserIdAsync(user.Id);
+        await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsync<MasterPasswordPolicyRequirement>(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMasterPasswordPolicyForUserAsync_WithFeatureFlagDisabled_EvaluatesPolicyDetails(User user, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(user.Id, sutProvider);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(false);
+
+        var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.PolicyRequirements);
+        await sutProvider.GetDependency<IPolicyRepository>().Received(1).GetManyByUserIdAsync(user.Id);
+        await sutProvider.GetDependency<IPolicyRequirementQuery>().DidNotReceive().GetAsync<MasterPasswordPolicyRequirement>(user.Id);
     }
 
     private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)

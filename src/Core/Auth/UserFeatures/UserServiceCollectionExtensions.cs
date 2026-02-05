@@ -1,6 +1,7 @@
-﻿
-
+﻿using Bit.Core.Auth.Sso;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Commands;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
@@ -24,11 +25,13 @@ public static class UserServiceCollectionExtensions
     {
         services.AddScoped<IUserService, UserService>();
         services.AddDeviceTrustCommands();
+        services.AddEmergencyAccessCommands();
         services.AddUserPasswordCommands();
         services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
         services.AddTdeOffboardingPasswordCommands();
         services.AddTwoFactorQueries();
+        services.AddSsoQueries();
     }
 
     public static void AddDeviceTrustCommands(this IServiceCollection services)
@@ -36,15 +39,21 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IUntrustDevicesCommand, UntrustDevicesCommand>();
     }
 
+    private static void AddEmergencyAccessCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IDeleteEmergencyAccessCommand, DeleteEmergencyAccessCommand>();
+    }
+
     public static void AddUserKeyCommands(this IServiceCollection services, IGlobalSettings globalSettings)
     {
-        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
         services.AddScoped<IRotateUserAccountKeysCommand, RotateUserAccountKeysCommand>();
     }
 
     private static void AddUserPasswordCommands(this IServiceCollection services)
     {
         services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
+        services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
+        services.AddScoped<ITdeSetPasswordCommand, TdeSetPasswordCommand>();
     }
 
     private static void AddTdeOffboardingPasswordCommands(this IServiceCollection services)
@@ -69,5 +78,10 @@ public static class UserServiceCollectionExtensions
     private static void AddTwoFactorQueries(this IServiceCollection services)
     {
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
+    }
+
+    private static void AddSsoQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IUserSsoOrganizationIdentifierQuery, UserSsoOrganizationIdentifierQuery>();
     }
 }

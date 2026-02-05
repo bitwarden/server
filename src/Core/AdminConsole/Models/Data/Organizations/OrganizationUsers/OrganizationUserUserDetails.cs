@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
@@ -17,6 +20,12 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public string Email { get; set; }
     public string AvatarColor { get; set; }
     public string TwoFactorProviders { get; set; }
+    /// <summary>
+    /// Indicates whether the user has a personal premium subscription.
+    /// Does not include premium access from organizations -
+    /// do not use this to check whether the user can access premium features.
+    /// Null when the organization user is in Invited status (UserId is null).
+    /// </summary>
     public bool? Premium { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
@@ -58,11 +67,6 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public Guid? GetUserId()
     {
         return UserId;
-    }
-
-    public bool GetPremium()
-    {
-        return Premium.GetValueOrDefault(false);
     }
 
     public Permissions GetPermissions()

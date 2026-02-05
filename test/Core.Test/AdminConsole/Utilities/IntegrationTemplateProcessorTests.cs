@@ -40,12 +40,12 @@ public class IntegrationTemplateProcessorTests
     }
 
     [Theory, BitAutoData]
-    public void ReplaceTokens_WithNullProperty_LeavesTokenUnchanged(EventMessage eventMessage)
+    public void ReplaceTokens_WithNullProperty_InsertsEmptyString(EventMessage eventMessage)
     {
         eventMessage.UserId = null;
 
         var template = "Event #Type#, User (id: #UserId#).";
-        var expected = $"Event {eventMessage.Type}, User (id: #UserId#).";
+        var expected = $"Event {eventMessage.Type}, User (id: ).";
         var result = IntegrationTemplateProcessor.ReplaceTokens(template, eventMessage);
 
         Assert.Equal(expected, result);
@@ -83,6 +83,7 @@ public class IntegrationTemplateProcessorTests
     [Theory]
     [InlineData("User name is #UserName#")]
     [InlineData("Email: #UserEmail#")]
+    [InlineData("User type = #UserType#")]
     public void TemplateRequiresUser_ContainingKeys_ReturnsTrue(string template)
     {
         var result = IntegrationTemplateProcessor.TemplateRequiresUser(template);
@@ -102,6 +103,7 @@ public class IntegrationTemplateProcessorTests
     [Theory]
     [InlineData("Acting user is #ActingUserName#")]
     [InlineData("Acting user's email is #ActingUserEmail#")]
+    [InlineData("Acting user's type is #ActingUserType#")]
     public void TemplateRequiresActingUser_ContainingKeys_ReturnsTrue(string template)
     {
         var result = IntegrationTemplateProcessor.TemplateRequiresActingUser(template);
@@ -115,6 +117,25 @@ public class IntegrationTemplateProcessorTests
     public void TemplateRequiresActingUser_EmptyInputOrNoMatchingKeys_ReturnsFalse(string template)
     {
         var result = IntegrationTemplateProcessor.TemplateRequiresActingUser(template);
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("Group name is #GroupName#!")]
+    [InlineData("Group: #GroupName#")]
+    public void TemplateRequiresGroup_ContainingKeys_ReturnsTrue(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresGroup(template);
+        Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData("#GroupId#")]  // This is on the base class, not fetched, so should be false
+    [InlineData("No Group Tokens")]
+    [InlineData("")]
+    public void TemplateRequiresGroup_EmptyInputOrNoMatchingKeys_ReturnsFalse(string template)
+    {
+        var result = IntegrationTemplateProcessor.TemplateRequiresGroup(template);
         Assert.False(result);
     }
 

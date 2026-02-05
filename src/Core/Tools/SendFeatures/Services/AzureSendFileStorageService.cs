@@ -1,4 +1,7 @@
-﻿using Azure.Storage.Blobs;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;

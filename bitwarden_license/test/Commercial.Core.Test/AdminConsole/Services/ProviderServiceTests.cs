@@ -6,12 +6,18 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,6 +26,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -41,7 +48,7 @@ public class ProviderServiceTests
     public async Task CompleteSetupAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CompleteSetupAsync(default, default, default, default, null));
+            () => sutProvider.Sut.CompleteSetupAsync(default, default, default, default, null, null));
         Assert.Contains("Invalid owner.", exception.Message);
     }
 
@@ -53,85 +60,12 @@ public class ProviderServiceTests
         userService.GetUserByIdAsync(user.Id).Returns(user);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default, null));
+            () => sutProvider.Sut.CompleteSetupAsync(provider, user.Id, default, default, null, null));
         Assert.Contains("Invalid token.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task CompleteSetupAsync_InvalidTaxInfo_ThrowsBadRequestException(
-        User user,
-        Provider provider,
-        string key,
-        TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        [ProviderUser] ProviderUser providerUser,
-        SutProvider<ProviderService> sutProvider)
-    {
-        providerUser.ProviderId = provider.Id;
-        providerUser.UserId = user.Id;
-        var userService = sutProvider.GetDependency<IUserService>();
-        userService.GetUserByIdAsync(user.Id).Returns(user);
-
-        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
-        providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
-
-        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
-        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
-        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
-            .Returns(protector);
-
-        sutProvider.Create();
-
-        var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
-        taxInfo.BillingAddressCountry = null;
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo, tokenizedPaymentSource));
-
-        Assert.Equal("Both address and postal code are required to set up your provider.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CompleteSetupAsync_InvalidTokenizedPaymentSource_ThrowsBadRequestException(
-        User user,
-        Provider provider,
-        string key,
-        TaxInfo taxInfo,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        [ProviderUser] ProviderUser providerUser,
-        SutProvider<ProviderService> sutProvider)
-    {
-        providerUser.ProviderId = provider.Id;
-        providerUser.UserId = user.Id;
-        var userService = sutProvider.GetDependency<IUserService>();
-        userService.GetUserByIdAsync(user.Id).Returns(user);
-
-        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
-        providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
-
-        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
-        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
-        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
-            .Returns(protector);
-
-        sutProvider.Create();
-
-        var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup).Returns(true);
-
-        tokenizedPaymentSource = tokenizedPaymentSource with { Type = PaymentMethodType.BitPay };
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo, tokenizedPaymentSource));
-
-        Assert.Equal("A payment method is required to set up your provider.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource,
+    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key, TokenizedPaymentMethod tokenizedPaymentMethod, BillingAddress billingAddress,
             [ProviderUser] ProviderUser providerUser,
             SutProvider<ProviderService> sutProvider)
     {
@@ -151,7 +85,7 @@ public class ProviderServiceTests
         var providerBillingService = sutProvider.GetDependency<IProviderBillingService>();
 
         var customer = new Customer { Id = "customer_id" };
-        providerBillingService.SetupCustomer(provider, taxInfo, tokenizedPaymentSource).Returns(customer);
+        providerBillingService.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress).Returns(customer);
 
         var subscription = new Subscription { Id = "subscription_id" };
         providerBillingService.SetupSubscription(provider).Returns(subscription);
@@ -160,7 +94,7 @@ public class ProviderServiceTests
 
         var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo, tokenizedPaymentSource);
+        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, tokenizedPaymentMethod, billingAddress);
 
         await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(Arg.Is<Provider>(
             p =>
@@ -170,6 +104,57 @@ public class ProviderServiceTests
 
         await sutProvider.GetDependency<IProviderUserRepository>().Received()
             .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CompleteSetupAsync_WithAutoConfirmEnabled_ThrowsUserCannotJoinProviderError(User user, Provider provider,
+        string key,
+        TokenizedPaymentMethod tokenizedPaymentMethod, BillingAddress billingAddress,
+        [ProviderUser] ProviderUser providerUser,
+        SutProvider<ProviderService> sutProvider)
+    {
+        providerUser.ProviderId = provider.Id;
+        providerUser.UserId = user.Id;
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByIdAsync(user.Id).Returns(user);
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
+
+        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+
+        var providerBillingService = sutProvider.GetDependency<IProviderBillingService>();
+
+        var customer = new Customer { Id = "customer_id" };
+        providerBillingService.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress).Returns(customer);
+
+        var subscription = new Subscription { Id = "subscription_id" };
+        providerBillingService.SetupSubscription(provider).Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyDetails = new List<PolicyDetails> { new() { OrganizationId = Guid.NewGuid(), IsProvider = false } };
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(policyRequirement);
+
+        sutProvider.Create();
+
+        var token = protector.Protect(
+            $"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, tokenizedPaymentMethod,
+                billingAddress));
+
+        Assert.Equal(new UserCannotJoinProvider().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -186,6 +171,262 @@ public class ProviderServiceTests
     public async Task UpdateAsync_Success(Provider provider, SutProvider<ProviderService> sutProvider)
     {
         await sutProvider.Sut.UpdateAsync(provider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_ExistingProviderIsNull_DoesNotCallUpdateClientOrganizationsEnabledStatus(
+        Provider provider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns((Provider)null);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.DidNotReceive().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusNotChanged_DoesNotCallUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = provider.Enabled; // Same enabled status
+        provider.Type = ProviderType.Msp; // Set to a type that would trigger update if status changed
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.DidNotReceive().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusChangedButProviderTypeIsReseller_DoesNotCallUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Reseller; // Type that should not trigger update
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.DidNotReceive().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusChangedAndProviderTypeIsMsp_CallsUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Msp; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        // Create test organizations with different enabled status than what we're setting
+        var organizations = providerOrganizationDetails.Select(po =>
+        {
+            var org = new Organization { Id = po.OrganizationId, Enabled = !provider.Enabled };
+            return org;
+        }).ToList();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        foreach (var org in organizations)
+        {
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        }
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        foreach (var org in organizations)
+        {
+            await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+            await applicationCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_EnabledStatusChangedAndProviderTypeIsBusinessUnit_CallsUpdateClientOrganizationsEnabledStatus(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.BusinessUnit; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        // Create test organizations with different enabled status than what we're setting
+        var organizations = providerOrganizationDetails.Select(po =>
+        {
+            var org = new Organization { Id = po.OrganizationId, Enabled = !provider.Enabled };
+            return org;
+        }).ToList();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        foreach (var org in organizations)
+        {
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        }
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        foreach (var org in organizations)
+        {
+            await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+            await applicationCacheService.Received(1).UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o =>
+                o.Id == org.Id && o.Enabled == provider.Enabled));
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_OrganizationEnabledStatusAlreadyMatches_DoesNotUpdateOrganization(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Msp; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        // Create test organizations with SAME enabled status as what we're setting
+        var organizations = providerOrganizationDetails.Select(po =>
+        {
+            var org = new Organization { Id = po.OrganizationId, Enabled = provider.Enabled };
+            return org;
+        }).ToList();
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        foreach (var org in organizations)
+        {
+            organizationRepository.GetByIdAsync(org.Id).Returns(org);
+        }
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        // Organizations should not be updated since their enabled status already matches
+        foreach (var org in organizations)
+        {
+            await organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+            await applicationCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_OrganizationIsNull_SkipsNullOrganization(
+        Provider provider, Provider existingProvider, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+
+        existingProvider.Id = provider.Id;
+        existingProvider.Enabled = !provider.Enabled; // Different enabled status
+        provider.Type = ProviderType.Msp; // Type that should trigger update
+
+        // Create test provider organization details
+        var providerOrganizationDetails = new List<ProviderOrganizationOrganizationDetails>
+        {
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() },
+            new ProviderOrganizationOrganizationDetails { Id = Guid.NewGuid(), ProviderId = provider.Id, OrganizationId = Guid.NewGuid() }
+        };
+
+        providerRepository.GetByIdAsync(provider.Id).Returns(existingProvider);
+        providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id).Returns(providerOrganizationDetails);
+
+        // Return null for all organizations
+        organizationRepository.GetByIdAsync(Arg.Any<Guid>()).Returns((Organization)null);
+
+        // Act
+        await sutProvider.Sut.UpdateAsync(provider);
+
+        // Assert
+        await providerRepository.Received(1).ReplaceAsync(provider);
+        await providerOrganizationRepository.Received(1).GetManyDetailsByProviderAsync(provider.Id);
+
+        // No organizations should be updated since they're all null
+        await organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+        await applicationCacheService.DidNotReceive().UpsertOrganizationAbilityAsync(Arg.Any<Organization>());
     }
 
     [Theory, BitAutoData]
@@ -396,6 +637,132 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptUserAsync_WithAutoConfirmEnabledAndPolicyExists_Throws(
+        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetByIdAsync(providerUser.Id)
+            .Returns(providerUser);
+
+        var protector = DataProtectionProvider
+            .Create("ApplicationName")
+            .CreateProtector("ProviderServiceDataProtector");
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+
+        sutProvider.Create();
+
+        providerUser.Email = user.Email;
+        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyDetails = new List<PolicyDetails>
+        {
+            new() { OrganizationId = Guid.NewGuid(), IsProvider = false }
+        };
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(policyRequirement);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token));
+
+        Assert.Equal(new UserCannotJoinProvider().Message, exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_WithAutoConfirmEnabledButNoPolicyExists_Success(
+        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetByIdAsync(providerUser.Id)
+            .Returns(providerUser);
+
+        var protector = DataProtectionProvider
+            .Create("ApplicationName")
+            .CreateProtector("ProviderServiceDataProtector");
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+        sutProvider.Create();
+
+        providerUser.Email = user.Email;
+        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement([]);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(policyRequirement);
+
+        // Act
+        var pu = await sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token);
+
+        // Assert
+        Assert.Null(pu.Email);
+        Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
+        Assert.Equal(user.Id, pu.UserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_WithAutoConfirmDisabled_Success(
+        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetByIdAsync(providerUser.Id)
+            .Returns(providerUser);
+
+        var protector = DataProtectionProvider
+            .Create("ApplicationName")
+            .CreateProtector("ProviderServiceDataProtector");
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+        sutProvider.Create();
+
+        providerUser.Email = user.Email;
+        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        // Act
+        var pu = await sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token);
+
+        // Assert
+        Assert.Null(pu.Email);
+        Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
+        Assert.Equal(user.Id, pu.UserId);
+
+        // Verify that policy check was never called when feature flag is disabled
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceive()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+    }
+
+    [Theory, BitAutoData]
     public async Task ConfirmUsersAsync_NoValid(
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser pu1,
         [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu2,
@@ -442,12 +809,130 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task ConfirmUsersAsync_WithAutoConfirmEnabledAndPolicyExists_ReturnsError(
+        [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu1, User u1,
+        Provider provider, User confirmingUser, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        pu1.ProviderId = provider.Id;
+        pu1.UserId = u1.Id;
+        var providerUsers = new[] { pu1 };
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetManyAsync([]).ReturnsForAnyArgs(providerUsers);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyDetails = new List<PolicyDetails>
+        {
+            new() { OrganizationId = Guid.NewGuid(), IsProvider = false }
+        };
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(u1.Id)
+            .Returns(policyRequirement);
+
+        var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, confirmingUser.Id);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(new UserCannotJoinProvider().Message, result[0].Item2);
+
+        // Verify user was not confirmed
+        await providerUserRepository.DidNotReceive().ReplaceAsync(Arg.Any<ProviderUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUsersAsync_WithAutoConfirmEnabledButNoPolicyExists_Success(
+        [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu1, User u1,
+        Provider provider, User confirmingUser, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        pu1.ProviderId = provider.Id;
+        pu1.UserId = u1.Id;
+        var providerUsers = new[] { pu1 };
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetManyAsync([]).ReturnsForAnyArgs(providerUsers);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(u1.Id)
+            .Returns(policyRequirement);
+
+        var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, confirmingUser.Id);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("", result[0].Item2);
+
+        // Verify user was confirmed
+        await providerUserRepository.Received(1).ReplaceAsync(Arg.Is<ProviderUser>(pu =>
+            pu.Status == ProviderUserStatusType.Confirmed));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUsersAsync_WithAutoConfirmDisabled_Success(
+        [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu1, User u1,
+        Provider provider, User confirmingUser, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        pu1.ProviderId = provider.Id;
+        pu1.UserId = u1.Id;
+        var providerUsers = new[] { pu1 };
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetManyAsync([]).ReturnsForAnyArgs(providerUsers);
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, confirmingUser.Id);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("", result[0].Item2);
+
+        // Verify user was confirmed
+        await providerUserRepository.Received(1).ReplaceAsync(Arg.Is<ProviderUser>(pu =>
+            pu.Status == ProviderUserStatusType.Confirmed));
+
+        // Verify that policy check was never called when feature flag is disabled
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceive()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task SaveUserAsync_UserIdIsInvalid_Throws(ProviderUser providerUser,
         SutProvider<ProviderService> sutProvider)
     {
-        providerUser.Id = default;
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(providerUser, default));
+        providerUser.Id = Guid.Empty;
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.SaveUserAsync(providerUser, Guid.Empty));
         Assert.Equal("Invite the user first.", exception.Message);
     }
 
@@ -573,7 +1058,7 @@ public class ProviderServiceTests
         await organizationRepository.Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == provider.BillingEmail));
 
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
             organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options => options.Email == provider.BillingEmail));
 
@@ -628,12 +1113,12 @@ public class ProviderServiceTests
         organization.Plan = "Enterprise (Monthly)";
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(StaticStore.GetPlan(organization.PlanType));
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var expectedPlanType = PlanType.EnterpriseMonthly2020;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(expectedPlanType)
-            .Returns(StaticStore.GetPlan(expectedPlanType));
+            .Returns(MockPlans.Get(expectedPlanType));
 
         var expectedPlanId = "2020-enterprise-org-seat-monthly";
 
@@ -644,9 +1129,9 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+        sutProvider.GetDependency<IStripeAdapter>().GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .Returns(GetSubscription(organization.GatewaySubscriptionId));
-        await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
+        await sutProvider.GetDependency<IStripeAdapter>().UpdateSubscriptionAsync(
             organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
@@ -937,7 +1422,7 @@ public class ProviderServiceTests
     private static SubscriptionUpdateOptions SubscriptionUpdateRequest(string expectedPlanId, Subscription subscriptionItem) =>
         new()
         {
-            Items = new List<Stripe.SubscriptionItemOptions>
+            Items = new List<SubscriptionItemOptions>
             {
                 new() { Id = subscriptionItem.Id, Price = expectedPlanId },
             }

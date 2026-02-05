@@ -1,16 +1,16 @@
-﻿@using Bit.Admin.Enums;
-@using Bit.Core
+﻿@inject IAccessControlService AccessControlService
+
+@using Bit.Admin.Enums
+@using Bit.Admin.Services
 @using Bit.Core.AdminConsole.Enums.Provider
 @using Bit.Core.Billing.Enums
 @using Bit.Core.Billing.Extensions
-@using Microsoft.AspNetCore.Mvc.TagHelpers
-@inject Bit.Admin.Services.IAccessControlService AccessControlService
-@inject Bit.Core.Services.IFeatureService FeatureService
-
+@using Bit.Core.Enums
 @model ProviderEditModel
 @{
     ViewData["Title"] = "Provider: " + Model.Provider.DisplayName();
     var canEdit = AccessControlService.UserHasPermission(Permission.Provider_Edit);
+    var canCheckEnabled = AccessControlService.UserHasPermission(Permission.Provider_CheckEnabledBox);
 }
 
 <h1>Provider <small>@Model.Provider.DisplayName()</small></h1>
@@ -30,6 +30,13 @@
         <dt class="col-sm-4 col-lg-3">Name</dt>
         <dd class="col-sm-8 col-lg-9">@Model.Provider.DisplayName()</dd>
     </dl>
+    @if (canCheckEnabled && (Model.Provider.Type == ProviderType.Msp || Model.Provider.Type == ProviderType.BusinessUnit))
+    {
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" disabled='@(canCheckEnabled ? null : "disabled")'>
+            <label class="form-check-label" asp-for="Enabled"></label>
+        </div>
+    }
     <h2>Business Information</h2>
     <dl class="row">
         <dt class="col-sm-4 col-lg-3">Business Name</dt>
@@ -106,7 +113,7 @@
             <div class="col-sm">
                 <div class="mb-3">
                     <label asp-for="Gateway" class="form-label"></label>
-                    <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                    <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<GatewayType>()">
                         <option value="">--</option>
                     </select>
                 </div>
@@ -136,7 +143,7 @@
                 </div>
             </div>
         </div>
-        @if (FeatureService.IsEnabled(FeatureFlagKeys.PM199566_UpdateMSPToChargeAutomatically) && Model.Provider.Type == ProviderType.Msp && Model.Provider.IsBillable())
+        @if (Model.Provider.Type == ProviderType.Msp && Model.Provider.IsBillable())
         {
             <div class="row">
                 <div class="col-sm">

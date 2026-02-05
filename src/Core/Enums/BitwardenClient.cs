@@ -8,5 +8,6 @@ public static class BitwardenClient
         Desktop = "desktop",
         Mobile = "mobile",
         Cli = "cli",
-        DirectoryConnector = "connector";
+        DirectoryConnector = "connector",
+        Send = "send";
 }

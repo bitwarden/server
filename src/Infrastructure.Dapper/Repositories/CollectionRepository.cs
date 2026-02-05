@@ -1,10 +1,14 @@
 ﻿using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
@@ -72,6 +76,19 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         {
             var results = await connection.QueryAsync<Collection>(
                 $"[{Schema}].[{Table}_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<Collection>> GetManySharedCollectionsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Collection>(
+                $"[{Schema}].[{Table}_ReadSharedCollectionsByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
@@ -209,6 +226,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         obj.SetNewId();
+
         var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
 
         objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
@@ -225,18 +243,52 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
-        var objWithGroupsAndUsers = JsonSerializer.Deserialize<CollectionWithGroupsAndUsers>(JsonSerializer.Serialize(obj))!;
-
-        objWithGroupsAndUsers.Groups = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
-        objWithGroupsAndUsers.Users = users != null ? users.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
-
-        using (var connection = new SqlConnection(ConnectionString))
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
         {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
-                objWithGroupsAndUsers,
-                commandType: CommandType.StoredProcedure);
+            if (groups == null && users == null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_Update]",
+                    obj,
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+            else if (groups != null && users == null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_UpdateWithGroups]",
+                    new CollectionWithGroups(obj, groups),
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+            else if (groups == null && users != null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_UpdateWithUsers]",
+                    new CollectionWithUsers(obj, users),
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+            else if (groups != null && users != null)
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[Collection_UpdateWithGroupsAndUsers]",
+                    new CollectionWithGroupsAndUsers(obj, groups, users),
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction);
+            }
+
+            await transaction.CommitAsync();
         }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> collectionIds)
@@ -309,10 +361,171 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    {
+        organizationUserIds = organizationUserIds.ToList();
+        if (!organizationUserIds.Any())
+        {
+            return;
+        }
+
+        var organizationUserCollectionIds = organizationUserIds
+            .Select(ou => (ou, CoreHelpers.GenerateComb()))
+            .ToTwoGuidIdArrayTVP();
+
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[Collection_CreateDefaultCollections]",
+                new
+                {
+                    OrganizationId = organizationId,
+                    DefaultCollectionName = defaultCollectionName,
+                    OrganizationUserCollectionIds = organizationUserCollectionIds
+                },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName)
+    {
+        organizationUserIds = organizationUserIds.ToList();
+        if (!organizationUserIds.Any())
+        {
+            return;
+        }
+
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            var orgUserIdWithDefaultCollection = await GetOrgUserIdsWithDefaultCollectionAsync(connection, transaction, organizationId);
+
+            var missingDefaultCollectionUserIds = organizationUserIds.Except(orgUserIdWithDefaultCollection);
+
+            var (collections, collectionUsers) =
+                CollectionUtils.BuildDefaultUserCollections(organizationId, missingDefaultCollectionUserIds, defaultCollectionName);
+
+            if (!collectionUsers.Any() || !collections.Any())
+            {
+                return;
+            }
+
+            await BulkResourceCreationService.CreateCollectionsAsync(connection, transaction, collections);
+            await BulkResourceCreationService.CreateCollectionsUsersAsync(connection, transaction, collectionUsers);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    private async Task<HashSet<Guid>> GetOrgUserIdsWithDefaultCollectionAsync(SqlConnection connection, SqlTransaction transaction, Guid organizationId)
+    {
+        const string sql = @"
+                    SELECT
+                        ou.Id AS OrganizationUserId
+                    FROM
+                        OrganizationUser ou
+                    INNER JOIN
+                        CollectionUser cu ON cu.OrganizationUserId = ou.Id
+                    INNER JOIN
+                        Collection c ON c.Id = cu.CollectionId
+                    WHERE
+                        ou.OrganizationId = @OrganizationId
+                        AND c.Type = @CollectionType;
+                ";
+
+        var organizationUserIds = await connection.QueryAsync<Guid>(
+            sql,
+            new { OrganizationId = organizationId, CollectionType = CollectionType.DefaultUserCollection },
+            transaction: transaction
+        );
+
+        return organizationUserIds.ToHashSet();
+    }
+
     public class CollectionWithGroupsAndUsers : Collection
     {
+        public CollectionWithGroupsAndUsers() { }
+
+        public CollectionWithGroupsAndUsers(Collection collection,
+            IEnumerable<CollectionAccessSelection> groups,
+            IEnumerable<CollectionAccessSelection> users)
+        {
+            Id = collection.Id;
+            Name = collection.Name;
+            OrganizationId = collection.OrganizationId;
+            CreationDate = collection.CreationDate;
+            RevisionDate = collection.RevisionDate;
+            Type = collection.Type;
+            ExternalId = collection.ExternalId;
+            DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            Groups = groups.ToArrayTVP();
+            Users = users.ToArrayTVP();
+        }
+
         [DisallowNull]
         public DataTable? Groups { get; set; }
+        [DisallowNull]
+        public DataTable? Users { get; set; }
+    }
+
+    public class CollectionWithGroups : Collection
+    {
+        public CollectionWithGroups() { }
+
+        public CollectionWithGroups(Collection collection, IEnumerable<CollectionAccessSelection> groups)
+        {
+            Id = collection.Id;
+            Name = collection.Name;
+            OrganizationId = collection.OrganizationId;
+            CreationDate = collection.CreationDate;
+            RevisionDate = collection.RevisionDate;
+            Type = collection.Type;
+            ExternalId = collection.ExternalId;
+            DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            Groups = groups.ToArrayTVP();
+        }
+
+        [DisallowNull]
+        public DataTable? Groups { get; set; }
+    }
+
+    public class CollectionWithUsers : Collection
+    {
+        public CollectionWithUsers() { }
+
+        public CollectionWithUsers(Collection collection, IEnumerable<CollectionAccessSelection> users)
+        {
+
+            Id = collection.Id;
+            Name = collection.Name;
+            OrganizationId = collection.OrganizationId;
+            CreationDate = collection.CreationDate;
+            RevisionDate = collection.RevisionDate;
+            Type = collection.Type;
+            ExternalId = collection.ExternalId;
+            DefaultUserCollectionEmail = collection.DefaultUserCollectionEmail;
+            Users = users.ToArrayTVP();
+        }
+
         [DisallowNull]
         public DataTable? Users { get; set; }
     }

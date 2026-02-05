@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-using Bit.Core.Platform.MailDelivery;
+using Bit.Core.Platform.Mail.Delivery;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 

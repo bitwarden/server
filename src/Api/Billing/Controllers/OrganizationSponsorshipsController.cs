@@ -1,9 +1,12 @@
-﻿using Bit.Api.Models.Request.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -35,7 +38,7 @@ public class OrganizationSponsorshipsController : Controller
     private readonly ICloudSyncSponsorshipsCommand _syncSponsorshipsCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IFeatureService _featureService;
 
     public OrganizationSponsorshipsController(
@@ -52,7 +55,7 @@ public class OrganizationSponsorshipsController : Controller
         ICloudSyncSponsorshipsCommand syncSponsorshipsCommand,
         IUserService userService,
         ICurrentContext currentContext,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IFeatureService featureService)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
@@ -68,7 +71,7 @@ public class OrganizationSponsorshipsController : Controller
         _syncSponsorshipsCommand = syncSponsorshipsCommand;
         _userService = userService;
         _currentContext = currentContext;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _featureService = featureService;
     }
 
@@ -78,25 +81,12 @@ public class OrganizationSponsorshipsController : Controller
     public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
     {
         var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
-        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(sponsoringOrgId,
             PolicyType.FreeFamiliesSponsorshipPolicy);
 
-        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        if (freeFamiliesSponsorshipPolicy.Enabled)
         {
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
-        }
-
-        if (!_featureService.IsEnabled(Bit.Core.FeatureFlagKeys.PM17772_AdminInitiatedSponsorships))
-        {
-            if (model.IsAdminInitiated.GetValueOrDefault())
-            {
-                throw new BadRequestException();
-            }
-
-            if (!string.IsNullOrWhiteSpace(model.Notes))
-            {
-                model.Notes = null;
-            }
         }
 
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
@@ -118,10 +108,10 @@ public class OrganizationSponsorshipsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task ResendSponsorshipOffer(Guid sponsoringOrgId, [FromQuery] string sponsoredFriendlyName)
     {
-        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsoringOrgId,
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(sponsoringOrgId,
             PolicyType.FreeFamiliesSponsorshipPolicy);
 
-        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        if (freeFamiliesSponsorshipPolicy.Enabled)
         {
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
@@ -148,9 +138,9 @@ public class OrganizationSponsorshipsController : Controller
         var (isValid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
         if (isValid && sponsorship.SponsoringOrganizationId.HasValue)
         {
-            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsorship.SponsoringOrganizationId.Value,
+            var policy = await _policyQuery.RunAsync(sponsorship.SponsoringOrganizationId.Value,
                 PolicyType.FreeFamiliesSponsorshipPolicy);
-            isFreeFamilyPolicyEnabled = policy?.Enabled ?? false;
+            isFreeFamilyPolicyEnabled = policy.Enabled;
         }
 
         var response = PreValidateSponsorshipResponseModel.From(isValid, isFreeFamilyPolicyEnabled);
@@ -175,10 +165,10 @@ public class OrganizationSponsorshipsController : Controller
             throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
         }
 
-        var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(
+        var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(
             model.SponsoredOrganizationId, PolicyType.FreeFamiliesSponsorshipPolicy);
 
-        if (freeFamiliesSponsorshipPolicy?.Enabled == true)
+        if (freeFamiliesSponsorshipPolicy.Enabled)
         {
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
@@ -205,7 +195,6 @@ public class OrganizationSponsorshipsController : Controller
 
     [Authorize("Application")]
     [HttpDelete("{sponsoringOrganizationId}")]
-    [HttpPost("{sponsoringOrganizationId}/delete")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
     {
@@ -220,6 +209,15 @@ public class OrganizationSponsorshipsController : Controller
             .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
+    [HttpPost("{sponsoringOrganizationId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{sponsoringOrganizationId} instead.")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostRevokeSponsorship(Guid sponsoringOrganizationId)
+    {
+        await RevokeSponsorship(sponsoringOrganizationId);
     }
 
     [Authorize("Application")]
@@ -238,7 +236,6 @@ public class OrganizationSponsorshipsController : Controller
 
     [Authorize("Application")]
     [HttpDelete("sponsored/{sponsoredOrgId}")]
-    [HttpPost("sponsored/{sponsoredOrgId}/remove")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task RemoveSponsorship(Guid sponsoredOrgId)
     {
@@ -252,6 +249,15 @@ public class OrganizationSponsorshipsController : Controller
             .GetBySponsoredOrganizationIdAsync(sponsoredOrgId);
 
         await _removeSponsorshipCommand.RemoveSponsorshipAsync(existingOrgSponsorship);
+    }
+
+    [Authorize("Application")]
+    [HttpPost("sponsored/{sponsoredOrgId}/remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /sponsored/{sponsoredOrgId} instead.")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostRemoveSponsorship(Guid sponsoredOrgId)
+    {
+        await RemoveSponsorship(sponsoredOrgId);
     }
 
     [HttpGet("{sponsoringOrgId}/sync-status")]

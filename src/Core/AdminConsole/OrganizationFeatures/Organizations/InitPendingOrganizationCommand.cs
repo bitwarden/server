@@ -1,4 +1,9 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
@@ -25,6 +30,8 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly IGlobalSettings _globalSettings;
     private readonly IPolicyService _policyService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IFeatureService _featureService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public InitPendingOrganizationCommand(
             IOrganizationService organizationService,
@@ -34,7 +41,9 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             IDataProtectionProvider dataProtectionProvider,
             IGlobalSettings globalSettings,
             IPolicyService policyService,
-            IOrganizationUserRepository organizationUserRepository
+            IOrganizationUserRepository organizationUserRepository,
+            IFeatureService featureService,
+            IPolicyRequirementQuery policyRequirementQuery
             )
     {
         _organizationService = organizationService;
@@ -45,6 +54,8 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _globalSettings = globalSettings;
         _policyService = policyService;
         _organizationUserRepository = organizationUserRepository;
+        _featureService = featureService;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task InitPendingOrganizationAsync(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken)
@@ -110,6 +121,17 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var requirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
+
+            if (requirement.CannotCreateNewOrganization())
+            {
+                throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                                              "which has a policy that prohibits you from being a member of any other organization.");
+            }
+        }
+
         var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {

@@ -72,8 +72,11 @@ BEGIN
         CU
     FROM
         [dbo].[CollectionUser] CU
+    INNER JOIN
+        [dbo].[Collection] C ON C.[Id] = CU.[CollectionId]
     WHERE
         CU.[OrganizationUserId] = @Id
+        AND C.[Type] != 1  -- Don't delete default collections
         AND NOT EXISTS (
             SELECT
                 1

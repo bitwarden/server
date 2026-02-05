@@ -1,4 +1,7 @@
-﻿using Bit.Api.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
@@ -19,7 +22,8 @@ namespace Bit.Api.Controllers;
 public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
-    private readonly ICollectionService _collectionService;
+    private readonly ICreateCollectionCommand _createCollectionCommand;
+    private readonly IUpdateCollectionCommand _updateCollectionCommand;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
@@ -28,7 +32,8 @@ public class CollectionsController : Controller
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
-        ICollectionService collectionService,
+        ICreateCollectionCommand createCollectionCommand,
+        IUpdateCollectionCommand updateCollectionCommand,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
         IAuthorizationService authorizationService,
@@ -36,7 +41,8 @@ public class CollectionsController : Controller
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
         _collectionRepository = collectionRepository;
-        _collectionService = collectionService;
+        _createCollectionCommand = createCollectionCommand;
+        _updateCollectionCommand = updateCollectionCommand;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
         _authorizationService = authorizationService;
@@ -96,14 +102,14 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<CollectionResponseModel>> GetAll(Guid orgId)
     {
         IEnumerable<Collection> orgCollections;
 
         var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
         if (readAllAuthorized)
         {
-            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+            orgCollections = await _collectionRepository.GetManySharedCollectionsByOrganizationIdAsync(orgId);
         }
         else
         {
@@ -140,7 +146,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("")]
-    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Post(Guid orgId, [FromBody] CreateCollectionRequestModel model)
     {
         var collection = model.ToCollection(orgId);
 
@@ -153,7 +159,7 @@ public class CollectionsController : Controller
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly()).ToList() ?? new List<CollectionAccessSelection>();
 
-        await _collectionService.SaveAsync(collection, groups, users);
+        await _createCollectionCommand.CreateAsync(collection, groups, users);
 
         if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(orgId) == null && await _currentContext.ProviderUserForOrgAsync(orgId)))
         {
@@ -167,8 +173,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] CollectionRequestModel model)
+    public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
@@ -179,7 +184,7 @@ public class CollectionsController : Controller
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
-        await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
+        await _updateCollectionCommand.UpdateAsync(model.ToCollection(collection), groups, users);
 
         if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
         {
@@ -192,17 +197,11 @@ public class CollectionsController : Controller
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
 
-    [HttpPut("{id}/users")]
-    public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
+    public async Task<CollectionResponseModel> PostPut(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
-        var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
+        return await Put(orgId, id, model);
     }
 
     [HttpPost("bulk-access")]
@@ -229,7 +228,6 @@ public class CollectionsController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(Guid orgId, Guid id)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
@@ -242,8 +240,14 @@ public class CollectionsController : Controller
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
+    public async Task PostDelete(Guid orgId, Guid id)
+    {
+        await Delete(orgId, id);
+    }
+
     [HttpDelete("")]
-    [HttpPost("delete")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
@@ -256,17 +260,10 @@ public class CollectionsController : Controller
         await _deleteCollectionCommand.DeleteManyAsync(collections);
     }
 
-    [HttpDelete("{id}/user/{orgUserId}")]
-    [HttpPost("{id}/delete-user/{orgUserId}")]
-    public async Task DeleteUser(Guid orgId, Guid id, Guid orgUserId)
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
+    public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
-        var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ModifyUserAccess)).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        await _collectionService.DeleteUserAsync(collection, orgUserId);
+        await DeleteMany(orgId, model);
     }
 }

@@ -10,8 +10,9 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -19,7 +20,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -37,10 +37,10 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserService _userService;
-    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IGetCloudOrganizationLicenseQuery _getCloudOrganizationLicenseQuery;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
@@ -59,12 +59,12 @@ public class OrganizationsControllerTests : IDisposable
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _paymentService = Substitute.For<IPaymentService>();
+        _paymentService = Substitute.For<IStripePaymentService>();
         Substitute.For<IPolicyRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         Substitute.For<ISsoConfigService>();
         _userService = Substitute.For<IUserService>();
-        _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
+        _getCloudOrganizationLicenseQuery = Substitute.For<IGetCloudOrganizationLicenseQuery>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
@@ -81,7 +81,7 @@ public class OrganizationsControllerTests : IDisposable
             _userService,
             _paymentService,
             _currentContext,
-            _cloudGetOrganizationLicenseQuery,
+            _getCloudOrganizationLicenseQuery,
             _globalSettings,
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,

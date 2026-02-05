@@ -1,7 +1,10 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -21,21 +24,6 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
-    /// <summary>
-    /// Used for both email two factor and email two factor setup.
-    /// </summary>
-    /// <param name="user">user requesting the action</param>
-    /// <param name="authentication">this controls if what verbiage is shown in the email</param>
-    /// <returns>void</returns>
-    Task SendTwoFactorEmailAsync(User user, bool authentication = true);
-    /// <summary>
-    /// Calls the same email implementation but instead it sends the token to the account email not the
-    /// email set up for two-factor, since in practice they can be different.
-    /// </summary>
-    /// <param name="user">user attepting to login with a new device</param>
-    /// <returns>void</returns>
-    Task SendNewDeviceVerificationEmailAsync(User user);
-    Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
@@ -45,12 +33,12 @@ public interface IUserService
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
+    // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
+    [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
-    Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
-        KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
@@ -73,11 +61,23 @@ public interface IUserService
     Task<bool> CheckPasswordAsync(User user, string password);
     /// <summary>
     /// Checks if the user has access to premium features, either through a personal subscription or through an organization.
+    ///
+    /// This is the preferred way to definitively know if a user has access to premium features when you already have the User object.
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
-    Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
-    Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
+    Task<bool> CanAccessPremium(User user);
+
+    /// <summary>
+    /// Checks if the user has inherited access to premium features through an organization.
+    ///
+    /// This primarily serves as a means to communicate to the client when a user has inherited their premium status
+    /// through an organization. Feature gating logic probably should not be behind this check.
+    /// </summary>
+    /// <param name="user">user being acted on</param>
+    /// <returns>true if they can access premium because of organization membership; false otherwise.</returns>
+    [Obsolete("Use IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. This method will be removed in a future version.")]
+    Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
@@ -87,7 +87,6 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
-    Task ResendNewDeviceVerificationEmail(string email, string secret);
     /// <summary>
     /// We use this method to check if the user has an active new device verification bypass
     /// </summary>
@@ -101,9 +100,6 @@ public interface IUserService
     Task ToggleNewDeviceVerificationException(Guid userId);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
-
-    [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
 
     /// <summary>
     /// This method is used by the TwoFactorAuthenticationValidator to recover two

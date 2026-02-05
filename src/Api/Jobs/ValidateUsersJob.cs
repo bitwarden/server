@@ -1,5 +1,5 @@
-﻿using Bit.Core.Jobs;
-using Bit.Core.Services;
+﻿using Bit.Core.Billing.Services;
+using Bit.Core.Jobs;
 using Quartz;
 
 namespace Bit.Api.Jobs;

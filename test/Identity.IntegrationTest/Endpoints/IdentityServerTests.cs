@@ -21,6 +21,13 @@ namespace Bit.Identity.IntegrationTest.Endpoints;
 [SutProviderCustomize]
 public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 {
+    private static readonly KeysRequestModel TEST_ACCOUNT_KEYS = new KeysRequestModel
+    {
+        AccountKeys = null,
+        PublicKey = "public-key",
+        EncryptedPrivateKey = "encrypted-private-key",
+    };
+
     private const int SecondsInMinute = 60;
     private const int MinutesInHour = 60;
     private const int SecondsInHour = SecondsInMinute * MinutesInHour;
@@ -53,6 +60,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypePassword_Success(RegisterFinishRequestModel requestModel)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
 
@@ -67,7 +75,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
-        AssertUserDecryptionOptions(root);
+        AssertUserDecryptionOptions(root, user);
     }
 
     [Theory, RegisterFinishRequestModelCustomize]
@@ -78,6 +86,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersTrue_Success(
        OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -103,6 +112,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyDisabled_WithEnforceSsoPolicyForAllUsersFalse_Success(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -129,6 +139,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithAllUserTypes_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersTrue_Throw(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -152,6 +163,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Success(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -175,6 +187,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_GrantTypePassword_WithNonOwnerOrAdmin_WithSsoPolicyEnabled_WithEnforceSsoPolicyForAllUsersFalse_Throws(
         OrganizationUserType organizationUserType, RegisterFinishRequestModel requestModel, Guid organizationId, int generatedUsername)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         requestModel.Email = $"{generatedUsername}@example.com";
 
         var localFactory = new IdentityApplicationFactory();
@@ -196,6 +209,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypeRefreshToken_Success(RegisterFinishRequestModel requestModel)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
 
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
@@ -218,6 +232,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypeClientCredentials_Success(RegisterFinishRequestModel model)
     {
+        model.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         var localFactory = new IdentityApplicationFactory();
         var user = await localFactory.RegisterNewIdentityFactoryUserAsync(model);
 
@@ -242,6 +257,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         RegisterFinishRequestModel model,
         string deviceId)
     {
+        model.UserAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
         var server = localFactory.WithWebHostBuilder(builder =>
         {
@@ -445,6 +461,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public async Task TokenEndpoint_TooQuickInOneSecond_BlockRequest(
         RegisterFinishRequestModel requestModel)
     {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
         const int AmountInOneSecondAllowed = 10;
 
         // The rule we are testing is 10 requests in 1 second
@@ -601,14 +618,27 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
     }
 
-    private static void AssertUserDecryptionOptions(JsonElement tokenResponse)
+    private static void AssertUserDecryptionOptions(JsonElement tokenResponse, User expectedUser)
     {
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(tokenResponse, "UserDecryptionOptions", JsonValueKind.Object)
-            .EnumerateObject();
+        var userDecryptionOptions =
+            AssertHelper.AssertJsonProperty(tokenResponse, "UserDecryptionOptions", JsonValueKind.Object);
 
-        Assert.Collection(userDecryptionOptions,
-            (prop) => { Assert.Equal("HasMasterPassword", prop.Name); Assert.Equal(JsonValueKind.True, prop.Value.ValueKind); },
-            (prop) => { Assert.Equal("Object", prop.Name); Assert.Equal("userDecryptionOptions", prop.Value.GetString()); });
+        AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
+        var objectString = AssertHelper.AssertJsonProperty(userDecryptionOptions, "Object", JsonValueKind.String).ToString();
+        Assert.Equal("userDecryptionOptions", objectString);
+        var masterPasswordUnlock = AssertHelper.AssertJsonProperty(userDecryptionOptions, "MasterPasswordUnlock", JsonValueKind.Object);
+        // MasterPasswordUnlock.Kdf
+        var kdf = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Kdf", JsonValueKind.Object);
+        var kdfType = AssertHelper.AssertJsonProperty(kdf, "KdfType", JsonValueKind.Number).GetInt32();
+        Assert.Equal((int)expectedUser.Kdf, kdfType);
+        var kdfIterations = AssertHelper.AssertJsonProperty(kdf, "Iterations", JsonValueKind.Number).GetInt32();
+        Assert.Equal(expectedUser.KdfIterations, kdfIterations);
+        // MasterPasswordUnlock.MasterKeyEncryptedUserKey
+        var masterKeyEncryptedUserKey = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "MasterKeyEncryptedUserKey", JsonValueKind.String).ToString();
+        Assert.Equal(expectedUser.Key, masterKeyEncryptedUserKey);
+        // MasterPasswordUnlock.Salt
+        var salt = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Salt", JsonValueKind.String).ToString();
+        Assert.Equal(expectedUser.Email.ToLower(), salt);
     }
 
     private void ReinitializeDbForTests(IdentityApplicationFactory factory)

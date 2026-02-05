@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -22,8 +23,26 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUser?> GetByOrganizationAsync(Guid organizationId, Guid userId);
     Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
     Task<OrganizationUserUserDetails?> GetDetailsByIdAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUser and its associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="id">The id of the OrganizationUser</param>
+    /// <returns>A tuple containing the OrganizationUser and its associated collections</returns>
     Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id);
+    /// <summary>
+    /// Returns the OrganizationUsers and their associated collections (excluding DefaultUserCollections).
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <param name="includeGroups">Whether to include groups</param>
+    /// <param name="includeCollections">Whether to include collections</param>
+    /// <returns>A list of OrganizationUserUserDetails</returns>
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
+    /// <inheritdoc cref="GetManyDetailsByOrganizationAsync"/>
+    /// <remarks>
+    /// This method is optimized for performance.
+    /// Reduces database round trips by fetching all data in fewer queries.
+    /// </remarks>
+    Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
@@ -58,7 +77,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
-
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
 
     /// <summary>
@@ -70,4 +88,24 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role);
 
     Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection);
+
+    /// <summary>
+    /// It will only confirm if the user is in the `Accepted` state.
+    ///
+    /// This is an idempotent operation.
+    /// </summary>
+    /// <param name="organizationUserToConfirm">Accepted OrganizationUser to confirm</param>
+    /// <returns>True, if the user was updated. False, if not performed.</returns>
+    Task<bool> ConfirmOrganizationUserAsync(AcceptedOrganizationUserToConfirm organizationUserToConfirm);
+
+    /// <summary>
+    /// Returns the OrganizationUserUserDetails if found.
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <param name="userId">The id of the User to fetch</param>
+    /// <returns>OrganizationUserUserDetails of the specified user or null if not found</returns>
+    /// <remarks>
+    /// Similar to GetByOrganizationAsync, but returns the user details.
+    /// </remarks>
+    Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId);
 }

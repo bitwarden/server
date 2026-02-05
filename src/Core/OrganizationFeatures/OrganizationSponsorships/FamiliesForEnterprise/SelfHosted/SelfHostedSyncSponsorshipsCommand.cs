@@ -1,6 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.IdentityServer;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
@@ -59,7 +62,7 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
             .ToDictionary(i => i.SponsoringOrganizationUserId);
         if (!organizationSponsorshipsDict.Any())
         {
-            _logger.LogInformation($"No existing sponsorships to sync for organization {organizationId}");
+            _logger.LogInformation("No existing sponsorships to sync for organization {organizationId}", organizationId);
             return;
         }
         var syncedSponsorships = new List<OrganizationSponsorshipData>();

@@ -1,9 +1,12 @@
-﻿using Bit.Core.Identity;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
-using IdentityModel;
 
 namespace Bit.Identity.IdentityServer.ClientProviders;
 

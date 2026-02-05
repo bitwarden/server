@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.Models.Business;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
@@ -6,8 +9,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Validation;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
@@ -19,7 +22,7 @@ public class InviteUsersPasswordManagerValidator(
     IInviteUsersEnvironmentValidator inviteUsersEnvironmentValidator,
     IInviteUsersOrganizationValidator inviteUsersOrganizationValidator,
     IProviderRepository providerRepository,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IOrganizationRepository organizationRepository
     ) : IInviteUsersPasswordManagerValidator
 {

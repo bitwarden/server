@@ -8,8 +8,8 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Installations;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using NSubstitute;
 using Xunit;
@@ -166,7 +166,7 @@ public class PushControllerTests
         yield return UserTyped(PushType.SyncOrgKeys);
         yield return UserTyped(PushType.SyncSettings);
         yield return UserTyped(PushType.LogOut);
-        yield return UserTyped(PushType.PendingSecurityTasks);
+        yield return UserTyped(PushType.RefreshSecurityTasks);
 
         yield return Typed(new PushSendRequestModel<AuthRequestPushNotification>
         {

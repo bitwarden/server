@@ -1,9 +1,12 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Identity;
-using Bit.Core.IdentityServer;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
-using IdentityModel;
 
 namespace Bit.Identity.IdentityServer.ClientProviders;
 

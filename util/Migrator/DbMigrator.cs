@@ -1,4 +1,7 @@
-﻿using System.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Data;
 using System.Reflection;
 using System.Text;
 using Bit.Core;
@@ -50,7 +53,7 @@ public class DbMigrator
                 if (ex.Message.Contains("Server is in script upgrade mode."))
                 {
                     attempt++;
-                    _logger.LogInformation($"Database is in script upgrade mode, trying again (attempt #{attempt}).");
+                    _logger.LogInformation("Database is in script upgrade mode, trying again (attempt #{Attempt}).", attempt);
                     Thread.Sleep(20000);
                 }
                 else
@@ -162,7 +165,7 @@ public class DbMigrator
             {
                 stringBuilder.AppendLine(script.Name);
             }
-            _logger.LogInformation(Constants.BypassFiltersEventId, stringBuilder.ToString());
+            _logger.LogInformation(Constants.BypassFiltersEventId, "{Scripts}", stringBuilder.ToString());
             return true;
         }
 

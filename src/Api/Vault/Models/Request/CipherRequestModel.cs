@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
-using NS = Newtonsoft.Json;
-using NSL = Newtonsoft.Json.Linq;
 
 namespace Bit.Api.Vault.Models.Request;
 
@@ -37,12 +38,28 @@ public class CipherRequestModel
     // TODO: Rename to Attachments whenever the above is finally removed.
     public Dictionary<string, CipherAttachmentModel> Attachments2 { get; set; }
 
+    [Obsolete("Use Data instead.")]
     public CipherLoginModel Login { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherCardModel Card { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherIdentityModel Identity { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherSecureNoteModel SecureNote { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherSSHKeyModel SSHKey { get; set; }
+
+    /// <summary>
+    /// JSON string containing cipher-specific data
+    /// </summary>
+    [StringLength(500000)]
+    public string Data { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
+    public DateTime? ArchivedDate { get; set; }
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
     {
@@ -63,39 +80,57 @@ public class CipherRequestModel
     {
         existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
         existingCipher.Favorite = Favorite;
+        existingCipher.ArchivedDate = ArchivedDate;
         ToCipher(existingCipher);
         return existingCipher;
     }
 
-    public Cipher ToCipher(Cipher existingCipher)
+    public Cipher ToCipher(Cipher existingCipher, Guid? userId = null)
     {
-        switch (existingCipher.Type)
+        // If Data field is provided, use it directly
+        if (!string.IsNullOrWhiteSpace(Data))
         {
-            case CipherType.Login:
-                var loginObj = NSL.JObject.FromObject(ToCipherLoginData(),
-                    new NS.JsonSerializer { NullValueHandling = NS.NullValueHandling.Ignore });
-                // TODO: Switch to JsonNode in .NET 6 https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-use-dom-utf8jsonreader-utf8jsonwriter?pivots=dotnet-6-0
-                loginObj[nameof(CipherLoginData.Uri)]?.Parent?.Remove();
-                existingCipher.Data = loginObj.ToString(NS.Formatting.None);
-                break;
-            case CipherType.Card:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.Identity:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.SecureNote:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.SSHKey:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            default:
-                throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+            existingCipher.Data = Data;
+        }
+        else
+        {
+            // Fallback to structured fields
+            switch (existingCipher.Type)
+            {
+                case CipherType.Login:
+                    var loginData = ToCipherLoginData();
+                    var loginJson = JsonSerializer.Serialize(loginData, JsonHelpers.IgnoreWritingNull);
+                    var loginObj = JsonDocument.Parse(loginJson);
+                    var loginDict = JsonSerializer.Deserialize<Dictionary<string, object>>(loginJson);
+                    loginDict?.Remove(nameof(CipherLoginData.Uri));
+
+                    existingCipher.Data = JsonSerializer.Serialize(loginDict, JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Card:
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Identity:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.SecureNote:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.SSHKey:
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+            }
         }
 
+        var userIdKey = userId.HasValue ? userId.ToString().ToUpperInvariant() : null;
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
+        existingCipher.Folders = UpdateUserSpecificJsonField(existingCipher.Folders, userIdKey, FolderId);
+        existingCipher.Favorites = UpdateUserSpecificJsonField(existingCipher.Favorites, userIdKey, Favorite);
+        existingCipher.Archives = UpdateUserSpecificJsonField(existingCipher.Archives, userIdKey, ArchivedDate);
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;
@@ -260,6 +295,37 @@ public class CipherRequestModel
             KeyFingerprint = SSHKey.KeyFingerprint,
         };
     }
+
+    /// <summary>
+    /// Updates a JSON string representing a dictionary by adding, updating, or removing a key-value pair
+    /// based on the provided userIdKey and newValue.
+    /// </summary>
+    private static string UpdateUserSpecificJsonField(string existingJson, string userIdKey, object newValue)
+    {
+        if (userIdKey == null)
+        {
+            return existingJson;
+        }
+
+        var jsonDict = string.IsNullOrWhiteSpace(existingJson)
+            ? new Dictionary<string, object>()
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(existingJson) ?? new Dictionary<string, object>();
+
+        var shouldRemove = newValue == null ||
+                          (newValue is string strValue && string.IsNullOrWhiteSpace(strValue)) ||
+                          (newValue is bool boolValue && !boolValue);
+
+        if (shouldRemove)
+        {
+            jsonDict.Remove(userIdKey);
+        }
+        else
+        {
+            jsonDict[userIdKey] = newValue is string str ? str.ToUpperInvariant() : newValue;
+        }
+
+        return jsonDict.Count == 0 ? null : JsonSerializer.Serialize(jsonDict);
+    }
 }
 
 public class CipherWithIdRequestModel : CipherRequestModel
@@ -313,11 +379,23 @@ public class CipherCollectionsRequestModel
     public IEnumerable<string> CollectionIds { get; set; }
 }
 
+public class CipherBulkArchiveRequestModel
+{
+    [Required]
+    public IEnumerable<Guid> Ids { get; set; }
+}
+
 public class CipherBulkDeleteRequestModel
 {
     [Required]
     public IEnumerable<string> Ids { get; set; }
     public string OrganizationId { get; set; }
+}
+
+public class CipherBulkUnarchiveRequestModel
+{
+    [Required]
+    public IEnumerable<Guid> Ids { get; set; }
 }
 
 public class CipherBulkRestoreRequestModel

@@ -1,11 +1,14 @@
-﻿using System.Diagnostics;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics;
 using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
-using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Platform.PushRegistration;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;

@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Dirt.Reports.Models.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Dirt.Reports.Models.Data;
 
 public class MemberAccessReportDetail
 {

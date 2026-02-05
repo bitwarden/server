@@ -28,4 +28,17 @@ public interface ISecurityTaskRepository : IRepository<SecurityTask, Guid>
     /// <param name="tasks">Collection of tasks to create</param>
     /// <returns>Collection of created security tasks</returns>
     Task<ICollection<SecurityTask>> CreateManyAsync(IEnumerable<SecurityTask> tasks);
+
+    /// <summary>
+    /// Retrieves security task metrics for an organization.
+    /// </summary>
+    /// <param name="organizationId">The id of the organization</param>
+    /// <returns>A collection of security task metrics</returns>
+    Task<SecurityTaskMetrics> GetTaskMetricsAsync(Guid organizationId);
+
+    /// <summary>
+    /// Marks all tasks associated with the respective ciphers as complete.
+    /// </summary>
+    /// <param name="cipherIds">Collection of cipher IDs</param>
+    Task MarkAsCompleteByCipherIds(IEnumerable<Guid> cipherIds);
 }

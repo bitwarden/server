@@ -244,6 +244,44 @@ public class UpdateOrganizationUserCommandTests
         Assert.Contains("User can only be an admin of one free organization.", exception.Message);
     }
 
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WithMixedCollectionTypes_FiltersOutDefaultUserCollections(
+        OrganizationUser user, OrganizationUser originalUser, Collection sharedCollection, Collection defaultUserCollection,
+        Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization)
+    {
+        user.Permissions = null;
+        sharedCollection.Type = CollectionType.SharedCollection;
+        defaultUserCollection.Type = CollectionType.DefaultUserCollection;
+        sharedCollection.OrganizationId = defaultUserCollection.OrganizationId = organization.Id;
+
+        Setup(sutProvider, organization, user, originalUser);
+
+        var collectionAccess = new List<CollectionAccessSelection>
+        {
+            new() { Id = sharedCollection.Id, ReadOnly = true, HidePasswords = false, Manage = false },
+            new() { Id = defaultUserCollection.Id, ReadOnly = false, HidePasswords = true, Manage = false }
+        };
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>
+            {
+                new() { Id = sharedCollection.Id, OrganizationId = user.OrganizationId, Type = CollectionType.SharedCollection },
+                new() { Id = defaultUserCollection.Id, OrganizationId = user.OrganizationId, Type = CollectionType.DefaultUserCollection }
+            });
+
+        await sutProvider.Sut.UpdateUserAsync(user, OrganizationUserType.User, savingUserId, collectionAccess, null);
+
+        // Verify that ReplaceAsync was called with only the shared collection (default user collection filtered out)
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            user,
+            Arg.Is<IEnumerable<CollectionAccessSelection>>(collections =>
+                collections.Count() == 1 &&
+                collections.First().Id == sharedCollection.Id
+            )
+        );
+    }
+
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,
         OrganizationUser newUser, OrganizationUser oldUser)
     {

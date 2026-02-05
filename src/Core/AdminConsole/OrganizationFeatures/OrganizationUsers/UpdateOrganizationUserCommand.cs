@@ -89,7 +89,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         if (collectionAccessList.Count != 0)
         {
-            await ValidateCollectionAccessAsync(originalOrganizationUser, collectionAccessList);
+            collectionAccessList = await ValidateAccessAndFilterDefaultUserCollectionsAsync(originalOrganizationUser, collectionAccessList);
         }
 
         if (groupAccess?.Any() == true)
@@ -179,11 +179,19 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         throw new BadRequestException("User can only be an admin of one free organization.");
     }
 
-    private async Task ValidateCollectionAccessAsync(OrganizationUser originalUser,
-        ICollection<CollectionAccessSelection> collectionAccess)
+    private async Task<List<CollectionAccessSelection>> ValidateAccessAndFilterDefaultUserCollectionsAsync(
+        OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess)
     {
         var collections = await _collectionRepository
             .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
+
+        ValidateCollections(originalUser, collectionAccess, collections);
+
+        return ExcludeDefaultUserCollections(collectionAccess, collections);
+    }
+
+    private static void ValidateCollections(OrganizationUser originalUser, List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections)
+    {
         var collectionIds = collections.Select(c => c.Id);
 
         var missingCollection = collectionAccess
@@ -200,6 +208,12 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new NotFoundException();
         }
     }
+
+    private static List<CollectionAccessSelection> ExcludeDefaultUserCollections(
+        List<CollectionAccessSelection> collectionAccess, ICollection<Collection> collections) =>
+            collectionAccess
+                .Where(cas => collections.Any(c => c.Id == cas.Id && c.Type != CollectionType.DefaultUserCollection))
+                .ToList();
 
     private async Task ValidateGroupAccessAsync(OrganizationUser originalUser,
         ICollection<Guid> groupAccess)

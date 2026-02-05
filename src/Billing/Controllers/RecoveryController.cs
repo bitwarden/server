@@ -1,4 +1,7 @@
-﻿using Bit.Billing.Models.Recovery;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Billing.Models.Recovery;
 using Bit.Billing.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http.HttpResults;

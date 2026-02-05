@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -9,6 +10,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -75,7 +77,7 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserExists_ShouldReturnUserKdfInfo()
+    public async Task PostPasswordPrelogin_WhenUserExists_ShouldReturnUserKdfInfo()
     {
         var userKdfInfo = new UserKdfInformation
         {
@@ -84,30 +86,113 @@ public class AccountsControllerTests : IDisposable
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
 
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(userKdfInfo.Kdf, response.Kdf);
         Assert.Equal(userKdfInfo.KdfIterations, response.KdfIterations);
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExistAndNoDefaultKdfHmacKeySet_ShouldDefaultToPBKDF()
+    public async Task PostPrelogin_And_PostPasswordPrelogin_ShouldUseSamePreloginLogic()
+    {
+        // Arrange: No user exists and no default HMAC key to force default path
+        var email = "same-user@example.com";
+        SetDefaultKdfHmacKey(null);
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+
+        // Act
+        var legacyResponse = await _sut.PostPrelogin(new PasswordPreloginRequestModel { Email = email });
+        var newResponse = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
+
+        // Assert: Both endpoints yield identical results, implying shared logic path
+        Assert.Equal(legacyResponse.Kdf, newResponse.Kdf);
+        Assert.Equal(legacyResponse.KdfIterations, newResponse.KdfIterations);
+        Assert.Equal(legacyResponse.KdfMemory, newResponse.KdfMemory);
+        Assert.Equal(legacyResponse.KdfParallelism, newResponse.KdfParallelism);
+        Assert.Equal(legacyResponse.Salt, newResponse.Salt);
+        Assert.NotNull(legacyResponse.KdfSettings);
+        Assert.NotNull(newResponse.KdfSettings);
+        Assert.Equal(legacyResponse.KdfSettings!.KdfType, newResponse.KdfSettings!.KdfType);
+        Assert.Equal(legacyResponse.KdfSettings!.Iterations, newResponse.KdfSettings!.Iterations);
+        Assert.Equal(legacyResponse.KdfSettings!.Memory, newResponse.KdfSettings!.Memory);
+        Assert.Equal(legacyResponse.KdfSettings!.Parallelism, newResponse.KdfSettings!.Parallelism);
+
+        // Both methods should consult the repository once each with the same email
+        await _userRepository.Received(2).GetKdfInformationByEmailAsync(Arg.Is<string>(e => e == email));
+    }
+
+    [Fact]
+    public async Task PostPasswordPrelogin_WhenUserExists_ReturnsNewFieldsAlignedWithLegacy_Argon2()
+    {
+        var email = "user@example.com";
+        var userKdfInfo = new UserKdfInformation
+        {
+            Kdf = KdfType.Argon2id,
+            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
+
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
+
+        // New fields exist and match repository values
+        Assert.NotNull(response.KdfSettings);
+        Assert.Equal(userKdfInfo.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(userKdfInfo.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(userKdfInfo.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(userKdfInfo.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // New and legacy fields are aligned during migration
+        Assert.Equal(response.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(response.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // Salt is set to the input email during migration
+        Assert.Equal(email, response.Salt);
+    }
+
+    [Fact]
+    public async Task PostPasswordPrelogin_WhenUserDoesNotExistAndNoDefaultKdfHmacKeySet_ShouldDefaultToPBKDF()
     {
         SetDefaultKdfHmacKey(null);
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
+    [Fact]
+    public async Task PostPasswordPrelogin_NoUser_NoDefaultHmacKey_ReturnsAlignedNewFieldsAndSalt()
+    {
+        var email = "user@example.com";
+        SetDefaultKdfHmacKey(null);
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
+
+        // New fields exist
+        Assert.NotNull(response.KdfSettings);
+
+        // New and legacy fields are aligned during migration
+        Assert.Equal(response.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(response.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // Salt is set to the input email during migration
+        Assert.Equal(email, response.Salt);
+    }
+
     [Theory]
     [BitAutoData]
-    public async Task PostPrelogin_WhenUserDoesNotExistAndDefaultKdfHmacKeyIsSet_ShouldComputeHmacAndReturnExpectedKdf(string email)
+    public async Task PostPasswordPrelogin_WhenUserDoesNotExistAndDefaultKdfHmacKeyIsSet_ShouldComputeHmacAndReturnExpectedKdf(string email)
     {
         // Arrange:
-        var defaultKey = Encoding.UTF8.GetBytes("my-secret-key");
+        var defaultKey = "my-secret-key"u8.ToArray();
         SetDefaultKdfHmacKey(defaultKey);
 
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
@@ -122,7 +207,7 @@ public class AccountsControllerTests : IDisposable
         var expectedKdf = defaultKdfResults[expectedIndex];
 
         // Act
-        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = email });
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = email });
 
         // Assert: Ensure the returned KDF matches the expected one from the computed hash
         Assert.Equal(expectedKdf.Kdf, response.Kdf);
@@ -132,6 +217,16 @@ public class AccountsControllerTests : IDisposable
             Assert.Equal(expectedKdf.KdfMemory, response.KdfMemory);
             Assert.Equal(expectedKdf.KdfParallelism, response.KdfParallelism);
         }
+
+        // New and legacy fields are aligned during migration
+        Assert.NotNull(response.KdfSettings);
+        Assert.Equal(response.Kdf, response.KdfSettings!.KdfType);
+        Assert.Equal(response.KdfIterations, response.KdfSettings!.Iterations);
+        Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
+        Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
+
+        // Salt is set to the input email during migration
+        Assert.Equal(email, response.Salt);
     }
 
     [Theory]
@@ -148,7 +243,7 @@ public class AccountsControllerTests : IDisposable
 
         var token = "fakeToken";
 
-        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).Returns(token);
+        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails, null).Returns(token);
 
         // Act
         var result = await _sut.PostRegisterSendVerificationEmail(model);
@@ -171,7 +266,7 @@ public class AccountsControllerTests : IDisposable
             ReceiveMarketingEmails = receiveMarketingEmails
         };
 
-        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails).ReturnsNull();
+        _sendVerificationEmailForRegistrationCommand.Run(email, name, receiveMarketingEmails, null).ReturnsNull();
 
         // Act
         var result = await _sut.PostRegisterSendVerificationEmail(model);
@@ -179,6 +274,55 @@ public class AccountsControllerTests : IDisposable
         // Assert
         var noContentResult = Assert.IsType<NoContentResult>(result);
         Assert.Equal(204, noContentResult.StatusCode);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagEnabled_PassesFromMarketingToCommandAsync(
+        string email, string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var fromMarketing = MarketingInitiativeConstants.Premium;
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            FromMarketing = fromMarketing,
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(true);
+
+        // Act
+        await _sut.PostRegisterSendVerificationEmail(model);
+
+        // Assert
+        await _sendVerificationEmailForRegistrationCommand.Received(1)
+            .Run(email, name, receiveMarketingEmails, fromMarketing);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagDisabled_PassesNullFromMarketingToCommandAsync(
+        string email, string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var model = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            FromMarketing = MarketingInitiativeConstants.Premium, // model includes FromMarketing: "premium"
+        };
+
+        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(false);
+
+        // Act
+        await _sut.PostRegisterSendVerificationEmail(model);
+
+        // Assert
+        await _sendVerificationEmailForRegistrationCommand.Received(1)
+            .Run(email, name, receiveMarketingEmails, null); // fromMarketing gets ignored and null gets passed
     }
 
     [Theory, BitAutoData]
@@ -446,6 +590,504 @@ public class AccountsControllerTests : IDisposable
 
         // Act & assert
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostRegisterVerificationEmailClicked(requestModel));
+    }
+
+    // PM-28143 - When removing the old properties, update this test to just test the new properties working
+    // as expected.
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_EmailVerification_BothDataForms_ProduceEquivalentOutcomes(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: new-form model (MasterPasswordAuthenticationData + MasterPasswordUnlockData)
+
+        var kdfData = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
+        var newModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfData,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = email // salt choice is not validated here during registration
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfData,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Arrange: legacy-form model (MasterPasswordHash + legacy KDF + UserSymmetricKey)
+        var legacyModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordHash = masterPasswordHash,
+            Kdf = KdfType.Argon2id,
+            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            UserSymmetricKey = masterKeyWrappedUserKey,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        var newUser = newModel.ToUser();
+        var legacyUser = legacyModel.ToUser();
+
+        _registerUserCommand
+            .RegisterUserViaEmailVerificationToken(Arg.Any<User>(), masterPasswordHash, emailVerificationToken)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act: call with new form
+        var newResult = await _sut.PostRegisterFinish(newModel);
+        // Act: call with legacy form
+        var legacyResult = await _sut.PostRegisterFinish(legacyModel);
+
+        // Assert: outcomes are identical in effect (success response)
+        Assert.NotNull(newResult);
+        Assert.NotNull(legacyResult);
+
+        // Assert: effective users are equivalent
+        Assert.Equal(legacyUser.Email, newUser.Email);
+        Assert.Equal(legacyUser.MasterPasswordHint, newUser.MasterPasswordHint);
+        Assert.Equal(legacyUser.Kdf, newUser.Kdf);
+        Assert.Equal(legacyUser.KdfIterations, newUser.KdfIterations);
+        Assert.Equal(legacyUser.KdfMemory, newUser.KdfMemory);
+        Assert.Equal(legacyUser.KdfParallelism, newUser.KdfParallelism);
+        Assert.Equal(legacyUser.Key, newUser.Key);
+        Assert.Equal(legacyUser.PublicKey, newUser.PublicKey);
+        Assert.Equal(legacyUser.PrivateKey, newUser.PrivateKey);
+
+        // Assert: hash forwarded identically from both inputs
+        await _registerUserCommand.Received(2).RegisterUserViaEmailVerificationToken(
+            Arg.Is<User>(u =>
+                u.Email == newUser.Email &&
+                u.Kdf == newUser.Kdf &&
+                u.KdfIterations == newUser.KdfIterations &&
+                u.KdfMemory == newUser.KdfMemory &&
+                u.KdfParallelism == newUser.KdfParallelism &&
+                u.Key == newUser.Key),
+            masterPasswordHash,
+            emailVerificationToken);
+
+        await _registerUserCommand.Received(2).RegisterUserViaEmailVerificationToken(
+            Arg.Is<User>(u =>
+                u.Email == legacyUser.Email &&
+                u.Kdf == legacyUser.Kdf &&
+                u.KdfIterations == legacyUser.KdfIterations &&
+                u.KdfMemory == legacyUser.KdfMemory &&
+                u.KdfParallelism == legacyUser.KdfParallelism &&
+                u.Key == legacyUser.Key),
+            masterPasswordHash,
+            emailVerificationToken);
+    }
+
+    // PM-28143 - When removing the old properties, update this test to just test the new properties working
+    // as expected.
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_OrgInvite_BothDataForms_ProduceEquivalentOutcomes(
+        string email,
+        string orgInviteToken,
+        Guid organizationUserId,
+        string masterPasswordHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        var kdfData = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
+        // Arrange: new-form model (MasterPasswordAuthenticationData + MasterPasswordUnlockData)
+        var newModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            OrgInviteToken = orgInviteToken,
+            OrganizationUserId = organizationUserId,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfData,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfData,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Arrange: legacy-form model (MasterPasswordHash + legacy KDF + UserSymmetricKey)
+        var legacyModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            OrgInviteToken = orgInviteToken,
+            OrganizationUserId = organizationUserId,
+            MasterPasswordHash = masterPasswordHash,
+            Kdf = kdfData.KdfType,
+            KdfIterations = kdfData.Iterations,
+            KdfMemory = kdfData.Memory,
+            KdfParallelism = kdfData.Parallelism,
+            UserSymmetricKey = masterKeyWrappedUserKey,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        var newUser = newModel.ToUser();
+        var legacyUser = legacyModel.ToUser();
+
+        _registerUserCommand
+            .RegisterUserViaOrganizationInviteToken(Arg.Any<User>(), masterPasswordHash, orgInviteToken, organizationUserId)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        var newResult = await _sut.PostRegisterFinish(newModel);
+        var legacyResult = await _sut.PostRegisterFinish(legacyModel);
+
+        // Assert success
+        Assert.NotNull(newResult);
+        Assert.NotNull(legacyResult);
+
+        // Assert: effective users are equivalent
+        Assert.Equal(legacyUser.Email, newUser.Email);
+        Assert.Equal(legacyUser.MasterPasswordHint, newUser.MasterPasswordHint);
+        Assert.Equal(legacyUser.Kdf, newUser.Kdf);
+        Assert.Equal(legacyUser.KdfIterations, newUser.KdfIterations);
+        Assert.Equal(legacyUser.KdfMemory, newUser.KdfMemory);
+        Assert.Equal(legacyUser.KdfParallelism, newUser.KdfParallelism);
+        Assert.Equal(legacyUser.Key, newUser.Key);
+        Assert.Equal(legacyUser.PublicKey, newUser.PublicKey);
+        Assert.Equal(legacyUser.PrivateKey, newUser.PrivateKey);
+
+        // Assert: hash forwarded identically from both inputs
+        await _registerUserCommand.Received(2).RegisterUserViaOrganizationInviteToken(
+            Arg.Is<User>(u =>
+                u.Email == newUser.Email &&
+                u.Kdf == newUser.Kdf &&
+                u.KdfIterations == newUser.KdfIterations &&
+                u.KdfMemory == newUser.KdfMemory &&
+                u.KdfParallelism == newUser.KdfParallelism &&
+                u.Key == newUser.Key),
+            masterPasswordHash,
+            orgInviteToken,
+            organizationUserId);
+
+        await _registerUserCommand.Received(2).RegisterUserViaOrganizationInviteToken(
+            Arg.Is<User>(u =>
+                u.Email == legacyUser.Email &&
+                u.Kdf == legacyUser.Kdf &&
+                u.KdfIterations == legacyUser.KdfIterations &&
+                u.KdfMemory == legacyUser.KdfMemory &&
+                u.KdfParallelism == legacyUser.KdfParallelism &&
+                u.Key == legacyUser.Key),
+            masterPasswordHash,
+            orgInviteToken,
+            organizationUserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_NewForm_UsesUnlockDataForKdfAndKey_WhenRootFieldsNull(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        string masterKeyWrappedUserKey,
+        int iterations,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: Provide only unlock-data KDF + key; leave root KDF fields null
+        var unlockKdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = iterations
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                // present but not used by ToUser for KDF/Key
+                Kdf = unlockKdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = unlockKdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            // root KDF fields intentionally null
+            Kdf = null,
+            KdfIterations = null,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        _registerUserCommand
+            .RegisterUserViaEmailVerificationToken(Arg.Any<User>(), masterPasswordHash, emailVerificationToken)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        var _ = await _sut.PostRegisterFinish(model);
+
+        // Assert: The user passed to command uses unlock-data values
+        await _registerUserCommand.Received(1).RegisterUserViaEmailVerificationToken(
+            Arg.Is<User>(u =>
+                u.Email == email &&
+                u.Kdf == unlockKdf.KdfType &&
+                u.KdfIterations == unlockKdf.Iterations &&
+                u.Key == masterKeyWrappedUserKey),
+            masterPasswordHash,
+            emailVerificationToken);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostRegisterFinish_LegacyForm_UsesRootFields_WhenUnlockDataNull(
+        string email,
+        string emailVerificationToken,
+        string masterPasswordHash,
+        string legacyKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: Provide only legacy root KDF + key; no unlock-data provided
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            EmailVerificationToken = emailVerificationToken,
+            MasterPasswordHash = masterPasswordHash,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = legacyKey,
+            MasterPasswordUnlock = null,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        _registerUserCommand
+            .RegisterUserViaEmailVerificationToken(Arg.Any<User>(), masterPasswordHash, emailVerificationToken)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act
+        var _ = await _sut.PostRegisterFinish(model);
+
+        // Assert: The user passed to command uses root values
+        await _registerUserCommand.Received(1).RegisterUserViaEmailVerificationToken(
+            Arg.Is<User>(u =>
+                u.Email == email &&
+                u.Kdf == KdfType.PBKDF2_SHA256 &&
+                u.KdfIterations == AuthConstants.PBKDF2_ITERATIONS.Default &&
+                u.Key == legacyKey),
+            masterPasswordHash,
+            emailVerificationToken);
+    }
+
+    [Theory, BitAutoData]
+    public void RegisterFinishRequestModel_Validate_Throws_WhenUnlockAndAuthDataMismatch(
+        string email,
+        string authHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: authentication and unlock have different KDF and/or salt
+        var authKdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+        };
+        var unlockKdf = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = authKdf,
+                MasterPasswordAuthenticationHash = authHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = unlockKdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Provide a minimal valid token type to satisfy model-level token validation
+        model.EmailVerificationToken = "test-token";
+
+        var ctx = new ValidationContext(model);
+
+        // Act
+        var results = model.Validate(ctx).ToList();
+
+        // Assert mismatched auth/unlock is allowed
+        Assert.Empty(results);
+    }
+
+    [Theory, BitAutoData]
+    public void RegisterFinishRequestModel_Validate_Throws_WhenSaltMismatch(
+        string email,
+        string authHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        var unlockKdf = new KdfRequestModel
+        {
+            KdfType = KdfType.Argon2id,
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = unlockKdf,
+                MasterPasswordAuthenticationHash = authHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = unlockKdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                // Intentionally different salt to force mismatch
+                Salt = email + ".mismatch"
+            },
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Provide a minimal valid token type to satisfy model-level token validation
+        model.EmailVerificationToken = "test-token";
+
+        var ctx = new ValidationContext(model);
+
+        // Act
+        var results = model.Validate(ctx).ToList();
+
+        // Assert mismatched salts between auth/unlock are allowed
+        Assert.Empty(results);
+    }
+
+    [Theory, BitAutoData]
+    public void RegisterFinishRequestModel_Validate_Throws_WhenAuthHashAndRootHashMismatch(
+        string email,
+        string authHash,
+        string differentRootHash,
+        string masterKeyWrappedUserKey,
+        string publicKey,
+        string encryptedPrivateKey)
+    {
+        // Arrange: same KDF/salt, but authentication hash differs from legacy root hash
+        var kdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+        };
+
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = authHash,
+                Salt = email
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = masterKeyWrappedUserKey,
+                Salt = email
+            },
+            // Intentionally set the legacy field to a different value to trigger the throw
+            MasterPasswordHash = differentRootHash,
+            UserAsymmetricKeys = new KeysRequestModel
+            {
+                PublicKey = publicKey,
+                EncryptedPrivateKey = encryptedPrivateKey
+            }
+        };
+
+        // Provide a minimal valid token type to satisfy model-level token validation
+        model.EmailVerificationToken = "test-token";
+
+        var ctx = new ValidationContext(model);
+
+        // Act
+        var results = model.Validate(ctx).ToList();
+
+        // Assert: validation result exists with expected message and member names
+        var mismatchResult = Assert.Single(results.Where(r =>
+            r.ErrorMessage ==
+            "MasterPasswordAuthenticationHash and root level MasterPasswordHash provided and are not equal. Only provide one."));
+        Assert.Contains("MasterPasswordAuthenticationHash", mismatchResult.MemberNames);
+        Assert.Contains("MasterPasswordHash", mismatchResult.MemberNames);
     }
 
     private void SetDefaultKdfHmacKey(byte[]? newKey)

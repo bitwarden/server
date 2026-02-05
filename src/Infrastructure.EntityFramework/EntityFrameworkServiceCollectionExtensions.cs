@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
-using Bit.Core.Billing.Repositories;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
@@ -88,6 +88,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+        services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
         services.AddSingleton<IProviderRepository, ProviderRepository>();
@@ -108,6 +109,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
+        services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Platform.MailDelivery;
+﻿using Bit.Core.Platform.Mail.Delivery;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

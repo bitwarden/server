@@ -47,17 +47,18 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
                         ((cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select new { c, ou, o, cu, gu, g, cg };
 
-        return query.Select(x => new CollectionDetails
+        return query.Select(row => new CollectionDetails
         {
-            Id = x.c.Id,
-            OrganizationId = x.c.OrganizationId,
-            Name = x.c.Name,
-            ExternalId = x.c.ExternalId,
-            CreationDate = x.c.CreationDate,
-            RevisionDate = x.c.RevisionDate,
-            ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false,
-            HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
-            Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
+            Id = row.c.Id,
+            OrganizationId = row.c.OrganizationId,
+            Name = row.c.Name,
+            ExternalId = row.c.ExternalId,
+            CreationDate = row.c.CreationDate,
+            RevisionDate = row.c.RevisionDate,
+            ReadOnly = (bool?)row.cu.ReadOnly ?? (bool?)row.cg.ReadOnly ?? false,
+            HidePasswords = (bool?)row.cu.HidePasswords ?? (bool?)row.cg.HidePasswords ?? false,
+            Manage = (bool?)row.cu.Manage ?? (bool?)row.cg.Manage ?? false,
+            Type = row.c.Type
         });
     }
 }

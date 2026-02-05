@@ -1,4 +1,7 @@
-﻿using Bit.Billing.Models;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Billing.Models;
 using Bit.Billing.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -117,9 +120,7 @@ public class StripeController : Controller
 
         return deliveryContainer.ApiVersion switch
         {
-            "2024-06-20" => HandleVersionWith(_billingSettings.StripeWebhookSecret20240620),
-            "2023-10-16" => HandleVersionWith(_billingSettings.StripeWebhookSecret20231016),
-            "2022-08-01" => HandleVersionWith(_billingSettings.StripeWebhookSecret),
+            "2025-08-27.basil" => HandleVersionWith(_billingSettings.StripeWebhookSecret20250827Basil),
             _ => HandleDefault(deliveryContainer.ApiVersion)
         };
 

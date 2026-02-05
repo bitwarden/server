@@ -8,7 +8,7 @@
 @if(!string.IsNullOrWhiteSpace(Model.TransactionId))
 {
     <div class="alert alert-success" role="alert">
-        <p>Charged customer "@Model.Id" for @Model.Amount.Value.ToString("C").</p>
+        <p>Charged customer "@Model.Id" for @Model.Amount!.Value.ToString("C").</p>
         <strong>btTransactionId:</strong> @Model.TransactionId<br />
         <strong>btPayPalTransactionId:</strong> @Model.PayPalTransactionId
     </div>

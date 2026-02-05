@@ -1,49 +1,91 @@
 ﻿CREATE PROCEDURE [dbo].[Cipher_DeleteByOrganizationId]
-    @OrganizationId AS UNIQUEIDENTIFIER
-AS
-BEGIN
-    SET NOCOUNT ON
+     @OrganizationId UNIQUEIDENTIFIER
+ AS
+ BEGIN
+     SET NOCOUNT ON;
 
-    DECLARE @BatchSize INT = 100
+     DECLARE @BatchSize INT = 1000;
 
-    -- Delete collection ciphers
-    WHILE @BatchSize > 0
-    BEGIN
-        BEGIN TRANSACTION Cipher_DeleteByOrganizationId_CC
+     BEGIN TRY
+         BEGIN TRANSACTION;
 
-        DELETE TOP(@BatchSize) CC
-        FROM
-            [dbo].[CollectionCipher] CC
-        INNER JOIN
-            [dbo].[Collection] C ON C.[Id] = CC.[CollectionId]
-        WHERE
-            C.[OrganizationId] = @OrganizationId
+         ---------------------------------------------------------------------
+         -- 1. Delete organization ciphers that are NOT in any default
+         --    user collection (Collection.Type = 1).
+         ---------------------------------------------------------------------
+         WHILE 1 = 1
+         BEGIN
+             ;WITH Target AS
+             (
+                 SELECT TOP (@BatchSize) C.Id
+                 FROM dbo.Cipher C
+                 WHERE C.OrganizationId = @OrganizationId
+                   AND NOT EXISTS (
+                       SELECT 1
+                       FROM dbo.CollectionCipher CC2
+                       INNER JOIN dbo.Collection Col2
+                         ON Col2.Id = CC2.CollectionId
+                         AND Col2.Type = 1  -- Default user collection
+                       WHERE CC2.CipherId = C.Id
+                   )
+                 ORDER BY C.Id  -- Deterministic ordering (matches clustered index)
+             )
+             DELETE C
+             FROM dbo.Cipher C
+             INNER JOIN Target T ON T.Id = C.Id;
 
-        SET @BatchSize = @@ROWCOUNT
+             IF @@ROWCOUNT = 0 BREAK;
+         END
 
-        COMMIT TRANSACTION Cipher_DeleteByOrganizationId_CC
-    END
+         ---------------------------------------------------------------------
+         -- 2. Remove remaining CollectionCipher rows that reference
+         --    non-default (Type = 0 / shared) collections, for ciphers
+         --    that were preserved because they belong to at least one
+         --    default (Type = 1) collection.
+         ---------------------------------------------------------------------
+         SET @BatchSize = 1000;
+         WHILE 1 = 1
+         BEGIN
+             ;WITH ToDelete AS
+             (
+                 SELECT TOP (@BatchSize)
+                        CC.CipherId,
+                        CC.CollectionId
+                 FROM dbo.CollectionCipher CC
+                 INNER JOIN dbo.Collection Col
+                         ON Col.Id = CC.CollectionId
+                        AND Col.Type = 0  -- Non-default collections
+                 INNER JOIN dbo.Cipher C
+                         ON C.Id = CC.CipherId
+                 WHERE C.OrganizationId = @OrganizationId
+                 ORDER BY CC.CollectionId, CC.CipherId  -- Matches clustered index
+             )
+             DELETE CC
+             FROM dbo.CollectionCipher CC
+             INNER JOIN ToDelete TD
+                 ON CC.CipherId = TD.CipherId
+                AND CC.CollectionId = TD.CollectionId;
 
-    -- Reset batch size
-    SET @BatchSize = 100
+             IF @@ROWCOUNT = 0 BREAK;
+         END
 
-    -- Delete ciphers
-    WHILE @BatchSize > 0
-    BEGIN
-        BEGIN TRANSACTION Cipher_DeleteByOrganizationId
+         ---------------------------------------------------------------------
+         -- 3. Bump revision date (inside transaction for consistency)
+         ---------------------------------------------------------------------
+         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId;
 
-        DELETE TOP(@BatchSize)
-        FROM
-            [dbo].[Cipher]
-        WHERE
-            [OrganizationId] = @OrganizationId
+         COMMIT TRANSACTION ;
 
-        SET @BatchSize = @@ROWCOUNT
-
-        COMMIT TRANSACTION Cipher_DeleteByOrganizationId
-    END
-
-    -- Cleanup organization
-    EXEC [dbo].[Organization_UpdateStorage] @OrganizationId
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
-END
+         ---------------------------------------------------------------------
+         -- 4. Update storage usage (outside the transaction to avoid
+         --    holding locks during long-running calculation)
+         ---------------------------------------------------------------------
+         EXEC [dbo].[Organization_UpdateStorage] @OrganizationId;
+     END TRY
+     BEGIN CATCH
+         IF @@TRANCOUNT > 0
+             ROLLBACK TRANSACTION;
+         THROW;
+     END CATCH
+ END
+ GO

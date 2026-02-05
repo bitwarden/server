@@ -1,6 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Enums;
-using Bit.Core.Services;
+﻿using Bit.Core.Enums;
 
 namespace Bit.Identity.Utilities;
 
@@ -11,28 +9,15 @@ public interface ILoginApprovingClientTypes
 
 public class LoginApprovingClientTypes : ILoginApprovingClientTypes
 {
-    public LoginApprovingClientTypes(
-        IFeatureService featureService)
+    public LoginApprovingClientTypes()
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.BrowserExtensionLoginApproval))
+        TypesThatCanApprove = new List<ClientType>
         {
-            TypesThatCanApprove = new List<ClientType>
-            {
-                ClientType.Desktop,
-                ClientType.Mobile,
-                ClientType.Web,
-                ClientType.Browser,
-            };
-        }
-        else
-        {
-            TypesThatCanApprove = new List<ClientType>
-            {
-                ClientType.Desktop,
-                ClientType.Mobile,
-                ClientType.Web,
-            };
-        }
+            ClientType.Desktop,
+            ClientType.Mobile,
+            ClientType.Web,
+            ClientType.Browser,
+        };
     }
 
     public IReadOnlyCollection<ClientType> TypesThatCanApprove { get; }

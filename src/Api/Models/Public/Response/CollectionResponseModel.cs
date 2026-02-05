@@ -1,7 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
 namespace Bit.Api.Models.Public.Response;
@@ -11,6 +14,12 @@ namespace Bit.Api.Models.Public.Response;
 /// </summary>
 public class CollectionResponseModel : CollectionBaseModel, IResponseModel
 {
+    [JsonConstructor]
+    public CollectionResponseModel()
+    {
+
+    }
+
     public CollectionResponseModel(Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
         if (collection == null)
@@ -21,7 +30,6 @@ public class CollectionResponseModel : CollectionBaseModel, IResponseModel
         Id = collection.Id;
         ExternalId = collection.ExternalId;
         Groups = groups?.Select(c => new AssociationWithPermissionsResponseModel(c));
-        Type = collection.Type;
     }
 
     /// <summary>
@@ -40,8 +48,4 @@ public class CollectionResponseModel : CollectionBaseModel, IResponseModel
     /// The associated groups that this collection is assigned to.
     /// </summary>
     public IEnumerable<AssociationWithPermissionsResponseModel> Groups { get; set; }
-    /// <summary>
-    /// The type of this collection
-    /// </summary>
-    public CollectionType Type { get; set; }
 }

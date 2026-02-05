@@ -18,7 +18,7 @@ BEGIN
         AND (@BeforeDate IS NOT NULL OR [Date] <= @EndDate)
         AND (@BeforeDate IS NULL OR [Date] < @BeforeDate)
         AND [OrganizationId] = @OrganizationId
-        AND [ServiceAccountId] = @ServiceAccountId
+        AND ([ServiceAccountId] = @ServiceAccountId OR [GrantedServiceAccountId] = @ServiceAccountId)
     ORDER BY [Date] DESC
     OFFSET 0 ROWS
     FETCH NEXT @PageSize ROWS ONLY

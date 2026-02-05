@@ -1,7 +1,5 @@
-﻿#nullable enable
-using Bit.Api.Billing.Models.Responses;
+﻿using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Requests;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -12,10 +10,11 @@ namespace Bit.Api.Billing.Controllers;
 [Route("accounts/billing")]
 [Authorize("Application")]
 public class AccountsBillingController(
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IUserService userService,
     IPaymentHistoryService paymentHistoryService) : Controller
 {
+    // TODO: Migrate to Query / AccountBillingVNextController
     [HttpGet("history")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<BillingHistoryResponseModel> GetBillingHistoryAsync()
@@ -30,20 +29,7 @@ public class AccountsBillingController(
         return new BillingHistoryResponseModel(billingInfo);
     }
 
-    [HttpGet("payment-method")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<BillingPaymentResponseModel> GetPaymentMethodAsync()
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var billingInfo = await paymentService.GetBillingAsync(user);
-        return new BillingPaymentResponseModel(billingInfo);
-    }
-
+    // TODO: Migrate to Query / AccountBillingVNextController
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromQuery] string? status = null, [FromQuery] string? startAfter = null)
     {
@@ -62,6 +48,7 @@ public class AccountsBillingController(
         return TypedResults.Ok(invoices);
     }
 
+    // TODO: Migrate to Query / AccountBillingVNextController
     [HttpGet("transactions")]
     public async Task<IResult> GetTransactionsAsync([FromQuery] DateTime? startAfter = null)
     {
@@ -77,19 +64,5 @@ public class AccountsBillingController(
             startAfter);
 
         return TypedResults.Ok(transactions);
-    }
-
-    [HttpPost("preview-invoice")]
-    public async Task<IResult> PreviewInvoiceAsync([FromBody] PreviewIndividualInvoiceRequestBody model)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var invoice = await paymentService.PreviewInvoiceAsync(model, user.GatewayCustomerId, user.GatewaySubscriptionId);
-
-        return TypedResults.Ok(invoice);
     }
 }

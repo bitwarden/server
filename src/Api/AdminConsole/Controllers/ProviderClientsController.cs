@@ -1,4 +1,7 @@
-﻿using Bit.Api.Billing.Controllers;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -54,8 +57,7 @@ public class ProviderClientsController(
             Owner = user,
             BillingEmail = provider.BillingEmail,
             OwnerKey = requestBody.Key,
-            PublicKey = requestBody.KeyPair.PublicKey,
-            PrivateKey = requestBody.KeyPair.EncryptedPrivateKey,
+            Keys = requestBody.KeyPair.ToPublicKeyEncryptionKeyPairData(),
             CollectionName = requestBody.CollectionName,
             IsFromProvider = true
         };

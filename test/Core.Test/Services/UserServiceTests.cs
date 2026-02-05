@@ -11,11 +11,11 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Context;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -25,11 +25,15 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Fido2NetLib;
+using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
+using static Fido2NetLib.Fido2;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Services;
 
@@ -82,125 +86,6 @@ public class UserServiceTests
         AssertHelper.AssertJsonProperty(root, "Premium", JsonValueKind.True);
         var versionProp = AssertHelper.AssertJsonProperty(root, "Version", JsonValueKind.Number);
         Assert.Equal(1, versionProp.GetInt32());
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_Success(SutProvider<UserService> sutProvider, User user)
-    {
-        var email = user.Email.ToLowerInvariant();
-        var token = "thisisatokentocompare";
-        var authentication = true;
-        var IpAddress = "1.1.1.1";
-        var deviceType = "Android";
-
-        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
-        userTwoFactorTokenProvider
-            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(true));
-        userTwoFactorTokenProvider
-            .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(token));
-
-        var context = sutProvider.GetDependency<ICurrentContext>();
-        context.DeviceType = DeviceType.Android;
-        context.IpAddress = IpAddress;
-
-        sutProvider.Sut.RegisterTokenProvider("Custom_Email", userTwoFactorTokenProvider);
-
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object> { ["Email"] = email },
-                Enabled = true
-            }
-        });
-        await sutProvider.Sut.SendTwoFactorEmailAsync(user);
-
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType, authentication);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderOnUser(SutProvider<UserService> sutProvider, User user)
-    {
-        user.TwoFactorProviders = null;
-
-        await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderMetadataOnUser(SutProvider<UserService> sutProvider, User user)
-    {
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new TwoFactorProvider
-            {
-                MetaData = null,
-                Enabled = true
-            }
-        });
-
-        await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendTwoFactorEmailAsync_ExceptionBecauseNoProviderEmailMetadataOnUser(SutProvider<UserService> sutProvider, User user)
-    {
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object> { ["qweqwe"] = user.Email.ToLowerInvariant() },
-                Enabled = true
-            }
-        });
-
-        await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendNewDeviceVerificationEmailAsync_ExceptionBecauseUserNull(SutProvider<UserService> sutProvider)
-    {
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SendNewDeviceVerificationEmailAsync(null));
-    }
-
-    [Theory]
-    [BitAutoData(DeviceType.UnknownBrowser, "Unknown Browser")]
-    [BitAutoData(DeviceType.Android, "Android")]
-    public async Task SendNewDeviceVerificationEmailAsync_DeviceMatches(DeviceType deviceType, string deviceTypeName,
-        User user)
-    {
-        var sutProvider = new SutProvider<UserService>()
-            .CreateWithUserServiceCustomizations(user);
-
-        var context = sutProvider.GetDependency<ICurrentContext>();
-        context.DeviceType = deviceType;
-        context.IpAddress = "1.1.1.1";
-
-        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
-
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), deviceTypeName, Arg.Any<bool>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendNewDeviceVerificationEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(User user)
-    {
-        var sutProvider = new SutProvider<UserService>()
-            .CreateWithUserServiceCustomizations(user);
-
-        var context = sutProvider.GetDependency<ICurrentContext>();
-        context.DeviceType = null;
-        context.IpAddress = "1.1.1.1";
-
-        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
-
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), "Unknown Browser", Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -577,78 +462,6 @@ public class UserServiceTests
             .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(default, default);
     }
 
-    [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_UserNull_SendTwoFactorEmailAsyncNotCalled(
-        SutProvider<UserService> sutProvider, string email, string secret)
-    {
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(email)
-            .Returns(null as User);
-
-        await sutProvider.Sut.ResendNewDeviceVerificationEmail(email, secret);
-
-        await sutProvider.GetDependency<IMailService>()
-            .DidNotReceive()
-            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_SecretNotValid_SendTwoFactorEmailAsyncNotCalled(
-    SutProvider<UserService> sutProvider, string email, string secret)
-    {
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(email)
-            .Returns(null as User);
-
-        await sutProvider.Sut.ResendNewDeviceVerificationEmail(email, secret);
-
-        await sutProvider.GetDependency<IMailService>()
-            .DidNotReceive()
-            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_SendsToken_Success(User user)
-    {
-        // Arrange
-        var testPassword = "test_password";
-        SetupUserAndDevice(user, true);
-
-        var sutProvider = new SutProvider<UserService>()
-            .CreateWithUserServiceCustomizations(user);
-
-        // Setup the fake password verification
-        sutProvider
-            .GetDependency<IUserPasswordStore<User>>()
-            .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
-            .Returns((ci) =>
-            {
-                return Task.FromResult("hashed_test_password");
-            });
-
-        sutProvider.GetDependency<IPasswordHasher<User>>()
-            .VerifyHashedPassword(user, "hashed_test_password", testPassword)
-            .Returns((ci) =>
-            {
-                return PasswordVerificationResult.Success;
-            });
-
-        sutProvider.GetDependency<IUserRepository>()
-            .GetByEmailAsync(user.Email)
-            .Returns(user);
-
-        var context = sutProvider.GetDependency<ICurrentContext>();
-        context.DeviceType = DeviceType.Android;
-        context.IpAddress = "1.1.1.1";
-
-        await sutProvider.Sut.ResendNewDeviceVerificationEmail(user.Email, testPassword);
-
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
-
-    }
-
     [Theory]
     [BitAutoData("")]
     [BitAutoData("null")]
@@ -784,6 +597,209 @@ public class UserServiceTests
         {
             user.MasterPassword = null;
         }
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task StartWebAuthnRegistrationAsync_BelowLimit_Succeeds(
+        bool hasPremium, SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange - Non-premium user with 4 credentials (below limit of 5)
+        SetupWebAuthnProvider(user, credentialCount: 4);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = hasPremium;
+        user.Id = Guid.NewGuid();
+        user.Email = "test@example.com";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        var mockFido2 = sutProvider.GetDependency<IFido2>();
+        mockFido2.RequestNewCredential(
+            Arg.Any<Fido2User>(),
+            Arg.Any<List<PublicKeyCredentialDescriptor>>(),
+            Arg.Any<AuthenticatorSelection>(),
+            Arg.Any<AttestationConveyancePreference>())
+            .Returns(new CredentialCreateOptions
+            {
+                Challenge = new byte[] { 1, 2, 3 },
+                Rp = new PublicKeyCredentialRpEntity("example.com", "example.com", ""),
+                User = new Fido2User
+                {
+                    Id = user.Id.ToByteArray(),
+                    Name = user.Email,
+                    DisplayName = user.Name
+                },
+                PubKeyCredParams = new List<PubKeyCredParam>()
+            });
+
+        // Act
+        var result = await sutProvider.Sut.StartWebAuthnRegistrationAsync(user);
+
+        // Assert
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task CompleteWebAuthRegistrationAsync_ExceedsLimit_ThrowsBadRequestException(bool hasPremium,
+        SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
+    {
+        // Arrange - time-of-check/time-of-use scenario: user now has 10 credentials (at limit)
+        SetupWebAuthnProviderWithPending(user, credentialCount: 10);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = hasPremium;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CompleteWebAuthRegistrationAsync(user, 11, "NewKey", deviceResponse));
+
+        Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task CompleteWebAuthRegistrationAsync_BelowLimit_Succeeds(bool hasPremium,
+        SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
+    {
+        // Arrange - User has 4 credentials (below limit of 5)
+        SetupWebAuthnProviderWithPending(user, credentialCount: 4);
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        user.Premium = hasPremium;
+        user.Id = Guid.NewGuid();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>());
+
+        var mockFido2 = sutProvider.GetDependency<IFido2>();
+        mockFido2.MakeNewCredentialAsync(
+            Arg.Any<AuthenticatorAttestationRawResponse>(),
+            Arg.Any<CredentialCreateOptions>(),
+            Arg.Any<IsCredentialIdUniqueToUserAsyncDelegate>())
+            .Returns(new CredentialMakeResult("ok", "", new AttestationVerificationSuccess
+            {
+                Aaguid = Guid.NewGuid(),
+                Counter = 0,
+                CredentialId = new byte[] { 1, 2, 3 },
+                CredType = "public-key",
+                PublicKey = new byte[] { 4, 5, 6 },
+                Status = "ok",
+                User = new Fido2User
+                {
+                    Id = user.Id.ToByteArray(),
+                    Name = user.Email ?? "test@example.com",
+                    DisplayName = user.Name ?? "Test User"
+                }
+            }));
+
+        // Act
+        var result = await sutProvider.Sut.CompleteWebAuthRegistrationAsync(user, 5, "NewKey", deviceResponse);
+
+        // Assert
+        Assert.True(result);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    private static void SetupWebAuthnProvider(User user, int credentialCount)
+    {
+        var providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+        var metadata = new Dictionary<string, object>();
+
+        // Add credentials as Key1, Key2, Key3, etc.
+        for (int i = 1; i <= credentialCount; i++)
+        {
+            metadata[$"Key{i}"] = new TwoFactorProvider.WebAuthnData
+            {
+                Name = $"Key {i}",
+                Descriptor = new PublicKeyCredentialDescriptor(new byte[] { (byte)i }),
+                PublicKey = new byte[] { (byte)i },
+                UserHandle = new byte[] { (byte)i },
+                SignatureCounter = 0,
+                CredType = "public-key",
+                RegDate = DateTime.UtcNow,
+                AaGuid = Guid.NewGuid()
+            };
+        }
+
+        providers[TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
+        {
+            Enabled = true,
+            MetaData = metadata
+        };
+
+        user.SetTwoFactorProviders(providers);
+    }
+
+    private static void SetupWebAuthnProviderWithPending(User user, int credentialCount)
+    {
+        var providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+        var metadata = new Dictionary<string, object>();
+
+        // Add existing credentials
+        for (int i = 1; i <= credentialCount; i++)
+        {
+            metadata[$"Key{i}"] = new TwoFactorProvider.WebAuthnData
+            {
+                Name = $"Key {i}",
+                Descriptor = new PublicKeyCredentialDescriptor(new byte[] { (byte)i }),
+                PublicKey = new byte[] { (byte)i },
+                UserHandle = new byte[] { (byte)i },
+                SignatureCounter = 0,
+                CredType = "public-key",
+                RegDate = DateTime.UtcNow,
+                AaGuid = Guid.NewGuid()
+            };
+        }
+
+        // Add pending registration
+        var pendingOptions = new CredentialCreateOptions
+        {
+            Challenge = new byte[] { 1, 2, 3 },
+            Rp = new PublicKeyCredentialRpEntity("example.com", "example.com", ""),
+            User = new Fido2User
+            {
+                Id = user.Id.ToByteArray(),
+                Name = user.Email ?? "test@example.com",
+                DisplayName = user.Name ?? "Test User"
+            },
+            PubKeyCredParams = new List<PubKeyCredParam>()
+        };
+        metadata["pending"] = pendingOptions.ToJson();
+
+        providers[TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
+        {
+            Enabled = true,
+            MetaData = metadata
+        };
+
+        user.SetTwoFactorProviders(providers);
     }
 }
 

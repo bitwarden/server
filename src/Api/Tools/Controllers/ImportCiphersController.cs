@@ -1,4 +1,7 @@
-﻿using Bit.Api.Tools.Models.Request.Accounts;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
@@ -60,7 +63,7 @@ public class ImportCiphersController : Controller
     }
 
     [HttpPost("import-organization")]
-    public async Task PostImport([FromQuery] string organizationId,
+    public async Task PostImportOrganization([FromQuery] string organizationId,
         [FromBody] ImportOrganizationCiphersRequestModel model)
     {
         if (!_globalSettings.SelfHosted &&
@@ -73,7 +76,6 @@ public class ImportCiphersController : Controller
 
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
-
 
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
         var authorized = await CheckOrgImportPermission(collections, orgId);
@@ -153,7 +155,7 @@ public class ImportCiphersController : Controller
         if (existingCollections.Any() && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
         {
             return true;
-        };
+        }
 
         return false;
     }

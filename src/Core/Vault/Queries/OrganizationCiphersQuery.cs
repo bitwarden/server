@@ -24,7 +24,7 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
         var orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId).ToList();
         var orgCipherIds = orgCiphers.Select(c => c.Id);
 
-        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        var collectionCiphers = await _collectionCipherRepository.GetManySharedByOrganizationIdAsync(organizationId);
         var collectionCiphersGroupDict = collectionCiphers
             .Where(c => orgCipherIds.Contains(c.CipherId))
             .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
@@ -60,5 +60,11 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
         var managedCollectionIds = collectionIds.ToHashSet();
         var allOrganizationCiphers = await GetAllOrganizationCiphers(organizationId);
         return allOrganizationCiphers.Where(c => c.CollectionIds.Intersect(managedCollectionIds).Any());
+    }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid orgId)
+    {
+        return (await _cipherRepository.GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(orgId)).ToList();
     }
 }

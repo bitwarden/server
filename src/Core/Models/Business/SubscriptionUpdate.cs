@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Enums;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -47,6 +50,7 @@ public abstract class SubscriptionUpdate
     protected static bool IsNonSeatBasedPlan(StaticStore.Plan plan)
         => plan.Type is
             >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
+            or PlanType.FamiliesAnnually2025
             or PlanType.FamiliesAnnually
             or PlanType.TeamsStarter2023
             or PlanType.TeamsStarter;

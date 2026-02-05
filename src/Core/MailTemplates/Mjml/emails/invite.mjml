@@ -1,0 +1,30 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../components/head.mjml" />
+  </mj-head>
+
+  <mj-body>
+    <mj-wrapper css-class="border-fix" padding="20px 20px">
+      <mj-bw-hero
+        img-src="https://assets.bitwarden.com/email/v1/business.png"
+        title="A Bitwarden member has invited you to Bitwarden Password Manager"
+        button-text="Finish account setup"
+        button-url="#"
+      />
+
+      <mj-section>
+        <mj-column>
+          <mj-button href="#">Join Organization Now</mj-button>
+
+          <mj-text>
+            This invitation expires on
+            <b>Tuesday, January 23, 2024 2:59PM UTC</b>.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
+
+    <mj-include path="../components/footer.mjml" />
+  </mj-body>
+</mjml>

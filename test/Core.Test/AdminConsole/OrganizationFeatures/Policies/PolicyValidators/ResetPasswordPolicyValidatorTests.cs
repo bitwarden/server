@@ -68,4 +68,59 @@ public class ResetPasswordPolicyValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
         Assert.True(string.IsNullOrEmpty(result));
     }
+
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(false, false)]
+    public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_TdeEnabled_ValidationError(
+        bool policyEnabled,
+        bool autoEnrollEnabled,
+        [PolicyUpdate(PolicyType.ResetPassword)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.ResetPassword)] Policy policy,
+        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+    {
+        policyUpdate.Enabled = policyEnabled;
+        policyUpdate.SetDataModel(new ResetPasswordDataModel
+        {
+            AutoEnrollEnabled = autoEnrollEnabled
+        });
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        var ssoConfig = new SsoConfig { Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption });
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(ssoConfig);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
+        Assert.Contains("Trusted device encryption is on and requires this policy.", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_TdeNotEnabled_Success(
+        [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.ResetPassword)] Policy policy,
+        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+    {
+        policyUpdate.SetDataModel(new ResetPasswordDataModel
+        {
+            AutoEnrollEnabled = false
+        });
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        var ssoConfig = new SsoConfig { Enabled = false };
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(ssoConfig);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
+        Assert.True(string.IsNullOrEmpty(result));
+    }
 }

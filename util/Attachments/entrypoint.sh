@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # Setup
 
@@ -30,10 +30,10 @@ then
     mkhomedir_helper $USERNAME
 
     # The rest...
-
     chown -R $USERNAME:$GROUPNAME /bitwarden_server
     mkdir -p /etc/bitwarden/core/attachments
     chown -R $USERNAME:$GROUPNAME /etc/bitwarden
+    
     gosu_cmd="gosu $USERNAME:$GROUPNAME"
 else
     gosu_cmd=""

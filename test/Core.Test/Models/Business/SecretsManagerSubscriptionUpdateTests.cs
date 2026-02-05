@@ -4,7 +4,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
@@ -16,13 +16,13 @@ public class SecretsManagerSubscriptionUpdateTests
     private static TheoryData<Plan> ToPlanTheory(List<PlanType> types)
     {
         var theoryData = new TheoryData<Plan>();
-        var plans = types.Select(StaticStore.GetPlan).ToArray();
+        var plans = types.Select(MockPlans.Get).ToArray();
         theoryData.AddRange(plans);
         return theoryData;
     }
 
     public static TheoryData<Plan> NonSmPlans =>
-        ToPlanTheory([PlanType.Custom, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019]);
+        ToPlanTheory([PlanType.Custom, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2025, PlanType.FamiliesAnnually2019]);
 
     public static TheoryData<Plan> SmPlans => ToPlanTheory([
         PlanType.EnterpriseAnnually2019,

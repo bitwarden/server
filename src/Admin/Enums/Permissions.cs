@@ -45,14 +45,13 @@ public enum Permission
     Provider_Edit,
     Provider_View,
     Provider_ResendEmailInvite,
+    Provider_CheckEnabledBox,
 
     Tools_ChargeBrainTreeCustomer,
     Tools_PromoteAdmin,
     Tools_PromoteProviderServiceUser,
     Tools_GenerateLicenseFile,
     Tools_ManageTaxRates,
-    Tools_ManageStripeSubscriptions,
     Tools_CreateEditTransaction,
-    Tools_ProcessStripeEvents,
-    Tools_MigrateProviders
+    Tools_ProcessStripeEvents
 }

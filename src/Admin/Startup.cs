@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Providers.Migration;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -66,6 +65,7 @@ public class Startup
             default:
                 break;
         }
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -92,7 +92,6 @@ public class Startup
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
         services.AddHttpClient();
-        services.AddProviderMigration();
 
 #if OSS
         services.AddOosServices();
@@ -134,11 +133,8 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 

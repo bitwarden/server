@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
@@ -6,12 +9,15 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -29,7 +35,6 @@ namespace Bit.Admin.AdminConsole.Controllers;
 [Authorize]
 public class OrganizationsController : Controller
 {
-    private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
@@ -38,7 +43,7 @@ public class OrganizationsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
@@ -52,9 +57,10 @@ public class OrganizationsController : Controller
     private readonly IProviderBillingService _providerBillingService;
     private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
+    private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IOrganizationBillingService _organizationBillingService;
 
     public OrganizationsController(
-        IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
@@ -63,7 +69,7 @@ public class OrganizationsController : Controller
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IPolicyRepository policyRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
@@ -76,9 +82,10 @@ public class OrganizationsController : Controller
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
         IProviderBillingService providerBillingService,
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IOrganizationBillingService organizationBillingService)
     {
-        _organizationService = organizationService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationConnectionRepository = organizationConnectionRepository;
@@ -101,6 +108,8 @@ public class OrganizationsController : Controller
         _providerBillingService = providerBillingService;
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
+        _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _organizationBillingService = organizationBillingService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -237,6 +246,8 @@ public class OrganizationsController : Controller
         var existingOrganizationData = new Organization
         {
             Id = organization.Id,
+            Name = organization.Name,
+            BillingEmail = organization.BillingEmail,
             Status = organization.Status,
             PlanType = organization.PlanType,
             Seats = organization.Seats
@@ -281,6 +292,22 @@ public class OrganizationsController : Controller
         await _organizationRepository.ReplaceAsync(organization);
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+
+        // Sync name/email changes to Stripe
+        if (existingOrganizationData.Name != organization.Name || existingOrganizationData.BillingEmail != organization.BillingEmail)
+        {
+            try
+            {
+                await _organizationBillingService.UpdateOrganizationNameAndEmail(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for organization {OrganizationId}. Database was updated successfully.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but Stripe customer name/email synchronization failed.";
+            }
+        }
 
         return RedirectToAction("Edit", new { id });
     }
@@ -392,7 +419,7 @@ public class OrganizationsController : Controller
         var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, OrganizationUserType.Owner);
         foreach (var organizationUser in organizationUsers)
         {
-            await _organizationService.ResendInviteAsync(id, null, organizationUser.Id, true);
+            await _resendOrganizationInviteCommand.ResendInviteAsync(id, null, organizationUser.Id, true);
         }
 
         return Json(null);
@@ -468,6 +495,9 @@ public class OrganizationsController : Controller
             organization.UseRiskInsights = model.UseRiskInsights;
             organization.UseOrganizationDomains = model.UseOrganizationDomains;
             organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
+            organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
+            organization.UseDisableSmAdsForUsers = model.UseDisableSmAdsForUsers;
+            organization.UsePhishingBlocker = model.UsePhishingBlocker;
 
             //secrets
             organization.SmSeats = model.SmSeats;

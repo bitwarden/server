@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 using Bit.Api.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -233,8 +236,8 @@ public class OrganizationUserPublicKeyResponseModel : ResponseModel
 
 public class OrganizationUserBulkResponseModel : ResponseModel
 {
-    public OrganizationUserBulkResponseModel(Guid id, string error,
-        string obj = "OrganizationBulkConfirmResponseModel") : base(obj)
+    public OrganizationUserBulkResponseModel(Guid id, string error)
+        : base("OrganizationBulkConfirmResponseModel")
     {
         Id = id;
         Error = error;

@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.Identity;
+using Bit.Core.Auth.Identity;
 
 namespace Bit.Core.Models.Data;
 

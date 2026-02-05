@@ -4,46 +4,52 @@
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    ;WITH [AvailableCollectionsCTE] AS(
-        SELECT
-            Id
-        FROM
-            [dbo].[Collection]
-        WHERE
-            OrganizationId = @OrganizationId
-    ),
-    [CollectionCiphersCTE] AS(
-        SELECT
-            [CollectionId],
-            [CipherId]
-        FROM
-            [dbo].[CollectionCipher]
-        WHERE
-            [CipherId] = @CipherId
+    -- Available collections for this org, excluding default collections
+    SELECT
+        C.[Id]
+    INTO #TempAvailableCollections
+    FROM [dbo].[Collection] AS C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Type] <> 1;  -- exclude DefaultUserCollection
+
+    -- Insert new collection assignments
+    INSERT INTO [dbo].[CollectionCipher] (
+        [CollectionId],
+        [CipherId]
     )
-    MERGE
-        [CollectionCiphersCTE] AS [Target]
-    USING 
-        @CollectionIds AS [Source]
-    ON
-        [Target].[CollectionId] = [Source].[Id]
-        AND [Target].[CipherId] = @CipherId
-    WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        INSERT VALUES
-        (
-            [Source].[Id],
-            @CipherId
-        )
-    WHEN NOT MATCHED BY SOURCE
-    AND [Target].[CipherId] = @CipherId THEN
-        DELETE
-    ;
+    SELECT
+        S.[Id],
+        @CipherId
+    FROM @CollectionIds AS S
+    INNER JOIN #TempAvailableCollections AS A
+        ON A.[Id] = S.[Id]
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM [dbo].[CollectionCipher] AS CC
+        WHERE CC.[CollectionId] = S.[Id]
+          AND CC.[CipherId]    = @CipherId
+    );
+
+    -- Delete removed collection assignments
+    DELETE CC
+    FROM [dbo].[CollectionCipher] AS CC
+    INNER JOIN #TempAvailableCollections AS A
+        ON A.[Id] = CC.[CollectionId]
+    WHERE CC.[CipherId] = @CipherId
+      AND NOT EXISTS (
+          SELECT 1
+          FROM @CollectionIds AS S
+          WHERE S.[Id] = CC.[CollectionId]
+      );
 
     IF @OrganizationId IS NOT NULL
     BEGIN
-        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+        EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId;
     END
+
+    DROP TABLE #TempAvailableCollections;
 END
+GO

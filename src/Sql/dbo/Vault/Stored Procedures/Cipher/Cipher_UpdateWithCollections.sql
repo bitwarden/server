@@ -12,6 +12,7 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
+    @Archives NVARCHAR(MAX) = NULL,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -38,8 +39,12 @@ BEGIN
         [Attachments] = @Attachments,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate,
-        [Key] = @Key
-        -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
+        [Key] = @Key,
+        [Folders] = @Folders,
+        [Favorites] = @Favorites,
+        [Reprompt] = @Reprompt,
+        [Archives] = @Archives
+        -- No need to update CreationDate or Type since that data will not change
     WHERE
         [Id] = @Id
 

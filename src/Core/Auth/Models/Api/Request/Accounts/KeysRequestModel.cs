@@ -1,16 +1,24 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
 public class KeysRequestModel
 {
+    [Obsolete("Use AccountKeys.AccountPublicKey instead")]
     [Required]
     public string PublicKey { get; set; }
+    [Obsolete("Use AccountKeys.UserKeyEncryptedAccountPrivateKey instead")]
     [Required]
     public string EncryptedPrivateKey { get; set; }
+    public AccountKeysRequestModel AccountKeys { get; set; }
 
+    [Obsolete("Use SetAccountKeysForUserCommand instead")]
     public User ToUser(User existingUser)
     {
         if (string.IsNullOrWhiteSpace(PublicKey) || string.IsNullOrWhiteSpace(EncryptedPrivateKey))

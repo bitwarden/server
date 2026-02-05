@@ -1,4 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Setup;
 

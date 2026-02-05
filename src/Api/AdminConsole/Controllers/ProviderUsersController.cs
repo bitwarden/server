@@ -1,4 +1,7 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Providers;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Models.Business.Provider;
@@ -46,7 +49,7 @@ public class ProviderUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<ProviderUserUserDetailsResponseModel>> Get(Guid providerId)
+    public async Task<ListResponseModel<ProviderUserUserDetailsResponseModel>> GetAll(Guid providerId)
     {
         if (!_currentContext.ProviderManageUsers(providerId))
         {
@@ -152,7 +155,6 @@ public class ProviderUsersController : Controller
     }
 
     [HttpPut("{id:guid}")]
-    [HttpPost("{id:guid}")]
     public async Task Put(Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
     {
         if (!_currentContext.ProviderManageUsers(providerId))
@@ -170,8 +172,14 @@ public class ProviderUsersController : Controller
         await _providerService.SaveUserAsync(model.ToProviderUser(providerUser), userId.Value);
     }
 
+    [HttpPost("{id:guid}")]
+    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
+    public async Task PostPut(Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
+    {
+        await Put(providerId, id, model);
+    }
+
     [HttpDelete("{id:guid}")]
-    [HttpPost("{id:guid}/delete")]
     public async Task Delete(Guid providerId, Guid id)
     {
         if (!_currentContext.ProviderManageUsers(providerId))
@@ -183,8 +191,14 @@ public class ProviderUsersController : Controller
         await _providerService.DeleteUsersAsync(providerId, new[] { id }, userId.Value);
     }
 
+    [HttpPost("{id:guid}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDelete(Guid providerId, Guid id)
+    {
+        await Delete(providerId, id);
+    }
+
     [HttpDelete("")]
-    [HttpPost("delete")]
     public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
     {
         if (!_currentContext.ProviderManageUsers(providerId))
@@ -196,5 +210,12 @@ public class ProviderUsersController : Controller
         var result = await _providerService.DeleteUsersAsync(providerId, model.Ids, userId.Value);
         return new ListResponseModel<ProviderUserBulkResponseModel>(result.Select(r =>
             new ProviderUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    [HttpPost("delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> PostBulkDelete(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    {
+        return await BulkDelete(providerId, model);
     }
 }

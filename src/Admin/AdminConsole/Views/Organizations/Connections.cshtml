@@ -52,7 +52,7 @@
                                 <td>
                                     @if(connection.Enabled)
                                     {
-                                        @if(@TempData["ConnectionActivated"] != null && @TempData["ConnectionActivated"].ToString() == @Model.Organization.Id.ToString())
+                                        @if(@TempData["ConnectionActivated"] != null && @TempData["ConnectionActivated"]!.ToString() == @Model.Organization.Id.ToString())
                                         {
                                             @if(connection.Type.Equals(OrganizationConnectionType.CloudBillingSync))
                                             {

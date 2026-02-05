@@ -66,7 +66,8 @@ BEGIN
 	LEFT JOIN
 	    [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
 	WHERE
-	    C.[OrganizationId] = @OrganizationId
+	    C.[OrganizationId] = @OrganizationId AND
+	    C.[Type] != 1 -- Exclude DefaultUserCollection
     GROUP BY
     	C.[Id],
     	C.[OrganizationId],

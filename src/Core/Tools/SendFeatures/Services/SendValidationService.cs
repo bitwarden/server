@@ -1,8 +1,12 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -24,6 +28,7 @@ public class SendValidationService : ISendValidationService
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IPricingClient _pricingClient;
 
 
 
@@ -35,7 +40,7 @@ public class SendValidationService : ISendValidationService
         IUserService userService,
         IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings,
-
+        IPricingClient pricingClient,
         ICurrentContext currentContext)
     {
         _userRepository = userRepository;
@@ -45,6 +50,7 @@ public class SendValidationService : ISendValidationService
         _userService = userService;
         _policyRequirementQuery = policyRequirementQuery;
         _globalSettings = globalSettings;
+        _pricingClient = pricingClient;
         _currentContext = currentContext;
     }
 
@@ -120,10 +126,19 @@ public class SendValidationService : ISendValidationService
             }
             else
             {
-                // Users that get access to file storage/premium from their organization get the default
-                // 1 GB max storage.
-                short limit = _globalSettings.SelfHosted ? (short)10240 : (short)1;
-                storageBytesRemaining = user.StorageBytesRemaining(limit);
+                // Users that get access to file storage/premium from their organization get storage
+                // based on the current premium plan from the pricing service
+                short provided;
+                if (_globalSettings.SelfHosted)
+                {
+                    provided = Constants.SelfHostedMaxStorageGb;
+                }
+                else
+                {
+                    var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
+                    provided = (short)premiumPlan.Storage.Provided;
+                }
+                storageBytesRemaining = user.StorageBytesRemaining(provided);
             }
         }
         else if (send.OrganizationId.HasValue)

@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -79,6 +82,10 @@ public class OrganizationUserBulkConfirmRequestModel
     [Required]
     public IEnumerable<OrganizationUserBulkConfirmRequestModelEntry> Keys { get; set; }
 
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string DefaultUserCollectionName { get; set; }
+
     public Dictionary<Guid, string> ToDictionary()
     {
         return Keys.ToDictionary(e => e.Id, e => e.Key);
@@ -109,12 +116,17 @@ public class OrganizationUserResetPasswordEnrollmentRequestModel
     public string ResetPasswordKey { get; set; }
     public string MasterPasswordHash { get; set; }
 }
-
+#nullable enable
 public class OrganizationUserBulkRequestModel
 {
-    [Required]
-    public IEnumerable<Guid> Ids { get; set; }
+    [Required, MinLength(1)]
+    public IEnumerable<Guid> Ids { get; set; } = new List<Guid>();
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string? DefaultUserCollectionName { get; set; }
 }
+#nullable disable
 
 public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
 {

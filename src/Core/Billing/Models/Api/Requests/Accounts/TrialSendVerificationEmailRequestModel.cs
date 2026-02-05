@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Billing.Models.Api.Requests.Accounts;

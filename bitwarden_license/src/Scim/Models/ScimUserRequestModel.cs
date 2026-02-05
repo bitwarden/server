@@ -1,11 +1,14 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
-using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
 namespace Bit.Scim.Models;
 
@@ -44,7 +47,7 @@ public class ScimUserRequestModel : BaseScimUserModel
         return new InviteOrganizationUsersRequest(
             invites:
             [
-                new Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.OrganizationUserInvite(
+                new OrganizationUserInviteCommandModel(
                         email: email,
                         externalId: ExternalIdForInvite()
                     )

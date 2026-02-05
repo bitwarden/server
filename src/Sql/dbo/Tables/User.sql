@@ -42,6 +42,10 @@
     [LastKeyRotationDate]              DATETIME2 (7)    NULL,
     [LastEmailChangeDate]              DATETIME2 (7)    NULL,
     [VerifyDevices]                    BIT              DEFAULT ((1)) NOT NULL,
+    [SecurityState]                    VARCHAR (MAX)   NULL,
+    [SecurityVersion]                  INT              NULL,
+    [SignedPublicKey]                  VARCHAR (MAX)   NULL,
+    [MaxStorageGbIncreased]            SMALLINT         NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
@@ -53,4 +57,8 @@ CREATE UNIQUE NONCLUSTERED INDEX [IX_User_Email]
 GO
 CREATE NONCLUSTERED INDEX [IX_User_Premium_PremiumExpirationDate_RenewalReminderDate]
     ON [dbo].[User]([Premium] ASC, [PremiumExpirationDate] ASC, [RenewalReminderDate] ASC);
+
+GO
+CREATE NONCLUSTERED INDEX [IX_User_Id_EmailDomain]
+    ON [dbo].[User]([Id] ASC, [Email] ASC);
 

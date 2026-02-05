@@ -13,6 +13,12 @@ public class NotificationStatusEntityTypeConfiguration : IEntityTypeConfiguratio
             .HasKey(ns => new { ns.UserId, ns.NotificationId })
             .IsClustered();
 
+        builder
+            .HasOne(ns => ns.Notification)
+            .WithMany()
+            .HasForeignKey(ns => ns.NotificationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.ToTable(nameof(NotificationStatus));
     }
 }

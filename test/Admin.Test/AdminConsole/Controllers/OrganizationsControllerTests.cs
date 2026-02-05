@@ -1,5 +1,7 @@
 ﻿using Bit.Admin.AdminConsole.Controllers;
 using Bit.Admin.AdminConsole.Models;
+using Bit.Admin.Enums;
+using Bit.Admin.Services;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -274,6 +276,41 @@ public class OrganizationsControllerTests
 
         await providerBillingService.Received(1).ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
         await providerBillingService.Received(1).ScaleSeats(provider, update.PlanType!.Value, update.Seats!.Value - organization.Seats.Value + organization.Seats.Value);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_UseAutomaticUserConfirmation_FullUpdate_SavesFeatureCorrectly(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.TeamsMonthly,
+            UseAutomaticUserConfirmation = true
+        };
+
+        organization.UseAutomaticUserConfirmation = false;
+
+        sutProvider.GetDependency<IAccessControlService>()
+                .UserHasPermission(Permission.Org_Plan_Edit)
+                .Returns(true);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        // Act
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(o => o.Id == organization.Id
+            && o.UseAutomaticUserConfirmation == true));
+
+        // Annul
+        await organizationRepository.DeleteAsync(organization);
     }
 
     #endregion

@@ -46,7 +46,7 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpGet("{orgId}/domain")]
-    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<OrganizationDomainResponseModel>> GetAll(Guid orgId)
     {
         await ValidateOrganizationAccessAsync(orgId);
 
@@ -105,7 +105,6 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpDelete("{orgId}/domain/{id}")]
-    [HttpPost("{orgId}/domain/{id}/remove")]
     public async Task RemoveDomain(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);
@@ -117,6 +116,13 @@ public class OrganizationDomainController : Controller
         }
 
         await _deleteOrganizationDomainCommand.DeleteAsync(domain);
+    }
+
+    [HttpPost("{orgId}/domain/{id}/remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostRemoveDomain(Guid orgId, Guid id)
+    {
+        await RemoveDomain(orgId, id);
     }
 
     [AllowAnonymous]

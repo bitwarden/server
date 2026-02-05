@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -6,12 +9,16 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -32,8 +39,9 @@ public class ProviderService : IProviderService
 {
     private static readonly PlanType[] _resellerDisallowedOrganizationTypes = [
         PlanType.Free,
-        PlanType.FamiliesAnnually,
-        PlanType.FamiliesAnnually2019
+        PlanType.FamiliesAnnually2025,
+        PlanType.FamiliesAnnually2019,
+        PlanType.FamiliesAnnually
     ];
 
     private readonly IDataProtector _dataProtector;
@@ -55,6 +63,7 @@ public class ProviderService : IProviderService
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -64,7 +73,8 @@ public class ProviderService : IProviderService
         ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
         IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
-        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand)
+        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -85,9 +95,10 @@ public class ProviderService : IProviderService
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
         _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo, TokenizedPaymentSource tokenizedPaymentSource = null)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -112,24 +123,19 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        if (taxInfo == null || string.IsNullOrEmpty(taxInfo.BillingAddressCountry) || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
-            throw new BadRequestException("Both address and postal code are required to set up your provider.");
-        }
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerUserId);
 
-        var requireProviderPaymentMethodDuringSetup =
-            _featureService.IsEnabled(FeatureFlagKeys.PM19956_RequireProviderPaymentMethodDuringSetup);
-
-        if (requireProviderPaymentMethodDuringSetup && tokenizedPaymentSource is not
+            if (organizationAutoConfirmPolicyRequirement
+                .CannotCreateProvider())
             {
-                Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
-                Token: not null and not ""
-            })
-        {
-            throw new BadRequestException("A payment method is required to set up your provider.");
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
+            }
         }
 
-        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo, tokenizedPaymentSource);
+        var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
         provider.GatewayCustomerId = customer.Id;
         var subscription = await _providerBillingService.SetupSubscription(provider);
         provider.GatewaySubscriptionId = subscription.Id;
@@ -149,7 +155,15 @@ public class ProviderService : IProviderService
             throw new ArgumentException("Cannot create provider this way.");
         }
 
+        var existingProvider = await _providerRepository.GetByIdAsync(provider.Id);
+        var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
+
         await _providerRepository.ReplaceAsync(provider);
+
+        if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
+        {
+            await UpdateClientOrganizationsEnabledStatusAsync(provider.Id, provider.Enabled);
+        }
     }
 
     public async Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite)
@@ -253,6 +267,18 @@ public class ProviderService : IProviderService
             throw new BadRequestException("User email does not match invite.");
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+            if (organizationAutoConfirmPolicyRequirement
+                .CannotJoinProvider())
+            {
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
+            }
+        }
+
         providerUser.Status = ProviderUserStatusType.Accepted;
         providerUser.UserId = user.Id;
         providerUser.Email = null;
@@ -296,6 +322,19 @@ public class ProviderService : IProviderService
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
                 {
                     throw new BadRequestException("Invalid user.");
+                }
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+                {
+                    var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                        .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+                    if (organizationAutoConfirmPolicyRequirement
+                        .CannotJoinProvider())
+                    {
+                        result.Add(Tuple.Create(providerUser, new UserCannotJoinProvider().Message));
+                        continue;
+                    }
                 }
 
                 providerUser.Status = ProviderUserStatusType.Confirmed;
@@ -432,7 +471,7 @@ public class ProviderService : IProviderService
 
         if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Email = provider.BillingEmail
             });
@@ -492,7 +531,7 @@ public class ProviderService : IProviderService
 
     private async Task<SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
     {
-        var subscriptionDetails = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
+        var subscriptionDetails = await _stripeAdapter.GetSubscriptionAsync(subscriptionId);
         return subscriptionDetails.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
@@ -502,7 +541,7 @@ public class ProviderService : IProviderService
         {
             if (subscriptionItem.Price.Id != extractedPlanType)
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(subscriptionItem.Subscription,
+                await _stripeAdapter.UpdateSubscriptionAsync(subscriptionItem.Subscription,
                     new Stripe.SubscriptionUpdateOptions
                     {
                         Items = new List<Stripe.SubscriptionItemOptions>
@@ -723,6 +762,22 @@ public class ProviderService : IProviderService
                 break;
             default:
                 throw new BadRequestException($"Unsupported provider type {providerType}.");
+        }
+    }
+
+    private async Task UpdateClientOrganizationsEnabledStatusAsync(Guid providerId, bool enabled)
+    {
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization != null && organization.Enabled != enabled)
+            {
+                organization.Enabled = enabled;
+                await _organizationRepository.ReplaceAsync(organization);
+                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            }
         }
     }
 }

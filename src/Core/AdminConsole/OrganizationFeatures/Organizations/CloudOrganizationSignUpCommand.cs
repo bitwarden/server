@@ -1,8 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -30,7 +36,7 @@ public interface ICloudOrganizationSignUpCommand
 public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationBillingService organizationBillingService,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IPolicyService policyService,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
@@ -39,7 +45,9 @@ public class CloudOrganizationSignUpCommand(
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
-    IPricingClient pricingClient) : ICloudOrganizationSignUpCommand
+    IPricingClient pricingClient,
+    IPolicyRequirementQuery policyRequirementQuery,
+    IFeatureService featureService) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
@@ -72,8 +80,7 @@ public class CloudOrganizationSignUpCommand(
             PlanType = plan!.Type,
             Seats = (short)(plan.PasswordManager.BaseSeats + signup.AdditionalSeats),
             MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = !plan.PasswordManager.BaseStorageGb.HasValue ?
-                (short?)null : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
+            MaxStorageGb = (short)(plan.PasswordManager.BaseStorageGb + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
@@ -92,8 +99,8 @@ public class CloudOrganizationSignUpCommand(
             ReferenceData = signup.Owner.ReferenceData,
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
+            PublicKey = signup.Keys?.PublicKey,
+            PrivateKey = signup.Keys?.WrappedPrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
@@ -234,6 +241,17 @@ public class CloudOrganizationSignUpCommand(
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
+        if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var requirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
+
+            if (requirement.CannotCreateNewOrganization())
+            {
+                throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                                              "which has a policy that prohibits you from being a member of any other organization.");
+            }
+        }
+
         var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {

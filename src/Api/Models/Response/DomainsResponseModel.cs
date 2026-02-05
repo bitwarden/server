@@ -1,14 +1,17 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response;
 
-public class DomainsResponseModel : ResponseModel
+public class DomainsResponseModel() : ResponseModel("domains")
 {
     public DomainsResponseModel(User user, bool excluded = true)
-        : base("domains")
+        : this()
     {
         if (user == null)
         {
@@ -35,13 +38,13 @@ public class DomainsResponseModel : ResponseModel
     public IEnumerable<GlobalDomains> GlobalEquivalentDomains { get; set; }
 
 
-    public class GlobalDomains
+    public class GlobalDomains()
     {
         public GlobalDomains(
             GlobalEquivalentDomainsType globalDomain,
             IEnumerable<string> domains,
             IEnumerable<GlobalEquivalentDomainsType> excludedDomains,
-            bool excluded)
+            bool excluded) : this()
         {
             Type = (byte)globalDomain;
             Domains = domains;
