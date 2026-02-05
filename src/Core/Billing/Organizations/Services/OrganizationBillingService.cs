@@ -98,33 +98,6 @@ public class OrganizationBillingService(
             orgOccupiedSeats.Total);
     }
 
-    public async Task UpdatePaymentMethod(
-        Organization organization,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
-        {
-            var customer = await CreateCustomerAsync(organization,
-                new CustomerSetup
-                {
-                    TokenizedPaymentSource = tokenizedPaymentSource,
-                    TaxInformation = taxInformation
-                });
-
-            organization.Gateway = GatewayType.Stripe;
-            organization.GatewayCustomerId = customer.Id;
-
-            await organizationRepository.ReplaceAsync(organization);
-        }
-        else
-        {
-            await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
-            await subscriberService.UpdateTaxInformation(organization, taxInformation);
-            await UpdateMissingPaymentMethodBehaviourAsync(organization);
-        }
-    }
-
     public async Task UpdateSubscriptionPlanFrequency(
         Organization organization, PlanType newPlanType)
     {
@@ -595,25 +568,6 @@ public class OrganizationBillingService(
         var couponAppliesTo = coupon.AppliesTo?.Products;
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
-    }
-
-    private async Task UpdateMissingPaymentMethodBehaviourAsync(Organization organization)
-    {
-        var subscription = await subscriberService.GetSubscriptionOrThrow(organization);
-        if (subscription.TrialSettings?.EndBehavior?.MissingPaymentMethod == StripeConstants.MissingPaymentMethodBehaviorOptions.Cancel)
-        {
-            var options = new SubscriptionUpdateOptions
-            {
-                TrialSettings = new SubscriptionTrialSettingsOptions
-                {
-                    EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
-                    {
-                        MissingPaymentMethod = StripeConstants.MissingPaymentMethodBehaviorOptions.CreateInvoice
-                    }
-                }
-            };
-            await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId, options);
-        }
     }
 
     #endregion
