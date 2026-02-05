@@ -34,7 +34,7 @@ public class UpdatePaymentMethodCommandTests
     {
         _command = new UpdatePaymentMethodCommand(
             _braintreeGateway,
-            Substitute.For<IBraintreeService>(),
+            _braintreeService,
             _globalSettings,
             Substitute.For<ILogger<UpdatePaymentMethodCommand>>(),
             _setupIntentCache,
