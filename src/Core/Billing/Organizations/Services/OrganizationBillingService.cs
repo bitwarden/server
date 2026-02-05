@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -31,7 +30,6 @@ public class OrganizationBillingService(
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     ITaxService taxService) : IOrganizationBillingService
@@ -249,6 +247,7 @@ public class OrganizationBillingService(
         };
 
         var braintreeCustomerId = "";
+        var setupIntentId = "";
 
         if (customerSetup.IsBillable)
         {
@@ -342,7 +341,7 @@ public class OrganizationBillingService(
                             throw new BillingException();
                         }
 
-                        await setupIntentCache.Set(organization.Id, setupIntent.Id);
+                        setupIntentId = setupIntent.Id;
                         break;
                     }
                 case PaymentMethodType.Card:
@@ -368,6 +367,12 @@ public class OrganizationBillingService(
         try
         {
             var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
+
+            if (!string.IsNullOrEmpty(setupIntentId))
+            {
+                await stripeAdapter.UpdateSetupIntentAsync(setupIntentId,
+                    new SetupIntentUpdateOptions { Customer = customer.Id });
+            }
 
             organization.Gateway = GatewayType.Stripe;
             organization.GatewayCustomerId = customer.Id;
@@ -402,11 +407,6 @@ public class OrganizationBillingService(
                 // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
                 switch (customerSetup.TokenizedPaymentSource!.Type)
                 {
-                    case PaymentMethodType.BankAccount:
-                        {
-                            await setupIntentCache.RemoveSetupIntentForSubscriber(organization.Id);
-                            break;
-                        }
                     case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
                         {
                             await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);

@@ -47,5 +47,6 @@ public interface IStripeAdapter
     Task<List<SetupIntent>> ListSetupIntentsAsync(SetupIntentListOptions options);
     Task CancelSetupIntentAsync(string id, SetupIntentCancelOptions options = null);
     Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null);
+    Task<SetupIntent> UpdateSetupIntentAsync(string id, SetupIntentUpdateOptions options = null);
     Task<Price> GetPriceAsync(string id, PriceGetOptions options = null);
 }
