@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -16,7 +15,6 @@ public interface IGetPaymentMethodQuery
 
 public class GetPaymentMethodQuery(
     IBraintreeService braintreeService,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IGetPaymentMethodQuery
 {
@@ -39,19 +37,17 @@ public class GetPaymentMethodQuery(
         }
 
         // Then check for a bank account pending verification
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
-
-        if (!string.IsNullOrEmpty(setupIntentId))
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
         {
-            var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
-            {
-                Expand = ["payment_method"]
-            });
+            Customer = customer.Id,
+            Expand = ["data.payment_method"]
+        });
 
-            if (setupIntent.IsUnverifiedBankAccount())
-            {
-                return MaskedPaymentMethod.From(setupIntent);
-            }
+        var unverifiedBankAccount = setupIntents?.FirstOrDefault(si => si.IsUnverifiedBankAccount());
+
+        if (unverifiedBankAccount != null)
+        {
+            return MaskedPaymentMethod.From(unverifiedBankAccount);
         }
 
         // Then check the default payment method
