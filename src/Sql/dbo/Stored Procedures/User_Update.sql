@@ -45,7 +45,7 @@
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
     @SignedPublicKey VARCHAR(MAX) = NULL,
-    @MasterPasswordSalt NVARCHAR(256)
+    @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
