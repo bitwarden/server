@@ -44,7 +44,7 @@ public class SendEmailOtpRequestValidator(
          * as invalid requests. The response for a request with a correct email which needs an OTP and a request
          * that has an invalid email need to be the same otherwise an attacker could enumerate until a valid email is found.
          */
-        if (!authMethod.emails.Contains(email))
+        if (!authMethod.emails.Contains(email, StringComparer.OrdinalIgnoreCase))
         {
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
         }
