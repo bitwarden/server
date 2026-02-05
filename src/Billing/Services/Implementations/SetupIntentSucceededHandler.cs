@@ -1,9 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
+using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
 using Event = Stripe.Event;
@@ -11,10 +11,10 @@ using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
 
 public class SetupIntentSucceededHandler(
+    ILogger<SetupIntentSucceededHandler> logger,
     IOrganizationRepository organizationRepository,
     IProviderRepository providerRepository,
     IPushNotificationAdapter pushNotificationAdapter,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     IStripeEventService stripeEventService) : ISetupIntentSucceededHandler
 {
@@ -27,23 +27,29 @@ public class SetupIntentSucceededHandler(
 
         if (setupIntent is not
             {
+                CustomerId: not null,
                 PaymentMethod.UsBankAccount: not null
             })
         {
+            logger.LogWarning("SetupIntent {SetupIntentId} has no customer ID or is not a US bank account", setupIntent.Id);
             return;
         }
 
-        var subscriberId = await setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id);
-        if (subscriberId == null)
+        var organization = await organizationRepository.GetByGatewayCustomerIdAsync(setupIntent.CustomerId);
+        if (organization != null)
         {
+            await SetPaymentMethodAsync(organization, setupIntent.PaymentMethod);
             return;
         }
 
-        var organization = await organizationRepository.GetByIdAsync(subscriberId.Value);
-        var provider = await providerRepository.GetByIdAsync(subscriberId.Value);
+        var provider = await providerRepository.GetByGatewayCustomerIdAsync(setupIntent.CustomerId);
+        if (provider != null)
+        {
+            await SetPaymentMethodAsync(provider, setupIntent.PaymentMethod);
+            return;
+        }
 
-        OneOf<Organization, Provider> entity = organization != null ? organization : provider!;
-        await SetPaymentMethodAsync(entity, setupIntent.PaymentMethod);
+        logger.LogError("No organization or provider found for customer {CustomerId}", setupIntent.CustomerId);
     }
 
     private async Task SetPaymentMethodAsync(
