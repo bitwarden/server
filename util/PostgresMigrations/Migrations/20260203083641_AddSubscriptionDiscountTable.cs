@@ -17,7 +17,7 @@ public partial class AddSubscriptionDiscountTable : Migration
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
                 StripeCouponId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                 StripeProductIds = table.Column<string>(type: "text", nullable: true),
-                PercentOff = table.Column<decimal>(type: "numeric", nullable: true),
+                PercentOff = table.Column<decimal>(type: "numeric(5,2)", nullable: true),
                 AmountOff = table.Column<long>(type: "bigint", nullable: true),
                 Currency = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
                 Duration = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),

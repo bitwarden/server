@@ -959,7 +959,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<decimal?>("PercentOff")
-                        .HasColumnType("numeric");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");

@@ -19,7 +19,7 @@ public partial class AddSubscriptionDiscountTable : Migration
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 StripeProductIds = table.Column<string>(type: "longtext", nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
-                PercentOff = table.Column<decimal>(type: "decimal(65,30)", nullable: true),
+                PercentOff = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
                 AmountOff = table.Column<long>(type: "bigint", nullable: true),
                 Currency = table.Column<string>(type: "varchar(10)", maxLength: 10, nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),

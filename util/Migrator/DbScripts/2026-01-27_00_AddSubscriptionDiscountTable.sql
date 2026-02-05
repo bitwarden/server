@@ -26,28 +26,14 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_SubscriptionDiscount_DateRange' AND object_id = OBJECT_ID('[dbo].[SubscriptionDiscount]'))
 BEGIN
     CREATE INDEX [IX_SubscriptionDiscount_DateRange] ON [dbo].[SubscriptionDiscount]
-        ([StartDate], [EndDate]) INCLUDE ([StripeProductIds], [AudienceType]);
+        ([StartDate], [EndDate]);
 END
 GO
 
 -- View
 CREATE OR ALTER VIEW [dbo].[SubscriptionDiscountView]
 AS
-SELECT
-    [Id],
-    [StripeCouponId],
-    [StripeProductIds],
-    [PercentOff],
-    [AmountOff],
-    [Currency],
-    [Duration],
-    [DurationInMonths],
-    [Name],
-    [StartDate],
-    [EndDate],
-    [AudienceType],
-    [CreationDate],
-    [RevisionDate]
+SELECT *
 FROM
     [dbo].[SubscriptionDiscount]
 GO

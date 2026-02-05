@@ -1,19 +1,5 @@
 CREATE VIEW [dbo].[SubscriptionDiscountView]
 AS
-SELECT
-    [Id],
-    [StripeCouponId],
-    [StripeProductIds],
-    [PercentOff],
-    [AmountOff],
-    [Currency],
-    [Duration],
-    [DurationInMonths],
-    [Name],
-    [StartDate],
-    [EndDate],
-    [AudienceType],
-    [CreationDate],
-    [RevisionDate]
+SELECT *
 FROM
     [dbo].[SubscriptionDiscount]

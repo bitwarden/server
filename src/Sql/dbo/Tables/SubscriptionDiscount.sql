@@ -19,5 +19,4 @@ CREATE TABLE [dbo].[SubscriptionDiscount] (
 
 GO
 CREATE NONCLUSTERED INDEX [IX_SubscriptionDiscount_DateRange]
-    ON [dbo].[SubscriptionDiscount]([StartDate] ASC, [EndDate] ASC)
-    INCLUDE([StripeProductIds], [AudienceType]);
+    ON [dbo].[SubscriptionDiscount]([StartDate] ASC, [EndDate] ASC);

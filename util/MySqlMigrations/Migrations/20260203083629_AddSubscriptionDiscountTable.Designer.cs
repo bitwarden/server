@@ -954,7 +954,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("varchar(100)");
 
                     b.Property<decimal?>("PercentOff")
-                        .HasColumnType("decimal(65,30)");
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");

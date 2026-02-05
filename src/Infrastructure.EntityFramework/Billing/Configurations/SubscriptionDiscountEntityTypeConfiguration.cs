@@ -28,14 +28,14 @@ public class SubscriptionDiscountEntityTypeConfiguration : IEntityTypeConfigurat
                     c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                     c => c == null ? null : c.ToList()));
 
-        var dateRangeIndex = builder
+        builder
+            .Property(sd => sd.PercentOff)
+            .HasPrecision(5, 2);
+
+        builder
             .HasIndex(sd => new { sd.StartDate, sd.EndDate })
             .IsClustered(false)
             .HasDatabaseName("IX_SubscriptionDiscount_DateRange");
-
-        SqlServerIndexBuilderExtensions.IncludeProperties(
-            dateRangeIndex,
-            sd => new { sd.StripeProductIds, sd.AudienceType });
 
         builder.ToTable(nameof(SubscriptionDiscount));
     }
