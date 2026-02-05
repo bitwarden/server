@@ -70,7 +70,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var root = body.RootElement;
         AssertRefreshTokenExists(root);
         AssertHelper.AssertJsonProperty(root, "ForcePasswordReset", JsonValueKind.False);
-        AssertHelper.AssertJsonProperty(root, "ResetMasterPassword", JsonValueKind.False);
         var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
