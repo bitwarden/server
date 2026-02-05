@@ -319,6 +319,17 @@ public class MailKitSmtpMailDeliveryServiceTests
     [Fact]
     public async Task TestMicrosoftSmtpWithOAuth()
     {
+        // How to test Microsoft SMTP OAuth:
+        // Login to our test Microsoft tenant with the credentials stored in
+        // Bitwarden. Go to "Microsoft Entra ID" > "Manage" > "App registrations" and select
+        // the app for testing SMTP.
+        // From the overview page you should set the following
+        // `MICROSOFT_TENANT_ID` is the "Directory (tenant) ID"
+        // `MICROSOFT_CLIENT_ID` is the "Application (client) ID"
+        // Then make your way to the "Certificates & secrets"
+        // Create a client secret and use the "Value" for `MICROSOFT_CLIENT_SECRET`.
+        // The `MICROSOFT_USERNAME` should be the email that you used to sign into the tenant
+
         var sendToEmail = Environment.GetEnvironmentVariable("TEST_MAILBOX");
         var tenantId = Environment.GetEnvironmentVariable("MICROSOFT_TENANT_ID");
         var clientId = Environment.GetEnvironmentVariable("MICROSOFT_CLIENT_ID"); ;
