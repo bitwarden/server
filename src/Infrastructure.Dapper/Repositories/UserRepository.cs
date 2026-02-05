@@ -404,6 +404,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
     {
+        var protectedKeyConnectorWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(keyConnectorWrappedUserKey));
+
         return async (connection, transaction) =>
         {
             var timestamp = DateTime.UtcNow;
@@ -413,7 +416,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new
                 {
                     Id = userId,
-                    Key = keyConnectorWrappedUserKey,
+                    Key = protectedKeyConnectorWrappedUserKey,
                     // Key Connector does not use KDF, so we set some defaults
                     Kdf = KdfType.Argon2id,
                     KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
@@ -431,6 +434,13 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
     {
+        var protectedMasterKeyWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(masterPasswordUnlockData.MasterKeyWrappedUserKey));
+
+        var protectedServerSideHashedMasterPasswordAuthenticationHash = string.Concat(
+            Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(serverSideHashedMasterPasswordAuthenticationHash));
+
         return async (connection, transaction) =>
         {
             var timestamp = DateTime.UtcNow;
@@ -440,9 +450,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new
                 {
                     Id = userId,
-                    MasterPassword = serverSideHashedMasterPasswordAuthenticationHash,
+                    MasterPassword = protectedServerSideHashedMasterPasswordAuthenticationHash,
                     MasterPasswordHint = masterPasswordHint,
-                    Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
+                    Key = protectedMasterKeyWrappedUserKey,
                     Kdf = masterPasswordUnlockData.Kdf.KdfType,
                     KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
                     KdfMemory = masterPasswordUnlockData.Kdf.Memory,
