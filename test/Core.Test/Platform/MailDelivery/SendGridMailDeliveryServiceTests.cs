@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
-public class SendGridMailDeliveryServiceTests
+public class SendGridMailDeliveryServiceTests : IDisposable
 {
     private readonly SendGridMailDeliveryService _sut;
 
@@ -26,7 +26,7 @@ public class SendGridMailDeliveryServiceTests
             Mail =
             {
                 SendGridApiKey = "SendGridApiKey",
-                SendGridApiHost = "https://api.sendgrid.com",
+                SendGridApiHost = "https://api.sendgrid.com"
             }
         };
 
@@ -40,6 +40,11 @@ public class SendGridMailDeliveryServiceTests
             _hostingEnvironment,
             _logger
         );
+    }
+
+    public void Dispose()
+    {
+        _sut?.Dispose();
     }
 
     [Fact]

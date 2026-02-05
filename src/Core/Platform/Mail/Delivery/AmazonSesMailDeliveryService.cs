@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-internal class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
+public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
 {
     private readonly GlobalSettings _globalSettings;
     private readonly IWebHostEnvironment _hostingEnvironment;

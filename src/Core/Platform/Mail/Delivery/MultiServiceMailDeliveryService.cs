@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-internal class MultiServiceMailDeliveryService : IMailDeliveryService
+public class MultiServiceMailDeliveryService : IMailDeliveryService
 {
     private readonly IMailDeliveryService _sesService;
     private readonly IMailDeliveryService _sendGridService;

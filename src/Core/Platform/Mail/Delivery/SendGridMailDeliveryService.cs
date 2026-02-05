@@ -8,7 +8,7 @@ using SendGrid.Helpers.Mail;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-public class SendGridMailDeliveryService : IMailDeliveryService
+public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
 {
     private readonly GlobalSettings _globalSettings;
     private readonly IWebHostEnvironment _hostingEnvironment;
@@ -24,6 +24,11 @@ public class SendGridMailDeliveryService : IMailDeliveryService
         : this(new SendGridClient(globalSettings.Mail.SendGridApiKey, globalSettings.Mail.SendGridApiHost),
              globalSettings, hostingEnvironment, logger)
     {
+    }
+
+    public void Dispose()
+    {
+        // TODO: nothing to dispose
     }
 
     public SendGridMailDeliveryService(

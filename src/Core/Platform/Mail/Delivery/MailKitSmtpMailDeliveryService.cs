@@ -10,7 +10,7 @@ using MimeKit;
 
 namespace Bit.Core.Platform.Mail.Delivery;
 
-internal class MailKitSmtpMailDeliveryService : IMailDeliveryService
+public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
