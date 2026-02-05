@@ -682,15 +682,15 @@ public class SubscriptionUpdatedHandlerTests
                 Data =
                 [
                     new SubscriptionItem
-                {
-                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
-                    Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
-                },
-                new SubscriptionItem
-                {
-                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
-                    Plan = new Plan { Id = "secrets-manager-enterprise-seat-annually" }
-                }
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    },
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
+                        Plan = new Plan { Id = "secrets-manager-enterprise-seat-annually" }
+                    }
                 ]
             },
             Customer = new Customer
@@ -730,7 +730,7 @@ public class SubscriptionUpdatedHandlerTests
                         Data =
                         [
                             new SubscriptionItem { Plan = new Stripe.Plan { Id = "secrets-manager-teams-seat-annually" } },
-                    ]
+                        ]
                     }
                 })
             }

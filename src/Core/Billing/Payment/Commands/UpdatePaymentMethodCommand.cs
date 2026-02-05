@@ -97,6 +97,8 @@ public class UpdatePaymentMethodCommand(
 
         await setupIntentCache.Set(subscriber.Id, setupIntent.Id);
 
+        _logger.LogInformation("{Command}: Successfully cached Setup Intent ({SetupIntentId}) for subscriber ({SubscriberID})", CommandName, setupIntent.Id, subscriber.Id);
+
         await UnlinkBraintreeCustomerAsync(customer);
 
         return MaskedPaymentMethod.From(setupIntent);
@@ -124,12 +126,10 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        Braintree.Customer braintreeCustomer;
+        var braintreeCustomer = await braintreeService.GetCustomer(customer);
 
-        if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
+        if (braintreeCustomer != null)
         {
-            braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
             await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
         }
         else

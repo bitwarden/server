@@ -20,7 +20,7 @@ public interface IRestoreOrganizationUserCommand
     /// </summary>
     /// <param name="organizationUser">Revoked user to be restored.</param>
     /// <param name="restoringUserId">UserId of the user performing the action.</param>
-    Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId);
+    Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string? defaultCollectionName);
 
     /// <summary>
     /// Validates that the requesting user can perform the action. There is also a check done to ensure the organization
@@ -50,5 +50,5 @@ public interface IRestoreOrganizationUserCommand
     /// <param name="userService">Passed in from caller to avoid circular dependency</param>
     /// <returns>List of organization user Ids and strings. A successful restoration will have an empty string.
     /// If an error occurs, the error message will be provided.</returns>
-    Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
+    Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService, string? defaultCollectionName);
 }
