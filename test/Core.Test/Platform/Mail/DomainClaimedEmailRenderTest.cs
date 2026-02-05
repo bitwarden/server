@@ -94,7 +94,7 @@ public class DomainClaimedEmailRenderTest
     }
 
     [Fact(Skip = "For local development - requires MailCatcher at localhost:10250")]
-    public async Task SendDomainClaimedEmail_ToMailCatcher()
+    [Fact(Skip = "For local development - requires MailCatcher at localhost:10250")]
     public async Task SendDomainClaimedEmail_ToMailCatcher()
     {
         // Arrange
