@@ -705,19 +705,6 @@ public class ProviderBillingService(
         }
     }
 
-    public async Task UpdatePaymentMethod(
-        Provider provider,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        await Task.WhenAll(
-            subscriberService.UpdatePaymentSource(provider, tokenizedPaymentSource),
-            subscriberService.UpdateTaxInformation(provider, taxInformation));
-
-        await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId,
-            new SubscriptionUpdateOptions { CollectionMethod = CollectionMethod.ChargeAutomatically });
-    }
-
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
     {
         var (provider, updatedPlanConfigurations) = command;
