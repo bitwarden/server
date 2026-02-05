@@ -16,9 +16,9 @@
 
     <!-- Main Content -->
     <mj-wrapper padding="5px 20px 10px 20px">
-      <mj-section background-color="#fff" padding="15px 10px 10px 10px">
+      <mj-section background-color="#fff" padding="10px 10px 10px 10px">
         <mj-column>
-          <mj-text font-size="16px" line-height="24px" padding="10px 15px">
+          <mj-text font-size="16px" line-height="24px" padding="15px 15px">
             Bitwarden is a password manager used to simplify password sharing and protect your sensitive data. Once you accept this invitation, you can:
           </mj-text>
         </mj-column>
@@ -38,13 +38,13 @@
         icon-alt="Share Icon"
         text="Share logins easily with your friends, family, or coworkers."
       />
-      <mj-section background-color="#fff" padding="10px">
+      <mj-section background-color="#fff" padding="10px 10px 10px 10px">
         <mj-column>
-          <mj-text font-size="12px" line-height="16px" color="#1B2029" padding="10px 15px">
+          <mj-text font-size="12px" line-height="16px" color="#1B2029" padding="15px 15px">
             {{#if InviterEmail}}
-            This invitation was sent by <a href="mailto:{{InviterEmail}}" style="color: #175ddc; text-decoration: none;">{{InviterEmail}}</a> and expires {{ExpirationDate}}.
+            This invitation was sent by <a href="mailto:{{InviterEmail}}" style="color: #175ddc; text-decoration: none;">{{InviterEmail}}</a> and expires {{ExpirationDate}}
             {{else}}
-            This invitation expires {{ExpirationDate}}.
+            This invitation expires {{ExpirationDate}}
             {{/if}}
           </mj-text>
         </mj-column>

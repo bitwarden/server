@@ -34,8 +34,7 @@ class MjBwIconRow extends BodyComponent {
           line-height: 20px;
         }
         .mj-bw-icon-row {
-          padding: 10px 15px;
-          width: fit-content !important;
+          padding: 10px 15px !important;
         }
       }
     `;
@@ -79,7 +78,7 @@ class MjBwIconRow extends BodyComponent {
       `
       <mj-section background-color="#fff" padding="10px 10px 10px 10px">
         <mj-group css-class="mj-bw-icon-row">
-          <mj-column width="15%" vertical-align="top">
+          <mj-column width="15%" vertical-align="middle">
             <mj-image
               src="${this.getAttribute("icon-src")}"
               alt="${this.getAttribute("icon-alt")}"
@@ -88,7 +87,7 @@ class MjBwIconRow extends BodyComponent {
               border-radius="8px"
             />
           </mj-column>
-          <mj-column width="85%" vertical-align="top">
+          <mj-column width="85%" vertical-align="middle">
               ${headAnchorElement}
               <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 ${this.getAttribute("text")}
