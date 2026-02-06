@@ -12,7 +12,7 @@ repository = "https://github.com/bitwarden/server"
 crate-type = ["cdylib"]
 
 [dependencies]
-base64 = "0.22.1"
+base64 = "=0.22.1"
 bitwarden-core = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "7080159154a42b59028ccb9f5af62bf087e565f9", features = ["internal"] }
 bitwarden-crypto = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "7080159154a42b59028ccb9f5af62bf087e565f9" }
 bitwarden-vault = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "7080159154a42b59028ccb9f5af62bf087e565f9" }
