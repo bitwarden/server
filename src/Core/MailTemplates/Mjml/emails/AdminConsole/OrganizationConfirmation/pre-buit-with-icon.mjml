@@ -1,0 +1,188 @@
+<mjml>
+    <mj-head>
+        <mj-title>Hello world</mj-title>
+        <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
+        <mj-attributes>
+            <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
+            <mj-text font-weight="300" font-size="16px" color="#616161" line-height="24px"></mj-text>
+            <mj-section padding="0px"></mj-section>
+        </mj-attributes>
+    </mj-head>
+    <mj-body>
+        <mj-section padding="20px 0">
+            <mj-column width="60%">
+                <mj-text font-size="10px">Your bimonthly intake of AI, machine learning and bots is here!</mj-text>
+            </mj-column>
+            <mj-column width="40%">
+                <mj-text align="right">[[PERMALINK]]</mj-text>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="100%">
+                <mj-image href="https://recast.ai?ref=newsletter" src="https://static.mailjet.com/mjml-website/templates/recast-hero.png"></mj-image>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="100%">
+                <mj-text align="center">Your bimonthly intake of AI, machine learning and bots is here!</mj-text>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="45%">
+                <mj-text align="center" font-weight="500" padding="0px" font-size="18px">ISSUE #18 - DECEMBER</mj-text>
+                <mj-divider border-width="2px" border-color="#616161"></mj-divider>
+                <mj-divider border-width="2px" border-color="#616161" width="45%"></mj-divider>
+            </mj-column>
+        </mj-section>
+        <mj-section padding-top="30px">
+            <mj-column width="100%">
+                <mj-text>
+                    <p>Hello hello!</p>
+                    <p> Don't panic. This is still the same newsletter, I'm still me. We just updated the design to make it sleeker and easier to read! </p>
+                    <p>Without further ado, let's dive into AI for medecine, sound recognition models and bot building!</p>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="11%">
+                <mj-image padding-right="0px" padding-left="25px" align="left" width="70px" href="https://twitter.com/MrJustaine" src="https://static.mailjet.com/mjml-website/templates/recast-profile.png"></mj-image>
+            </mj-column>
+            <mj-column width="89%">
+                <mj-text padding="0 25px">
+                    <p style="color:#BDBDBD; line-height: 9px"> Justine - <a href="https://recast.ai?ref=newsletter" style="color: #3498DB;">
+                        Recast.AI
+                    </a> team </p>
+                    <p style="font-style: italic; color:#BDBDBD; line-height: 9px"> Your light in the storm </p>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="100%">
+                <mj-divider border-width="1px" border-color="#E0E0E0"></mj-divider>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="75%">
+                <mj-text>
+                    <h3 style="font-weight: bold; margin-top: 0; margin-bottom: 0"> <a href="https://blog.recast.ai/module-faster-shadow/" style="color: #3498DB; text-decoration: none">
+                        Modules, are you faster than your shadows?
+                    </a> </h3>
+                    <p style="font-size: 14px">As a developer, should you use modules or code this bit of feature by yourself? Let's find out.</p>
+                </mj-text>
+            </mj-column>
+            <mj-column width="25%">
+                <mj-image width="100px" href="https://blog.recast.ai/module-faster-shadow/" src="https://static.mailjet.com/mjml-website/templates/recast-image1.png"></mj-image>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="75%">
+                <mj-text>
+                    <h3 style="font-weight: bold; margin-top: 0; margin-bottom: 0"> <a href="http://projects.csail.mit.edu/soundnet/" style="color: #3498DB; text-decoration: none;">
+                        SoundNet - Learning sound representations from unlabeled video
+                    </a> </h3>
+                    <p style="font-size: 14px;">With a deep convolutional network created for sound recognition, the model recognizes objects and scenes only from sounds. </p>
+                </mj-text>
+            </mj-column>
+            <mj-column width="25%">
+                <mj-image width="100px" href="http://projects.csail.mit.edu/soundnet/" src="https://static.mailjet.com/mjml-website/templates/recast-image2.png"></mj-image>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="75%">
+                <mj-text>
+                    <h3 style="font-weight: bold; margin-top: 0; margin-bottom: 0"> <a href="https://blog.cardiogr.am/three-challenges-for-artificial-intelligence-in-medicine-dfb9993ae750#.ex1me3nhw" style="color: #3498DB; text-decoration: none;">
+                        Three challenges for artificial intelligence in medicine
+                    </a> </h3>
+                    <p style="font-size: 14px;">Brandon Ballinger takes us back in time with an historic of AI in medecine and where it could today make a difference.</p>
+                </mj-text>
+            </mj-column>
+            <mj-column width="25%">
+                <mj-image width="100px" href="https://blog.cardiogr.am/three-challenges-for-artificial-intelligence-in-medicine-dfb9993ae750#.ex1me3nhw" src="https://static.mailjet.com/mjml-website/templates/recast-image3.png"></mj-image>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="75%">
+                <mj-text>
+                    <h3 style="font-weight: bold; margin-top: 0; margin-bottom: 0"> <a href="https://blog.recast.ai/how-to-choose-the-best-channel-for-your-bot-the-ultimate-cheat-sheet/" style="color: #3498DB; text-decoration: none;">
+                        How to choose the best channel for your bot: the ultimate cheat sheet
+                    </a> </h3>
+                    <p style="font-size: 14px;">Bot channels do not offer the same features: here’s an analysis of a few to help you figure everything out.</p>
+                </mj-text>
+            </mj-column>
+            <mj-column width="25%">
+                <mj-image width="100px" href="https://blog.recast.ai/how-to-choose-the-best-channel-for-your-bot-the-ultimate-cheat-sheet/" src="https://static.mailjet.com/mjml-website/templates/recast-image4.jpg"></mj-image>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="100%">
+                <mj-divider border-width="1px" border-color="#E0E0E0"></mj-divider>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column>
+                <mj-text padding-bottom="0px">
+                    <h3 style="font-weight: bold"> <a href="http://www.forbes.com/sites/quora/2016/09/23/what-are-the-differences-between-ai-machine-learning-nlp-and-deep-learning/#4f981bbb36f0" style="color: #3498DB; text-decoration: none;">
+                        What are the differences between AI, machine learning, NLP, and deep learning?
+                    </a> </h3>
+                </mj-text>
+                <mj-image width="600px" padding-top="0" href="http://www.forbes.com/sites/quora/2016/09/23/what-are-the-differences-between-ai-machine-learning-nlp-and-deep-learning/#4f981bbb36f0" src="https://static.mailjet.com/mjml-website/templates/recast-image5.jpg"></mj-image>
+                <mj-text>
+                    <p style="font-size: 14px;"> So many big words in a booming market, let's take a step back and redefine which is what, and which does what. </p>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column>
+                <mj-text padding-bottom="0px">
+                    <h3 style="font-weight: bold"> <a href="https://chatbotsmagazine.com/the-implications-of-a-i-on-the-future-chatbots-eaedaf20bfb7#.28dezxtns" style="color: #3498DB; text-decoration: none;">
+                        The implications of AI on the future chatbots
+                    </a> </h3>
+                </mj-text>
+                <mj-image width="600px" padding-top="0" href="https://chatbotsmagazine.com/the-implications-of-a-i-on-the-future-chatbots-eaedaf20bfb7#.28dezxtns" src="https://static.mailjet.com/mjml-website/templates/recast-image6.jpg"></mj-image>
+                <mj-text>
+                    <p style="font-size: 14px;"> Artificial intelligence, machine learning, neural networks: how can they be used with chatbots? What does the future hold? </p>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column>
+                <mj-text padding-bottom="0px">
+                    <h3 style="font-weight: bold"> <a href="https://chatbotsmagazine.com/nlp-and-the-coming-content-explosion-5ad45017f36f#.rr1g031tl" style="color: #3498DB; text-decoration: none;">
+                        NLP and the coming content explosion
+                    </a> </h3>
+                </mj-text>
+                <mj-image width="600px" padding-top="0" href="https://chatbotsmagazine.com/nlp-and-the-coming-content-explosion-5ad45017f36f#.rr1g031tl" src="https://static.mailjet.com/mjml-website/templates/recast-image7.png"></mj-image>
+                <mj-text>
+                    <p style="font-size: 14px;"> Natural language powered interfaces are taking the world by storm, and we can't help but wonder how they'll change the way we deliver, read and share content. </p>
+                </mj-text>
+                <mj-divider border-width="1px" border-color="#E0E0E0"></mj-divider>
+            </mj-column>
+        </mj-section>
+        <mj-section>
+            <mj-column width="65%">
+                <mj-image align="left" width="150px" href="https://recast.ai?ref=newsletter" src="https://cdn.recast.ai/newsletter/recast-ai-01.png"></mj-image>
+            </mj-column>
+            <mj-column width="35%">
+                <mj-table>
+                    <tr style="list-style: none;line-height:1">
+                        <td> <a href="https://twitter.com/RecastAI">
+                            <img width="25" src="https://static.mailjet.com/mjml-website/templates/recast-twitter.png" />
+                        </a> </td>
+                        <td> <a href="https://www.facebook.com/recastAI">
+                            <img width="25" src="https://static.mailjet.com/mjml-website/templates/recast-facebook.png" />
+                        </a> </td>
+                        <td> <a href="https://medium.com/@RecastAI">
+                            <img width="25" src="https://static.mailjet.com/mjml-website/templates/recast-medium.png" />
+                        </a> </td>
+                        <td> <a href="https://www.youtube.com/channel/UCA0UZlR8crpgwFiVaSTbVWw">
+                            <img width="25" src="https://static.mailjet.com/mjml-website/templates/recast-youtube.png" />
+                        </a> </td>
+                        <td> <a href="https://plus.google.com/u/0/+RecastAi">
+                            <img width="25" src="https://static.mailjet.com/mjml-website/templates/recast-google.png" />
+                        </a> </td>
+                    </tr>
+                </mj-table>
+            </mj-column>
+        </mj-section>
+    </mj-body>
+</mjml>
