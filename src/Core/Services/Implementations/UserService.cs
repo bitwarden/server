@@ -336,7 +336,7 @@ public class UserService : UserManager<User>, IUserService
         var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
         if (result.Succeeded)
         {
-            var setRegisterFinishUserDataTask = _userRepository.SetRegisterFinishUserData(user.Id, registerFinishData);
+            var setRegisterFinishUserDataTask = _userRepository.SetMasterPasswordUnlockUserData(user.Id, registerFinishData.MasterPasswordUnlockData);
             await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, [setRegisterFinishUserDataTask]);
         }
         return result;

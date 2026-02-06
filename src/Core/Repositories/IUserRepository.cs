@@ -93,7 +93,7 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <returns>On success</returns>
     Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions);
 
-    UpdateUserData SetRegisterFinishUserData(Guid userId, RegisterFinishData registerFinishData);
+    UpdateUserData SetMasterPasswordUnlockUserData(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData);
 }
 
 public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,

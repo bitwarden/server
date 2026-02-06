@@ -487,24 +487,22 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public UpdateUserData SetRegisterFinishUserData(Guid userId, RegisterFinishData registerFinishData)
+    public UpdateUserData SetMasterPasswordUnlockUserData(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData)
     {
         return async (connection, transaction) =>
         {
             var timestamp = DateTime.UtcNow;
 
             await connection!.ExecuteAsync(
-                "[dbo].[User_SetRegisterFinishUserData]",
+                "[dbo].[User_SetMasterPasswordUnlockUserData]",
                 new
                 {
                     Id = userId,
-                    Kdf = registerFinishData.MasterPasswordUnlockData.Kdf.KdfType,
-                    KdfIterations = registerFinishData.MasterPasswordUnlockData.Kdf.Iterations,
-                    KdfMemory = registerFinishData.MasterPasswordUnlockData.Kdf.Memory,
-                    KdfParallelism = registerFinishData.MasterPasswordUnlockData.Kdf.Parallelism,
-                    Key = registerFinishData.MasterPasswordUnlockData.MasterKeyWrappedUserKey,
-                    PublicKey = registerFinishData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.PublicKey,
-                    PrivateKey = registerFinishData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey,
+                    Kdf = masterPasswordUnlockData.Kdf.KdfType,
+                    KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
+                    KdfMemory = masterPasswordUnlockData.Kdf.Memory,
+                    KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
+                    Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
                 },

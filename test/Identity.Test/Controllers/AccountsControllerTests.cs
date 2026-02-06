@@ -425,7 +425,9 @@ public class AccountsControllerTests : IDisposable
         var kdfModel = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_ITERATIONS.Default
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -523,7 +525,9 @@ public class AccountsControllerTests : IDisposable
         var kdfModel = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default,
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -599,7 +603,9 @@ public class AccountsControllerTests : IDisposable
         var kdfModel = new KdfRequestModel
         {
             KdfType = KdfType.Argon2id,
-            Iterations = AuthConstants.ARGON2_ITERATIONS.Default
+            Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
         };
 
         var newModel = new RegisterFinishRequestModel
@@ -804,10 +810,8 @@ public class AccountsControllerTests : IDisposable
             Email = email,
             EmailVerificationToken = emailVerificationToken,
             MasterPasswordHash = masterPasswordHash,
-            Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = masterKeyWrappedUserKey,
             UserAsymmetricKeys = new KeysRequestModel
             {
@@ -916,10 +920,8 @@ public class AccountsControllerTests : IDisposable
             OrgInviteToken = orgInviteToken,
             OrganizationUserId = organizationUserId,
             MasterPasswordHash = masterPasswordHash,
-            Kdf = kdfData.KdfType,
-            KdfIterations = kdfData.Iterations,
-            KdfMemory = kdfData.Memory,
-            KdfParallelism = kdfData.Parallelism,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
             UserSymmetricKey = masterKeyWrappedUserKey,
             UserAsymmetricKeys = new KeysRequestModel
             {
