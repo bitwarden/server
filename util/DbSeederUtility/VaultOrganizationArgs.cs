@@ -34,6 +34,9 @@ public class VaultOrganizationArgs : IArgumentModel
     [Option('r', "region", Description = "Geographic region for names: NorthAmerica, Europe, AsiaPacific, LatinAmerica, MiddleEast, Africa, or Global")]
     public string? Region { get; set; }
 
+    [Option("mangle", Description = "Enable mangling for test isolation")]
+    public bool Mangle { get; set; } = false;
+
     public void Validate()
     {
         if (Users < 1)
