@@ -8,9 +8,8 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Services;
 
-public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService, IApplicationCacheService
+public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService
 {
-    private readonly ServiceBusClient _serviceBusClient;
     private readonly ServiceBusSender _topicMessageSender;
     private readonly string _subName;
 
@@ -21,7 +20,7 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
         : base(organizationRepository, providerRepository)
     {
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
-        _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
+
         _topicMessageSender = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString).CreateSender(globalSettings.ServiceBus.ApplicationCacheTopicName);
     }
 
@@ -63,5 +62,20 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
     public async Task BaseDeleteOrganizationAbilityAsync(Guid organizationId)
     {
         await base.DeleteOrganizationAbilityAsync(organizationId);
+    }
+
+    public override async Task DeleteProviderAbilityAsync(Guid providerId)
+    {
+        await base.DeleteProviderAbilityAsync(providerId);
+        var message = new ServiceBusMessage
+        {
+            Subject = _subName,
+            ApplicationProperties =
+            {
+                { "type", (byte)ApplicationCacheMessageType.DeleteProviderAbility },
+                { "id", providerId },
+            }
+        };
+        var task = _topicMessageSender.SendMessageAsync(message);
     }
 }

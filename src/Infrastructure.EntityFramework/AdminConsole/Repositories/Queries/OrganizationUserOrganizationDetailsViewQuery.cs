@@ -7,8 +7,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
     public IQueryable<OrganizationUserOrganizationDetails> Run(DatabaseContext dbContext)
     {
         var query = from ou in dbContext.OrganizationUsers
-                    join o in dbContext.Organizations on ou.OrganizationId equals o.Id into outerOrganization
-                    from o in outerOrganization.DefaultIfEmpty()
+                    join o in dbContext.Organizations on ou.OrganizationId equals o.Id
                     join su in dbContext.SsoUsers on new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId } equals new { UserId = (Guid?)su.UserId, su.OrganizationId } into su_g
                     from su in su_g.DefaultIfEmpty()
                     join po in dbContext.ProviderOrganizations on o.Id equals po.OrganizationId into po_g
@@ -23,6 +22,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                     {
                         UserId = ou.UserId,
                         OrganizationId = ou.OrganizationId,
+                        OrganizationUserId = ou.Id,
                         Name = o.Name,
                         Enabled = o.Enabled,
                         PlanType = o.PlanType,
@@ -56,6 +56,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         ProviderId = p.Id,
                         ProviderName = p.Name,
                         ProviderType = p.Type,
+                        SsoEnabled = ss.Enabled,
                         SsoConfig = ss.Data,
                         FamilySponsorshipFriendlyName = os.FriendlyName,
                         FamilySponsorshipLastSyncDate = os.LastSyncDate,
@@ -64,7 +65,18 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         AccessSecretsManager = ou.AccessSecretsManager,
                         UsePasswordManager = o.UsePasswordManager,
                         SmSeats = o.SmSeats,
-                        SmServiceAccounts = o.SmServiceAccounts
+                        SmServiceAccounts = o.SmServiceAccounts,
+                        LimitCollectionCreation = o.LimitCollectionCreation,
+                        LimitCollectionDeletion = o.LimitCollectionDeletion,
+                        AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
+                        UseRiskInsights = o.UseRiskInsights,
+                        UseAdminSponsoredFamilies = o.UseAdminSponsoredFamilies,
+                        LimitItemDeletion = o.LimitItemDeletion,
+                        IsAdminInitiated = os.IsAdminInitiated,
+                        UseOrganizationDomains = o.UseOrganizationDomains,
+                        UseAutomaticUserConfirmation = o.UseAutomaticUserConfirmation,
+                        UseDisableSMAdsForUsers = o.UseDisableSmAdsForUsers,
+                        UsePhishingBlocker = o.UsePhishingBlocker
                     };
         return query;
     }

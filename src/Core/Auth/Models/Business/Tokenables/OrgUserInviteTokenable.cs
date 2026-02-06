@@ -23,7 +23,7 @@ public class OrgUserInviteTokenable : ExpiringTokenable
 
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid OrgUserId { get; set; }
-    public string OrgUserEmail { get; set; }
+    public string? OrgUserEmail { get; set; }
 
     [JsonConstructor]
     public OrgUserInviteTokenable()

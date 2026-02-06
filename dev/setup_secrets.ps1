@@ -2,7 +2,7 @@
 # Helper script for applying the same user secrets to each project
 param (
     [switch]$clear,
-    [Parameter(ValueFromRemainingArguments = $true, Position=1)]
+    [Parameter(ValueFromRemainingArguments = $true, Position = 1)]
     $cmdArgs
 )
 
@@ -16,16 +16,19 @@ if ($clear -eq $true) {
 }
 
 $projects = @{
-    Admin = "../src/Admin"
-    Api = "../src/Api"
-    Billing = "../src/Billing"
-    Events = "../src/Events"
-    EventsProcessor = "../src/EventsProcessor"
-    Icons = "../src/Icons"
-    Identity = "../src/Identity"
-    Notifications = "../src/Notifications"
-    Sso = "../bitwarden_license/src/Sso" 
-    Scim = "../bitwarden_license/src/Scim" 
+    Admin            = "../src/Admin"
+    Api              = "../src/Api"
+    Billing          = "../src/Billing"
+    Events           = "../src/Events"
+    EventsProcessor  = "../src/EventsProcessor"
+    Icons            = "../src/Icons"
+    Identity         = "../src/Identity"
+    Notifications    = "../src/Notifications"
+    Sso              = "../bitwarden_license/src/Sso"
+    Scim             = "../bitwarden_license/src/Scim"
+    IntegrationTests = "../test/Infrastructure.IntegrationTest"
+    SeederApi        = "../util/SeederApi"
+    SeederUtility    = "../util/DbSeederUtility"
 }
 
 foreach ($key in $projects.keys) {

@@ -1,11 +1,10 @@
 .data
 secrets.json
-db
+*.db
 
 # Docker container configurations
 .env
 authsources.php
-directory.ldif
 
 # Development certificates
 identity_server_dev.crt
@@ -19,3 +18,4 @@ signingkey.jwk
 
 # Reverse Proxy Conifg
 reverse-proxy.conf
+*.crt

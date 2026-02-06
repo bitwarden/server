@@ -37,7 +37,10 @@ public static class DatabaseOptionsFactory
         {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
-                .UseNpgsql(globalSettings.PostgreSql.ConnectionString)
+                .UseNpgsql(globalSettings.PostgreSql.ConnectionString, npgsqlDbContextOptionsBuilder =>
+                {
+                    npgsqlDbContextOptionsBuilder.MigrationsAssembly(nameof(PostgresMigrations));
+                })
                 .UseApplicationServiceProvider(services)
                 .Options);
         }
@@ -45,7 +48,21 @@ public static class DatabaseOptionsFactory
         {
             var mySqlConnectionString = globalSettings.MySql.ConnectionString;
             Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
-                .UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString))
+                .UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString), mySqlDbContextOptionsBuilder =>
+                {
+                    mySqlDbContextOptionsBuilder.MigrationsAssembly(nameof(MySqlMigrations));
+                })
+                .UseApplicationServiceProvider(services)
+                .Options);
+        }
+        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.Sqlite?.ConnectionString))
+        {
+            var sqliteConnectionString = globalSettings.Sqlite.ConnectionString;
+            Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
+                .UseSqlite(sqliteConnectionString, mySqlDbContextOptionsBuilder =>
+                {
+                    mySqlDbContextOptionsBuilder.MigrationsAssembly(nameof(SqliteMigrations));
+                })
                 .UseApplicationServiceProvider(services)
                 .Options);
         }

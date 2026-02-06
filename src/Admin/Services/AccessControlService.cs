@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Settings;
@@ -29,12 +32,12 @@ public class AccessControlService : IAccessControlService
         }
 
         var userRole = GetUserRoleFromClaim();
-        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.ContainsKey(userRole))
+        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.TryGetValue(userRole, out var rolePermissions))
         {
             return false;
         }
 
-        return RolePermissionMapping.RolePermissions[userRole].Contains(permission);
+        return rolePermissions.Contains(permission);
     }
 
     public string GetUserRole(string userEmail)

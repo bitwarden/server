@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
@@ -35,7 +35,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         await base.DeleteAsync(emergencyAccess);
     }
 
-    public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -144,4 +144,23 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         };
     }
 
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entitiesToRemove = from ea in dbContext.EmergencyAccesses
+                               where emergencyAccessIds.Contains(ea.Id)
+                               select ea;
+
+        var granteeIds = entitiesToRemove
+            .Where(ea => ea.Status == EmergencyAccessStatusType.Confirmed)
+            .Where(ea => ea.GranteeId.HasValue)
+            .Select(ea => ea.GranteeId!.Value) // .Value is safe here due to the Where above
+            .Distinct();
+
+        dbContext.EmergencyAccesses.RemoveRange(entitiesToRemove);
+        await dbContext.UserBumpManyAccountRevisionDatesAsync([.. granteeIds]);
+        await dbContext.SaveChangesAsync();
+    }
 }

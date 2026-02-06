@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Auth.Helpers;
@@ -60,7 +60,7 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
         }
     }
 
-    public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -149,5 +149,15 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
                 cmd.ExecuteNonQuery();
             }
         };
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+                "[dbo].[EmergencyAccess_DeleteManyById]",
+                new { EmergencyAccessIds = emergencyAccessIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
     }
 }

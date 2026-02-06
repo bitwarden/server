@@ -8,6 +8,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderUserRepository
@@ -59,7 +61,19 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
         }
     }
 
-    public async Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId)
+    public async Task<ICollection<ProviderUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<ProviderUser>(
+            "[dbo].[ProviderUser_ReadManyByManyUserIds]",
+            new { UserIds = userIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
+    public async Task<ProviderUser?> GetByProviderUserAsync(Guid providerId, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

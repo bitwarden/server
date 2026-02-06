@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 
@@ -17,4 +20,8 @@ public interface IProjectRepository
     Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType);
     Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId);
     Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId);
+    Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
+    Task<ProjectCounts> GetProjectCountsByIdAsync(Guid projectId, Guid userId, AccessClientType accessType);
+    Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds, Guid userId,
+        AccessClientType accessType);
 }

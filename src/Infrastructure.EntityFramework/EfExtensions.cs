@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework;
 
 public static class EfExtensions

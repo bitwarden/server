@@ -1,24 +1,34 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Enums;
+using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
+using Xunit;
+
+#nullable enable
 
 namespace Bit.Api.IntegrationTest.Factories;
 
 public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
-    private readonly IdentityApplicationFactory _identityApplicationFactory;
-    private const string _connectionString = "DataSource=:memory:";
+    protected IdentityApplicationFactory _identityApplicationFactory;
 
-    public ApiApplicationFactory()
+    public ApiApplicationFactory() : this(new SqliteTestDatabase())
     {
-        SqliteConnection = new SqliteConnection(_connectionString);
-        SqliteConnection.Open();
+    }
+
+    protected ApiApplicationFactory(ITestDatabase db)
+    {
+        TestDatabase = db;
 
         _identityApplicationFactory = new IdentityApplicationFactory();
-        _identityApplicationFactory.SqliteConnection = SqliteConnection;
+        _identityApplicationFactory.TestDatabase = TestDatabase;
+        _identityApplicationFactory.ManagesDatabase = false;
     }
+
+    public IdentityApplicationFactory Identity => _identityApplicationFactory;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -40,13 +50,27 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     /// <summary>
     /// Helper for registering and logging in to a new account
     /// </summary>
-    public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
+    public async Task<(string Token, string RefreshToken)> LoginWithNewAccount(
+        string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
     {
-        await _identityApplicationFactory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = email,
-            MasterPasswordHash = masterPasswordHash,
-        });
+        // This might be the first action in a test and since it forwards to the Identity server, we need to ensure that
+        // this server is initialized since it's responsible for seeding the database.
+        Assert.NotNull(Services);
+
+        await _identityApplicationFactory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
+            {
+                Email = email,
+                MasterPasswordHash = masterPasswordHash,
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = "public_key",
+                    EncryptedPrivateKey = "private_key"
+                },
+                UserSymmetricKey = "sym_key",
+            });
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
     }
@@ -59,9 +83,21 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
     }
 
-    protected override void Dispose(bool disposing)
+    /// <summary>
+    /// Helper for logging in via client secret.
+    /// Currently used for Secrets Manager service accounts
+    /// </summary>
+    public async Task<string> LoginWithClientSecretAsync(Guid clientId, string clientSecret)
     {
-        base.Dispose(disposing);
-        SqliteConnection.Dispose();
+        return await _identityApplicationFactory.TokenFromAccessTokenAsync(clientId, clientSecret);
+    }
+
+    /// <summary>
+    /// Helper for logging in with an Organization api key.
+    /// Currently used for the Public Api
+    /// </summary>
+    public async Task<string> LoginWithOrganizationApiKeyAsync(string clientId, string clientSecret)
+    {
+        return await _identityApplicationFactory.TokenFromOrganizationApiKeyAsync(clientId, clientSecret);
     }
 }

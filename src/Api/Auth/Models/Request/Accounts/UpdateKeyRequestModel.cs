@@ -1,5 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 
@@ -19,5 +23,6 @@ public class UpdateKeyRequestModel
     public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
     public IEnumerable<EmergencyAccessWithIdRequestModel> EmergencyAccessKeys { get; set; }
     public IEnumerable<ResetPasswordWithOrgIdRequestModel> ResetPasswordKeys { get; set; }
+    public IEnumerable<WebAuthnLoginRotateKeyRequestModel> WebAuthnKeys { get; set; }
 
 }

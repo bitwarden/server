@@ -20,9 +20,9 @@ public class CreateSecretCommandTests
     {
         data.Projects = new List<Project>() { mockProject };
 
-        await sutProvider.Sut.CreateAsync(data);
+        await sutProvider.Sut.CreateAsync(data, null);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .CreateAsync(data);
+            .CreateAsync(data, null);
     }
 }

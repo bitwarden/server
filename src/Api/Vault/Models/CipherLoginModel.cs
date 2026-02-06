@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
 
@@ -74,17 +77,21 @@ public class CipherLoginModel
         public CipherLoginUriModel(CipherLoginData.CipherLoginUriData uri)
         {
             Uri = uri.Uri;
+            UriChecksum = uri.UriChecksum;
             Match = uri.Match;
         }
 
         [EncryptedString]
         [EncryptedStringLength(10000)]
         public string Uri { get; set; }
+        [EncryptedString]
+        [EncryptedStringLength(10000)]
+        public string UriChecksum { get; set; }
         public UriMatchType? Match { get; set; } = null;
 
         public CipherLoginData.CipherLoginUriData ToCipherLoginUriData()
         {
-            return new CipherLoginData.CipherLoginUriData { Uri = Uri, Match = Match, };
+            return new CipherLoginData.CipherLoginUriData { Uri = Uri, UriChecksum = UriChecksum, Match = Match, };
         }
     }
 }

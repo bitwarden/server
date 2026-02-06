@@ -1,6 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
@@ -15,7 +18,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class UserRepositoryTests
 {
     [CiSkippedTheory, EfUserAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         User user, UserCompare equalityComparer,
         List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo
@@ -41,7 +44,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void ReplaceAsync_Works_DataMatches(User postUser, User replaceUser,
+    public async Task ReplaceAsync_Works_DataMatches(User postUser, User replaceUser,
         UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo)
     {
@@ -65,7 +68,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void DeleteAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+    public async Task DeleteAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
     {
         foreach (var sut in suts)
         {
@@ -93,7 +96,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void GetByEmailAsync_Works_DataMatches(User user, UserCompare equalityComparer,
+    public async Task GetByEmailAsync_Works_DataMatches(User user, UserCompare equalityComparer,
             List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
     {
         var savedUsers = new List<User>();
@@ -113,7 +116,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void GetKdfInformationByEmailAsync_Works_DataMatches(User user,
+    public async Task GetKdfInformationByEmailAsync_Works_DataMatches(User user,
         UserKdfInformationCompare equalityComparer, List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo)
     {
@@ -135,7 +138,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void SearchAsync_Works_DataMatches(User user, int skip, int take,
+    public async Task SearchAsync_Works_DataMatches(User user, int skip, int take,
         UserCompare equalityCompare, List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo)
     {
@@ -157,7 +160,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void GetManyByPremiumAsync_Works_DataMatches(User user,
+    public async Task GetManyByPremiumAsync_Works_DataMatches(User user,
         List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
     {
         var returnedUsers = new List<User>();
@@ -178,7 +181,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void GetPublicKeyAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts,
+    public async Task GetPublicKeyAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo)
     {
         var returnedKeys = new List<string>();
@@ -199,7 +202,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void GetAccountRevisionDateAsync(User user, List<EfRepo.UserRepository> suts,
+    public async Task GetAccountRevisionDateAsync(User user, List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo)
     {
         var returnedKeys = new List<string>();
@@ -220,7 +223,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void UpdateRenewalReminderDateAsync_Works_DataMatches(User user,
+    public async Task UpdateRenewalReminderDateAsync_Works_DataMatches(User user,
         DateTime updatedReminderDate, List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo)
     {
@@ -249,7 +252,7 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async void GetBySsoUserAsync_Works_DataMatches(User user, Organization org,
+    public async Task GetBySsoUserAsync_Works_DataMatches(User user, Organization org,
         SsoUser ssoUser, UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
         List<EfRepo.SsoUserRepository> ssoUserRepos, List<EfRepo.OrganizationRepository> orgRepos,
         SqlRepo.UserRepository sqlUserRepo, SqlAuthRepo.SsoUserRepository sqlSsoUserRepo,
@@ -288,5 +291,90 @@ public class UserRepositoryTests
 
         var distinctItems = returnedList.Distinct(equalityComparer);
         Assert.True(!distinctItems.Skip(1).Any());
+    }
+
+    [CiSkippedTheory, EfUserAutoData]
+    public async Task UpdateUserKeyAndEncryptedDataAsync_Works_DataMatches(User user, SqlRepo.UserRepository sqlUserRepo)
+    {
+        var sqlUser = await sqlUserRepo.CreateAsync(user);
+        sqlUser.Kdf = KdfType.PBKDF2_SHA256;
+        sqlUser.KdfIterations = 6_000_000;
+        sqlUser.KdfMemory = 7_000_000;
+        sqlUser.KdfParallelism = 8_000_000;
+        sqlUser.MasterPassword = "masterPasswordHash";
+        sqlUser.MasterPasswordHint = "masterPasswordHint";
+        sqlUser.Email = "example@example.com";
+
+        await sqlUserRepo.UpdateUserKeyAndEncryptedDataV2Async(sqlUser, []);
+        var updatedUser = await sqlUserRepo.GetByIdAsync(sqlUser.Id);
+        Assert.Equal(sqlUser.Kdf, updatedUser.Kdf);
+        Assert.Equal(sqlUser.KdfIterations, updatedUser.KdfIterations);
+        Assert.Equal(sqlUser.KdfMemory, updatedUser.KdfMemory);
+        Assert.Equal(sqlUser.KdfParallelism, updatedUser.KdfParallelism);
+        Assert.Equal(sqlUser.MasterPassword, updatedUser.MasterPassword);
+        Assert.Equal(sqlUser.MasterPasswordHint, updatedUser.MasterPasswordHint);
+        Assert.Equal(sqlUser.Email, updatedUser.Email);
+    }
+
+    [CiSkippedTheory, EfUserAutoData]
+    public async Task UpdateAccountCryptographicStateAsync_Works_DataMatches(
+        User user,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo)
+    {
+        // Test for V1 user (no signature key pair or security state)
+        var accountKeysDataV1 = new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: "v1-wrapped-private-key",
+                publicKey: "v1-public-key"
+            )
+        };
+
+        foreach (var sut in suts)
+        {
+            var createdUser = await sut.CreateAsync(user);
+            sut.ClearChangeTracking();
+
+            await sut.SetV2AccountCryptographicStateAsync(createdUser.Id, accountKeysDataV1);
+            sut.ClearChangeTracking();
+
+            var updatedUser = await sut.GetByIdAsync(createdUser.Id);
+            Assert.Equal("v1-public-key", updatedUser.PublicKey);
+            Assert.Equal("v1-wrapped-private-key", updatedUser.PrivateKey);
+            Assert.Null(updatedUser.SignedPublicKey);
+            Assert.Null(updatedUser.SecurityState);
+            Assert.Null(updatedUser.SecurityVersion);
+        }
+
+        // Test for V2 user (with signature key pair and security state)
+        var accountKeysDataV2 = new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: "v2-wrapped-private-key",
+                publicKey: "v2-public-key",
+                signedPublicKey: "v2-signed-public-key"
+            ),
+            SignatureKeyPairData = new SignatureKeyPairData(
+                signatureAlgorithm: SignatureAlgorithm.Ed25519,
+                wrappedSigningKey: "v2-wrapped-signing-key",
+                verifyingKey: "v2-verifying-key"
+            ),
+            SecurityStateData = new SecurityStateData
+            {
+                SecurityState = "v2-security-state",
+                SecurityVersion = 2
+            }
+        };
+
+        var sqlUser = await sqlUserRepo.CreateAsync(user);
+        await sqlUserRepo.SetV2AccountCryptographicStateAsync(sqlUser.Id, accountKeysDataV2);
+
+        var updatedSqlUser = await sqlUserRepo.GetByIdAsync(sqlUser.Id);
+        Assert.Equal("v2-public-key", updatedSqlUser.PublicKey);
+        Assert.Equal("v2-wrapped-private-key", updatedSqlUser.PrivateKey);
+        Assert.Equal("v2-signed-public-key", updatedSqlUser.SignedPublicKey);
+        Assert.Equal("v2-security-state", updatedSqlUser.SecurityState);
+        Assert.Equal(2, updatedSqlUser.SecurityVersion);
     }
 }

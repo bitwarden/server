@@ -8,6 +8,8 @@ using Quartz.Impl.Matchers;
 
 namespace Bit.Core.Jobs;
 
+#nullable enable
+
 public abstract class BaseJobsHostedService : IHostedService, IDisposable
 {
     private const int MaximumJobRetries = 10;
@@ -16,7 +18,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
     private readonly ILogger<JobListener> _listenerLogger;
     protected readonly ILogger _logger;
 
-    private IScheduler _scheduler;
+    private IScheduler? _scheduler;
     protected GlobalSettings _globalSettings;
 
     public BaseJobsHostedService(
@@ -31,7 +33,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         _globalSettings = globalSettings;
     }
 
-    public IEnumerable<Tuple<Type, ITrigger>> Jobs { get; protected set; }
+    public IEnumerable<Tuple<Type, ITrigger>>? Jobs { get; protected set; }
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -61,10 +63,19 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         _scheduler.ListenerManager.AddJobListener(new JobListener(_listenerLogger),
             GroupMatcher<JobKey>.AnyGroup());
         await _scheduler.Start(cancellationToken);
+
+        var jobKeys = new List<JobKey>();
+        var triggerKeys = new List<TriggerKey>();
+
         if (Jobs != null)
         {
             foreach (var (job, trigger) in Jobs)
             {
+                jobKeys.Add(JobBuilder.Create(job)
+                    .WithIdentity(job.FullName!)
+                    .Build().Key);
+                triggerKeys.Add(trigger.Key);
+
                 for (var retry = 0; retry < MaximumJobRetries; retry++)
                 {
                     // There's a race condition when starting multiple containers simultaneously, retry until it succeeds..
@@ -77,7 +88,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                         }
 
                         var jobDetail = JobBuilder.Create(job)
-                            .WithIdentity(job.FullName)
+                            .WithIdentity(job.FullName!)
                             .Build();
 
                         var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
@@ -96,9 +107,9 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                             throw new Exception("Job failed to start after 10 retries.");
                         }
 
-                        _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
+                        _logger.LogWarning(e, "Exception while trying to schedule job: {JobName}", job.FullName);
                         var random = new Random();
-                        Thread.Sleep(random.Next(50, 250));
+                        await Task.Delay(random.Next(50, 250));
                     }
                 }
             }
@@ -106,13 +117,6 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
 
         // Delete old Jobs and Triggers
         var existingJobKeys = await _scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-        var jobKeys = Jobs.Select(j =>
-        {
-            var job = j.Item1;
-            return JobBuilder.Create(job)
-                .WithIdentity(job.FullName)
-                .Build().Key;
-        });
 
         foreach (var key in existingJobKeys)
         {
@@ -121,12 +125,11 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                 continue;
             }
 
-            _logger.LogInformation($"Deleting old job with key {key}");
+            _logger.LogInformation("Deleting old job with key {Key}", key);
             await _scheduler.DeleteJob(key);
         }
 
         var existingTriggerKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
-        var triggerKeys = Jobs.Select(j => j.Item2.Key);
 
         foreach (var key in existingTriggerKeys)
         {
@@ -135,14 +138,17 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                 continue;
             }
 
-            _logger.LogInformation($"Unscheduling old trigger with key {key}");
+            _logger.LogInformation("Unscheduling old trigger with key {Key}", key);
             await _scheduler.UnscheduleJob(key);
         }
     }
 
     public virtual async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _scheduler?.Shutdown(cancellationToken);
+        if (_scheduler is not null)
+        {
+            await _scheduler.Shutdown(cancellationToken);
+        }
     }
 
     public virtual void Dispose()

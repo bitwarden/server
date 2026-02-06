@@ -1,4 +1,7 @@
-﻿using AutoFixture;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoFixture;
 using AutoFixture.Xunit2;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
@@ -11,7 +14,7 @@ public class CustomAutoDataAttribute : AutoDataAttribute
 
     public CustomAutoDataAttribute(params ICustomization[] customizations) : base(() =>
     {
-        var fixture = new Fixture();
+        var fixture = new Fixture().WithAutoNSubstitutions();
         foreach (var customization in customizations)
         {
             fixture.Customize(customization);

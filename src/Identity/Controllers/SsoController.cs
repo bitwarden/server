@@ -1,21 +1,22 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Identity.Models;
+using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Services;
-using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
 
-// TODO: 2023-10-16, Remove account alias (https://bitwarden.atlassian.net/browse/PM-1247)
-[Route("account/[action]")]
 [Route("sso/[action]")]
 public class SsoController : Controller
 {

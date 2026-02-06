@@ -15,7 +15,9 @@ BEGIN
         [PlanSponsorshipType],
         [ToDelete],
         [LastSyncDate],
-        [ValidUntil]
+        [ValidUntil],
+        [IsAdminInitiated],
+        [Notes]
     )
     SELECT
         OS.[Id],
@@ -27,7 +29,9 @@ BEGIN
         OS.[PlanSponsorshipType],
         OS.[ToDelete],
         OS.[LastSyncDate],
-        OS.[ValidUntil]
+        OS.[ValidUntil],
+        OS.[IsAdminInitiated],
+        OS.[Notes]
     FROM
         @OrganizationSponsorshipsInput OS
 END

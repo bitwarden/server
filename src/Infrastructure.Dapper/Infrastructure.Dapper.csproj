@@ -1,11 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+    <PropertyGroup>
+      <!-- These opt outs should be removed when all warnings are addressed -->
+      <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
+    </PropertyGroup>
+
     <ItemGroup>
       <ProjectReference Include="..\Core\Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapper" Version="2.1.24" />
+      <PackageReference Include="Dapper" Version="2.1.66" />
     </ItemGroup>
 
 </Project>

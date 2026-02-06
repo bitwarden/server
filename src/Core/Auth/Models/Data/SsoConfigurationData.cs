@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
@@ -70,6 +73,7 @@ public class SsoConfigurationData
     public bool IdpWantAuthnRequestsSigned { get; set; }
 
     // SAML2 SP
+    public bool SpUniqueEntityId { get; set; }
     public Saml2NameIdFormat SpNameIdFormat { get; set; }
     public string SpOutboundSigningAlgorithm { get; set; }
     public Saml2SigningBehavior SpSigningBehavior { get; set; }

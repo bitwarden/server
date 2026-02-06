@@ -15,6 +15,7 @@ internal class OrganizationCipher : ICustomization
             .Without(c => c.UserId));
         fixture.Customize<CipherDetails>(composer => composer
             .With(c => c.OrganizationId, Guid.NewGuid())
+            .Without(c => c.ArchivedDate)
             .Without(c => c.UserId));
     }
 }
@@ -29,6 +30,7 @@ internal class UserCipher : ICustomization
             .Without(c => c.OrganizationId));
         fixture.Customize<CipherDetails>(composer => composer
             .With(c => c.UserId, Guid.NewGuid())
+            .Without(c => c.ArchivedDate)
             .Without(c => c.OrganizationId));
     }
 }

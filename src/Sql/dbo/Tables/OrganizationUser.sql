@@ -7,7 +7,6 @@
     [ResetPasswordKey]              VARCHAR (MAX)       NULL,
     [Status]                        SMALLINT            NOT NULL,
     [Type]                          TINYINT             NOT NULL,
-    [AccessAll]                     BIT                 NOT NULL,
     [ExternalId]                    NVARCHAR (300)      NULL,
     [CreationDate]                  DATETIME2 (7)       NOT NULL,
     [RevisionDate]                  DATETIME2 (7)       NOT NULL,
@@ -18,14 +17,28 @@
     CONSTRAINT [FK_OrganizationUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 
-
 GO
-CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatus]
-    ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC)
-    INCLUDE ([AccessAll]);
-
-
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatusV2]
+    ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC);
 GO
+
 CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId]
     ON [dbo].[OrganizationUser]([OrganizationId] ASC);
+GO
 
+CREATE NONCLUSTERED INDEX  IX_OrganizationUser_EmailOrganizationIdStatus
+    ON OrganizationUser (Email ASC, OrganizationId ASC, [Status] ASC);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_OrganizationId_UserId]
+    ON [dbo].[OrganizationUser] ([OrganizationId], [UserId])
+    INCLUDE ([Email], [Status], [Type], [ExternalId], [CreationDate],
+        [RevisionDate], [Permissions], [ResetPasswordKey], [AccessSecretsManager]);
+GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserId_Status_Filtered]
+    ON [dbo].[OrganizationUser] ([UserId])
+    INCLUDE ([Id], [OrganizationId])
+    WHERE [Status] = 2; -- Confirmed
+
+GO

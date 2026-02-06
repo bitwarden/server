@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -14,8 +17,8 @@ public class OrganizationUserInviteRequestModel
     [StrictEmailAddressList]
     public IEnumerable<string> Emails { get; set; }
     [Required]
+    [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
-    public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
@@ -27,7 +30,6 @@ public class OrganizationUserInviteRequestModel
         {
             Emails = Emails,
             Type = Type,
-            AccessAll = AccessAll,
             AccessSecretsManager = AccessSecretsManager,
             Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
             Groups = Groups,
@@ -61,6 +63,10 @@ public class OrganizationUserConfirmRequestModel
 {
     [Required]
     public string Key { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string DefaultUserCollectionName { get; set; }
 }
 
 public class OrganizationUserBulkConfirmRequestModelEntry
@@ -76,6 +82,10 @@ public class OrganizationUserBulkConfirmRequestModel
     [Required]
     public IEnumerable<OrganizationUserBulkConfirmRequestModelEntry> Keys { get; set; }
 
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string DefaultUserCollectionName { get; set; }
+
     public Dictionary<Guid, string> ToDictionary()
     {
         return Keys.ToDictionary(e => e.Id, e => e.Key);
@@ -85,8 +95,8 @@ public class OrganizationUserBulkConfirmRequestModel
 public class OrganizationUserUpdateRequestModel
 {
     [Required]
+    [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
-    public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
@@ -96,28 +106,27 @@ public class OrganizationUserUpdateRequestModel
     {
         existingUser.Type = Type.Value;
         existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
-        existingUser.AccessAll = AccessAll;
         existingUser.AccessSecretsManager = AccessSecretsManager;
         return existingUser;
     }
 }
 
-public class OrganizationUserUpdateGroupsRequestModel
-{
-    [Required]
-    public IEnumerable<string> GroupIds { get; set; }
-}
-
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
+    public string MasterPasswordHash { get; set; }
 }
-
+#nullable enable
 public class OrganizationUserBulkRequestModel
 {
-    [Required]
-    public IEnumerable<Guid> Ids { get; set; }
+    [Required, MinLength(1)]
+    public IEnumerable<Guid> Ids { get; set; } = new List<Guid>();
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string? DefaultUserCollectionName { get; set; }
 }
+#nullable disable
 
 public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
 {

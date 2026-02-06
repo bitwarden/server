@@ -1,14 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
-    <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Server SDK settings">
+    <!-- These features will be gradually turned on -->
+    <BitIncludeFeatures>false</BitIncludeFeatures>
+    <BitIncludeAuthentication>false</BitIncludeAuthentication>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Billing' " />
   <ItemGroup>
+    <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MarkDig" Version="0.44.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
   </ItemGroup>
 
 </Project>

@@ -9,12 +9,6 @@ const AUTH_USERNAME = __ENV.AUTH_USER_EMAIL;
 const AUTH_PASSWORD = __ENV.AUTH_USER_PASSWORD_HASH;
 
 export const options = {
-  ext: {
-    loadimpact: {
-      projectID: 3639465,
-      name: "Config",
-    },
-  },
   scenarios: {
     constant_load: {
       executor: "constant-arrival-rate",
@@ -43,7 +37,7 @@ export const options = {
   },
   thresholds: {
     http_req_failed: ["rate<0.01"],
-    http_req_duration: ["p(95)<200"],
+    http_req_duration: ["p(95)<350"],
   },
 };
 

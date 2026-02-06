@@ -1,13 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Icons</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1304;CA1305</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Icons' " />
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.0.7" />
+    <PackageReference Include="AngleSharp" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup>

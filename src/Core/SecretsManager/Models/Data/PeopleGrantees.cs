@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.SecretsManager.Models.Data;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.SecretsManager.Models.Data;
 
 public class PeopleGrantees
 {

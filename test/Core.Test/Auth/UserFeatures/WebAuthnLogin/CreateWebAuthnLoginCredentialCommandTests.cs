@@ -17,7 +17,7 @@ namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 public class CreateWebAuthnLoginCredentialCommandTests
 {
     [Theory, BitAutoData]
-    internal async void ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<CreateWebAuthnLoginCredentialCommand> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
+    internal async Task ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<CreateWebAuthnLoginCredentialCommand> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
     {
         // Arrange
         var existingCredentials = credentialGenerator.Take(CreateWebAuthnLoginCredentialCommand.MaxCredentialsPerUser).ToList();
@@ -32,7 +32,7 @@ public class CreateWebAuthnLoginCredentialCommandTests
     }
 
     [Theory, BitAutoData]
-    internal async void DoesNotExceedExistingCredentialsLimit_CreatesCredential(SutProvider<CreateWebAuthnLoginCredentialCommand> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
+    internal async Task DoesNotExceedExistingCredentialsLimit_CreatesCredential(SutProvider<CreateWebAuthnLoginCredentialCommand> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
     {
         // Arrange
         var existingCredentials = credentialGenerator.Take(CreateWebAuthnLoginCredentialCommand.MaxCredentialsPerUser - 1).ToList();

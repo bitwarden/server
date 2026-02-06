@@ -1,40 +1,51 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
-using Bit.Core.Tools.Entities;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
+
+#nullable enable
 
 namespace Bit.Core.AdminConsole.Entities;
 
-public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
+public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
 {
-    private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
+    private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
     public Guid Id { get; set; }
     [MaxLength(50)]
-    public string Identifier { get; set; }
+    public string? Identifier { get; set; }
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
+    /// </summary>
     [MaxLength(50)]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
+    /// <summary>
+    /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
+    /// </summary>
     [MaxLength(50)]
-    public string BusinessName { get; set; }
+    [Obsolete("This property has been deprecated. Use the 'Name' property instead.")]
+    public string? BusinessName { get; set; }
     [MaxLength(50)]
-    public string BusinessAddress1 { get; set; }
+    public string? BusinessAddress1 { get; set; }
     [MaxLength(50)]
-    public string BusinessAddress2 { get; set; }
+    public string? BusinessAddress2 { get; set; }
     [MaxLength(50)]
-    public string BusinessAddress3 { get; set; }
+    public string? BusinessAddress3 { get; set; }
     [MaxLength(2)]
-    public string BusinessCountry { get; set; }
+    public string? BusinessCountry { get; set; }
     [MaxLength(30)]
-    public string BusinessTaxNumber { get; set; }
+    public string? BusinessTaxNumber { get; set; }
     [MaxLength(256)]
-    public string BillingEmail { get; set; }
+    public string BillingEmail { get; set; } = null!;
     [MaxLength(50)]
-    public string Plan { get; set; }
+    public string Plan { get; set; } = null!;
     public PlanType PlanType { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
@@ -57,16 +68,16 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public short? MaxStorageGb { get; set; }
     public GatewayType? Gateway { get; set; }
     [MaxLength(50)]
-    public string GatewayCustomerId { get; set; }
+    public string? GatewayCustomerId { get; set; }
     [MaxLength(50)]
-    public string GatewaySubscriptionId { get; set; }
-    public string ReferenceData { get; set; }
+    public string? GatewaySubscriptionId { get; set; }
+    public string? ReferenceData { get; set; }
     public bool Enabled { get; set; } = true;
     [MaxLength(100)]
-    public string LicenseKey { get; set; }
-    public string PublicKey { get; set; }
-    public string PrivateKey { get; set; }
-    public string TwoFactorProviders { get; set; }
+    public string? LicenseKey { get; set; }
+    public string? PublicKey { get; set; }
+    public string? PrivateKey { get; set; }
+    public string? TwoFactorProviders { get; set; }
     public DateTime? ExpirationDate { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
@@ -78,19 +89,60 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
-    public bool SecretsManagerBeta { get; set; }
     /// <summary>
-    /// Refers to the ability for an organization to limit collection creation and deletion to owners and admins only
+    /// If set to true, only owners, admins, and some custom users can create and delete collections.
+    /// If set to false, any organization member can create a collection, and any member can delete a collection that
+    /// they have Can Manage permissions for.
     /// </summary>
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+
     /// <summary>
-    /// Refers to the ability for an organization to limit owner/admin access to all collection items
-    /// <remarks>
-    /// True: Owner/admins can access all items belonging to any collections
-    /// False: Owner/admins can only access items for collections they are assigned
-    /// </remarks>
+    /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
+    /// If set to false, users generally need collection-level permissions to read/write a collection or its items.
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+
+    /// <summary>
+    /// If set to true, members can only delete items when they have a Can Manage permission over the collection.
+    /// If set to false, members can delete items when they have a Can Manage OR Can Edit permission over the collection.
+    /// </summary>
+    public bool LimitItemDeletion { get; set; }
+
+    /// <summary>
+    /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
+    /// </summary>
+    public bool UseRiskInsights { get; set; }
+
+    /// <summary>
+    /// If true, the organization can claim domains, which unlocks additional enterprise features
+    /// </summary>
+    public bool UseOrganizationDomains { get; set; }
+
+    /// <summary>
+    /// If set to true, admins can initiate organization-issued sponsorships.
+    /// </summary>
+    public bool UseAdminSponsoredFamilies { get; set; }
+
+    /// <summary>
+    /// If set to true, organization needs their seat count synced with their subscription
+    /// </summary>
+    public bool SyncSeats { get; set; }
+
+    /// <summary>
+    /// If set to true,  user accounts created within the organization are automatically confirmed without requiring additional verification steps.
+    /// </summary>
+    public bool UseAutomaticUserConfirmation { get; set; }
+
+    /// <summary>
+    /// If set to true, disables Secrets Manager ads for users in the organization
+    /// </summary>
+    public bool UseDisableSmAdsForUsers { get; set; }
+
+    /// <summary>
+    /// If set to true, the organization has phishing protection enabled.
+    /// </summary>
+    public bool UsePhishingBlocker { get; set; }
 
     public void SetNewId()
     {
@@ -100,19 +152,37 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         }
     }
 
-    public string BillingEmailAddress()
+    /// <summary>
+    /// Returns the name of the organization, HTML decoded ready for display.
+    /// </summary>
+    public string DisplayName()
+    {
+        return WebUtility.HtmlDecode(Name);
+    }
+
+    /// <summary>
+    /// Returns the business name of the organization, HTML decoded ready for display.
+    /// </summary>
+    ///
+    [Obsolete("This method has been deprecated. Use the 'DisplayName()' method instead.")]
+    public string? DisplayBusinessName()
+    {
+        return WebUtility.HtmlDecode(BusinessName);
+    }
+
+    public string? BillingEmailAddress()
     {
         return BillingEmail?.ToLowerInvariant()?.Trim();
     }
 
-    public string BillingName()
+    public string? BillingName()
     {
-        return BusinessName;
+        return DisplayBusinessName();
     }
 
-    public string SubscriberName()
+    public string? SubscriberName()
     {
-        return Name;
+        return DisplayName();
     }
 
     public string BraintreeCustomerIdPrefix()
@@ -135,6 +205,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return "organizationId";
     }
 
+    public bool IsOrganization() => true;
+
     public bool IsUser()
     {
         return false;
@@ -144,6 +216,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     {
         return "Organization";
     }
+
+    public bool IsExpired() => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;
 
     public long StorageBytesRemaining()
     {
@@ -166,7 +240,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return maxStorageBytes - Storage.Value;
     }
 
-    public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
+    public Dictionary<TwoFactorProviderType, TwoFactorProvider>? GetTwoFactorProviders()
     {
         if (string.IsNullOrWhiteSpace(TwoFactorProviders))
         {
@@ -206,12 +280,12 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public bool TwoFactorProviderIsEnabled(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
+        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
         {
             return false;
         }
 
-        return providers[provider].Enabled && Use2fa;
+        return twoFactorProvider.Enabled && Use2fa;
     }
 
     public bool TwoFactorIsEnabled()
@@ -225,22 +299,18 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return providers.Any(p => (p.Value?.Enabled ?? false) && Use2fa);
     }
 
-    public TwoFactorProvider GetTwoFactorProvider(TwoFactorProviderType provider)
+    public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
-        {
-            return null;
-        }
-
-        return providers[provider];
+        return providers?.GetValueOrDefault(provider);
     }
 
-    public void UpdateFromLicense(
-        OrganizationLicense license,
-        bool flexibleCollectionsMvpIsEnabled,
-        bool flexibleCollectionsV1IsEnabled)
+    public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)
     {
+        // The following properties are intentionally excluded from being updated:
+        // - Id - self-hosted org will have its own unique Guid
+        // - MaxStorageGb - not enforced for self-hosted because we're not providing the storage
+
         Name = license.Name;
         BusinessName = license.BusinessName;
         BillingEmail = license.BillingEmail;
@@ -270,7 +340,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        LimitCollectionCreationDeletion = !flexibleCollectionsMvpIsEnabled || license.LimitCollectionCreationDeletion;
-        AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled || license.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = license.UseRiskInsights;
+        UseOrganizationDomains = license.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies;
+        UseDisableSmAdsForUsers = license.UseDisableSmAdsForUsers;
+        UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation;
+        UsePhishingBlocker = license.UsePhishingBlocker;
     }
 }

@@ -1,7 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+
+#nullable enable
 
 namespace Bit.Api.AdminConsole.Public.Models;
 
@@ -17,11 +20,15 @@ public abstract class MemberBaseModel
         }
 
         Type = user.Type;
-        AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
+
+        if (Type == OrganizationUserType.Custom)
+        {
+            Permissions = new PermissionsModel(user.GetPermissions());
+        }
     }
 
+    [SetsRequiredMembers]
     public MemberBaseModel(OrganizationUserUserDetails user)
     {
         if (user == null)
@@ -30,31 +37,29 @@ public abstract class MemberBaseModel
         }
 
         Type = user.Type;
-        AccessAll = user.AccessAll;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
+
+        if (Type == OrganizationUserType.Custom)
+        {
+            Permissions = new PermissionsModel(user.GetPermissions());
+        }
     }
 
     /// <summary>
     /// The member's type (or role) within the organization.
     /// </summary>
     [Required]
-    public OrganizationUserType? Type { get; set; }
-    /// <summary>
-    /// Determines if this member can access all collections within the organization, or only the associated
-    /// collections. If set to <c>true</c>, this option overrides any collection assignments.
-    /// </summary>
-    [Required]
-    public bool? AccessAll { get; set; }
+    [EnumDataType(typeof(OrganizationUserType))]
+    public required OrganizationUserType? Type { get; set; }
     /// <summary>
     /// External identifier for reference or linking this member to another system, such as a user directory.
     /// </summary>
     /// <example>external_id_123456</example>
     [StringLength(300)]
-    public string ExternalId { get; set; }
+    public string? ExternalId { get; set; }
     /// <summary>
-    /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
+    /// The member's custom permissions if the member has a Custom role. If not supplied, all custom permissions will
+    /// default to false.
     /// </summary>
-    [Required]
-    public bool ResetPasswordEnrolled { get; set; }
+    public PermissionsModel? Permissions { get; set; }
 }

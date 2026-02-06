@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Utilities;
@@ -33,7 +36,7 @@ public class EmergencyAccessUpdateRequestModel
             existingEmergencyAccess.KeyEncrypted = KeyEncrypted;
         }
         existingEmergencyAccess.Type = Type;
-        existingEmergencyAccess.WaitTimeDays = WaitTimeDays;
+        existingEmergencyAccess.WaitTimeDays = (short)WaitTimeDays;
         return existingEmergencyAccess;
     }
 }

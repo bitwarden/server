@@ -1,19 +1,24 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
+using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
+using Bit.Core.SecretsManager.Queries.Interfaces;
+using Bit.Core.SecretsManager.Queries.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,39 +30,48 @@ public class SecretsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly ISecretVersionRepository _secretVersionRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
+    private readonly IAccessClientQuery _accessClientQuery;
+    private readonly ISecretsSyncQuery _secretsSyncQuery;
+    private readonly ISecretAccessPoliciesUpdatesQuery _secretAccessPoliciesUpdatesQuery;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public SecretsController(
         ICurrentContext currentContext,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
-        IOrganizationRepository organizationRepository,
+        ISecretVersionRepository secretVersionRepository,
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
         IDeleteSecretCommand deleteSecretCommand,
+        IAccessClientQuery accessClientQuery,
+        ISecretsSyncQuery secretsSyncQuery,
+        ISecretAccessPoliciesUpdatesQuery secretAccessPoliciesUpdatesQuery,
         IUserService userService,
         IEventService eventService,
-        IReferenceEventService referenceEventService,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
-        _organizationRepository = organizationRepository;
+        _secretVersionRepository = secretVersionRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
+        _accessClientQuery = accessClientQuery;
+        _secretsSyncQuery = secretsSyncQuery;
+        _secretAccessPoliciesUpdatesQuery = secretAccessPoliciesUpdatesQuery;
         _userService = userService;
         _eventService = eventService;
-        _referenceEventService = referenceEventService;
         _authorizationService = authorizationService;
+        _organizationUserRepository = organizationUserRepository;
 
     }
 
@@ -71,15 +85,16 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
-        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
+        var secrets = await _secretRepository.GetManyDetailsByOrganizationIdAsync(organizationId, userId, accessClient);
 
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
     [HttpPost("organizations/{organizationId}/secrets")]
-    public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
+    public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId,
+        [FromBody] SecretCreateRequestModel createRequest)
     {
         var secret = createRequest.ToSecret(organizationId);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Create);
@@ -88,8 +103,23 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _createSecretCommand.CreateAsync(secret);
+        SecretAccessPoliciesUpdates accessPoliciesUpdates = null;
+        if (createRequest.AccessPoliciesRequests != null)
+        {
+            secret.SetNewId();
+            accessPoliciesUpdates =
+                new SecretAccessPoliciesUpdates(
+                    createRequest.AccessPoliciesRequests.ToSecretAccessPolicies(secret.Id, organizationId));
+            var accessPolicyAuthorizationResult = await _authorizationService.AuthorizeAsync(User,
+                accessPoliciesUpdates, SecretAccessPoliciesOperations.Create);
+            if (!accessPolicyAuthorizationResult.Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
 
+        var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates);
+        await LogSecretEventAsync(secret, EventType.Secret_Created);
         // Creating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
     }
@@ -106,7 +136,7 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var access = await _secretRepository.AccessToSecretAsync(id, userId, accessClient);
 
@@ -115,13 +145,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (_currentContext.ClientType == ClientType.ServiceAccount)
-        {
-            await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
-
-            var org = await _organizationRepository.GetByIdAsync(secret.OrganizationId);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org, _currentContext));
-        }
+        await LogSecretEventAsync(secret, EventType.Secret_Retrieved);
 
         return new SecretResponseModel(secret, access.Read, access.Write);
     }
@@ -137,9 +161,9 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
-        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient);
+        var secrets = await _secretRepository.GetManyDetailsByProjectIdAsync(projectId, userId, accessClient);
 
         return new SecretWithProjectsListResponseModel(secrets);
     }
@@ -153,14 +177,66 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        var updatedSecret = updateRequest.ToSecret(id, secret.OrganizationId);
+        var updatedSecret = updateRequest.ToSecret(secret);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        var result = await _updateSecretCommand.UpdateAsync(updatedSecret);
+        SecretAccessPoliciesUpdates accessPoliciesUpdates = null;
+        if (updateRequest.AccessPoliciesRequests != null)
+        {
+            var userId = _userService.GetProperUserId(User)!.Value;
+            accessPoliciesUpdates = await _secretAccessPoliciesUpdatesQuery.GetAsync(updateRequest.AccessPoliciesRequests.ToSecretAccessPolicies(id, secret.OrganizationId), userId);
+
+            var accessPolicyAuthorizationResult = await _authorizationService.AuthorizeAsync(User, accessPoliciesUpdates, SecretAccessPoliciesOperations.Updates);
+            if (!accessPolicyAuthorizationResult.Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        // Create a version record if the value changed
+        if (updateRequest.ValueChanged)
+        {
+            // Store the old value before updating
+            var oldValue = secret.Value;
+            var userId = _userService.GetProperUserId(User)!.Value;
+            Guid? editorServiceAccountId = null;
+            Guid? editorOrganizationUserId = null;
+
+            if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
+            {
+                editorServiceAccountId = userId;
+            }
+            else if (_currentContext.IdentityClientType == IdentityClientType.User)
+            {
+                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId);
+                if (orgUser != null)
+                {
+                    editorOrganizationUserId = orgUser.Id;
+                }
+                else
+                {
+                    throw new NotFoundException();
+                }
+            }
+
+            var secretVersion = new SecretVersion
+            {
+                SecretId = id,
+                Value = oldValue,
+                VersionDate = DateTime.UtcNow,
+                EditorServiceAccountId = editorServiceAccountId,
+                EditorOrganizationUserId = editorOrganizationUserId
+            };
+
+            await _secretVersionRepository.CreateAsync(secretVersion);
+        }
+
+        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates);
+        await LogSecretEventAsync(secret, EventType.Secret_Edited);
 
         // Updating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
@@ -203,6 +279,7 @@ public class SecretsController : Controller
 
         await _deleteSecretCommand.DeleteSecrets(secretsToDelete);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Secret.Id, r.Error));
+        await LogSecretsEventAsync(secretsToDelete, EventType.Secret_Deleted);
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
@@ -216,34 +293,71 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        // Ensure all secrets belong to the same organization.
-        var organizationId = secrets.First().OrganizationId;
-        if (secrets.Any(secret => secret.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, secrets, BulkSecretOperations.ReadAll);
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-
-        foreach (var secret in secrets)
-        {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Read);
-            if (!authorizationResult.Succeeded)
-            {
-                throw new NotFoundException();
-            }
-        }
-
-        if (_currentContext.ClientType == ClientType.ServiceAccount)
-        {
-            var userId = _userService.GetProperUserId(User).Value;
-            var org = await _organizationRepository.GetByIdAsync(organizationId);
-            await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, EventType.Secret_Retrieved);
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org, _currentContext));
-        }
+        await LogSecretsEventAsync(secrets, EventType.Secret_Retrieved);
 
         var responses = secrets.Select(s => new BaseSecretResponseModel(s));
         return new ListResponseModel<BaseSecretResponseModel>(responses);
     }
+
+    [HttpGet("/organizations/{organizationId}/secrets/sync")]
+    public async Task<SecretsSyncResponseModel> GetSecretsSyncAsync([FromRoute] Guid organizationId,
+        [FromQuery] DateTime? lastSyncedDate = null)
+    {
+        if (lastSyncedDate.HasValue && lastSyncedDate.Value > DateTime.UtcNow)
+        {
+            throw new BadRequestException("Last synced date must be in the past.");
+        }
+
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessClient, serviceAccountId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+        if (accessClient != AccessClientType.ServiceAccount)
+        {
+            throw new BadRequestException("Only service accounts can sync secrets.");
+        }
+
+        var syncRequest = new SecretsSyncRequest
+        {
+            AccessClientType = accessClient,
+            OrganizationId = organizationId,
+            ServiceAccountId = serviceAccountId,
+            LastSyncedDate = lastSyncedDate
+        };
+        var syncResult = await _secretsSyncQuery.GetAsync(syncRequest);
+
+        if (syncResult.HasChanges)
+        {
+            await LogSecretsEventAsync(syncResult.Secrets, EventType.Secret_Retrieved);
+        }
+
+        return new SecretsSyncResponseModel(syncResult.HasChanges, syncResult.Secrets);
+    }
+
+    private async Task LogSecretsEventAsync(IEnumerable<Secret> secrets, EventType eventType)
+    {
+        var userId = _userService.GetProperUserId(User)!.Value;
+
+        switch (_currentContext.IdentityClientType)
+        {
+            case IdentityClientType.ServiceAccount:
+                await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, eventType);
+                break;
+            case IdentityClientType.User:
+                await _eventService.LogUserSecretsEventAsync(userId, secrets, eventType);
+                break;
+        }
+    }
+
+    private Task LogSecretEventAsync(Secret secret, EventType eventType) =>
+       LogSecretsEventAsync(new[] { secret }, eventType);
+
 }

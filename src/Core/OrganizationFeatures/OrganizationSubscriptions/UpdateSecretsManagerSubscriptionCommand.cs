@@ -1,4 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -14,7 +19,7 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubscriptionCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IMailService _mailService;
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -25,7 +30,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationUserRepository organizationUserRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository,
@@ -47,26 +52,18 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
     {
-        await ValidateUpdate(update);
+        await ValidateUpdateAsync(update);
 
         await FinalizeSubscriptionAdjustmentAsync(update);
 
-        if (update.SmSeatAutoscaleLimitReached)
-        {
-            await SendSeatLimitEmailAsync(update.Organization);
-        }
-
-        if (update.SmServiceAccountAutoscaleLimitReached)
-        {
-            await SendServiceAccountLimitEmailAsync(update.Organization);
-        }
+        await ValidateAutoScaleLimitsAsync(update);
     }
 
     private async Task FinalizeSubscriptionAdjustmentAsync(SecretsManagerSubscriptionUpdate update)
     {
         if (update.SmSeatsChanged)
         {
-            await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase, update.ProrationDate);
+            await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase);
 
             // TODO: call ReferenceEventService - see AC-1481
         }
@@ -74,7 +71,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (update.SmServiceAccountsChanged)
         {
             await _paymentService.AdjustServiceAccountsAsync(update.Organization, update.Plan,
-                update.SmServiceAccountsExcludingBase, update.ProrationDate);
+                update.SmServiceAccountsExcludingBase);
 
             // TODO: call ReferenceEventService - see AC-1481
         }
@@ -96,7 +93,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                     OrganizationUserType.Owner))
                 .Select(u => u.Email).Distinct();
 
-            await _mailService.SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, ownerEmails);
+            await _mailService.SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats!.Value, ownerEmails);
 
         }
         catch (Exception e)
@@ -113,17 +110,17 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                     OrganizationUserType.Owner))
                 .Select(u => u.Email).Distinct();
 
-            await _mailService.SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, ownerEmails);
+            await _mailService.SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts!.Value, ownerEmails);
 
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Error encountered notifying organization owners of service accounts limit reached.");
+            _logger.LogError(e, $"Error encountered notifying organization owners of machine accounts limit reached.");
         }
 
     }
 
-    public async Task ValidateUpdate(SecretsManagerSubscriptionUpdate update)
+    public async Task ValidateUpdateAsync(SecretsManagerSubscriptionUpdate update)
     {
         if (_globalSettings.SelfHosted)
         {
@@ -165,13 +162,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no access to Secrets Manager.");
         }
 
-        if (organization.SecretsManagerBeta)
-        {
-            throw new BadRequestException("Organization is enrolled in Secrets Manager Beta. " +
-                                          "Please contact Customer Success to add Secrets Manager to your subscription.");
-        }
-
-        if (update.Plan.Product == ProductType.Free)
+        if (update.Plan.ProductTier == ProductTierType.Free)
         {
             // No need to check the organization is set up with Stripe
             return;
@@ -199,7 +190,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
         }
 
-        if (update.Autoscaling && update.SmSeats.Value < organization.SmSeats.Value)
+        if (update.Autoscaling && update.SmSeats!.Value < organization.SmSeats.Value)
         {
             throw new BadRequestException("Cannot use autoscaling to subtract seats.");
         }
@@ -213,7 +204,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         // Check autoscale maximum seats
-        if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats.Value > update.MaxAutoscaleSmSeats.Value)
+        if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats!.Value > update.MaxAutoscaleSmSeats.Value)
         {
             var message = update.Autoscaling
                 ? "Secrets Manager seat limit has been reached."
@@ -222,7 +213,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         // Check minimum seats included with plan
-        if (plan.SecretsManager.BaseSeats > update.SmSeats.Value)
+        if (plan.SecretsManager.BaseSeats > update.SmSeats!.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseSeats} Secrets Manager  seats.");
         }
@@ -236,7 +227,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check minimum seats currently in use by the organization
         if (organization.SmSeats.Value > update.SmSeats.Value)
         {
+            // Retrieve the number of currently occupied Secrets Manager seats for the organization.
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+
+            // Check if the occupied number of seats exceeds the updated seat count.
+            // If so, throw an exception indicating that the subscription cannot be decreased below the current usage.
             if (occupiedSeats > update.SmSeats.Value)
             {
                 throw new BadRequestException($"{occupiedSeats} users are currently occupying Secrets Manager seats. " +
@@ -259,12 +254,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check if the organization has unlimited service accounts
         if (organization.SmServiceAccounts == null)
         {
-            throw new BadRequestException("Organization has no service accounts limit, no need to adjust service accounts");
+            throw new BadRequestException("Organization has no machine accounts limit, no need to adjust machine accounts");
         }
 
-        if (update.Autoscaling && update.SmServiceAccounts.Value < organization.SmServiceAccounts.Value)
+        if (update.Autoscaling && update.SmServiceAccounts!.Value < organization.SmServiceAccounts.Value)
         {
-            throw new BadRequestException("Cannot use autoscaling to subtract service accounts.");
+            throw new BadRequestException("Cannot use autoscaling to subtract machine accounts.");
         }
 
         // Check plan maximum service accounts
@@ -273,29 +268,29 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             var planMaxServiceAccounts = plan.SecretsManager.BaseServiceAccount +
                                          plan.SecretsManager.MaxAdditionalServiceAccount.GetValueOrDefault();
-            throw new BadRequestException($"You have reached the maximum number of service accounts ({planMaxServiceAccounts}) for this plan.");
+            throw new BadRequestException($"You have reached the maximum number of machine accounts ({planMaxServiceAccounts}) for this plan.");
         }
 
         // Check autoscale maximum service accounts
         if (update.MaxAutoscaleSmServiceAccounts.HasValue &&
-            update.SmServiceAccounts.Value > update.MaxAutoscaleSmServiceAccounts.Value)
+            update.SmServiceAccounts!.Value > update.MaxAutoscaleSmServiceAccounts.Value)
         {
             var message = update.Autoscaling
-                ? "Secrets Manager service account limit has been reached."
-                : "Cannot set max service accounts autoscaling below service account amount.";
+                ? "Secrets Manager machine account limit has been reached."
+                : "Cannot set max machine accounts autoscaling below machine account amount.";
             throw new BadRequestException(message);
         }
 
         // Check minimum service accounts included with plan
-        if (plan.SecretsManager.BaseServiceAccount > update.SmServiceAccounts.Value)
+        if (plan.SecretsManager.BaseServiceAccount > update.SmServiceAccounts!.Value)
         {
-            throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseServiceAccount} service accounts.");
+            throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseServiceAccount} machine accounts.");
         }
 
         // Check minimum service accounts required by business logic
         if (update.SmServiceAccounts.Value <= 0)
         {
-            throw new BadRequestException("You must have at least 1 service account.");
+            throw new BadRequestException("You must have at least 1 machine account.");
         }
 
         // Check minimum service accounts currently in use by the organization
@@ -304,8 +299,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             var currentServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
             if (currentServiceAccounts > update.SmServiceAccounts)
             {
-                throw new BadRequestException($"Your organization currently has {currentServiceAccounts} service accounts. " +
-                                              $"You cannot decrease your subscription below your current service account usage.");
+                throw new BadRequestException($"Your organization currently has {currentServiceAccounts} machine accounts. " +
+                                              $"You cannot decrease your subscription below your current machine account usage.");
             }
         }
     }
@@ -325,7 +320,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (plan.SecretsManager.MaxSeats.HasValue && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
+        if (plan.SecretsManager.MaxSeats.HasValue && plan.SecretsManager.MaxSeats.Value > 0 && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
         {
             throw new BadRequestException(string.Concat(
                 $"Your plan has a Secrets Manager seat limit of {plan.SecretsManager.MaxSeats}, ",
@@ -352,18 +347,18 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (update.SmServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value < update.SmServiceAccounts.Value)
         {
             throw new BadRequestException(
-                $"Cannot set max service accounts autoscaling below current service accounts count.");
+                $"Cannot set max machine accounts autoscaling below current machine accounts count.");
         }
 
         if (!plan.SecretsManager.AllowServiceAccountsAutoscale)
         {
-            throw new BadRequestException("Your plan does not allow service accounts autoscaling.");
+            throw new BadRequestException("Your plan does not allow machine accounts autoscaling.");
         }
 
         if (plan.SecretsManager.MaxServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value > plan.SecretsManager.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a service account limit of {plan.SecretsManager.MaxServiceAccounts}, ",
+                $"Your plan has a machine account limit of {plan.SecretsManager.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmServiceAccounts}.",
                 "Reduce your max autoscale count."));
         }
@@ -380,5 +375,56 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
         }
+    }
+
+    private async Task ValidateAutoScaleLimitsAsync(SecretsManagerSubscriptionUpdate update)
+    {
+        var (smSeatAutoScaleLimitReached, smServiceAccountsLimitReached) = await AreAutoscaleLimitsReachedAsync(update);
+
+        if (smSeatAutoScaleLimitReached)
+        {
+            await SendSeatLimitEmailAsync(update.Organization);
+        }
+
+        if (smServiceAccountsLimitReached)
+        {
+            await SendServiceAccountLimitEmailAsync(update.Organization);
+        }
+    }
+
+    private async Task<(bool, bool)> AreAutoscaleLimitsReachedAsync(SecretsManagerSubscriptionUpdate update)
+    {
+        var smSeatAutoScaleLimitReached = false;
+        var smServiceAccountsLimitReached = false;
+
+        var (occupiedSmSeats, occupiedSmServiceAccounts) = await GetOccupiedSmSeatsAndServiceAccountsAsync(update.Organization.Id);
+
+        if (occupiedSmSeats > 0
+            && update.MaxAutoscaleSmSeats is not null
+            && occupiedSmSeats == update.MaxAutoscaleSmSeats!.Value)
+        {
+            smSeatAutoScaleLimitReached = true;
+        }
+
+        if (occupiedSmServiceAccounts > 0
+            && update.MaxAutoscaleSmServiceAccounts is not null
+            && occupiedSmServiceAccounts == update.MaxAutoscaleSmServiceAccounts!.Value)
+        {
+            smServiceAccountsLimitReached = true;
+        }
+
+        return (smSeatAutoScaleLimitReached, smServiceAccountsLimitReached);
+    }
+
+    /// <summary>
+    /// Requests the number of Secret Manager seats and service accounts currently used by the organization
+    /// </summary>
+    /// <param name="organizationId"> The id of the organization</param>
+    /// <returns > A tuple containing the occupied seats and the occupied service account counts</returns>
+    private async Task<(int, int)> GetOccupiedSmSeatsAndServiceAccountsAsync(Guid organizationId)
+    {
+        var occupiedSmSeatsTask = _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organizationId);
+        var occupiedServiceAccountsTask = _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organizationId);
+        return (await occupiedSmSeatsTask, await occupiedServiceAccountsTask);
     }
 }

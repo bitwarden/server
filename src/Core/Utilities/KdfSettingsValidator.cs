@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.Utilities;
 
 public static class KdfSettingsValidator
 {
+    // PM-28143 - Remove below when fixing ticket
     public static IEnumerable<ValidationResult> Validate(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         switch (kdfType)
@@ -33,5 +35,10 @@ public static class KdfSettingsValidator
             default:
                 break;
         }
+    }
+
+    public static IEnumerable<ValidationResult> Validate(KdfSettings settings)
+    {
+        return Validate(settings.KdfType, settings.Iterations, settings.Memory, settings.Parallelism);
     }
 }

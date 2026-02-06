@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.AdminConsole.Entities;
 
+#nullable enable
+
 public class GroupUser
 {
     public Guid GroupId { get; set; }

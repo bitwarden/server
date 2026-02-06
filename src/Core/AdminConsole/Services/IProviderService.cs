@@ -1,5 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
@@ -7,7 +11,7 @@ namespace Bit.Core.AdminConsole.Services;
 
 public interface IProviderService
 {
-    Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key);
+    Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress);
     Task UpdateAsync(Provider provider, bool updateBilling = false);
 
     Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite);
@@ -23,9 +27,11 @@ public interface IProviderService
     Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds);
     Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup,
         string clientOwnerEmail, User user);
-    Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId);
     Task LogProviderAccessToOrganizationAsync(Guid organizationId);
     Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail);
+    Task InitiateDeleteAsync(Provider provider, string providerAdminEmail);
+    Task DeleteAsync(Provider provider, string token);
+    Task DeleteAsync(Provider provider);
 }
 

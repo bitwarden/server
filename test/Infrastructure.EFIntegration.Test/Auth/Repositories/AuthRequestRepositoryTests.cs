@@ -15,7 +15,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Auth.Repositories;
 public class AuthRequestRepositoryTests
 {
     [CiSkippedTheory, EfAuthRequestAutoData]
-    public async void CreateAsync_Works_DataMatches(
+    public async Task CreateAsync_Works_DataMatches(
         AuthRequest authRequest,
         AuthRequestCompare equalityComparer,
         List<EfAuthRepo.AuthRequestRepository> suts,

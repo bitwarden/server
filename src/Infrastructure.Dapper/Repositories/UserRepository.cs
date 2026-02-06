@@ -1,10 +1,15 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
@@ -18,23 +23,19 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public UserRepository(
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
     }
 
-    public UserRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
-    public override async Task<User> GetByIdAsync(Guid id)
+    public override async Task<User?> GetByIdAsync(Guid id)
     {
         var user = await base.GetByIdAsync(id);
         UnprotectData(user);
         return user;
     }
 
-    public async Task<User> GetByEmailAsync(string email)
+    public async Task<User?> GetByEmailAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -69,7 +70,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+    public async Task<User?> GetBySsoUserAsync(string externalId, Guid? organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -83,7 +84,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email)
+    public async Task<UserKdfInformation?> GetKdfInformationByEmailAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -125,7 +126,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<string> GetPublicKeyAsync(Guid id)
+    public async Task<string?> GetPublicKeyAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -169,6 +170,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_DeleteById]",
                 new { Id = user.Id },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
+    public async Task DeleteManyAsync(IEnumerable<User> users)
+    {
+        var ids = users.Select(user => user.Id);
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteByIds]",
+                new { Ids = JsonSerializer.Serialize(ids) },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 180);
         }
@@ -242,6 +255,97 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public async Task UpdateUserKeyAndEncryptedDataV2Async(
+        User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            user.AccountRevisionDate = user.RevisionDate;
+
+            ProtectData(user);
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_Update]",
+                user,
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                await action(connection, transaction);
+            }
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            UnprotectData(user);
+            throw;
+        }
+        UnprotectData(user);
+    }
+
+    public async Task SetV2AccountCryptographicStateAsync(
+        Guid userId,
+        UserAccountKeysData accountKeysData,
+        IEnumerable<UpdateUserData>? updateUserDataActions = null)
+    {
+        if (!accountKeysData.IsV2Encryption())
+        {
+            throw new ArgumentException("Provided account keys data is not valid V2 encryption data.", nameof(accountKeysData));
+        }
+
+        var timestamp = DateTime.UtcNow;
+        var signatureKeyPairId = CoreHelpers.GenerateComb();
+
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[User_UpdateAccountCryptographicState]",
+                new
+                {
+                    Id = userId,
+                    PublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.PublicKey,
+                    PrivateKey = accountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey,
+                    SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey,
+                    SecurityState = accountKeysData.SecurityStateData!.SecurityState,
+                    SecurityVersion = accountKeysData.SecurityStateData!.SecurityVersion,
+                    SignatureKeyPairId = signatureKeyPairId,
+                    SignatureAlgorithm = accountKeysData.SignatureKeyPairData!.SignatureAlgorithm,
+                    SigningKey = accountKeysData.SignatureKeyPairData!.WrappedSigningKey,
+                    VerifyingKey = accountKeysData.SignatureKeyPairData!.VerifyingKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            //  Update user data that depends on cryptographic state
+            if (updateUserDataActions != null)
+            {
+                foreach (var action in updateUserDataActions)
+                {
+                    await action(connection, transaction);
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {
@@ -254,6 +358,132 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
             UnprotectData(results);
             return results.ToList();
+        }
+    }
+
+    public async Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserWithCalculatedPremium>(
+                $"[{Schema}].[{Table}_ReadByIdsWithCalculatedPremium]",
+                new { Ids = JsonSerializer.Serialize(ids) },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<UserWithCalculatedPremium?> GetCalculatedPremiumAsync(Guid userId)
+    {
+        var result = await GetManyWithCalculatedPremiumAsync([userId]);
+
+        UnprotectData(result);
+        return result.SingleOrDefault();
+    }
+
+    public async Task<IEnumerable<UserPremiumAccess>> GetPremiumAccessByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserPremiumAccess>(
+                $"[{Schema}].[{Table}_ReadPremiumAccessByIds]",
+                new { Ids = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<UserPremiumAccess?> GetPremiumAccessAsync(Guid userId)
+    {
+        var result = await GetPremiumAccessByIdsAsync([userId]);
+        return result.SingleOrDefault();
+    }
+
+    public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
+    {
+        var protectedKeyConnectorWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(keyConnectorWrappedUserKey));
+
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateKeyConnectorUserKey]",
+                new
+                {
+                    Id = userId,
+                    Key = protectedKeyConnectorWrappedUserKey,
+                    // Key Connector does not use KDF, so we set some defaults
+                    Kdf = KdfType.Argon2id,
+                    KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+                    KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+                    KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+                    UsesKeyConnector = true,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+        string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
+    {
+        var protectedMasterKeyWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(masterPasswordUnlockData.MasterKeyWrappedUserKey));
+
+        var protectedServerSideHashedMasterPasswordAuthenticationHash = string.Concat(
+            Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(serverSideHashedMasterPasswordAuthenticationHash));
+
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateMasterPassword]",
+                new
+                {
+                    Id = userId,
+                    MasterPassword = protectedServerSideHashedMasterPasswordAuthenticationHash,
+                    MasterPasswordHint = masterPasswordHint,
+                    Key = protectedMasterKeyWrappedUserKey,
+                    Kdf = masterPasswordUnlockData.Kdf.KdfType,
+                    KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
+                    KdfMemory = masterPasswordUnlockData.Kdf.Memory,
+                    KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    public async Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            foreach (var action in updateUserDataActions)
+            {
+                await action(connection, transaction);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
         }
     }
 
@@ -270,17 +500,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         var originalKey = user.Key;
 
         // Protect values
-        if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
-        {
-            user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.MasterPassword));
-        }
-
-        if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
-        {
-            user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.Key));
-        }
+        ProtectData(user);
 
         // Save
         await saveTask();
@@ -290,7 +510,22 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         user.Key = originalKey;
     }
 
-    private void UnprotectData(User user)
+    private void ProtectData(User user)
+    {
+        if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.MasterPassword!));
+        }
+
+        if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.Key!));
+        }
+    }
+
+    private void UnprotectData(User? user)
     {
         if (user == null)
         {

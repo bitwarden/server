@@ -8,4 +8,5 @@ public enum CipherType : byte
     SecureNote = 2,
     Card = 3,
     Identity = 4,
+    SSHKey = 5,
 }

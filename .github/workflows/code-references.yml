@@ -1,0 +1,80 @@
+name: Collect code references
+
+on:
+  push:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-secret-access:
+    name: Check for secret access
+    runs-on: ubuntu-22.04
+    outputs:
+      available: ${{ steps.check-secret-access.outputs.available }}
+    permissions: {}
+
+    steps:
+      - name: Check
+        id: check-secret-access
+        run: |
+          if [ "${{ secrets.AZURE_CLIENT_ID }}" != '' ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT";
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT";
+          fi
+
+  refs:
+    name: Code reference collection
+    runs-on: ubuntu-22.04
+    needs: check-secret-access
+    if: ${{ needs.check-secret-access.outputs.available == 'true' }}
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Get Azure Key Vault secrets
+        id: get-kv-secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-server
+          secrets: "LD-ACCESS-TOKEN"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
+      - name: Collect
+        id: collect
+        uses: launchdarkly/find-code-references@89a7d362d1d4b3725fe0fe0ccd0dc69e3bdcba58 # v2.14.0
+        with:
+          accessToken: ${{ steps.get-kv-secrets.outputs.LD-ACCESS-TOKEN }}
+          projKey: default
+          allowTags: true
+
+      - name: Add label
+        if: steps.collect.outputs.any-changed == 'true'
+        run: gh pr edit "$PR_NUMBER" --add-label feature-flag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Remove label
+        if: steps.collect.outputs.any-changed == 'false'
+        run: gh pr edit "$PR_NUMBER" --remove-label feature-flag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}

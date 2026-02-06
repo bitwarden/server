@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
@@ -15,9 +18,9 @@ public class TwoFactorEmailResponseModel : ResponseModel
         }
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider?.MetaData?.ContainsKey("Email") ?? false)
+        if (provider?.MetaData?.TryGetValue("Email", out var email) ?? false)
         {
-            Email = (string)provider.MetaData["Email"];
+            Email = (string)email;
             Enabled = provider.Enabled;
         }
         else

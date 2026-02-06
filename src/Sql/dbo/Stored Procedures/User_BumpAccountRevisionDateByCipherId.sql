@@ -16,20 +16,18 @@ BEGIN
     LEFT JOIN
         [dbo].[CollectionCipher] CC ON CC.[CipherId] = @CipherId
     LEFT JOIN
-        [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = OU.[Id] AND CU.[CollectionId] = CC.[CollectionId]
+        [dbo].[CollectionUser] CU ON CU.[OrganizationUserId] = OU.[Id] AND CU.[CollectionId] = CC.[CollectionId]
     LEFT JOIN
-        [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND OU.[AccessAll] = 0 AND GU.[OrganizationUserId] = OU.[Id]
+        [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND GU.[OrganizationUserId] = OU.[Id]
     LEFT JOIN
         [dbo].[Group] G ON G.[Id] = GU.[GroupId]
     LEFT JOIN
-        [dbo].[CollectionGroup] CG ON G.[AccessAll] = 0 AND CG.[GroupId] = GU.[GroupId] AND CG.[CollectionId] = CC.[CollectionId]
+        [dbo].[CollectionGroup] CG ON CG.[GroupId] = GU.[GroupId] AND CG.[CollectionId] = CC.[CollectionId]
     WHERE
         OU.[OrganizationId] = @OrganizationId
         AND OU.[Status] = 2 -- 2 = Confirmed
         AND (
             CU.[CollectionId] IS NOT NULL
             OR CG.[CollectionId] IS NOT NULL
-            OR OU.[AccessAll] = 1
-            OR G.[AccessAll] = 1
         )
 END

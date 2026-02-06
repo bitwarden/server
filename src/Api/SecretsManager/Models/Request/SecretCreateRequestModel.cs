@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Utilities;
 
@@ -22,6 +25,8 @@ public class SecretCreateRequestModel : IValidatableObject
     public string Note { get; set; }
 
     public Guid[] ProjectIds { get; set; }
+
+    public SecretAccessPoliciesRequestsModel AccessPoliciesRequests { get; set; }
 
     public Secret ToSecret(Guid organizationId)
     {

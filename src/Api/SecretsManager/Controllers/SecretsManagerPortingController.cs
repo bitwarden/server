@@ -1,4 +1,7 @@
-﻿using Bit.Api.SecretsManager.Models.Request;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -44,7 +47,7 @@ public class SecretsManagerPortingController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, AccessClientType.NoAccessCheck);
-        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId, userId, AccessClientType.NoAccessCheck);
+        var secrets = await _secretRepository.GetManyDetailsByOrganizationIdAsync(organizationId, userId, AccessClientType.NoAccessCheck);
 
         if (projects == null && secrets == null)
         {

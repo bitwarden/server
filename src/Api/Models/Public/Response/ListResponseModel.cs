@@ -4,10 +4,9 @@ namespace Bit.Api.Models.Public.Response;
 
 public class ListResponseModel<T> : IResponseModel where T : IResponseModel
 {
-    public ListResponseModel(IEnumerable<T> data, string continuationToken = null)
+    public ListResponseModel(IEnumerable<T> data)
     {
         Data = data;
-        ContinuationToken = continuationToken;
     }
 
     /// <summary>
@@ -21,8 +20,4 @@ public class ListResponseModel<T> : IResponseModel where T : IResponseModel
     /// </summary>
     [Required]
     public IEnumerable<T> Data { get; set; }
-    /// <summary>
-    /// A cursor for use in pagination.
-    /// </summary>
-    public string ContinuationToken { get; set; }
 }

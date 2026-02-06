@@ -56,7 +56,7 @@ such Open Source Software only.
 logos of any Contributor (except as may be necessary to comply with the notice
 requirements in Section 2.3), and use of any Bitwarden trademarks must comply with
 Bitwarden Trademark Guidelines
-<https://github.com/bitwarden/server/blob/master/TRADEMARK_GUIDELINES.md>.
+<https://github.com/bitwarden/server/blob/main/TRADEMARK_GUIDELINES.md>.
 
 3. TERMINATION
 

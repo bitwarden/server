@@ -7,6 +7,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class ProviderOrganizationRepository : Repository<ProviderOrganization, Guid>, IProviderOrganizationRepository
@@ -19,7 +21,7 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<ICollection<ProviderOrganization>> CreateManyAsync(IEnumerable<ProviderOrganization> providerOrganizations)
+    public async Task<ICollection<ProviderOrganization>?> CreateManyAsync(IEnumerable<ProviderOrganization> providerOrganizations)
     {
         var entities = providerOrganizations.ToList();
 
@@ -74,7 +76,7 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         }
     }
 
-    public async Task<ProviderOrganization> GetByOrganizationId(Guid organizationId)
+    public async Task<ProviderOrganization?> GetByOrganizationId(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

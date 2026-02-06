@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -7,7 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
@@ -43,6 +44,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -68,6 +70,8 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddDistributedCache(globalSettings);
+        services.AddBillingOperations();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
@@ -91,11 +95,8 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 

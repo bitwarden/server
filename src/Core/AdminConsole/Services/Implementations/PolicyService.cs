@@ -1,12 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -17,152 +18,42 @@ namespace Bit.Core.AdminConsole.Services.Implementations;
 public class PolicyService : IPolicyService
 {
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IEventService _eventService;
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
-        IEventService eventService,
-        IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
-        ISsoConfigRepository ssoConfigRepository,
-        IMailService mailService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IFeatureService featureService,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _applicationCacheService = applicationCacheService;
-        _eventService = eventService;
-        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
-        _ssoConfigRepository = ssoConfigRepository;
-        _mailService = mailService;
         _globalSettings = globalSettings;
-    }
-
-    public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
-        Guid? savingUserId)
-    {
-        var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
-        if (org == null)
-        {
-            throw new BadRequestException("Organization not found");
-        }
-
-        if (!org.UsePolicies)
-        {
-            throw new BadRequestException("This organization cannot use policies.");
-        }
-
-        // Handle dependent policy checks
-        switch (policy.Type)
-        {
-            case PolicyType.SingleOrg:
-                if (!policy.Enabled)
-                {
-                    await RequiredBySsoAsync(org);
-                    await RequiredByVaultTimeoutAsync(org);
-                    await RequiredByKeyConnectorAsync(org);
-                    await RequiredByAccountRecoveryAsync(org);
-                }
-                break;
-
-            case PolicyType.RequireSso:
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                else
-                {
-                    await RequiredByKeyConnectorAsync(org);
-                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
-                }
-                break;
-
-            case PolicyType.ResetPassword:
-                if (!policy.Enabled || policy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
-                {
-                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
-                }
-
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                break;
-
-            case PolicyType.MaximumVaultTimeout:
-                if (policy.Enabled)
-                {
-                    await DependsOnSingleOrgAsync(org);
-                }
-                break;
-        }
-
-        var now = DateTime.UtcNow;
-        if (policy.Id == default(Guid))
-        {
-            policy.CreationDate = now;
-        }
-
-        if (policy.Enabled)
-        {
-            var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
-            if (!currentPolicy?.Enabled ?? true)
-            {
-                var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
-                    policy.OrganizationId);
-                var removableOrgUsers = orgUsers.Where(ou =>
-                    ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
-                    ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
-                    ou.UserId != savingUserId);
-                switch (policy.Type)
-                {
-                    case PolicyType.TwoFactorAuthentication:
-                        foreach (var orgUser in removableOrgUsers)
-                        {
-                            if (!await userService.TwoFactorIsEnabledAsync(orgUser))
-                            {
-                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                    savingUserId);
-                                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                                    org.Name, orgUser.Email);
-                            }
-                        }
-                        break;
-                    case PolicyType.SingleOrg:
-                        var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
-                                removableOrgUsers.Select(ou => ou.UserId.Value));
-                        foreach (var orgUser in removableOrgUsers)
-                        {
-                            if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
-                                        && ou.OrganizationId != org.Id
-                                        && ou.Status != OrganizationUserStatusType.Invited))
-                            {
-                                await organizationService.DeleteUserAsync(policy.OrganizationId, orgUser.Id,
-                                    savingUserId);
-                                await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                                    org.Name, orgUser.Email);
-                            }
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-        policy.RevisionDate = now;
-        await _policyRepository.UpsertAsync(policy);
-        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+        _featureService = featureService;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var masterPaswordPolicy = (await _policyRequirementQuery.GetAsync<MasterPasswordPolicyRequirement>(user.Id));
+
+            if (!masterPaswordPolicy.Enabled)
+            {
+                return null;
+            }
+
+            return masterPaswordPolicy.EnforcedOptions;
+        }
+
         var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
             .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
             .ToList();
@@ -180,6 +71,7 @@ public class PolicyService : IPolicyService
         }
 
         return enforcedOptions;
+
     }
 
     public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
@@ -200,7 +92,7 @@ public class PolicyService : IPolicyService
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         return organizationUserPolicyDetails.Where(o =>
-            (!orgAbilities.ContainsKey(o.OrganizationId) || orgAbilities[o.OrganizationId].UsePolicies) &&
+            (!orgAbilities.TryGetValue(o.OrganizationId, out var orgAbility) || orgAbility.UsePolicies) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&
@@ -223,59 +115,5 @@ public class PolicyService : IPolicyService
         }
 
         return new[] { OrganizationUserType.Owner, OrganizationUserType.Admin };
-    }
-
-    private async Task DependsOnSingleOrgAsync(Organization org)
-    {
-        var singleOrg = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.SingleOrg);
-        if (singleOrg?.Enabled != true)
-        {
-            throw new BadRequestException("Single Organization policy not enabled.");
-        }
-    }
-
-    private async Task RequiredBySsoAsync(Organization org)
-    {
-        var requireSso = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.RequireSso);
-        if (requireSso?.Enabled == true)
-        {
-            throw new BadRequestException("Single Sign-On Authentication policy is enabled.");
-        }
-    }
-
-    private async Task RequiredByKeyConnectorAsync(Organization org)
-    {
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
-        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
-        {
-            throw new BadRequestException("Key Connector is enabled.");
-        }
-    }
-
-    private async Task RequiredByAccountRecoveryAsync(Organization org)
-    {
-        var requireSso = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.ResetPassword);
-        if (requireSso?.Enabled == true)
-        {
-            throw new BadRequestException("Account recovery policy is enabled.");
-        }
-    }
-
-    private async Task RequiredByVaultTimeoutAsync(Organization org)
-    {
-        var vaultTimeout = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.MaximumVaultTimeout);
-        if (vaultTimeout?.Enabled == true)
-        {
-            throw new BadRequestException("Maximum Vault Timeout policy is enabled.");
-        }
-    }
-
-    private async Task RequiredBySsoTrustedDeviceEncryptionAsync(Organization org)
-    {
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
-        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
-        {
-            throw new BadRequestException("Trusted device encryption is on and requires this policy.");
-        }
     }
 }

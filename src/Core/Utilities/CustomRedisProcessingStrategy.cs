@@ -1,7 +1,11 @@
-﻿using AspNetCoreRateLimit;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AspNetCoreRateLimit;
 using AspNetCoreRateLimit.Redis;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
@@ -26,6 +30,7 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
     private const string _redisTimeoutCacheKey = "IpRateLimitRedisTimeout";
 
     public CustomRedisProcessingStrategy(
+        [FromKeyedServices("rate-limiter")]
         IConnectionMultiplexer connectionMultiplexer,
         IRateLimitConfiguration config,
         ILogger<CustomRedisProcessingStrategy> logger,

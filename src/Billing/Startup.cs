@@ -1,13 +1,18 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
+using Bit.Commercial.Core.Utilities;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Quartz;
 using Stripe;
 
 namespace Bit.Billing;
@@ -32,6 +37,7 @@ public class Startup
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
         services.Configure<BillingSettings>(Configuration.GetSection("BillingSettings"));
+        var billingSettings = Configuration.GetSection("BillingSettings").Get<BillingSettings>();
 
         // Stripe Billing
         StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
@@ -42,15 +48,29 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
-        // PayPal Client
-        services.AddSingleton<Utilities.PayPalIpnClient>();
-
-        // BitPay Client
-        services.AddSingleton<BitPayClient>();
+        // PayPal IPN Client
+        services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
+
+        //Handlers
+        services.AddScoped<IStripeEventUtilityService, StripeEventUtilityService>();
+        services.AddScoped<ISubscriptionDeletedHandler, SubscriptionDeletedHandler>();
+        services.AddScoped<ISubscriptionUpdatedHandler, SubscriptionUpdatedHandler>();
+        services.AddScoped<IUpcomingInvoiceHandler, UpcomingInvoiceHandler>();
+        services.AddScoped<IChargeSucceededHandler, ChargeSucceededHandler>();
+        services.AddScoped<IChargeRefundedHandler, ChargeRefundedHandler>();
+        services.AddScoped<ICustomerUpdatedHandler, CustomerUpdatedHandler>();
+        services.AddScoped<IInvoiceCreatedHandler, InvoiceCreatedHandler>();
+        services.AddScoped<IPaymentFailedHandler, PaymentFailedHandler>();
+        services.AddScoped<IPaymentMethodAttachedHandler, PaymentMethodAttachedHandler>();
+        services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
+        services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
+        services.AddScoped<ISetupIntentSucceededHandler, SetupIntentSucceededHandler>();
+        services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity
         services.AddCustomIdentityServices(globalSettings);
@@ -59,6 +79,9 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddDistributedCache(globalSettings);
+        services.AddBillingOperations();
+        services.AddCommercialCoreServices();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
@@ -66,8 +89,7 @@ public class Startup
         // TODO: no longer be required - see PM-1880
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
-        // Mvc
-        services.AddMvc(config =>
+        services.AddControllers(config =>
         {
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });
@@ -76,31 +98,42 @@ public class Startup
         // Authentication
         services.AddAuthentication();
 
-        // Jobs service, uncomment when we have some jobs to run
-        // Jobs.JobsHostedService.AddJobsServices(services);
-        // services.AddHostedService<Jobs.JobsHostedService>();
-
-        // Set up HttpClients
-        services.AddHttpClient("FreshdeskApi");
-
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
+        services.AddScoped<IProviderEventService, ProviderEventService>();
+        services.AddScoped<IPushNotificationAdapter, PushNotificationAdapter>();
+
+        // Add Quartz services first
+        services.AddQuartz(q =>
+        {
+            q.UseMicrosoftDependencyInjectionJobFactory();
+        });
+        services.AddQuartzHostedService();
+
+        // Jobs service
+        Jobs.JobsHostedService.AddJobsServices(services);
+        services.AddHostedService<Jobs.JobsHostedService>();
+
+        // Swagger
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen();
     }
 
     public void Configure(
         IApplicationBuilder app,
-        IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+        IWebHostEnvironment env)
     {
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Billing API V1");
+            });
         }
 
         app.UseStaticFiles();

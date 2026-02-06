@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace Bit.Sso.Utilities;
@@ -46,9 +49,9 @@ public static class OpenIdConnectOptionsExtensions
 
             // Handle State if we've gotten that back
             var decodedState = options.StateDataFormat.Unprotect(state);
-            if (decodedState != null && decodedState.Items.ContainsKey("scheme"))
+            if (decodedState != null && decodedState.Items.TryGetValue("scheme", out var stateScheme))
             {
-                return decodedState.Items["scheme"] == scheme;
+                return stateScheme == scheme;
             }
         }
         catch

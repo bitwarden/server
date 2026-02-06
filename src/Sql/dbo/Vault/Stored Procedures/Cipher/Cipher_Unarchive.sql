@@ -1,0 +1,43 @@
+﻿CREATE PROCEDURE [dbo].[Cipher_Unarchive]
+    @Ids AS [dbo].[GuidIdArray] READONLY,
+    @UserId AS UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    CREATE TABLE #Temp
+    (
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [UserId] UNIQUEIDENTIFIER NULL
+    )
+
+    INSERT INTO #Temp
+    SELECT
+        ucd.[Id],
+        ucd.[UserId]
+    FROM
+        [dbo].[UserCipherDetails](@UserId) ucd
+        INNER JOIN @Ids ids ON ids.Id = ucd.[Id]
+    WHERE
+        ucd.[ArchivedDate] IS NOT NULL
+
+    DECLARE @UtcNow DATETIME2(7) = SYSUTCDATETIME();
+    UPDATE
+        [dbo].[Cipher]
+    SET
+        [Archives] = JSON_MODIFY(
+            COALESCE([Archives], N'{}'),
+            CONCAT('$."', @UserId, '"'),
+            NULL
+        ),
+        [RevisionDate] = @UtcNow
+    FROM [dbo].[Cipher] AS c
+    INNER JOIN #Temp AS t
+        ON t.[Id] = c.[Id];
+
+    EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+
+    DROP TABLE #Temp
+
+    SELECT @UtcNow
+END

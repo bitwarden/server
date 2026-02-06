@@ -1,0 +1,25 @@
+@model Bit.Admin.Billing.Models.ProcessStripeEvents.EventsFormModel
+
+@{
+    ViewData["Title"] = "Process Stripe Events";
+}
+
+<h1>Process Stripe Events</h1>
+<form method="post" asp-controller="ProcessStripeEvents" asp-action="Process">
+    <div class="row">
+        <div class="col-1">
+            <div class="form-group">
+                <input type="submit" value="Process" class="btn btn-primary mb-2"/>
+            </div>
+        </div>
+        <div class="col-2">
+            <div class="form-group form-check">
+                <input type="checkbox" class="form-check-input" asp-for="Inspect">
+                <label class="form-check-label" asp-for="Inspect"></label>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <textarea id="event-ids" type="text" class="form-control" rows="100" asp-for="EventIds"></textarea>
+    </div>
+</form>

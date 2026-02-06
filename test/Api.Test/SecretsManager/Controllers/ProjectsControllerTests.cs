@@ -44,7 +44,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void ListByOrganization_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
+    public async Task ListByOrganization_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(false);
 
@@ -54,7 +54,7 @@ public class ProjectsControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void ListByOrganization_ReturnsEmptyList(PermissionType permissionType,
+    public async Task ListByOrganization_ReturnsEmptyList(PermissionType permissionType,
         SutProvider<ProjectsController> sutProvider, Guid data)
     {
         switch (permissionType)
@@ -78,7 +78,7 @@ public class ProjectsControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void ListByOrganization_Success(PermissionType permissionType,
+    public async Task ListByOrganization_Success(PermissionType permissionType,
         SutProvider<ProjectsController> sutProvider, Guid data, Project mockProject)
     {
         switch (permissionType)
@@ -105,7 +105,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Create_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
+    public async Task Create_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -115,17 +115,17 @@ public class ProjectsControllerTests
 
         var resultProject = data.ToProject(orgId);
 
-        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().ClientType)
+        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().IdentityClientType)
             .ReturnsForAnyArgs(resultProject);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(orgId, data));
         await sutProvider.GetDependency<ICreateProjectCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().ClientType);
+            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
     }
 
     [Theory]
     [BitAutoData]
-    public async void Create_AtMaxProjects_Throws(SutProvider<ProjectsController> sutProvider,
+    public async Task Create_AtMaxProjects_Throws(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -138,12 +138,12 @@ public class ProjectsControllerTests
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(orgId, data));
 
         await sutProvider.GetDependency<ICreateProjectCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().ClientType);
+            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
     }
 
     [Theory]
     [BitAutoData]
-    public async void Create_Success(SutProvider<ProjectsController> sutProvider,
+    public async Task Create_Success(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -153,18 +153,18 @@ public class ProjectsControllerTests
 
         var resultProject = data.ToProject(orgId);
 
-        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().ClientType)
+        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default, sutProvider.GetDependency<ICurrentContext>().IdentityClientType)
             .ReturnsForAnyArgs(resultProject);
 
         await sutProvider.Sut.CreateAsync(orgId, data);
 
         await sutProvider.GetDependency<ICreateProjectCommand>().Received(1)
-            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().ClientType);
+            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
     }
 
     [Theory]
     [BitAutoData]
-    public async void Update_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
+    public async Task Update_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
         Guid userId, ProjectUpdateRequestModel data, Project existingProject)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -184,7 +184,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Update_Success(SutProvider<ProjectsController> sutProvider,
+    public async Task Update_Success(SutProvider<ProjectsController> sutProvider,
         Guid userId, ProjectUpdateRequestModel data, Project existingProject)
     {
         sutProvider.GetDependency<IAuthorizationService>()
@@ -205,7 +205,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Get_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
+    public async Task Get_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
         SetupAdmin(sutProvider, orgId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(orgId).Returns(false);
@@ -214,7 +214,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Get_ThrowsNotFound(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
+    public async Task Get_ThrowsNotFound(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
         SetupAdmin(sutProvider, orgId);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(data));
@@ -223,7 +223,7 @@ public class ProjectsControllerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void Get_Success(PermissionType permissionType, SutProvider<ProjectsController> sutProvider,
+    public async Task Get_Success(PermissionType permissionType, SutProvider<ProjectsController> sutProvider,
         Guid orgId, Guid data)
     {
         switch (permissionType)
@@ -252,7 +252,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Get_UserWithoutPermission_Throws(SutProvider<ProjectsController> sutProvider, Guid orgId,
+    public async Task Get_UserWithoutPermission_Throws(SutProvider<ProjectsController> sutProvider, Guid orgId,
         Guid data)
     {
         SetupUserWithPermission(sutProvider, orgId);
@@ -267,7 +267,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteProjects_NoProjectsFound_ThrowsNotFound(
+    public async Task BulkDeleteProjects_NoProjectsFound_ThrowsNotFound(
         SutProvider<ProjectsController> sutProvider, List<Project> data)
     {
         var ids = data.Select(project => project.Id).ToList();
@@ -277,7 +277,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteProjects_ProjectsFoundMisMatch_ThrowsNotFound(
+    public async Task BulkDeleteProjects_ProjectsFoundMisMatch_ThrowsNotFound(
         SutProvider<ProjectsController> sutProvider, List<Project> data, Project mockProject)
     {
         data.Add(mockProject);
@@ -288,7 +288,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteProjects_OrganizationMistMatch_ThrowsNotFound(
+    public async Task BulkDeleteProjects_OrganizationMistMatch_ThrowsNotFound(
         SutProvider<ProjectsController> sutProvider, List<Project> data)
     {
 
@@ -299,7 +299,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteProjects_NoAccessToSecretsManager_ThrowsNotFound(
+    public async Task BulkDeleteProjects_NoAccessToSecretsManager_ThrowsNotFound(
         SutProvider<ProjectsController> sutProvider, List<Project> data)
     {
 
@@ -316,8 +316,8 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteProjects_ReturnsAccessDeniedForProjectsWithoutAccess_Success(
-        SutProvider<ProjectsController> sutProvider, List<Project> data)
+    public async Task BulkDeleteProjects_ReturnsAccessDeniedForProjectsWithoutAccess_Success(
+        SutProvider<ProjectsController> sutProvider, Guid userId, List<Project> data)
     {
 
         var ids = data.Select(project => project.Id).ToList();
@@ -333,6 +333,7 @@ public class ProjectsControllerTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
 
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
@@ -346,7 +347,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteProjects_Success(SutProvider<ProjectsController> sutProvider, List<Project> data)
+    public async Task BulkDeleteProjects_Success(SutProvider<ProjectsController> sutProvider, Guid userId, List<Project> data)
     {
         var ids = data.Select(project => project.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -357,7 +358,7 @@ public class ProjectsControllerTests
                 .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), project,
                     Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         }
-
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
 

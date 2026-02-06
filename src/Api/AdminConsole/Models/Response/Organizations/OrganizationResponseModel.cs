@@ -1,8 +1,17 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
+using System.Text.Json.Serialization;
+using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Enums;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Utilities;
 using Constants = Bit.Core.Constants;
 
@@ -10,8 +19,10 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationResponseModel : ResponseModel
 {
-    public OrganizationResponseModel(Organization organization, string obj = "organization")
-        : base(obj)
+    public OrganizationResponseModel(
+        Organization organization,
+        Plan plan,
+        string obj = "organization") : base(obj)
     {
         if (organization == null)
         {
@@ -27,7 +38,8 @@ public class OrganizationResponseModel : ResponseModel
         BusinessCountry = organization.BusinessCountry;
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
-        Plan = new PlanResponseModel(StaticStore.GetPlan(organization.PlanType));
+        // Self-Host instances only require plan information that can be derived from the Organization record.
+        Plan = plan != null ? new PlanResponseModel(plan) : new PlanResponseModel(organization);
         PlanType = organization.PlanType;
         Seats = organization.Seats;
         MaxAutoscaleSeats = organization.MaxAutoscaleSeats;
@@ -54,12 +66,22 @@ public class OrganizationResponseModel : ResponseModel
         SmServiceAccounts = organization.SmServiceAccounts;
         MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        LimitCollectionCreation = organization.LimitCollectionCreation;
+        LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
+        UseOrganizationDomains = organization.UseOrganizationDomains;
+        UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
+        UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
+        UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
+        UsePhishingBlocker = organization.UsePhishingBlocker;
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }
     public string BusinessAddress2 { get; set; }
@@ -95,24 +117,36 @@ public class OrganizationResponseModel : ResponseModel
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
+    public bool UseDisableSmAdsForUsers { get; set; }
+    public bool UsePhishingBlocker { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 {
-    public OrganizationSubscriptionResponseModel(Organization organization) : base(organization, "organizationSubscription")
+    public OrganizationSubscriptionResponseModel(
+        Organization organization,
+        Plan plan) : base(organization, plan, "organizationSubscription")
     {
         Expiration = organization.ExpirationDate;
         StorageName = organization.Storage.HasValue ?
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
-        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
-    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
-        : this(organization)
+    public OrganizationSubscriptionResponseModel(
+        Organization organization,
+        SubscriptionInfo subscription,
+        Plan plan,
+        bool hideSensitiveData) : this(organization, plan)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
@@ -122,27 +156,54 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         if (hideSensitiveData)
         {
             BillingEmail = null;
-            Subscription.Items = null;
-            UpcomingInvoice.Amount = null;
+            if (Subscription != null)
+            {
+                Subscription.Items = null;
+            }
+            if (UpcomingInvoice != null)
+            {
+                UpcomingInvoice.Amount = null;
+            }
         }
-
-        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
-        this(organization)
+        this(organization, (Plan)null)
     {
         if (license != null)
         {
-            // License expiration should always include grace period - See OrganizationLicense.cs
+            // License expiration should always include grace period (unless it's in a Trial) - See OrganizationLicense.cs.
             Expiration = license.Expires;
-            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period
-            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ??
-                                             license.Expires?.AddDays(-Constants
-                                                 .OrganizationSelfHostSubscriptionGracePeriodDays);
-        }
 
-        SecretsManagerBeta = organization.SecretsManagerBeta;
+            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period unless it's in a Trial.
+            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                ? license.Expires
+                : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+        }
+    }
+
+    public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license, ClaimsPrincipal claimsPrincipal) :
+        this(organization, (Plan)null)
+    {
+        if (license != null)
+        {
+            // CRITICAL: When a license has a Token (JWT), ALWAYS use the expiration from the token claim
+            // The token's expiration is cryptographically secured and cannot be tampered with
+            // The file's Expires property can be manually edited and should NOT be trusted for display
+            if (claimsPrincipal != null)
+            {
+                Expiration = claimsPrincipal.GetValue<DateTime>(OrganizationLicenseConstants.Expires);
+                ExpirationWithoutGracePeriod = claimsPrincipal.GetValue<DateTime?>(OrganizationLicenseConstants.ExpirationWithoutGracePeriod);
+            }
+            else
+            {
+                // No token - use the license file expiration (for older licenses without tokens)
+                Expiration = license.Expires;
+                ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ?? (license.Trial
+                    ? license.Expires
+                    : license.Expires?.AddDays(-Constants.OrganizationSelfHostSubscriptionGracePeriodDays));
+            }
+        }
     }
 
     public string StorageName { get; set; }
@@ -160,6 +221,4 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
-
-    public bool SecretsManagerBeta { get; set; }
 }

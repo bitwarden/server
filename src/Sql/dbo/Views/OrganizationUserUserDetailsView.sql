@@ -11,7 +11,6 @@ SELECT
     U.[Premium],
     OU.[Status],
     OU.[Type],
-    OU.[AccessAll],
     OU.[AccessSecretsManager],
     OU.[ExternalId],
     SU.[ExternalId] SsoExternalId,

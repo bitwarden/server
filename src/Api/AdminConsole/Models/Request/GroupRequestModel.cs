@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 
@@ -9,8 +12,6 @@ public class GroupRequestModel
     [Required]
     [StringLength(100)]
     public string Name { get; set; }
-    [Required]
-    public bool? AccessAll { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     public IEnumerable<Guid> Users { get; set; }
 
@@ -25,7 +26,6 @@ public class GroupRequestModel
     public Group ToGroup(Group existingGroup)
     {
         existingGroup.Name = Name;
-        existingGroup.AccessAll = AccessAll.Value;
         return existingGroup;
     }
 }

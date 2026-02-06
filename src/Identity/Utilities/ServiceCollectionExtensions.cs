@@ -1,12 +1,16 @@
-﻿using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.ClientProviders;
+using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityServer.ResponseHandling;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
-using StackExchange.Redis;
 
 namespace Bit.Identity.Utilities;
 
@@ -20,6 +24,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<StaticClientStore>();
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
+        services.AddTransient<IDeviceValidator, DeviceValidator>();
+        services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
+        services.AddTransient<ISsoRequestValidator, SsoRequestValidator>();
+        services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
+        services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
+        services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
+        services.AddTransient<ISendAuthenticationMethodValidator<NeverAuthenticate>, SendNeverAuthenticateRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -39,40 +50,46 @@ public static class ServiceCollectionExtensions
                 }
                 options.InputLengthRestrictions.UserName = 256;
                 options.KeyManagement.Enabled = false;
+                options.UserInteraction.LoginUrl = "/sso/Login";
             })
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
             .AddInMemoryApiScopes(ApiScopes.GetApiScopes())
-            .AddClientStoreCache<ClientStore>()
+            .AddClientStoreCache<DynamicClientStore>()
             .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
             .AddProfileService<ProfileService>()
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
-            .AddClientStore<ClientStore>()
+            .AddClientStore<DynamicClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
-            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>()
+            .AddExtensionGrantValidator<SendAccessGrantValidator>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.RedisConnectionString))
+        if (!globalSettings.SelfHosted)
         {
-            // If we have redis, prefer it
+            // Only cloud instances should be able to handle installations
+            services.AddClientProvider<InstallationClientProvider>("installation");
+        }
 
-            // Add the original persisted grant store via it's implementation type
-            // so we can inject it right after.
-            services.AddSingleton<PersistedGrantStore>();
+        if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey))
+        {
+            services.AddClientProvider<InternalClientProvider>("internal");
+        }
 
+        services.AddClientProvider<UserClientProvider>("user");
+        services.AddClientProvider<OrganizationClientProvider>("organization");
+        services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
+
+        if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
+        {
             services.AddSingleton<IPersistedGrantStore>(sp =>
-            {
-                return new RedisPersistedGrantStore(
-                    // TODO: .NET 8 create a keyed service for this connection multiplexer and even PersistedGrantStore
-                    ConnectionMultiplexer.Connect(globalSettings.IdentityServer.RedisConnectionString),
-                    sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
-                    sp.GetRequiredService<PersistedGrantStore>() // Fallback grant store
-                );
-            });
+                new PersistedGrantStore(sp.GetRequiredKeyedService<IGrantRepository>("cosmos"),
+                    g => new Core.Auth.Models.Data.GrantItem(g)));
         }
         else
         {
-            // Use the original grant store
-            identityServerBuilder.AddPersistedGrantStore<PersistedGrantStore>();
+            services.AddTransient<IPersistedGrantStore>(sp =>
+                new PersistedGrantStore(sp.GetRequiredService<IGrantRepository>(),
+                    g => new Core.Auth.Entities.Grant(g)));
         }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();

@@ -1,9 +1,13 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
@@ -13,7 +17,7 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
         : base(serviceScopeFactory, mapper, (context) => context.WebAuthnCredentials)
     { }
 
-    public async Task<Core.Auth.Entities.WebAuthnCredential> GetByIdAsync(Guid id, Guid userId)
+    public async Task<Core.Auth.Entities.WebAuthnCredential?> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -56,4 +60,29 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
             return true;
         }
     }
+
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
+    {
+        return async (_, _) =>
+        {
+            var newCreds = credentials.ToList();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var newCredIds = newCreds.Select(nwc => nwc.Id).ToList();
+            var validUserWebauthnCredentials = await GetDbSet(dbContext)
+                .Where(wc => wc.UserId == userId && newCredIds.Contains(wc.Id))
+                .ToListAsync();
+
+            foreach (var wc in validUserWebauthnCredentials)
+            {
+                var nwc = newCreds.First(eak => eak.Id == wc.Id);
+                wc.EncryptedPublicKey = nwc.EncryptedPublicKey;
+                wc.EncryptedUserKey = nwc.EncryptedUserKey;
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
 }

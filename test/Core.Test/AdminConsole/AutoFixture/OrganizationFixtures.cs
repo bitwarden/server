@@ -1,14 +1,17 @@
-﻿using System.Text.Json;
+﻿using System.Reflection;
+using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
+using AutoFixture.Xunit2;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
@@ -18,16 +21,38 @@ namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
 public class OrganizationCustomization : ICustomization
 {
     public bool UseGroups { get; set; }
+    public PlanType PlanType { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
+
+    public OrganizationCustomization()
+    {
+
+    }
+
+    public OrganizationCustomization(bool useAutomaticUserConfirmation, PlanType planType)
+    {
+        UseAutomaticUserConfirmation = useAutomaticUserConfirmation;
+        PlanType = planType;
+    }
 
     public void Customize(IFixture fixture)
     {
         var organizationId = Guid.NewGuid();
         var maxCollections = (short)new Random().Next(10, short.MaxValue);
+        var plan = MockPlans.Plans.FirstOrDefault(p => p.Type == PlanType);
+        var seats = (short)new Random().Next(plan.PasswordManager.BaseSeats, plan.PasswordManager.MaxSeats ?? short.MaxValue);
+        var smSeats = plan.SupportsSecretsManager
+            ? (short?)new Random().Next(plan.SecretsManager.BaseSeats, plan.SecretsManager.MaxSeats ?? short.MaxValue)
+            : null;
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.MaxCollections, maxCollections)
-            .With(o => o.UseGroups, UseGroups));
+            .With(o => o.UseGroups, UseGroups)
+            .With(o => o.PlanType, PlanType)
+            .With(o => o.Seats, seats)
+            .With(o => o.SmSeats, smSeats)
+            .With(o => o.UseAutomaticUserConfirmation, UseAutomaticUserConfirmation));
 
         fixture.Customize<Collection>(composer =>
             composer
@@ -67,7 +92,7 @@ internal class PaidOrganization : ICustomization
     public PlanType CheckedPlanType { get; set; }
     public void Customize(IFixture fixture)
     {
-        var validUpgradePlans = StaticStore.Plans.Where(p => p.Type != PlanType.Free && p.LegacyYear == null).OrderBy(p => p.UpgradeSortOrder).Select(p => p.Type).ToList();
+        var validUpgradePlans = MockPlans.Plans.Where(p => p.Type != PlanType.Free && p.LegacyYear == null).OrderBy(p => p.UpgradeSortOrder).Select(p => p.Type).ToList();
         var lowestActivePaidPlan = validUpgradePlans.First();
         CheckedPlanType = CheckedPlanType.Equals(PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
         validUpgradePlans.Remove(lowestActivePaidPlan);
@@ -95,7 +120,7 @@ internal class FreeOrganizationUpgrade : ICustomization
             .With(o => o.PlanType, PlanType.Free));
 
         var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
-        var selectedPlan = StaticStore.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
+        var selectedPlan = MockPlans.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
 
         fixture.Customize<OrganizationUpgrade>(composer => composer
             .With(ou => ou.Plan, selectedPlan.Type)
@@ -126,6 +151,9 @@ internal class OrganizationInvite : ICustomization
             .With(ou => ou.Permissions, PermissionsBlob));
         fixture.Customize<OrganizationUserInvite>(composer => composer
             .With(oi => oi.Type, InviteeUserType));
+        // Set Manage to false, this ensures it doesn't conflict with the other properties during validation
+        fixture.Customize<CollectionAccessSelection>(composer => composer
+            .With(c => c.Manage, false));
     }
 }
 
@@ -139,9 +167,8 @@ public class SecretsManagerOrganizationCustomization : ICustomization
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.UseSecretsManager, true)
-            .With(o => o.SecretsManagerBeta, false)
             .With(o => o.PlanType, planType)
-            .With(o => o.Plan, StaticStore.GetPlan(planType).Name)
+            .With(o => o.Plan, MockPlans.Get(planType).Name)
             .With(o => o.MaxAutoscaleSmSeats, (int?)null)
             .With(o => o.MaxAutoscaleSmServiceAccounts, (int?)null));
     }
@@ -181,10 +208,15 @@ internal class TeamsMonthlyWithAddOnsOrganizationCustomization : ICustomization
     }
 }
 
-internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
+public class OrganizationCustomizeAttribute : BitCustomizeAttribute
 {
     public bool UseGroups { get; set; }
-    public override ICustomization GetCustomization() => new OrganizationCustomization() { UseGroups = UseGroups };
+    public PlanType PlanType { get; set; } = PlanType.EnterpriseAnnually;
+    public override ICustomization GetCustomization() => new OrganizationCustomization()
+    {
+        UseGroups = UseGroups,
+        PlanType = PlanType
+    };
 }
 
 internal class PaidOrganizationCustomizeAttribute : BitCustomizeAttribute
@@ -259,4 +291,10 @@ internal class EphemeralDataProtectionAutoDataAttribute : CustomAutoDataAttribut
 {
     public EphemeralDataProtectionAutoDataAttribute() : base(new SutProviderCustomization(), new EphemeralDataProtectionCustomization())
     { }
+}
+
+internal class OrganizationAttribute(bool useAutomaticUserConfirmation = false, PlanType planType = PlanType.Free) : CustomizeAttribute
+{
+    public override ICustomization GetCustomization(ParameterInfo parameter) =>
+        new OrganizationCustomization(useAutomaticUserConfirmation, planType);
 }

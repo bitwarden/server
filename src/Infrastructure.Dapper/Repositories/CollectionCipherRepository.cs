@@ -5,6 +5,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepository
@@ -17,16 +19,12 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? "[dbo].[CollectionCipher_ReadByUserId_V2]"
-            : "[dbo].[CollectionCipher_ReadByUserId]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionCipher>(
-                sprocName,
+                "[dbo].[CollectionCipher_ReadByUserId]",
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -47,16 +45,25 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
+    public async Task<ICollection<CollectionCipher>> GetManySharedByOrganizationIdAsync(Guid organizationId)
     {
-        var sprocName = useFlexibleCollections
-            ? "[dbo].[CollectionCipher_ReadByUserIdCipherId_V2]"
-            : "[dbo].[CollectionCipher_ReadByUserIdCipherId]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionCipher>(
-                sprocName,
+                "[dbo].[CollectionCipher_ReadSharedByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<CollectionCipher>(
+                "[dbo].[CollectionCipher_ReadByUserIdCipherId]",
                 new { UserId = userId, CipherId = cipherId },
                 commandType: CommandType.StoredProcedure);
 
@@ -64,16 +71,12 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         }
     }
 
-    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
+    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
     {
-        var sprocName = useFlexibleCollections
-            ? "[dbo].[CollectionCipher_UpdateCollections_V2]"
-            : "[dbo].[CollectionCipher_UpdateCollections]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                "[dbo].[CollectionCipher_UpdateCollections]",
                 new { CipherId = cipherId, UserId = userId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
         }
@@ -91,16 +94,12 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
     }
 
     public async Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId,
-        Guid organizationId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
+        Guid organizationId, IEnumerable<Guid> collectionIds)
     {
-        var sprocName = useFlexibleCollections
-            ? "[dbo].[CollectionCipher_UpdateCollectionsForCiphers_V2]"
-            : "[dbo].[CollectionCipher_UpdateCollectionsForCiphers]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                "[dbo].[CollectionCipher_UpdateCollectionsForCiphers]",
                 new
                 {
                     CipherIds = cipherIds.ToGuidIdArrayTVP(),
@@ -108,6 +107,30 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
                     OrganizationId = organizationId,
                     CollectionIds = collectionIds.ToGuidIdArrayTVP()
                 },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[CollectionCipher_AddCollectionsForManyCiphers]",
+                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[CollectionCipher_RemoveCollectionsForManyCiphers]",
+                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
         }
     }

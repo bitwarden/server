@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1304;CA1305</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Api\Api.csproj" />
+    <ProjectReference Include="..\..\util\Seeder\Seeder.csproj" />
     <ProjectReference Include="..\IntegrationTestCommon\IntegrationTestCommon.csproj" />
 
     <Content Include="..\..\src\Api\appsettings.*.json">

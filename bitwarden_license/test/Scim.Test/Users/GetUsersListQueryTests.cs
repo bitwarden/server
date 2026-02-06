@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Scim.Models;
 using Bit.Scim.Users;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -24,7 +25,7 @@ public class GetUsersListQueryTests
             .GetManyDetailsByOrganizationAsync(organizationId)
             .Returns(organizationUserUserDetails);
 
-        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, null, count, startIndex);
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Count = count, StartIndex = startIndex });
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
@@ -49,7 +50,7 @@ public class GetUsersListQueryTests
             .GetManyDetailsByOrganizationAsync(organizationId)
             .Returns(organizationUserUserDetails);
 
-        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
@@ -71,7 +72,7 @@ public class GetUsersListQueryTests
             .GetManyDetailsByOrganizationAsync(organizationId)
             .Returns(organizationUserUserDetails);
 
-        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
@@ -96,7 +97,7 @@ public class GetUsersListQueryTests
             .GetManyDetailsByOrganizationAsync(organizationId)
             .Returns(organizationUserUserDetails);
 
-        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
@@ -120,7 +121,7 @@ public class GetUsersListQueryTests
             .GetManyDetailsByOrganizationAsync(organizationId)
             .Returns(organizationUserUserDetails);
 
-        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, filter, null, null);
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 

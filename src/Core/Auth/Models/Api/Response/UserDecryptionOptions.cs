@@ -1,7 +1,6 @@
 ﻿using System.Text.Json.Serialization;
+using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.Models.Api;
-
-#nullable enable
 
 namespace Bit.Core.Auth.Models.Api.Response;
 
@@ -14,7 +13,14 @@ public class UserDecryptionOptions : ResponseModel
     /// <summary>
     /// Gets or sets whether the current user has a master password that can be used to decrypt their vault.
     /// </summary>
+    [Obsolete("Use MasterPasswordUnlock instead. This will be removed in a future version.")]
     public bool HasMasterPassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the current user has master password unlock data available.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public MasterPasswordUnlockResponseModel? MasterPasswordUnlock { get; set; }
 
     /// <summary>
     /// Gets or sets the WebAuthn PRF decryption keys.
@@ -39,13 +45,19 @@ public class WebAuthnPrfDecryptionOption
 {
     public string EncryptedPrivateKey { get; }
     public string EncryptedUserKey { get; }
+    public string CredentialId { get; }
+    public string[] Transports { get; }
 
     public WebAuthnPrfDecryptionOption(
         string encryptedPrivateKey,
-        string encryptedUserKey)
+        string encryptedUserKey,
+        string credentialId,
+        string[]? transports = null)
     {
         EncryptedPrivateKey = encryptedPrivateKey;
         EncryptedUserKey = encryptedUserKey;
+        CredentialId = credentialId;
+        Transports = transports ?? [];
     }
 }
 
@@ -54,18 +66,21 @@ public class TrustedDeviceUserDecryptionOption
     public bool HasAdminApproval { get; }
     public bool HasLoginApprovingDevice { get; }
     public bool HasManageResetPasswordPermission { get; }
+    public bool IsTdeOffboarding { get; }
     public string? EncryptedPrivateKey { get; }
     public string? EncryptedUserKey { get; }
 
     public TrustedDeviceUserDecryptionOption(bool hasAdminApproval,
         bool hasLoginApprovingDevice,
         bool hasManageResetPasswordPermission,
+        bool isTdeOffboarding,
         string? encryptedPrivateKey,
         string? encryptedUserKey)
     {
         HasAdminApproval = hasAdminApproval;
         HasLoginApprovingDevice = hasLoginApprovingDevice;
         HasManageResetPasswordPermission = hasManageResetPasswordPermission;
+        IsTdeOffboarding = isTdeOffboarding;
         EncryptedPrivateKey = encryptedPrivateKey;
         EncryptedUserKey = encryptedUserKey;
     }

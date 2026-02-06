@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Bit.Seeder</RootNamespace>
+    <UserSecretsId>Bit.Seeder</UserSecretsId>
+    <Description>Core library for generating and managing test data for Bitwarden</Description>
+    <OutputType>library</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+    <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
+    <ProjectReference Include="..\RustSdk\RustSdk.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bogus" Version="35.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="..\..\Program.cs" />
+  </ItemGroup>
+
+  <!-- Allow integration tests to access internal seeders for validation -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SeederApi.IntegrationTest" />
+  </ItemGroup>
+</Project>

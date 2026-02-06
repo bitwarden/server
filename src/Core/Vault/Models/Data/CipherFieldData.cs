@@ -1,4 +1,7 @@
-﻿using Bit.Core.Vault.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Vault.Enums;
 
 namespace Bit.Core.Vault.Models.Data;
 

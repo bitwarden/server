@@ -2,7 +2,9 @@
 using AutoFixture.Kernel;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
+using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -39,8 +41,10 @@ internal class EfDevice : ICustomization
         fixture.Customizations.Add(new GlobalSettingsBuilder());
         fixture.Customizations.Add(new DeviceBuilder());
         fixture.Customizations.Add(new UserBuilder());
+        fixture.Customizations.Add(new AuthRequestBuilder());
         fixture.Customizations.Add(new EfRepositoryListBuilder<DeviceRepository>());
         fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<AuthRequestRepository>());
     }
 }
 

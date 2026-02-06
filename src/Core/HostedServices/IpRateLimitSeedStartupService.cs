@@ -3,6 +3,8 @@ using Microsoft.Extensions.Hosting;
 
 namespace Bit.Core.HostedServices;
 
+#nullable enable
+
 /// <summary>
 /// A startup service that will seed the IP rate limiting stores with any values in the
 /// GlobalSettings configuration.

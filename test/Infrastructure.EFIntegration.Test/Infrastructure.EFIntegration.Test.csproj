@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
@@ -21,6 +23,9 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Infrastructure.Dapper\Infrastructure.Dapper.csproj" />
       <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+      <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
+      <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
+      <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
       <ProjectReference Include="..\Common\Common.csproj" />
       <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
     </ItemGroup>

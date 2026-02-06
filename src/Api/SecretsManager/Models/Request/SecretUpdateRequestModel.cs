@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Utilities;
 
@@ -23,18 +26,29 @@ public class SecretUpdateRequestModel : IValidatableObject
 
     public Guid[] ProjectIds { get; set; }
 
-    public Secret ToSecret(Guid id, Guid organizationId)
+    public SecretAccessPoliciesRequestsModel AccessPoliciesRequests { get; set; }
+
+    public bool ValueChanged { get; set; } = false;
+
+    public Secret ToSecret(Secret secret)
     {
-        return new Secret()
+        secret.Key = Key;
+        secret.Value = Value;
+        secret.Note = Note;
+        secret.RevisionDate = DateTime.UtcNow;
+
+        if (secret.Projects?.FirstOrDefault()?.Id == ProjectIds?.FirstOrDefault())
         {
-            Id = id,
-            OrganizationId = organizationId,
-            Key = Key,
-            Value = Value,
-            Note = Note,
-            DeletedDate = null,
-            Projects = ProjectIds != null && ProjectIds.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
-        };
+            secret.Projects = null;
+        }
+        else
+        {
+            secret.Projects = ProjectIds != null && ProjectIds.Length != 0
+                ? ProjectIds.Select(x => new Project() { Id = x }).ToList()
+                : [];
+        }
+
+        return secret;
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

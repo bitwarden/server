@@ -5,7 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Microsoft.Extensions.Logging;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 
@@ -13,21 +13,15 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 {
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IEventService _eventService;
-    private readonly IDnsResolverService _dnsResolverService;
-    private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
     private readonly IGlobalSettings _globalSettings;
 
     public CreateOrganizationDomainCommand(
         IOrganizationDomainRepository organizationDomainRepository,
         IEventService eventService,
-        IDnsResolverService dnsResolverService,
-        ILogger<VerifyOrganizationDomainCommand> logger,
         IGlobalSettings globalSettings)
     {
         _organizationDomainRepository = organizationDomainRepository;
         _eventService = eventService;
-        _dnsResolverService = dnsResolverService;
-        _logger = logger;
         _globalSettings = globalSettings;
     }
 
@@ -50,26 +44,16 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
             throw new ConflictException("A domain already exists for this organization.");
         }
 
-        try
-        {
-            if (await _dnsResolverService.ResolveAsync(organizationDomain.DomainName, organizationDomain.Txt))
-            {
-                organizationDomain.SetVerifiedDate();
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("Error verifying Organization domain.", e);
-        }
-
+        // Generate and set DNS TXT Record
+        // DNS-Based Service Discovery RFC: https://www.ietf.org/rfc/rfc6763.txt; see section 6.1
+        // Google uses 43 chars for their TXT record value: https://support.google.com/a/answer/2716802
+        // A random 44 character string was used here to keep parity with prior client-side generation of 47 characters
+        organizationDomain.Txt = string.Join("=", "bw", CoreHelpers.RandomString(44));
         organizationDomain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
-        organizationDomain.SetLastCheckedDate();
 
         var orgDomain = await _organizationDomainRepository.CreateAsync(organizationDomain);
 
         await _eventService.LogOrganizationDomainEventAsync(orgDomain, EventType.OrganizationDomain_Added);
-        await _eventService.LogOrganizationDomainEventAsync(orgDomain,
-            orgDomain.VerifiedDate != null ? EventType.OrganizationDomain_Verified : EventType.OrganizationDomain_NotVerified);
 
         return orgDomain;
     }

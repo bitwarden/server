@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
-    @Name NVARCHAR(50),
+    @Name NVARCHAR(55),
     @OwnerEmail NVARCHAR(256),
     @Skip INT = 0,
     @Take INT = 25
@@ -9,7 +9,7 @@ BEGIN
     SET NOCOUNT ON
     DECLARE @NameLikeSearch NVARCHAR(55) = '%' + @Name + '%'
     DECLARE @OwnerLikeSearch NVARCHAR(55) = @OwnerEmail + '%'
-        
+
     IF @OwnerEmail IS NOT NULL
     BEGIN
         SELECT
@@ -21,11 +21,11 @@ BEGIN
             INNER JOIN
                 [dbo].[User] U ON U.[Id] = OU.[UserId]
         WHERE
-            ((O.[PlanType] >= 2 AND O.[PlanType] <= 5) OR (O.[PlanType] >= 8 AND O.[PlanType] <= 15)) -- All 'Teams' and 'Enterprise' organizations
+            O.[PlanType] NOT IN (0, 1, 6, 7) -- Not 'Free', 'Custom' or 'Families'
             AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] PO WHERE PO.[OrganizationId] = O.[Id])
             AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
             AND (U.[Email] LIKE @OwnerLikeSearch)
-        ORDER BY O.[CreationDate] DESC
+        ORDER BY O.[CreationDate] DESC, O.[Id]
         OFFSET @Skip ROWS
         FETCH NEXT @Take ROWS ONLY
     END
@@ -36,10 +36,10 @@ BEGIN
         FROM
             [dbo].[OrganizationView] O
         WHERE
-            ((O.[PlanType] >= 2 AND O.[PlanType] <= 5) OR (O.[PlanType] >= 8 AND O.[PlanType] <= 15)) -- All 'Teams' and 'Enterprise' organizations
+            O.[PlanType] NOT IN (0, 1, 6, 7) -- Not 'Free', 'Custom' or 'Families'
             AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] PO WHERE PO.[OrganizationId] = O.[Id])
             AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
-        ORDER BY O.[CreationDate] DESC
+        ORDER BY O.[CreationDate] DESC, O.[Id]
         OFFSET @Skip ROWS
         FETCH NEXT @Take ROWS ONLY
     END

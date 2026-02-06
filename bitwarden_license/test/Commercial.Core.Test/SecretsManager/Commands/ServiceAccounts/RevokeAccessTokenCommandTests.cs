@@ -18,13 +18,21 @@ public class RevokeAccessTokenCommandTests
         var apiKey1 = new ApiKey
         {
             Id = Guid.NewGuid(),
-            ServiceAccountId = serviceAccount.Id
+            ServiceAccountId = serviceAccount.Id,
+            Name = "Test Name",
+            Scope = "Test Scope",
+            EncryptedPayload = "Test EncryptedPayload",
+            Key = "Test Key",
         };
 
         var apiKey2 = new ApiKey
         {
             Id = Guid.NewGuid(),
-            ServiceAccountId = serviceAccount.Id
+            ServiceAccountId = serviceAccount.Id,
+            Name = "Test Name",
+            Scope = "Test Scope",
+            EncryptedPayload = "Test EncryptedPayload",
+            Key = "Test Key",
         };
 
         sutProvider.GetDependency<IApiKeyRepository>()

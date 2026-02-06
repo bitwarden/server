@@ -1,8 +1,12 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
 namespace Bit.EventsProcessor;
@@ -10,7 +14,7 @@ namespace Bit.EventsProcessor;
 public class AzureQueueHostedService : IHostedService, IDisposable
 {
     private readonly ILogger<AzureQueueHostedService> _logger;
-    private readonly IConfiguration _configuration;
+    private readonly GlobalSettings _globalSettings;
 
     private Task _executingTask;
     private CancellationTokenSource _cts;
@@ -19,10 +23,10 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
-        IConfiguration configuration)
+        GlobalSettings globalSettings)
     {
         _logger = logger;
-        _configuration = configuration;
+        _globalSettings = globalSettings;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -30,6 +34,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         _logger.LogInformation(Constants.BypassFiltersEventId, "Starting service.");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _executingTask = ExecuteAsync(_cts.Token);
+
         return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
     }
 
@@ -39,8 +44,10 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         {
             return;
         }
+
         _logger.LogWarning("Stopping service.");
-        _cts.Cancel();
+
+        await _cts.CancelAsync();
         await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
         cancellationToken.ThrowIfCancellationRequested();
     }
@@ -50,27 +57,32 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        var storageConnectionString = _configuration["azureStorageConnectionString"];
-        if (string.IsNullOrWhiteSpace(storageConnectionString))
+        var storageConnectionString = _globalSettings.Events.ConnectionString;
+        var queueName = _globalSettings.Events.QueueName;
+        if (string.IsNullOrWhiteSpace(storageConnectionString) ||
+            string.IsNullOrWhiteSpace(queueName))
         {
+            _logger.LogInformation("Azure Queue Hosted Service is disabled. Missing connection string or queue name.");
             return;
         }
 
         var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
         _eventWriteService = new RepositoryEventWriteService(repo);
-        _queueClient = new QueueClient(storageConnectionString, "event");
+        _queueClient = new QueueClient(storageConnectionString, queueName);
 
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var messages = await _queueClient.ReceiveMessagesAsync(32);
+                var messages = await _queueClient.ReceiveMessagesAsync(32,
+                    cancellationToken: cancellationToken);
                 if (messages.Value?.Any() ?? false)
                 {
                     foreach (var message in messages.Value)
                     {
                         await ProcessQueueMessageAsync(message.DecodeMessageText(), cancellationToken);
-                        await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                        await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
+                            cancellationToken);
                     }
                 }
                 else
@@ -78,14 +90,28 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 }
             }
-            catch (Exception e)
+            catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogError(e, "Exception occurred: " + e.Message);
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred processing message block.");
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Task.Delay cancelled during Alpine container shutdown");
+                    break;
+                }
             }
         }
 
-        _logger.LogWarning("Done processing.");
+        _logger.LogWarning("Done processing messages.");
     }
 
     public async Task ProcessQueueMessageAsync(string message, CancellationToken cancellationToken)
@@ -98,28 +124,31 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         try
         {
             _logger.LogInformation("Processing message.");
-            var events = new List<IEvent>();
 
+            var events = new List<IEvent>();
             using var jsonDocument = JsonDocument.Parse(message);
             var root = jsonDocument.RootElement;
             if (root.ValueKind == JsonValueKind.Array)
             {
-                var indexedEntities = root.ToObject<List<EventMessage>>()
-                    .SelectMany(e => EventTableEntity.IndexEvent(e));
+                var indexedEntities = root.Deserialize<List<EventMessage>>()
+                    .SelectMany(EventTableEntity.IndexEvent);
                 events.AddRange(indexedEntities);
             }
             else if (root.ValueKind == JsonValueKind.Object)
             {
-                var eventMessage = root.ToObject<EventMessage>();
+                var eventMessage = root.Deserialize<EventMessage>();
                 events.AddRange(EventTableEntity.IndexEvent(eventMessage));
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             await _eventWriteService.CreateManyAsync(events);
+
             _logger.LogInformation("Processed message.");
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            _logger.LogError("JsonReaderException: Unable to parse message.");
+            _logger.LogError(ex, "Unable to parse message.");
         }
     }
 }

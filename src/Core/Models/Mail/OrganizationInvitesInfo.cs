@@ -1,7 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Mail;
 public class OrganizationInvitesInfo
@@ -15,7 +18,7 @@ public class OrganizationInvitesInfo
         bool initOrganization = false
         )
     {
-        OrganizationName = org.Name;
+        OrganizationName = org.DisplayName();
         OrgSsoIdentifier = org.Identifier;
 
         IsFreeOrg = org.PlanType == PlanType.Free;
@@ -34,7 +37,6 @@ public class OrganizationInvitesInfo
     public bool OrgSsoEnabled { get; }
     public string OrgSsoIdentifier { get; }
     public bool OrgSsoLoginRequiredPolicyEnabled { get; }
-
     public IEnumerable<(OrganizationUser OrgUser, ExpiringToken Token)> OrgUserTokenPairs { get; }
     public Dictionary<Guid, bool> OrgUserHasExistingUserDict { get; }
 

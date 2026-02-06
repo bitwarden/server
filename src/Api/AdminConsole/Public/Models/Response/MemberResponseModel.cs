@@ -1,4 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,8 +17,11 @@ namespace Bit.Api.AdminConsole.Public.Models.Response;
 /// </summary>
 public class MemberResponseModel : MemberBaseModel, IResponseModel
 {
-    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections)
-        : base(user)
+    [JsonConstructor]
+    public MemberResponseModel() { }
+
+    [SetsRequiredMembers]
+    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections) : base(user)
     {
         if (user == null)
         {
@@ -25,11 +33,12 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         Email = user.Email;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
+        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(user.ResetPasswordKey);
     }
 
+    [SetsRequiredMembers]
     public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
-        IEnumerable<CollectionAccessSelection> collections)
-        : base(user)
+        IEnumerable<CollectionAccessSelection> collections) : base(user)
     {
         if (user == null)
         {
@@ -43,6 +52,8 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         TwoFactorEnabled = twoFactorEnabled;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
+        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(user.ResetPasswordKey);
+        SsoExternalId = user.SsoExternalId;
     }
 
     /// <summary>
@@ -91,4 +102,16 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     /// The associated collections that this member can access.
     /// </summary>
     public IEnumerable<AssociationWithPermissionsResponseModel> Collections { get; set; }
+
+    /// <summary>
+    /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
+    /// </summary>
+    [Required]
+    public bool ResetPasswordEnrolled { get; }
+
+    /// <summary>
+    /// SSO external identifier for linking this member to an identity provider.
+    /// </summary>
+    /// <example>sso_external_id_123456</example>
+    public string SsoExternalId { get; set; }
 }

@@ -10,12 +10,6 @@ const AUTH_CLIENT_ID = __ENV.AUTH_CLIENT_ID;
 const AUTH_CLIENT_SECRET = __ENV.AUTH_CLIENT_SECRET;
 
 export const options = {
-  ext: {
-    loadimpact: {
-      projectID: 3639465,
-      name: "Groups",
-    },
-  },
   scenarios: {
     constant_load: {
       executor: "constant-arrival-rate",
@@ -44,7 +38,7 @@ export const options = {
   },
   thresholds: {
     http_req_failed: ["rate<0.01"],
-    http_req_duration: ["p(95)<300"],
+    http_req_duration: ["p(95)<400"],
   },
 };
 

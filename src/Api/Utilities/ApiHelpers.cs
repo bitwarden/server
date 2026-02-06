@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
 using Bit.Core.Exceptions;
@@ -62,9 +65,9 @@ public static class ApiHelpers
                 }
             }
 
-            if (eventTypeHandlers.ContainsKey(eventGridEvent.EventType))
+            if (eventTypeHandlers.TryGetValue(eventGridEvent.EventType, out var eventTypeHandler))
             {
-                await eventTypeHandlers[eventGridEvent.EventType](eventGridEvent);
+                await eventTypeHandler(eventGridEvent);
             }
         }
 

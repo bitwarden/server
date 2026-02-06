@@ -1,4 +1,7 @@
-﻿using System.Reflection;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Reflection;
 
 namespace Bit.Core;
 
@@ -6,6 +9,11 @@ public static class Constants
 {
     public const int BypassFiltersEventId = 12482444;
     public const int FailedSecretVerificationDelay = 2000;
+
+    /// <summary>
+    /// Self-hosted max storage limit in GB (10 TB).
+    /// </summary>
+    public const short SelfHostedMaxStorageGb = 10240;
 
     // File size limits - give 1 MB extra for cushion.
     // Note: if request size limits are changed, 'client_max_body_size'
@@ -22,8 +30,8 @@ public static class Constants
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
-
-    public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
+    public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+    public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -35,6 +43,44 @@ public static class Constants
     /// If true, the organization plan assigned to that provider is updated to a 2020 plan.
     /// </summary>
     public static readonly DateTime ProviderCreatedPriorNov62023 = new DateTime(2023, 11, 6);
+
+    /// <summary>
+    /// When you set the ProrationBehavior to create_prorations,
+    /// Stripe will automatically create prorations for any changes made to the subscription,
+    /// such as changing the plan, adding or removing quantities, or applying discounts.
+    /// </summary>
+    public const string CreateProrations = "create_prorations";
+
+    /// <summary>
+    /// When you set the ProrationBehavior to always_invoice,
+    /// Stripe will always generate an invoice when a subscription update occurs,
+    /// regardless of whether there is a proration or not.
+    /// </summary>
+    public const string AlwaysInvoice = "always_invoice";
+
+    /// <summary>
+    /// Used primarily to determine whether a customer's business is inside or outside the United States
+    /// for billing purposes.
+    /// </summary>
+    public static class CountryAbbreviations
+    {
+        /// <summary>
+        /// Abbreviation for The United States.
+        /// This value must match what Stripe uses for the `Country` field value for the United States.
+        /// </summary>
+        public const string UnitedStates = "US";
+    }
+
+
+    /// <summary>
+    /// Constants for our browser extensions IDs
+    /// </summary>
+    public static class BrowserExtensions
+    {
+        public const string ChromeId = "chrome-extension://nngceckbapebfimnlniiiahkandclblb/";
+        public const string EdgeId = "chrome-extension://jbkfoedolllekgbhcbcoahefnbanhhlh/";
+        public const string OperaId = "chrome-extension://ccnckbpmaceehanjmeomladnmlffdjgn/";
+    }
 }
 
 public static class AuthConstants
@@ -44,7 +90,7 @@ public static class AuthConstants
     public static readonly RangeConstant ARGON2_ITERATIONS = new(2, 10, 3);
     public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
     public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
-
+    public static readonly string NewDeviceVerificationExceptionCacheKeyFormat = "NewDeviceVerificationException_{0}";
 }
 
 public class RangeConstant
@@ -88,20 +134,141 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
-    public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
-    public const string PasswordlessLogin = "passwordless-login";
-    public const string TrustedDeviceEncryption = "trusted-device-encryption";
-    public const string Fido2VaultCredentials = "fido2-vault-credentials";
-    public const string VaultOnboarding = "vault-onboarding";
-    public const string AutofillV2 = "autofill-v2";
-    public const string BrowserFilelessImport = "browser-fileless-import";
-    public const string FlexibleCollections = "flexible-collections";
-    public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
-    public const string BulkCollectionAccess = "bulk-collection-access";
-    public const string AutofillOverlay = "autofill-overlay";
-    public const string ItemShare = "item-share";
-    public const string KeyRotationImprovements = "key-rotation-improvements";
+    /* Admin Console Team */
+    public const string PolicyRequirements = "pm-14439-policy-requirements";
+    public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
+    public const string CreateDefaultLocation = "pm-19467-create-default-location";
+    public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
+    public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
+    public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
+    public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
+    public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
+    public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
+    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
+
+    /* Architecture */
+    public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
+    public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
+    public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
+    public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
+
+    /* Auth Team */
+    public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
+    public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
+    public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
+    public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
+    public const string Otp6Digits = "pm-18612-otp-6-digits";
+    public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
+    public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
+    public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
+    public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
+    public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
+    public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
+    public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
+    public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
+    public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
+    public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
+
+    /* Autofill Team */
+    public const string SSHAgent = "ssh-agent";
+    public const string SSHAgentV2 = "ssh-agent-v2";
+    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
+    public const string NotificationRefresh = "notification-refresh";
+    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
+    public const string WindowsDesktopAutotype = "windows-desktop-autotype";
+    public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
+
+    /* Billing Team */
+    public const string TrialPayment = "PM-8163-trial-payment";
+    public const string PM25379_UseNewOrganizationMetadataStructure = "pm-25379-use-new-organization-metadata-structure";
+    public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
+    public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
+    public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
+    public const string PM23341_Milestone_2 = "pm-23341-milestone-2";
+    public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
+    public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
+    public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
+    public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
+
+    /* Key Management Team */
+    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
+    public const string Argon2Default = "argon2-default";
+    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
+    public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
+    public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
+    public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
+    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
+    public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
+    public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
+    public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
+    public const string ConsolidatedSessionTimeoutComponent = "pm-26056-consolidated-session-timeout-component";
+    public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
+    public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
+    public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
+    public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
+    public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
+
+    /* Mobile Team */
+    public const string AndroidImportLoginsFlow = "import-logins-flow";
+    public const string AndroidMutualTls = "mutual-tls";
+    public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
+    public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
+    public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
+    public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
+    public const string MobileErrorReporting = "mobile-error-reporting";
+    public const string AndroidChromeAutofill = "android-chrome-autofill";
+    public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
+    public const string SendAccess = "pm-19394-send-access-control";
+    public const string CxpImportMobile = "cxp-import-mobile";
+    public const string CxpExportMobile = "cxp-export-mobile";
+
+    /* Platform Team */
+    public const string WebPush = "web-push";
+    public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
+    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
+    public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
+    public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
+
+    /* Tools Team */
+    /// <summary>
+    /// Enable this flag to share the send view used by the web and browser clients
+    /// on the desktop client.
+    /// </summary>
+    public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
+    public const string UseChromiumImporter = "pm-23982-chromium-importer";
+    public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
+    public const string SendUIRefresh = "pm-28175-send-ui-refresh";
+    public const string SendEmailOTP = "pm-19051-send-email-verification";
+
+    /* Vault Team */
+    public const string CipherKeyEncryption = "cipher-key-encryption";
+    public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
+    public const string PhishingDetection = "phishing-detection";
+    public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
+    public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
+    public const string PM23904_RiskInsightsForPremium = "pm-23904-risk-insights-for-premium";
+    public const string PM25083_AutofillConfirmFromSearch = "pm-25083-autofill-confirm-from-search";
+    public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
+    public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
+    public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
+    public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
+    public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
+
+    /* Innovation Team */
+    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
+
+    /* DIRT Team */
+    public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
+    public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
+    public const string EventManagementForHuntress = "event-management-for-huntress";
+    public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
+
+    /* UIF Team */
+    public const string RouterFocusManagement = "router-focus-management";
+
+    /* Secrets Manager Team */
+    public const string SM1719_RemoveSecretsManagerAds = "sm-1719-remove-secrets-manager-ads";
 
     public static List<string> GetAllKeys()
     {
@@ -114,10 +281,6 @@ public static class FeatureFlagKeys
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null
-        return new Dictionary<string, string>()
-        {
-            { TrustedDeviceEncryption, "true" },
-            { Fido2VaultCredentials, "true" }
-        };
+        return null;
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.Security.Claims;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Claims;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Queries.Interfaces;
@@ -21,7 +24,7 @@ public class AccessClientQuery : IAccessClientQuery
         ClaimsPrincipal claimsPrincipal, Guid organizationId)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
         var userId = _userService.GetProperUserId(claimsPrincipal).Value;
         return (accessClient, userId);
     }

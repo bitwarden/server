@@ -1,4 +1,7 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
@@ -31,7 +34,7 @@ public class OrganizationConnectionRequestModel<T> : OrganizationConnectionReque
 
         try
         {
-            ParsedConfig = model.Config.ToObject<T>(JsonHelpers.IgnoreCase);
+            ParsedConfig = model.Config.Deserialize<T>(JsonHelpers.IgnoreCase);
         }
         catch (JsonException)
         {

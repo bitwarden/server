@@ -20,7 +20,7 @@ public class SecretsManagerEventsControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountEvents_NoAccess_Throws(SutProvider<SecretsManagerEventsController> sutProvider,
+    public async Task GetServiceAccountEvents_NoAccess_Throws(SutProvider<SecretsManagerEventsController> sutProvider,
         ServiceAccount data)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
@@ -37,7 +37,7 @@ public class SecretsManagerEventsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountEvents_DateRangeOver_Throws(
+    public async Task GetServiceAccountEvents_DateRangeOver_Throws(
         SutProvider<SecretsManagerEventsController> sutProvider,
         ServiceAccount data)
     {
@@ -59,7 +59,7 @@ public class SecretsManagerEventsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetServiceAccountEvents_Success(SutProvider<SecretsManagerEventsController> sutProvider,
+    public async Task GetServiceAccountEvents_Success(SutProvider<SecretsManagerEventsController> sutProvider,
         ServiceAccount data)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);

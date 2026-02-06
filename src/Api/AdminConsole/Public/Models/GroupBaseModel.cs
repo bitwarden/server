@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Api.AdminConsole.Public.Models;
 
@@ -11,12 +14,6 @@ public abstract class GroupBaseModel
     [Required]
     [StringLength(100)]
     public string Name { get; set; }
-    /// <summary>
-    /// Determines if this group can access all collections within the organization, or only the associated
-    /// collections. If set to <c>true</c>, this option overrides any collection assignments.
-    /// </summary>
-    [Required]
-    public bool? AccessAll { get; set; }
     /// <summary>
     /// External identifier for reference or linking this group to another system, such as a user directory.
     /// </summary>

@@ -1,9 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Fido2NetLib;
 
@@ -17,7 +20,7 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
     [Required]
     [StringLength(50)]
     public string Key { get; set; }
-
+    public string UserVerificationToken { get; set; }
     public User ToUser(User existingUser)
     {
         var providers = existingUser.GetTwoFactorProviders();
@@ -25,7 +28,7 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.Authenticator))
+        else
         {
             providers.Remove(TwoFactorProviderType.Authenticator);
         }
@@ -42,14 +45,17 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
 
 public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IValidatableObject
 {
+    /*
+        String lengths based on Duo's documentation
+        https://github.com/duosecurity/duo_universal_csharp/blob/main/DuoUniversal/Client.cs
+    */
     [Required]
-    [StringLength(50)]
-    public string IntegrationKey { get; set; }
+    [StringLength(20, MinimumLength = 20, ErrorMessage = "Client Id must be exactly 20 characters.")]
+    public string ClientId { get; set; }
     [Required]
-    [StringLength(50)]
-    public string SecretKey { get; set; }
+    [StringLength(40, MinimumLength = 40, ErrorMessage = "Client Secret must be exactly 40 characters.")]
+    public string ClientSecret { get; set; }
     [Required]
-    [StringLength(50)]
     public string Host { get; set; }
 
     public User ToUser(User existingUser)
@@ -57,9 +63,9 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            providers = [];
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.Duo))
+        else
         {
             providers.Remove(TwoFactorProviderType.Duo);
         }
@@ -68,8 +74,8 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         {
             MetaData = new Dictionary<string, object>
             {
-                ["SKey"] = SecretKey,
-                ["IKey"] = IntegrationKey,
+                ["ClientSecret"] = ClientSecret,
+                ["ClientId"] = ClientId,
                 ["Host"] = Host
             },
             Enabled = true
@@ -83,9 +89,9 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         var providers = existingOrg.GetTwoFactorProviders();
         if (providers == null)
         {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
+            providers = [];
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.OrganizationDuo))
+        else
         {
             providers.Remove(TwoFactorProviderType.OrganizationDuo);
         }
@@ -94,8 +100,8 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         {
             MetaData = new Dictionary<string, object>
             {
-                ["SKey"] = SecretKey,
-                ["IKey"] = IntegrationKey,
+                ["ClientSecret"] = ClientSecret,
+                ["ClientId"] = ClientId,
                 ["Host"] = Host
             },
             Enabled = true
@@ -106,10 +112,22 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!DuoApi.ValidHost(Host))
+        var results = new List<ValidationResult>();
+        if (string.IsNullOrWhiteSpace(ClientId))
         {
-            yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
+            results.Add(new ValidationResult("ClientId is required.", [nameof(ClientId)]));
         }
+
+        if (string.IsNullOrWhiteSpace(ClientSecret))
+        {
+            results.Add(new ValidationResult("ClientSecret is required.", [nameof(ClientSecret)]));
+        }
+
+        if (string.IsNullOrWhiteSpace(Host) || !DuoUniversalTokenService.ValidDuoHost(Host))
+        {
+            results.Add(new ValidationResult("Host is invalid.", [nameof(Host)]));
+        }
+        return results;
     }
 }
 
@@ -130,7 +148,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.YubiKey))
+        else
         {
             providers.Remove(TwoFactorProviderType.YubiKey);
         }
@@ -213,7 +231,7 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.Email))
+        else
         {
             providers.Remove(TwoFactorProviderType.Email);
         }
@@ -255,7 +273,7 @@ public class TwoFactorWebAuthnDeleteRequestModel : SecretVerificationRequestMode
             yield return validationResult;
         }
 
-        if (!Id.HasValue || Id < 0 || Id > 5)
+        if (!Id.HasValue)
         {
             yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
         }
@@ -280,4 +298,12 @@ public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
     [Required]
     [StringLength(32)]
     public string RecoveryCode { get; set; }
+}
+
+public class TwoFactorAuthenticatorDisableRequestModel : TwoFactorProviderRequestModel
+{
+    [Required]
+    public string UserVerificationToken { get; set; }
+    [Required]
+    public string Key { get; set; }
 }

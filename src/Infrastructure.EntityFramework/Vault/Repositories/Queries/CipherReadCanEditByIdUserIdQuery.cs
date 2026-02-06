@@ -31,8 +31,8 @@ public class CipherReadCanEditByIdUserIdQuery : IQuery<Cipher>
                     from ou in ou_g.DefaultIfEmpty()
 
                     join cc in dbContext.CollectionCiphers
-                        on new { c.UserId, ou.AccessAll, CipherId = c.Id } equals
-                           new { UserId = (Guid?)null, AccessAll = false, cc.CipherId } into cc_g
+                        on new { c.UserId, CipherId = c.Id } equals
+                           new { UserId = (Guid?)null, cc.CipherId } into cc_g
                     from cc in cc_g.DefaultIfEmpty()
 
                     join cu in dbContext.CollectionUsers
@@ -41,8 +41,8 @@ public class CipherReadCanEditByIdUserIdQuery : IQuery<Cipher>
                     from cu in cu_g.DefaultIfEmpty()
 
                     join gu in dbContext.GroupUsers
-                        on new { c.UserId, CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                           new { UserId = (Guid?)null, CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                        on new { c.UserId, CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                           new { UserId = (Guid?)null, CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
 
                     join g in dbContext.Groups
@@ -50,8 +50,8 @@ public class CipherReadCanEditByIdUserIdQuery : IQuery<Cipher>
                     from g in g_g.DefaultIfEmpty()
 
                     join cg in dbContext.CollectionGroups
-                        on new { g.AccessAll, cc.CollectionId, gu.GroupId } equals
-                           new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
+                        on new { cc.CollectionId, gu.GroupId } equals
+                           new { cg.CollectionId, cg.GroupId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
 
                     where
@@ -60,10 +60,10 @@ public class CipherReadCanEditByIdUserIdQuery : IQuery<Cipher>
                         c.UserId == _userId ||
                         (
                             !c.UserId.HasValue && ou.Status == OrganizationUserStatusType.Confirmed && o.Enabled &&
-                            (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
+                            ((cu == null ? (Guid?)null : cu.CollectionId) != null || (cg == null ? (Guid?)null : cg.CollectionId) != null)
                         )
                     ) &&
-                    (c.UserId.HasValue || ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
+                    (c.UserId.HasValue || !cu.ReadOnly || !cg.ReadOnly)
                     select c;
         return query;
     }

@@ -1,26 +1,33 @@
 ﻿using System.Data;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+
+#nullable enable
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
 {
-    public OrganizationRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    protected readonly ILogger<OrganizationRepository> _logger;
 
-    public OrganizationRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+    public OrganizationRepository(
+        GlobalSettings globalSettings,
+        ILogger<OrganizationRepository> logger)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+    {
+        _logger = logger;
+    }
 
-    public async Task<Organization> GetByIdentifierAsync(string identifier)
+    public async Task<Organization?> GetByIdentifierAsync(string identifier)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -97,7 +104,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<Organization> GetByLicenseKeyAsync(string licenseKey)
+    public async Task<Organization?> GetByLicenseKeyAsync(string licenseKey)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -110,7 +117,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id)
+    public async Task<SelfHostedOrganizationDetails?> GetSelfHostedOrganizationDetailsById(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -153,11 +160,95 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
     public async Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId)
     {
+        _logger.LogInformation("AC-1758: Executing GetOwnerEmailAddressesById (Dapper)");
+
         await using var connection = new SqlConnection(ConnectionString);
 
         return await connection.QueryAsync<string>(
             $"[{Schema}].[{Table}_ReadOwnerEmailAddressesById]",
             new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByClaimedUserEmailDomain]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.ToList();
+        }
+    }
+
+    public async Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(
+        Guid userId,
+        ProviderType providerType)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<Organization>(
+                $"[{Schema}].[{Table}_ReadAddableToProviderByUserId]",
+                new { UserId = userId, ProviderType = providerType },
+                commandType: CommandType.StoredProcedure);
+
+            return result.ToList();
+        }
+    }
+
+    public async Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        return (await connection.QueryAsync<Organization>(
+            $"[{Schema}].[{Table}_ReadManyByIds]",
+            new { OrganizationIds = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure))
+            .ToList();
+    }
+
+    public async Task<OrganizationSeatCounts> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<OrganizationSeatCounts>(
+                "[dbo].[Organization_ReadOccupiedSeatCountByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.SingleOrDefault() ?? new OrganizationSeatCounts();
+        }
+    }
+
+    public async Task<IEnumerable<Organization>> GetOrganizationsForSubscriptionSyncAsync()
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        return await connection.QueryAsync<Organization>(
+            "[dbo].[Organization_GetOrganizationsForSubscriptionSync]",
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task UpdateSuccessfulOrganizationSyncStatusAsync(IEnumerable<Guid> successfulOrganizations, DateTime syncDate)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync("[dbo].[Organization_UpdateSubscriptionStatus]",
+            new
+            {
+                SuccessfulOrganizations = successfulOrganizations.ToGuidIdArrayTVP(),
+                SyncDate = syncDate
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
+            new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
     }
 }

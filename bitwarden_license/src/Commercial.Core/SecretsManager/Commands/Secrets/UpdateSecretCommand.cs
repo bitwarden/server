@@ -1,6 +1,7 @@
-﻿using Bit.Core.Exceptions;
+﻿#nullable enable
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Secrets;
@@ -14,21 +15,8 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> UpdateAsync(Secret updatedSecret)
+    public async Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPolicyUpdates)
     {
-        var secret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
-        if (secret == null)
-        {
-            throw new NotFoundException();
-        }
-
-        secret.Key = updatedSecret.Key;
-        secret.Value = updatedSecret.Value;
-        secret.Note = updatedSecret.Note;
-        secret.Projects = updatedSecret.Projects;
-        secret.RevisionDate = DateTime.UtcNow;
-
-        await _secretRepository.UpdateAsync(secret);
-        return secret;
+        return await _secretRepository.UpdateAsync(secret, accessPolicyUpdates);
     }
 }

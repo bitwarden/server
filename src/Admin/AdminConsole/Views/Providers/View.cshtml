@@ -1,0 +1,15 @@
+﻿@model ProviderViewModel
+@{
+    ViewData["Title"] = "Provider: " + Model.Provider.DisplayName();
+}
+
+<h1>Provider <small>@Model.Provider.DisplayName()</small></h1>
+
+<h2>Information</h2>
+@await Html.PartialAsync("_ViewInformation", Model)
+@if (Model.ProviderPlanViewModels.Any())
+{
+    @await Html.PartialAsync("ProviderPlans", Model.ProviderPlanViewModels)
+}
+@await Html.PartialAsync("Admins", Model)
+@await Html.PartialAsync("Organizations", Model)

@@ -1,26 +1,44 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
 public class KeysRequestModel
 {
+    [Obsolete("Use AccountKeys.AccountPublicKey instead")]
+    [Required]
     public string PublicKey { get; set; }
+    [Obsolete("Use AccountKeys.UserKeyEncryptedAccountPrivateKey instead")]
     [Required]
     public string EncryptedPrivateKey { get; set; }
+    public AccountKeysRequestModel AccountKeys { get; set; }
 
+    [Obsolete("Use SetAccountKeysForUserCommand instead")]
     public User ToUser(User existingUser)
     {
-        if (string.IsNullOrWhiteSpace(existingUser.PublicKey) && !string.IsNullOrWhiteSpace(PublicKey))
+        if (string.IsNullOrWhiteSpace(PublicKey) || string.IsNullOrWhiteSpace(EncryptedPrivateKey))
+        {
+            throw new InvalidOperationException("Public and private keys are required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(existingUser.PublicKey) && string.IsNullOrWhiteSpace(existingUser.PrivateKey))
         {
             existingUser.PublicKey = PublicKey;
-        }
-
-        if (string.IsNullOrWhiteSpace(existingUser.PrivateKey))
-        {
             existingUser.PrivateKey = EncryptedPrivateKey;
+            return existingUser;
         }
-
-        return existingUser;
+        else if (PublicKey == existingUser.PublicKey && CoreHelpers.FixedTimeEquals(EncryptedPrivateKey, existingUser.PrivateKey))
+        {
+            return existingUser;
+        }
+        else
+        {
+            throw new InvalidOperationException("Cannot replace existing key(s) with new key(s).");
+        }
     }
 }

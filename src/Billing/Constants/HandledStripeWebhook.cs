@@ -12,4 +12,6 @@ public static class HandledStripeWebhook
     public const string InvoiceCreated = "invoice.created";
     public const string PaymentMethodAttached = "payment_method.attached";
     public const string CustomerUpdated = "customer.updated";
+    public const string InvoiceFinalized = "invoice.finalized";
+    public const string SetupIntentSucceeded = "setup_intent.succeeded";
 }

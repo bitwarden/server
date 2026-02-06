@@ -1,5 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;
@@ -40,10 +43,9 @@ public class OrganizationUpgradeRequestModel
             {
                 BillingAddressCountry = BillingAddressCountry,
                 BillingAddressPostalCode = BillingAddressPostalCode
-            }
+            },
+            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
         };
-
-        Keys?.ToOrganizationUpgrade(orgUpgrade);
 
         return orgUpgrade;
     }

@@ -1,15 +1,19 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Infrastructure;
-using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Options;
@@ -349,7 +353,9 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         }
 
         var spEntityId = new Sustainsys.Saml2.Metadata.EntityId(
-            SsoConfigurationData.BuildSaml2ModulePath(_globalSettings.BaseServiceUri.Sso));
+            SsoConfigurationData.BuildSaml2ModulePath(
+                _globalSettings.BaseServiceUri.Sso,
+                config.SpUniqueEntityId ? name : null));
         bool? allowCreate = null;
         if (config.SpNameIdFormat != Saml2NameIdFormat.Transient)
         {
@@ -411,11 +417,11 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             SPOptions = spOptions,
             SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
             SignOutScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme,
-            CookieManager = new IdentityServer.DistributedCacheCookieManager(),
+            CookieManager = new DistributedCacheCookieManager(),
         };
         options.IdentityProviders.Add(idp);
 
-        return new DynamicAuthenticationScheme(name, name, typeof(Saml2BitHandler), options, SsoType.Saml2);
+        return new DynamicAuthenticationScheme(name, name, typeof(Saml2Handler), options, SsoType.Saml2);
     }
 
     private NameIdFormat GetNameIdFormat(Saml2NameIdFormat format)

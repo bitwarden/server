@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using OtpNet;
@@ -10,15 +13,12 @@ public class TwoFactorAuthenticatorResponseModel : ResponseModel
     public TwoFactorAuthenticatorResponseModel(User user)
         : base("twoFactorAuthenticator")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
-        if (provider?.MetaData?.ContainsKey("Key") ?? false)
+        if (provider?.MetaData?.TryGetValue("Key", out var keyValue) ?? false)
         {
-            Key = (string)provider.MetaData["Key"];
+            Key = (string)keyValue;
             Enabled = provider.Enabled;
         }
         else
@@ -31,4 +31,5 @@ public class TwoFactorAuthenticatorResponseModel : ResponseModel
 
     public bool Enabled { get; set; }
     public string Key { get; set; }
+    public string UserVerificationToken { get; set; }
 }

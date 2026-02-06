@@ -32,8 +32,10 @@ public class ProviderOrganizationOrganizationDetailsReadByProviderIdQuery : IQue
             CreationDate = x.po.CreationDate,
             RevisionDate = x.po.RevisionDate,
             UserCount = x.o.OrganizationUsers.Count(ou => ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed),
+            OccupiedSeats = x.o.OrganizationUsers.Count(ou => ou.Status >= 0),
             Seats = x.o.Seats,
             Plan = x.o.Plan,
+            PlanType = x.o.PlanType,
             Status = x.o.Status
         });
     }

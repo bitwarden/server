@@ -1,4 +1,7 @@
-﻿using Bit.Api.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -18,14 +21,12 @@ public class GroupResponseModel : ResponseModel
         Id = group.Id;
         OrganizationId = group.OrganizationId;
         Name = group.Name;
-        AccessAll = group.AccessAll;
         ExternalId = group.ExternalId;
     }
 
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public string Name { get; set; }
-    public bool AccessAll { get; set; }
     public string ExternalId { get; set; }
 }
 

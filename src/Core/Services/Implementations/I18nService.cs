@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿#nullable enable
+
 using Bit.Core.Resources;
 using Microsoft.Extensions.Localization;
 
@@ -10,8 +11,8 @@ public class I18nService : II18nService
 
     public I18nService(IStringLocalizerFactory factory)
     {
-        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
-        _localizer = factory.Create("SharedResources", assemblyName.Name);
+        var assemblyName = typeof(SharedResources).Assembly.GetName()!;
+        _localizer = factory.Create("SharedResources", assemblyName.Name!);
     }
 
     public LocalizedString GetLocalizedHtmlString(string key)
@@ -19,17 +20,19 @@ public class I18nService : II18nService
         return _localizer[key];
     }
 
-    public LocalizedString GetLocalizedHtmlString(string key, params object[] args)
+    public LocalizedString GetLocalizedHtmlString(string key, params object?[] args)
     {
+#nullable disable // IStringLocalizer does actually support null args, it is annotated incorrectly: https://github.com/dotnet/aspnetcore/issues/44251
         return _localizer[key, args];
+#nullable enable
     }
 
-    public string Translate(string key, params object[] args)
+    public string Translate(string key, params object?[] args)
     {
         return string.Format(GetLocalizedHtmlString(key).ToString(), args);
     }
 
-    public string T(string key, params object[] args)
+    public string T(string key, params object?[] args)
     {
         return Translate(key, args);
     }

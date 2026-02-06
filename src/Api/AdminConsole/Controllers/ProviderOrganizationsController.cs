@@ -1,10 +1,15 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Providers;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -16,22 +21,30 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class ProviderOrganizationsController : Controller
 {
-
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderService _providerService;
-    private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IProviderService _providerService;
+    private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
+    private readonly IUserService _userService;
 
     public ProviderOrganizationsController(
+        ICurrentContext currentContext,
+        IOrganizationRepository organizationRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderRepository providerRepository,
         IProviderService providerService,
-        IUserService userService,
-        ICurrentContext currentContext)
+        IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
+        IUserService userService)
     {
-        _providerOrganizationRepository = providerOrganizationRepository;
-        _providerService = providerService;
-        _userService = userService;
         _currentContext = currentContext;
+        _organizationRepository = organizationRepository;
+        _providerOrganizationRepository = providerOrganizationRepository;
+        _providerRepository = providerRepository;
+        _providerService = providerService;
+        _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
+        _userService = userService;
     }
 
     [HttpGet("")]
@@ -74,12 +87,12 @@ public class ProviderOrganizationsController : Controller
         }
 
         var organizationSignup = model.OrganizationCreateRequest.ToOrganizationSignup(user);
+        organizationSignup.IsFromProvider = true;
         var result = await _providerService.CreateOrganizationAsync(providerId, organizationSignup, model.ClientOwnerEmail, user);
         return new ProviderOrganizationResponseModel(result);
     }
 
     [HttpDelete("{id:guid}")]
-    [HttpPost("{id:guid}/delete")]
     public async Task Delete(Guid providerId, Guid id)
     {
         if (!_currentContext.ManageProviderOrganizations(providerId))
@@ -87,7 +100,22 @@ public class ProviderOrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        await _providerService.RemoveOrganizationAsync(providerId, id, userId.Value);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(id);
+
+        var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+
+        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(
+            provider,
+            providerOrganization,
+            organization);
+    }
+
+    [HttpPost("{id:guid}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostDelete(Guid providerId, Guid id)
+    {
+        await Delete(providerId, id);
     }
 }

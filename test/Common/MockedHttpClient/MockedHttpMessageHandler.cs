@@ -8,6 +8,8 @@ public class MockedHttpMessageHandler : HttpMessageHandler
 {
     private readonly List<IHttpRequestMatcher> _matchers = new();
 
+    public List<HttpRequestMessage> CapturedRequests { get; } = new List<HttpRequestMessage>();
+
     /// <summary>
     /// The fallback handler to use when the request does not match any of the provided matchers.
     /// </summary>
@@ -16,6 +18,7 @@ public class MockedHttpMessageHandler : HttpMessageHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        CapturedRequests.Add(request);
         var matcher = _matchers.FirstOrDefault(x => x.Matches(request));
         if (matcher == null)
         {

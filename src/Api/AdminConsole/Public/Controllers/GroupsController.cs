@@ -1,4 +1,7 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
@@ -110,8 +113,8 @@ public class GroupsController : Controller
     public async Task<IActionResult> Post([FromBody] GroupCreateUpdateRequestModel model)
     {
         var group = model.ToGroup(_currentContext.OrganizationId.Value);
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
         var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
         await _createGroupCommand.CreateGroupAsync(group, organization, associations);
         var response = new GroupResponseModel(group, associations);
         return new JsonResult(response);
@@ -139,8 +142,8 @@ public class GroupsController : Controller
         }
 
         var updatedGroup = model.ToGroup(existingGroup);
-        var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
         var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
         await _updateGroupCommand.UpdateGroupAsync(updatedGroup, organization, associations);
         var response = new GroupResponseModel(updatedGroup, associations);
         return new JsonResult(response);

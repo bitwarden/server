@@ -5,6 +5,8 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepository, IRepository<T, TId>
@@ -20,7 +22,7 @@ public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepositor
 
     protected Func<DatabaseContext, DbSet<TEntity>> GetDbSet { get; private set; }
 
-    public virtual async Task<T> GetByIdAsync(TId id)
+    public virtual async Task<T?> GetByIdAsync(TId id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

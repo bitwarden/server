@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 
 namespace Bit.Core.Vault.Models.Data;
 
@@ -26,6 +29,7 @@ public class CipherLoginData : CipherData
         public CipherLoginUriData() { }
 
         public string Uri { get; set; }
+        public string UriChecksum { get; set; }
         public UriMatchType? Match { get; set; } = null;
     }
 }

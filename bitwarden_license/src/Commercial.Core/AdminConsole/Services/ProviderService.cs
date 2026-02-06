@@ -1,11 +1,24 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -15,14 +28,21 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
+using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Services;
 
 public class ProviderService : IProviderService
 {
-    public static PlanType[] ProviderDisallowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
+    private static readonly PlanType[] _resellerDisallowedOrganizationTypes = [
+        PlanType.Free,
+        PlanType.FamiliesAnnually2025,
+        PlanType.FamiliesAnnually2019,
+        PlanType.FamiliesAnnually
+    ];
 
     private readonly IDataProtector _dataProtector;
     private readonly IMailService _mailService;
@@ -37,13 +57,24 @@ public class ProviderService : IProviderService
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IFeatureService _featureService;
+    private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderBillingService _providerBillingService;
+    private readonly IPricingClient _pricingClient;
+    private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IStripeAdapter stripeAdapter)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
+        IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
+        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
+        IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -58,9 +89,16 @@ public class ProviderService : IProviderService
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
+        _featureService = featureService;
+        _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
+        _applicationCacheService = applicationCacheService;
+        _providerBillingService = providerBillingService;
+        _pricingClient = pricingClient;
+        _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
-    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
+    public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TokenizedPaymentMethod paymentMethod, BillingAddress billingAddress)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
         if (owner == null)
@@ -85,7 +123,23 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        provider.Status = ProviderStatusType.Created;
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerUserId);
+
+            if (organizationAutoConfirmPolicyRequirement
+                .CannotCreateProvider())
+            {
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
+            }
+        }
+
+        var customer = await _providerBillingService.SetupCustomer(provider, paymentMethod, billingAddress);
+        provider.GatewayCustomerId = customer.Id;
+        var subscription = await _providerBillingService.SetupSubscription(provider);
+        provider.GatewaySubscriptionId = subscription.Id;
+        provider.Status = ProviderStatusType.Billable;
         await _providerRepository.UpsertAsync(provider);
 
         providerUser.Key = key;
@@ -101,7 +155,15 @@ public class ProviderService : IProviderService
             throw new ArgumentException("Cannot create provider this way.");
         }
 
+        var existingProvider = await _providerRepository.GetByIdAsync(provider.Id);
+        var enabledStatusChanged = existingProvider != null && existingProvider.Enabled != provider.Enabled;
+
         await _providerRepository.ReplaceAsync(provider);
+
+        if (enabledStatusChanged && (provider.Type == ProviderType.Msp || provider.Type == ProviderType.BusinessUnit))
+        {
+            await UpdateClientOrganizationsEnabledStatusAsync(provider.Id, provider.Enabled);
+        }
     }
 
     public async Task<List<ProviderUser>> InviteUserAsync(ProviderUserInvite<string> invite)
@@ -205,6 +267,18 @@ public class ProviderService : IProviderService
             throw new BadRequestException("User email does not match invite.");
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+            if (organizationAutoConfirmPolicyRequirement
+                .CannotJoinProvider())
+            {
+                throw new BadRequestException(new UserCannotJoinProvider().Message);
+            }
+        }
+
         providerUser.Status = ProviderUserStatusType.Accepted;
         providerUser.UserId = user.Id;
         providerUser.Email = null;
@@ -239,16 +313,28 @@ public class ProviderService : IProviderService
 
         foreach (var user in users)
         {
-            if (!keyedFilteredUsers.ContainsKey(user.Id))
+            if (!keyedFilteredUsers.TryGetValue(user.Id, out var providerUser))
             {
                 continue;
             }
-            var providerUser = keyedFilteredUsers[user.Id];
             try
             {
                 if (providerUser.Status != ProviderUserStatusType.Accepted || providerUser.ProviderId != providerId)
                 {
                     throw new BadRequestException("Invalid user.");
+                }
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+                {
+                    var organizationAutoConfirmPolicyRequirement = await _policyRequirementQuery
+                        .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+
+                    if (organizationAutoConfirmPolicyRequirement
+                        .CannotJoinProvider())
+                    {
+                        result.Add(Tuple.Create(providerUser, new UserCannotJoinProvider().Message));
+                        continue;
+                    }
                 }
 
                 providerUser.Status = ProviderUserStatusType.Confirmed;
@@ -257,7 +343,7 @@ public class ProviderService : IProviderService
 
                 await _providerUserRepository.ReplaceAsync(providerUser);
                 events.Add((providerUser, EventType.ProviderUser_Confirmed, null));
-                await _mailService.SendProviderConfirmedEmailAsync(provider.Name, user.Email);
+                await _mailService.SendProviderConfirmedEmailAsync(provider.DisplayName(), user.Email);
                 result.Add(Tuple.Create(providerUser, ""));
             }
             catch (BadRequestException e)
@@ -331,7 +417,7 @@ public class ProviderService : IProviderService
                 var email = user == null ? providerUser.Email : user.Email;
                 if (!string.IsNullOrWhiteSpace(email))
                 {
-                    await _mailService.SendProviderUserRemoved(provider.Name, email);
+                    await _mailService.SendProviderUserRemoved(provider.DisplayName(), email);
                 }
 
                 result.Add(Tuple.Create(providerUser, ""));
@@ -359,7 +445,10 @@ public class ProviderService : IProviderService
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        ThrowOnInvalidPlanType(organization.PlanType);
+
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        ThrowOnInvalidPlanType(provider.Type, organization.PlanType);
 
         if (organization.UseSecretsManager)
         {
@@ -374,8 +463,20 @@ public class ProviderService : IProviderService
             Key = key,
         };
 
-        await ApplyProviderPriceRateAsync(organizationId, providerId);
+        await ApplyProviderPriceRateAsync(organization, provider);
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
+
+        organization.BillingEmail = provider.BillingEmail;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
+        {
+            await _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            {
+                Email = provider.BillingEmail
+            });
+        }
+
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
     }
 
@@ -400,44 +501,47 @@ public class ProviderService : IProviderService
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
-    private async Task ApplyProviderPriceRateAsync(Guid organizationId, Guid providerId)
+    private async Task ApplyProviderPriceRateAsync(Organization organization, Provider provider)
     {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
         // if a provider was created before Nov 6, 2023.If true, the organization plan assigned to that provider is updated to a 2020 plan.
         if (provider.CreationDate >= Constants.ProviderCreatedPriorNov62023)
         {
             return;
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetStripeSeatPlanId(organization.PlanType));
-        var extractedPlanType = PlanTypeMappings(organization);
-        if (subscriptionItem != null)
+        if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+
+            var subscriptionItem = await GetSubscriptionItemAsync(
+                organization.GatewaySubscriptionId,
+                plan.PasswordManager.StripeSeatPlanId);
+
+            var extractedPlanType = PlanTypeMappings(organization);
+            var extractedPlan = await _pricingClient.GetPlanOrThrow(extractedPlanType);
+
+            if (subscriptionItem != null)
+            {
+                await UpdateSubscriptionAsync(subscriptionItem, extractedPlan.PasswordManager.StripeSeatPlanId, organization);
+            }
         }
 
         await _organizationRepository.UpsertAsync(organization);
     }
 
-    private async Task<Stripe.SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
+    private async Task<SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
     {
-        var subscriptionDetails = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
+        var subscriptionDetails = await _stripeAdapter.GetSubscriptionAsync(subscriptionId);
         return subscriptionDetails.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
-    private static string GetStripeSeatPlanId(PlanType planType)
-    {
-        return StaticStore.GetPlan(planType).PasswordManager.StripeSeatPlanId;
-    }
-
-    private async Task UpdateSubscriptionAsync(Stripe.SubscriptionItem subscriptionItem, string extractedPlanType, Organization organization)
+    private async Task UpdateSubscriptionAsync(SubscriptionItem subscriptionItem, string extractedPlanType, Organization organization)
     {
         try
         {
             if (subscriptionItem.Price.Id != extractedPlanType)
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(subscriptionItem.Subscription,
+                await _stripeAdapter.UpdateSubscriptionAsync(subscriptionItem.Subscription,
                     new Stripe.SubscriptionUpdateOptions
                     {
                         Items = new List<Stripe.SubscriptionItemOptions>
@@ -494,54 +598,53 @@ public class ProviderService : IProviderService
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
         OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
     {
-        ThrowOnInvalidPlanType(organizationSignup.Plan);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
 
-        var (organization, _) = await _organizationService.SignUpAsync(organizationSignup, true);
+        ThrowOnInvalidPlanType(provider.Type, organizationSignup.Plan);
+
+        var signUpResponse = await _providerClientOrganizationSignUpCommand.SignUpClientOrganizationAsync(organizationSignup);
 
         var providerOrganization = new ProviderOrganization
         {
             ProviderId = providerId,
-            OrganizationId = organization.Id,
+            OrganizationId = signUpResponse.Organization.Id,
             Key = organizationSignup.OwnerKey,
         };
 
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+        // Give the owner Can Manage access over the default collection
+        // The orgUser is not available when the org is created so we have to do it here as part of the invite
+        var defaultOwnerAccess = signUpResponse.DefaultCollection != null
+            ?
+            [
+                new CollectionAccessSelection
+                {
+                    Id = signUpResponse.DefaultCollection.Id,
+                    HidePasswords = false,
+                    ReadOnly = false,
+                    Manage = true
+                }
+            ]
+            : Array.Empty<CollectionAccessSelection>();
+
+        await _organizationService.InviteUsersAsync(signUpResponse.Organization.Id, user.Id, systemUser: null,
             new (OrganizationUserInvite, string)[]
             {
                 (
                     new OrganizationUserInvite
                     {
                         Emails = new[] { clientOwnerEmail },
-                        AccessAll = true,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
-                        Collections = Array.Empty<CollectionAccessSelection>(),
+                        Collections = defaultOwnerAccess,
                     },
                     null
                 )
             });
 
         return providerOrganization;
-    }
-
-    public async Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
-    {
-        var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
-        if (providerOrganization == null || providerOrganization.ProviderId != providerId)
-        {
-            throw new BadRequestException("Invalid organization.");
-        }
-
-        if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] { }, includeProvider: false))
-        {
-            throw new BadRequestException("Organization needs to have at least one confirmed owner.");
-        }
-
-        await _providerOrganizationRepository.DeleteAsync(providerOrganization);
-        await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
     }
 
     public async Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId)
@@ -580,12 +683,50 @@ public class ProviderService : IProviderService
         }
     }
 
+    public async Task InitiateDeleteAsync(Provider provider, string providerAdminEmail)
+    {
+        if (string.IsNullOrWhiteSpace(provider.Name))
+        {
+            throw new BadRequestException("Provider name not found.");
+        }
+        var providerAdmin = await _userRepository.GetByEmailAsync(providerAdminEmail);
+        if (providerAdmin == null)
+        {
+            throw new BadRequestException("Provider admin not found.");
+        }
+
+        var providerAdminOrgUser = await _providerUserRepository.GetByProviderUserAsync(provider.Id, providerAdmin.Id);
+        if (providerAdminOrgUser == null || providerAdminOrgUser.Status != ProviderUserStatusType.Confirmed ||
+            providerAdminOrgUser.Type != ProviderUserType.ProviderAdmin)
+        {
+            throw new BadRequestException("Org admin not found.");
+        }
+
+        var token = _providerDeleteTokenDataFactory.Protect(new ProviderDeleteTokenable(provider, 1));
+        await _mailService.SendInitiateDeletProviderEmailAsync(providerAdminEmail, provider, token);
+    }
+
+    public async Task DeleteAsync(Provider provider, string token)
+    {
+        if (!_providerDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.IsValid(provider))
+        {
+            throw new BadRequestException("Invalid token.");
+        }
+        await DeleteAsync(provider);
+    }
+
+    public async Task DeleteAsync(Provider provider)
+    {
+        await _providerRepository.DeleteAsync(provider);
+        await _applicationCacheService.DeleteProviderAbilityAsync(provider.Id);
+    }
+
     private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
     {
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
         var token = _dataProtector.Protect(
             $"ProviderUserInvite {providerUser.Id} {providerUser.Email} {nowMillis}");
-        await _mailService.SendProviderInviteEmailAsync(provider.Name, providerUser, token, providerUser.Email);
+        await _mailService.SendProviderInviteEmailAsync(provider.DisplayName(), providerUser, token, providerUser.Email);
     }
 
     private async Task<bool> HasConfirmedProviderAdminExceptAsync(Guid providerId, IEnumerable<Guid> providerUserIds)
@@ -597,11 +738,46 @@ public class ProviderService : IProviderService
         return confirmedOwnersIds.Except(providerUserIds).Any();
     }
 
-    private void ThrowOnInvalidPlanType(PlanType requestedType)
+    private void ThrowOnInvalidPlanType(ProviderType providerType, PlanType requestedType)
     {
-        if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
+        switch (providerType)
         {
-            throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
+            case ProviderType.Msp:
+                if (requestedType is not (PlanType.TeamsMonthly or PlanType.EnterpriseMonthly))
+                {
+                    throw new BadRequestException($"Managed Service Providers cannot manage organizations with the plan type {requestedType}. Only Teams (Monthly) and Enterprise (Monthly) are allowed.");
+                }
+                break;
+            case ProviderType.BusinessUnit:
+                if (requestedType is not (PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually))
+                {
+                    throw new BadRequestException($"Business Unit Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
+                }
+                break;
+            case ProviderType.Reseller:
+                if (_resellerDisallowedOrganizationTypes.Contains(requestedType))
+                {
+                    throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
+                }
+                break;
+            default:
+                throw new BadRequestException($"Unsupported provider type {providerType}.");
+        }
+    }
+
+    private async Task UpdateClientOrganizationsEnabledStatusAsync(Guid providerId, bool enabled)
+    {
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization != null && organization.Enabled != enabled)
+            {
+                organization.Enabled = enabled;
+                await _organizationRepository.ReplaceAsync(organization);
+                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            }
         }
     }
 }

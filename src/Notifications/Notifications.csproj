@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <Sdk Name="Bitwarden.Server.Sdk" />
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Notifications</UserSecretsId>
@@ -7,8 +8,12 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications-SelfHost' " />
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="6.0.25" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="6.0.25" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="8.0.8" />
+  </ItemGroup>
+
+  <ItemGroup Label="Pinned transitive dependencies">
+    <PackageReference Include="MessagePack" Version="2.5.192" />
   </ItemGroup>
 
   <ItemGroup>

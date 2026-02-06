@@ -1,8 +1,18 @@
-﻿namespace Bit.Server;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Server;
 
 public class Program
 {
     public static void Main(string[] args)
+    {
+        var builder = CreateWebHostBuilder(args);
+        var host = builder.Build();
+        host.Run();
+    }
+
+    public static IWebHostBuilder CreateWebHostBuilder(string[] args)
     {
         var config = new ConfigurationBuilder()
             .AddCommandLine(args)
@@ -34,7 +44,6 @@ public class Program
             builder.UseWebRoot(webRoot);
         }
 
-        var host = builder.Build();
-        host.Run();
+        return builder;
     }
 }

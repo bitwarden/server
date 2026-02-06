@@ -23,8 +23,8 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class OrganizationUserRepositoryTests
 {
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async void CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
-        OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
+    public async Task CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
+        OrganizationUserCompare equalityComparer, List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo)
@@ -61,13 +61,13 @@ public class OrganizationUserRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async void ReplaceAsync_Works_DataMatches(
+    public async Task ReplaceAsync_Works_DataMatches(
         OrganizationUser postOrgUser,
         OrganizationUser replaceOrgUser,
         User user,
         Organization org,
         OrganizationUserCompare equalityComparer,
-        List<EfRepo.OrganizationUserRepository> suts,
+        List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
@@ -113,7 +113,7 @@ public class OrganizationUserRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfRepo.OrganizationUserRepository> suts,
+    public async Task DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo)
@@ -166,7 +166,7 @@ public class OrganizationUserRepositoryTests
     [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, false)]     // Policy disabled
     [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false)]      // No policy of Type
     [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, false)]        // User not minStatus
-    public async void GetByUserIdWithPolicyDetailsAsync_Works_DataMatches(
+    public async Task GetByUserIdWithPolicyDetailsAsync_Works_DataMatches(
         // Inline data
         OrganizationUserType userType,
         bool canManagePolicies,
@@ -188,7 +188,7 @@ public class OrganizationUserRepositoryTests
         List<EfAdminConsoleRepo.PolicyRepository> efPolicyRepository,
         List<EfRepo.UserRepository> efUserRepository,
         List<EfRepo.OrganizationRepository> efOrganizationRepository,
-        List<EfRepo.OrganizationUserRepository> suts,
+        List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
         List<EfAdminConsoleRepo.ProviderRepository> efProviderRepository,
         List<EfAdminConsoleRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
         List<EfAdminConsoleRepo.ProviderUserRepository> efProviderUserRepository,

@@ -1,0 +1,71 @@
+name: Testing
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+      - "rc"
+      - "hotfix-rc"
+  pull_request:
+
+env:
+  _AZ_REGISTRY: "bitwardenprod.azurecr.io"
+
+jobs:
+  testing:
+    name: Run tests
+    if: ${{ startsWith(github.head_ref, 'version_bump_') == false }}
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # stable
+        with:
+          toolchain: stable
+
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+
+      - name: Print environment
+        run: |
+          dotnet --info
+          nuget help | grep Version
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+
+      - name: Remove SQL project
+        run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
+
+      - name: Test OSS solution
+        run: dotnet test ./test --configuration Debug --logger "trx;LogFileName=oss-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
+
+      - name: Test Bitwarden solution
+        run: dotnet test ./bitwarden_license/test --configuration Debug --logger "trx;LogFileName=bw-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
+
+      - name: Report test results
+        uses: dorny/test-reporter@b082adf0eced0765477756c2a610396589b8c637 # v2.5.0
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !cancelled() }}
+        with:
+          name: Test Results
+          path: "**/*-test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: true
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2

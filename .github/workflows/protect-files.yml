@@ -1,9 +1,7 @@
 # Runs if there are changes to the paths: list.
 # Starts a matrix job to check for modified files, then sets output based on the results.
 # The input decides if the label job is ran, adding a label to the PR.
----
-
-name: Protect Files
+name: Protect files
 
 on:
   pull_request:
@@ -17,7 +15,10 @@ on:
 jobs:
   changed-files:
     name: Check for file changes
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: write
     outputs:
       changes: ${{steps.check-changes.outputs.changes_detected}}
 
@@ -29,10 +30,11 @@ jobs:
             path: util/Migrator/DbScripts
             label: "DB-migrations-changed"
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+      - name: Check out repo
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 2
+          persist-credentials: false
 
       - name: Check for file changes
         id: check-changes
@@ -42,9 +44,9 @@ jobs:
           for file in $MODIFIED_FILES
           do
             if [[ $file == *"${{ matrix.path }}"* ]]; then
-              echo "changes_detected=true" >> $GITHUB_OUTPUT
+              echo "changes_detected=true" >> "$GITHUB_OUTPUT"
               break
-            else echo "changes_detected=false" >> $GITHUB_OUTPUT
+            else echo "changes_detected=false" >> "$GITHUB_OUTPUT"
             fi
           done
 

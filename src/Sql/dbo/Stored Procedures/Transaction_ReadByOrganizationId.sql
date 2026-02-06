@@ -1,14 +1,16 @@
 ﻿CREATE PROCEDURE [dbo].[Transaction_ReadByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER
+    @OrganizationId UNIQUEIDENTIFIER,
+    @Limit INT,
+    @StartAfter DATETIME2 = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT
-        *
-    FROM
-        [dbo].[TransactionView]
+    SELECT TOP (@Limit) *
+    FROM [dbo].[TransactionView]
     WHERE
-        [UserId] IS NULL
-        AND [OrganizationId] = @OrganizationId
+        [OrganizationId] = @OrganizationId
+      AND (@StartAfter IS NULL OR [CreationDate] < @StartAfter)
+    ORDER BY
+        [CreationDate] DESC
 END

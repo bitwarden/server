@@ -3,6 +3,7 @@
     "tasks": [
         {
             "label": "buildIdentityApi",
+            "hide": true,
             "dependsOrder": "sequence",
             "dependsOn": [
                 "buildIdentity",
@@ -14,6 +15,7 @@
         },
         {
             "label": "buildIdentityApiAdmin",
+            "hide": true,
             "dependsOrder": "sequence",
             "dependsOn": [
                 "buildIdentity",
@@ -25,7 +27,36 @@
             ]
         },
         {
+            "label": "buildIdentityApiSso",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI",
+                "buildSso"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
             "label": "buildFullServer",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildAdmin",
+                "buildAPI",
+                "buildEventsProcessor",
+                "buildIdentity",
+                "buildSso",
+                "buildIcons",
+                "buildBilling",
+                "buildNotifications"
+            ],
+        },
+        {
+            "label": "buildFullServerWithSeederApi",
+            "hide": true,
             "dependsOrder": "sequence",
             "dependsOn": [
                 "buildAdmin",
@@ -36,10 +67,12 @@
                 "buildIcons",
                 "buildBilling",
                 "buildNotifications",
+                "buildSeederAPI"
             ],
         },
         {
             "label": "buildSelfHostBit",
+            "hide": true,
             "dependsOrder": "sequence",
             "dependsOn": [
                 "buildAdmin",
@@ -52,6 +85,7 @@
         },
         {
             "label": "buildSelfHostOss",
+            "hide": true,
             "dependsOrder": "sequence",
             "dependsOn": [
                 "buildAdmin",
@@ -62,6 +96,7 @@
         },
         {
             "label": "buildIcons",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -70,10 +105,14 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile"
         },
         {
             "label": "buildPortal",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -82,10 +121,14 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile"
         },
         {
             "label": "buildSso",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -94,10 +137,30 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildEvents",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Events/Events.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile"
         },
         {
             "label": "buildEventsProcessor",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -106,10 +169,14 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile"
         },
         {
             "label": "buildAdmin",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -118,10 +185,14 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile"
         },
         {
             "label": "buildIdentity",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -130,10 +201,14 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile"
         },
         {
             "label": "buildAPI",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -142,6 +217,29 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "buildSeederAPI",
+            "hide": true,
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/util/SeederApi/SeederApi.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile",
             "group": {
                 "kind": "build",
@@ -150,6 +248,7 @@
         },
         {
             "label": "buildNotifications",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -158,6 +257,9 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile",
             "group": {
                 "kind": "build",
@@ -166,6 +268,7 @@
         },
         {
             "label": "buildBilling",
+            "hide": true,
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -174,6 +277,9 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "problemMatcher": "$msCompile",
             "group": {
                 "kind": "build",
@@ -181,23 +287,12 @@
             }
         },
         {
-            "label": "clean",
-            "type": "shell",
-            "command": "dotnet clean",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
             "label": "test",
             "type": "shell",
             "command": "dotnet test",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "group": {
                 "kind": "test",
                 "isDefault": true
@@ -213,13 +308,15 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "Setup Secrets",
+            "label": "Set Up Secrets",
+            "detail": "A task to run setup_secrets.ps1",
             "type": "shell",
             "command": "pwsh -WorkingDirectory ${workspaceFolder}/dev -Command '${workspaceFolder}/dev/setup_secrets.ps1 -clear:$${input:setupSecretsClear}'",
             "problemMatcher": []
         },
         {
             "label": "Install Dev Cert",
+            "detail": "A task to install the Bitwarden developer cert to run your local install as an admin.",
             "type": "shell",
             "command": "dotnet tool install -g dotnet-certificate-tool -g && certificate-tool add --file ${workspaceFolder}/dev/dev.pfx --password '${input:certPassword}'",
             "problemMatcher": []

@@ -40,7 +40,11 @@
     @LastPasswordChangeDate DATETIME2(7) = NULL,
     @LastKdfChangeDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
-    @LastEmailChangeDate DATETIME2(7) = NULL
+    @LastEmailChangeDate DATETIME2(7) = NULL,
+    @VerifyDevices BIT = 1,
+    @SecurityState VARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -88,7 +92,12 @@ BEGIN
         [LastPasswordChangeDate],
         [LastKdfChangeDate],
         [LastKeyRotationDate],
-        [LastEmailChangeDate]
+        [LastEmailChangeDate],
+        [VerifyDevices],
+        [SecurityState],
+        [SecurityVersion],
+        [SignedPublicKey],
+        [MaxStorageGbIncreased]
     )
     VALUES
     (
@@ -133,6 +142,11 @@ BEGIN
         @LastPasswordChangeDate,
         @LastKdfChangeDate,
         @LastKeyRotationDate,
-        @LastEmailChangeDate
+        @LastEmailChangeDate,
+        @VerifyDevices,
+        @SecurityState,
+        @SecurityVersion,
+        @SignedPublicKey,
+        @MaxStorageGb
     )
 END

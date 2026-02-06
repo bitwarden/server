@@ -1,4 +1,7 @@
-﻿using Bit.Setup.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Setup.Enums;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -150,6 +153,7 @@ public class Context
         var configText = File.ReadAllText(ConfigPath);
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
             .Build();
         Config = deserializer.Deserialize<Configuration>(configText);
 

@@ -90,9 +90,12 @@
     </div>
     <div class="col-md">
         <ul class="list-unstyled">
-            <li><a href="https://github.com/bitwarden/server/releases" target="_blank">Check for Server updates</a></li>
-            <li><a href="https://github.com/bitwarden/clients/releases" target="_blank">Check for Web updates</a></li>
-            <li><a href="https://help.bitwarden.com/article/updating-on-premise/" target="_blank">How do I update?</a></li>
+            <li><a href="https://github.com/bitwarden/server/releases" target="_blank" rel="noreferrer">Check for Server
+                    updates</a></li>
+            <li><a href="https://github.com/bitwarden/clients/releases" target="_blank" rel="noreferrer">Check for Web
+                    updates</a></li>
+            <li><a href="https://help.bitwarden.com/article/updating-on-premise/" target="_blank" rel="noreferrer">How
+                    do I update?</a></li>
         </ul>
     </div>
 </div>
@@ -102,7 +105,7 @@
 <h3>SMTP</h3>
 @if(!Bit.Core.Utilities.CoreHelpers.SettingHasValue(Model.GlobalSettings.Mail?.Smtp?.Host))
 {
-    <p class="text-muted">Not configured</p>
+    <p class="text-body-secondary">Not configured</p>
 }
 else
 {
@@ -156,7 +159,7 @@ else
         }
         else
         {
-            <span class="text-muted">Not configured</span>
+            <span class="text-body-secondary">Not configured</span>
         }
     </dd>
 
@@ -168,7 +171,7 @@ else
         }
         else
         {
-            <span class="text-muted">Not configured</span>
+            <span class="text-body-secondary">Not configured</span>
         }
     </dd>
 
@@ -180,7 +183,7 @@ else
         }
         else
         {
-            <span class="text-muted">Not configured</span>
+            <span class="text-body-secondary">Not configured</span>
         }
     </dd>
 </dl>

@@ -34,7 +34,7 @@ public class CountNewSmSeatsRequiredQuery : ICountNewSmSeatsRequiredQuery
             throw new BadRequestException("Organization does not use Secrets Manager");
         }
 
-        if (!organization.SmSeats.HasValue || organization.SecretsManagerBeta)
+        if (!organization.SmSeats.HasValue)
         {
             return 0;
         }

@@ -1,4 +1,9 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.StaticStore;
 
@@ -15,7 +20,7 @@ public class PlanResponseModel : ResponseModel
         }
 
         Type = plan.Type;
-        Product = plan.Product;
+        ProductTier = plan.ProductTier;
         Name = plan.Name;
         IsAnnual = plan.IsAnnual;
         NameLocalizationKey = plan.NameLocalizationKey;
@@ -30,6 +35,7 @@ public class PlanResponseModel : ResponseModel
         HasTotp = plan.HasTotp;
         Has2fa = plan.Has2fa;
         HasSso = plan.HasSso;
+        HasOrganizationDomains = plan.HasOrganizationDomains;
         HasResetPassword = plan.HasResetPassword;
         UsersGetPremium = plan.UsersGetPremium;
         UpgradeSortOrder = plan.UpgradeSortOrder;
@@ -44,8 +50,15 @@ public class PlanResponseModel : ResponseModel
         PasswordManager = new PasswordManagerPlanFeaturesResponseModel(plan.PasswordManager);
     }
 
+    public PlanResponseModel(Organization organization, string obj = "plan") : base(obj)
+    {
+        Type = organization.PlanType;
+        ProductTier = organization.PlanType.GetProductTier();
+        Name = organization.Plan;
+    }
+
     public PlanType Type { get; set; }
-    public ProductType Product { get; set; }
+    public ProductTierType ProductTier { get; set; }
     public string Name { get; set; }
     public bool IsAnnual { get; set; }
     public string NameLocalizationKey { get; set; }
@@ -62,6 +75,7 @@ public class PlanResponseModel : ResponseModel
     public bool Has2fa { get; set; }
     public bool HasApi { get; set; }
     public bool HasSso { get; set; }
+    public bool HasOrganizationDomains { get; set; }
     public bool HasResetPassword { get; set; }
     public bool UsersGetPremium { get; set; }
 
@@ -121,8 +135,10 @@ public class PlanResponseModel : ResponseModel
         {
             StripePlanId = plan.StripePlanId;
             StripeSeatPlanId = plan.StripeSeatPlanId;
+            StripeProviderPortalSeatPlanId = plan.StripeProviderPortalSeatPlanId;
             BasePrice = plan.BasePrice;
             SeatPrice = plan.SeatPrice;
+            ProviderPortalSeatPrice = plan.ProviderPortalSeatPrice;
             AllowSeatAutoscale = plan.AllowSeatAutoscale;
             HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
             MaxAdditionalSeats = plan.MaxAdditionalSeats;
@@ -141,8 +157,10 @@ public class PlanResponseModel : ResponseModel
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
+        public string StripeProviderPortalSeatPlanId { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }
+        public decimal ProviderPortalSeatPrice { get; init; }
         public bool AllowSeatAutoscale { get; init; }
         public bool HasAdditionalSeatsOption { get; init; }
         public int? MaxAdditionalSeats { get; init; }

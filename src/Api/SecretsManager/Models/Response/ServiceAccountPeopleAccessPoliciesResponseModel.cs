@@ -20,10 +20,10 @@ public class ServiceAccountPeopleAccessPoliciesResponseModel : ResponseModel
             switch (baseAccessPolicy)
             {
                 case UserServiceAccountAccessPolicy accessPolicy:
-                    UserAccessPolicies.Add(new UserServiceAccountAccessPolicyResponseModel(accessPolicy, userId));
+                    UserAccessPolicies.Add(new UserAccessPolicyResponseModel(accessPolicy, userId));
                     break;
                 case GroupServiceAccountAccessPolicy accessPolicy:
-                    GroupAccessPolicies.Add(new GroupServiceAccountAccessPolicyResponseModel(accessPolicy));
+                    GroupAccessPolicies.Add(new GroupAccessPolicyResponseModel(accessPolicy));
                     break;
             }
         }
@@ -33,7 +33,7 @@ public class ServiceAccountPeopleAccessPoliciesResponseModel : ResponseModel
     {
     }
 
-    public List<UserServiceAccountAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();
+    public List<UserAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();
 
-    public List<GroupServiceAccountAccessPolicyResponseModel> GroupAccessPolicies { get; set; } = new();
+    public List<GroupAccessPolicyResponseModel> GroupAccessPolicies { get; set; } = new();
 }

@@ -1,10 +1,11 @@
-﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Api.Vault.AuthorizationHandlers.Groups;
-using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
-using Bit.Core.IdentityServer;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Tools.Authorization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Authorization.SecurityTasks;
 using Bit.SharedWeb.Health;
+using Bit.SharedWeb.Swagger;
+using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 
@@ -12,7 +13,10 @@ namespace Bit.Api.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSwagger(this IServiceCollection services, GlobalSettings globalSettings)
+    /// <summary>
+    /// Configures the generation of swagger.json OpenAPI spec.
+    /// </summary>
+    public static void AddSwaggerGen(this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment)
     {
         services.AddSwaggerGen(config =>
         {
@@ -26,48 +30,42 @@ public static class ServiceCollectionExtensions
                     Url = new Uri("https://bitwarden.com"),
                     Email = "support@bitwarden.com"
                 },
-                Description = "The Bitwarden public APIs.",
+                Description = """
+                              This schema documents the endpoints available to the Public API, which provides
+                              organizations tools for managing members, collections, groups, event logs, and policies.
+                              If you are looking for the Vault Management API, refer instead to
+                              [this document](https://bitwarden.com/help/vault-management-api/).
+
+                              **Note:** your authorization must match the server you have selected.
+                              """,
                 License = new OpenApiLicense
                 {
                     Name = "GNU Affero General Public License v3.0",
                     Url = new Uri("https://github.com/bitwarden/server/blob/master/LICENSE.txt")
                 }
             });
+
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
-            config.AddSecurityDefinition("oauth2-client-credentials", new OpenApiSecurityScheme
-            {
-                Type = SecuritySchemeType.OAuth2,
-                Flows = new OpenApiOAuthFlows
-                {
-                    ClientCredentials = new OpenApiOAuthFlow
-                    {
-                        TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
-                        Scopes = new Dictionary<string, string>
-                        {
-                            { ApiScopes.ApiOrganization, "Organization APIs" },
-                        },
-                    }
-                },
-            });
+            // Configure Bitwarden cloud US and EU servers. These will appear in the swagger.json build artifact
+            // used for our help center. These are overwritten with the local server when running in self-hosted
+            // or dev mode (see Api Startup.cs).
+            config.AddSwaggerServerWithSecurity(
+                serverId: "US_server",
+                serverUrl: "https://api.bitwarden.com",
+                identityTokenUrl: "https://identity.bitwarden.com/connect/token",
+                serverDescription: "US server");
 
-            config.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "oauth2-client-credentials"
-                        },
-                    },
-                    new[] { ApiScopes.ApiOrganization }
-                }
-            });
+            config.AddSwaggerServerWithSecurity(
+                serverId: "EU_server",
+                serverUrl: "https://api.bitwarden.eu",
+                identityTokenUrl: "https://identity.bitwarden.eu/connect/token",
+                serverDescription: "EU server");
 
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
+
+            config.InitializeSwaggerFilters(environment);
 
             var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
             config.IncludeXmlComments(apiFilePath, true);
@@ -89,42 +87,16 @@ public static class ServiceCollectionExtensions
             {
                 builder.AddSqlServer(globalSettings.SqlServer.ConnectionString);
             }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Redis.ConnectionString))
-            {
-                builder.AddRedis(globalSettings.Redis.ConnectionString);
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
-            {
-                builder.AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
-                    .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue");
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications.ConnectionString))
-            {
-                builder.AddAzureQueueStorage(globalSettings.Notifications.ConnectionString,
-                    name: "notifications_queue");
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString))
-            {
-                builder.AddAzureServiceBusTopic(_ => globalSettings.ServiceBus.ConnectionString,
-                    _ => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "service_bus");
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
-            {
-                builder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
-            }
         });
     }
 
     public static void AddAuthorizationHandlers(this IServiceCollection services)
     {
-        services.AddScoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, OrganizationUserAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
+
+        // Admin Console authorization handlers
+        services.AddAdminConsoleAuthorizationHandlers();
     }
 }

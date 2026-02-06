@@ -34,10 +34,26 @@
             "stopAll": true
         },
         {
+            "name": "API, Identity, SSO",
+            "configurations": [
+                "run-API",
+                "run-Identity",
+                "run-Sso"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 4
+            },
+            "preLaunchTask": "buildIdentityApiSso",
+            "stopAll": true
+        },
+        {
             "name": "Full Server",
             "configurations": [
                 "run-Admin",
                 "run-API",
+                "run-Events",
                 "run-EventsProcessor",
                 "run-Identity",
                 "run-Sso",
@@ -48,9 +64,31 @@
             "presentation": {
                 "hidden": false,
                 "group": "AA_compounds",
-                "order": 4
+                "order": 5
             },
             "preLaunchTask": "buildFullServer",
+            "stopAll": true
+        },
+        {
+            "name": "Full Server with Seeder API",
+            "configurations": [
+                "run-Admin",
+                "run-API",
+                "run-Events",
+                "run-EventsProcessor",
+                "run-Identity",
+                "run-Sso",
+                "run-Icons",
+                "run-Billing",
+                "run-Notifications",
+                "run-SeederAPI"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "AA_compounds",
+                "order": 6
+            },
+            "preLaunchTask": "buildFullServerWithSeederApi",
             "stopAll": true
         },
         {
@@ -58,6 +96,7 @@
             "configurations": [
                 "run-Admin-SelfHost",
                 "run-API-SelfHost",
+                "run-Events-SelfHost",
                 "run-EventsProcessor-SelfHost",
                 "run-Identity-SelfHost",
                 "run-Sso-SelfHost",
@@ -76,6 +115,7 @@
             "configurations": [
                 "run-Admin-SelfHost",
                 "run-API-SelfHost",
+                "run-Events-SelfHost",
                 "run-EventsProcessor-SelfHost",
                 "run-Identity-SelfHost",
             ],
@@ -119,6 +159,17 @@
                 "group": "cloud",
             },
             "preLaunchTask": "buildBilling",
+        },
+        {
+            "name": "Events",
+            "configurations": [
+                "run-Events"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildEvents",
         },
         {
             "name": "Events Processor",
@@ -174,6 +225,17 @@
                 "group": "cloud",
             },
             "preLaunchTask": "buildSso",
+        },
+        {
+            "name": "Seeder API",
+            "configurations": [
+                "run-SeederAPI"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+            },
+            "preLaunchTask": "buildSeederAPI",
         },
         {
             "name": "Admin Self Host",
@@ -241,6 +303,17 @@
             },
             "preLaunchTask": "buildSso",
         },
+        {
+            "name": "Seeder API Self Host",
+            "configurations": [
+                "run-SeederAPI-SelfHost"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "self-host",
+            },
+            "preLaunchTask": "buildSeederAPI",
+        }
     ],
     "configurations": [
         // Configurations represent run-only scenarios so that they can be used in multiple compounds
@@ -252,7 +325,7 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Identity/bin/Debug/net6.0/Identity.dll",
+            "program": "${workspaceFolder}/src/Identity/bin/Debug/net8.0/Identity.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Identity",
             "stopAtEntry": false,
@@ -271,9 +344,28 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Api/bin/Debug/net6.0/Api.dll",
+            "program": "${workspaceFolder}/src/Api/bin/Debug/net8.0/Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Api",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-SeederAPI",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/util/SeederApi/bin/Debug/net8.0/SeederApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/util/SeederApi",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
@@ -290,7 +382,7 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Billing/bin/Debug/net6.0/Billing.dll",
+            "program": "${workspaceFolder}/src/Billing/bin/Debug/net8.0/Billing.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Billing",
             "stopAtEntry": false,
@@ -310,7 +402,7 @@
             "type": "coreclr",
             "request": "launch",
             "OS-COMMENT4": "If you have changed target frameworks, make sure to update the program path.",
-            "program": "${workspaceFolder}/src/Admin/bin/Debug/net6.0/Admin.dll",
+            "program": "${workspaceFolder}/src/Admin/bin/Debug/net8.0/Admin.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Admin",
             "stopAtEntry": false,
@@ -330,9 +422,28 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net6.0/Sso.dll",
+            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net8.0/Sso.dll",
             "args": [],
             "cwd": "${workspaceFolder}/bitwarden_license/src/Sso",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Events",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net8.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
@@ -349,7 +460,7 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net6.0/EventsProcessor.dll",
+            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net8.0/EventsProcessor.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/EventsProcessor",
             "stopAtEntry": false,
@@ -368,7 +479,7 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Icons/bin/Debug/net6.0/Icons.dll",
+            "program": "${workspaceFolder}/src/Icons/bin/Debug/net8.0/Icons.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Icons",
             "stopAtEntry": false,
@@ -387,7 +498,7 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net6.0/Notifications.dll",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net8.0/Notifications.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Notifications",
             "stopAtEntry": false,
@@ -406,7 +517,7 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Identity/bin/Debug/net6.0/Identity.dll",
+            "program": "${workspaceFolder}/src/Identity/bin/Debug/net8.0/Identity.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Identity",
             "stopAtEntry": false,
@@ -427,13 +538,34 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Api/bin/Debug/net6.0/Api.dll",
+            "program": "${workspaceFolder}/src/Api/bin/Debug/net8.0/Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Api",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:4001",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-SeederAPI-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/util/SeederApi/bin/Debug/net8.0/SeederApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/util/SeederApi",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:5048",
                 "developSelfHosted": "true",
             },
             "sourceFileMap": {
@@ -449,7 +581,7 @@
             "type": "coreclr",
             "request": "launch",
             "OS-COMMENT4": "If you have changed target frameworks, make sure to update the program path.",
-            "program": "${workspaceFolder}/src/Admin/bin/Debug/net6.0/Admin.dll",
+            "program": "${workspaceFolder}/src/Admin/bin/Debug/net8.0/Admin.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Admin",
             "stopAtEntry": false,
@@ -471,7 +603,7 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net6.0/Sso.dll",
+            "program": "${workspaceFolder}/bitwarden_license/src/Sso/bin/Debug/net8.0/Sso.dll",
             "args": [],
             "cwd": "${workspaceFolder}/bitwarden_license/src/Sso",
             "stopAtEntry": false,
@@ -492,13 +624,34 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net6.0/Notifications.dll",
+            "program": "${workspaceFolder}/src/Notifications/bin/Debug/net8.0/Notifications.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Notifications",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:61841",
+                "developSelfHosted": "true",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "run-Events-SelfHost",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net8.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:46274",
                 "developSelfHosted": "true",
             },
             "sourceFileMap": {
@@ -513,13 +666,13 @@
             "requireExactSource": true,
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net6.0/EventsProcessor.dll",
+            "program": "${workspaceFolder}/src/EventsProcessor/bin/Debug/net8.0/EventsProcessor.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/EventsProcessor",
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ASPNETCORE_URLS": "http://localhost:46274",
+                "ASPNETCORE_URLS": "http://localhost:54103",
                 "developSelfHosted": "true",
             },
             "sourceFileMap": {
