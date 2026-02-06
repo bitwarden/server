@@ -90,4 +90,66 @@ public class DeleteCollectionCommandTests
             .LogCollectionEventsAsync(default);
     }
 
+    [Theory, BitAutoData]
+    [OrganizationCustomize]
+    public async Task DeleteManyAsync_WithManyCollections_DeletesAllCollections(SutProvider<DeleteCollectionCommand> sutProvider)
+    {
+        // Arrange - Create 100 collections to test bulk delete performance
+        var collections = new List<Collection>();
+        var collectionIds = new List<Guid>();
+
+        for (int i = 0; i < 100; i++)
+        {
+            var collection = new Collection
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = Guid.NewGuid(),
+                Type = CollectionType.SharedCollection,
+                Name = $"Collection {i}"
+            };
+            collections.Add(collection);
+            collectionIds.Add(collection.Id);
+        }
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(collectionIds)
+            .Returns(collections);
+
+        // Act
+        await sutProvider.Sut.DeleteManyAsync(collectionIds);
+
+        // Assert
+        await sutProvider.GetDependency<ICollectionRepository>().Received()
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
+
+        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventsAsync(
+            Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(a =>
+                a.Count() == 100 &&
+                a.All(c => collectionIds.Contains(c.Item1.Id) && c.Item2 == EventType.Collection_Deleted)));
+    }
+
+    [Theory, BitAutoData]
+    [OrganizationCustomize]
+    public async Task DeleteManyAsync_WhenEventLoggingFails_StillDeletesCollections(Collection collection, SutProvider<DeleteCollectionCommand> sutProvider)
+    {
+        // Arrange
+        var collectionIds = new[] { collection.Id };
+        collection.Type = CollectionType.SharedCollection;
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(collectionIds)
+            .Returns(new List<Collection> { collection });
+
+        sutProvider.GetDependency<IEventService>()
+            .LogCollectionEventsAsync(Arg.Any<IEnumerable<(Collection, EventType, DateTime?)>>())
+            .Returns<Task>(_ => throw new Exception("Event logging failed"));
+
+        // Act - Should not throw exception even though event logging fails
+        await sutProvider.Sut.DeleteManyAsync(collectionIds);
+
+        // Assert - Collections should still be deleted
+        await sutProvider.GetDependency<ICollectionRepository>().Received()
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
+    }
+
 }
