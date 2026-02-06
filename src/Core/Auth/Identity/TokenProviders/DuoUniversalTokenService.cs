@@ -181,7 +181,6 @@ public class DuoUniversalTokenService(
             return null;
         }
 
-        // Form data (POST body) has precedence, then header as fallback
         string overrideFromForm = null;
         if (httpContext.Request.HasFormContentType)
         {
