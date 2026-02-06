@@ -73,6 +73,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
+        services.AddOrganizationFeatureCommands();
+    }
+
+    private static void AddOrganizationFeatureCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationAutoConfirmEnabledNotificationCommand, OrganizationAutoConfirmEnabledNotificationCommand>();
     }
 
     private static void AddOrganizationSignUpCommands(this IServiceCollection services)

@@ -1,0 +1,45 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+  </mj-head>
+  <mj-body>
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 0px 20px">
+      <mj-bw-simple-hero />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="0px 20px 10px 20px">
+      <mj-section background-color="#fff" padding="15px 10px 10px 10px">
+        <mj-column padding="15px 10px">
+          <mj-text font-family="roboto" font-weight="700" line-height="24px">
+            Automatic user confirmation is now available!
+          </mj-text>
+          <mj-text font-family="roboto" font-weight="400" line-height="24px">
+            A new global policy is available for your organization. It allows
+            new users to be automatically confirmed while an admin’s device is
+            unlocked. Log in to the web app to turn on the policy.
+          </mj-text>
+          <mj-button border-radius="20px" align="left" href="{{WebVaultUrl}}"
+            >Log in</mj-button
+          >
+          <mj-text
+            font-family="roboto"
+            line-height="16px"
+            font-weight="700"
+            font-size="13px"
+          >
+            <a
+              class="link"
+              href="https://bitwarden.com/help/automatic-confirmation/"
+              >Learn more about this policy</a
+            >
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>
