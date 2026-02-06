@@ -62,7 +62,7 @@ class MjBwHero extends BodyComponent {
             height="30px"
           ></mj-image>
           <mj-text color="#fff" padding-top="0" padding-bottom="0">
-            <h1 style="font-weight: normal; font-size: 24px; line-height: 32px">
+            <h1 style="font-weight: 500; font-size: 24px; line-height: 32px">
               ${this.getAttribute("title")}
             </h1>
             ` +

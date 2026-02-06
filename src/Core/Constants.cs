@@ -145,6 +145,7 @@ public static class FeatureFlagKeys
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
+    public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
