@@ -30,7 +30,7 @@ public partial class AddSubscriptionDiscountTable : Migration
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 StartDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 EndDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                AudienceType = table.Column<int>(type: "int", nullable: false),
+                AudienceType = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                 CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
             },

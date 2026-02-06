@@ -25,7 +25,7 @@ public partial class AddSubscriptionDiscountTable : Migration
                 Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                 StartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 EndDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                AudienceType = table.Column<int>(type: "integer", nullable: false),
+                AudienceType = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                 CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
             },
