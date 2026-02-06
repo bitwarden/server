@@ -278,6 +278,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
+
                     b.HasIndex("Id", "Enabled");
 
                     NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp", "UsersGetPremium" });
@@ -383,6 +387,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -2061,6 +2069,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);

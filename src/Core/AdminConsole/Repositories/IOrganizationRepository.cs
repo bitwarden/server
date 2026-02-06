@@ -9,6 +9,8 @@ namespace Bit.Core.Repositories;
 
 public interface IOrganizationRepository : IRepository<Organization, Guid>
 {
+    Task<Organization?> GetByGatewayCustomerIdAsync(string gatewayCustomerId);
+    Task<Organization?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId);
     Task<Organization?> GetByIdentifierAsync(string identifier);
     Task<ICollection<Organization>> GetManyByEnabledAsync();
     Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
