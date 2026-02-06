@@ -303,7 +303,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(
+    public async Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(
         Guid organizationId, Guid userId, bool includeAccessRelationships)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

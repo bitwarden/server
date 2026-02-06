@@ -287,7 +287,7 @@ public class OrganizationUsersControllerTests
             .Returns(true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetDetailsByIdWithCollectionsAsync(organizationUser.Id)
+            .GetDetailsByIdWithSharedCollectionsAsync(organizationUser.Id)
             .Returns((organizationUser, collections));
 
         sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()

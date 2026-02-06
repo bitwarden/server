@@ -312,7 +312,7 @@ public class CollectionRepositoryTests
             }
         });
 
-        var collections = await collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(organization.Id, user.Id, true);
+        var collections = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, user.Id, true);
 
         Assert.NotNull(collections);
 
@@ -442,7 +442,7 @@ public class CollectionRepositoryTests
             }
         }, null);
 
-        var collections = await collectionRepository.GetManyByOrganizationIdWithPermissionsAsync(organization.Id, user.Id, true);
+        var collections = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, user.Id, true);
 
         Assert.NotNull(collections);
 
