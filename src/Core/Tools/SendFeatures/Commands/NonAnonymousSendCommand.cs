@@ -23,6 +23,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly ISendValidationService _sendValidationService;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly ILogger<NonAnonymousSendCommand> _logger;
+    private readonly ISendAuthorizationService _sendAuthorizationService;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService,
@@ -38,6 +39,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _sendValidationService = sendValidationService;
         _sendCoreHelperService = sendCoreHelperService;
         _logger = logger;
+        _sendAuthorizationService = sendAuthorizationService;
     }
 
     public async Task SaveSendAsync(Send send)
@@ -181,4 +183,25 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         return valid;
     }
 
+    public async Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId)
+    {
+        if (send.Type != SendType.File)
+        {
+            throw new BadRequestException("Can only get a download URL for a file type of Send");
+        }
+
+        var now = DateTime.UtcNow;
+        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
+            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now ||
+            send.Disabled ||
+            send.DeletionDate < now)
+        {
+            return (null, SendAccessResult.Denied);
+        }
+
+        send.AccessCount++;
+        await _sendRepository.ReplaceAsync(send);
+        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), SendAccessResult.Granted);
+    }
 }

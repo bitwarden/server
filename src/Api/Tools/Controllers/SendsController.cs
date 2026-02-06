@@ -247,9 +247,19 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        send.AccessCount++;
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        /*
+         * AccessCount is incremented differently for File and Text Send types:
+         * - Text Sends are incremented at every access
+         * - File Sends are incremented only when the file is downloaded
+         *
+         * Note that this endpoint is initially called for all Send types
+         */
+        if (send.Type == SendType.Text)
+        {
+            send.AccessCount++;
+            await _sendRepository.ReplaceAsync(send);
+            await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        }
 
         return new ObjectResult(sendResponse);
     }
@@ -267,11 +277,12 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        var url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId);
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
 
-        send.AccessCount++;
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        if (result.Equals(SendAccessResult.Denied))
+        {
+            throw new NotFoundException();
+        }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }

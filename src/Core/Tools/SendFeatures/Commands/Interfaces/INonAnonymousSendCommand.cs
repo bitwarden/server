@@ -47,7 +47,22 @@ public interface INonAnonymousSendCommand
     /// <returns><see langword="true" /> when the file is confirmed, otherwise <see langword="false" /></returns>
     /// <remarks>
     /// When a file size cannot be confirmed, we assume we're working with a rogue client. The send is deleted out of
-    ///  an abundance of caution.
+    /// an abundance of caution.
     /// </remarks>
     Task<bool> ConfirmFileSize(Send send);
+
+    /// <summary>
+    /// If a File type Send can be downloaded, retrieves the download URL.
+    /// </summary>
+    /// <param name="send">The <see cref="Send" /> this command acts upon</param>
+    /// <param name="fileId">The fileId to be downloaded</param>
+    /// <returns>
+    /// A tuple wrapping the download URL string and <see cref="SendAccessResult" /> indicating whether access was granted
+    /// </returns>
+    /// <remarks>
+    /// This method is intended for authenticated endpoints where authentication has already been validated.
+    /// Returns <see cref="SendAccessResult.Denied" /> when the Send is disabled, MaxAccessCount has been reached,
+    /// expiration date has passed, or deletion date has been reached.
+    /// </remarks>
+    Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId);
 }
