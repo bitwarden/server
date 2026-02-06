@@ -81,7 +81,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
 
         _providerServiceDataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
-        _featureService = featureService;
     }
 
     public async Task<IdentityResult> RegisterUser(User user)
@@ -413,12 +412,6 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private async Task ValidateEmailDomainNotBlockedAsync(string email, Guid? excludeOrganizationId = null)
     {
-        // Only check if feature flag is enabled
-        if (!_featureService.IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation))
-        {
-            return;
-        }
-
         var emailDomain = EmailValidation.GetDomain(email);
 
         var isDomainBlocked = await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(
