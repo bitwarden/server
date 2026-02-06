@@ -103,16 +103,79 @@ public class DuoUniversalTokenServiceTests
         Assert.Equal(result, expectedResponse);
     }
 
-    [Theory]
-    [BitAutoData("vault.bitwarden.com")] // Cloud US
-    [BitAutoData("vault.bitwarden.eu")]  // Cloud EU
-    public void BuildDuoTwoFactorRedirectUri_MobileClient_CloudHost_ReturnsHttpsScheme(
-        string requestHost)
+    [Fact]
+    public void BuildDuoTwoFactorRedirectUri_MobileClient_NoOverride_DefaultsToBitwardenScheme()
     {
         // Arrange
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Headers["Bitwarden-Client-Name"] = "mobile";
-        httpContext.Request.Host = new HostString(requestHost);
+        httpContext.Request.Host = new HostString("vault.bitwarden.com");
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.HttpContext.Returns(httpContext);
+
+        var globalSettings = new CoreSettings.GlobalSettings
+        {
+            BaseServiceUri = new CoreSettings.GlobalSettings.BaseServiceUriSettings(new CoreSettings.GlobalSettings()) { Vault = "https://vault.bitwarden.com" }
+        };
+
+        var sut = new DuoUniversalTokenService(currentContext, globalSettings);
+
+        // Act
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
+
+        // Assert
+        Assert.Contains("client=mobile", result);
+        Assert.Contains("deeplinkScheme=bitwarden", result);
+    }
+
+    [Theory]
+    [BitAutoData("https")]
+    [BitAutoData("bitwarden")]
+    public void BuildDuoTwoFactorRedirectUri_MobileClient_WithFormOverride_UsesOverrideScheme(
+        string schemeOverride)
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["Bitwarden-Client-Name"] = "mobile";
+        httpContext.Request.ContentType = "application/x-www-form-urlencoded";
+        httpContext.Request.Form = new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        {
+            { "deeplinkScheme", schemeOverride }
+        });
+        httpContext.Request.Host = new HostString("vault.bitwarden.com");
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.HttpContext.Returns(httpContext);
+
+        var globalSettings = new CoreSettings.GlobalSettings
+        {
+            BaseServiceUri = new CoreSettings.GlobalSettings.BaseServiceUriSettings(new CoreSettings.GlobalSettings()) { Vault = "https://vault.bitwarden.com" }
+        };
+
+        var sut = new DuoUniversalTokenService(currentContext, globalSettings);
+
+        // Act
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
+
+        // Assert
+        Assert.Contains("client=mobile", result);
+        Assert.Contains($"deeplinkScheme={schemeOverride.ToLowerInvariant()}", result);
+    }
+
+    [Fact]
+    public void BuildDuoTwoFactorRedirectUri_MobileClient_FormOverrideTakesPrecedenceOverHeader()
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["Bitwarden-Client-Name"] = "mobile";
+        httpContext.Request.Headers["Bitwarden-Deeplink-Scheme"] = "bitwarden";
+        httpContext.Request.ContentType = "application/x-www-form-urlencoded";
+        httpContext.Request.Form = new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
+        {
+            { "deeplinkScheme", "https" }
+        });
+        httpContext.Request.Host = new HostString("vault.bitwarden.com");
 
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.HttpContext.Returns(httpContext);
@@ -130,7 +193,37 @@ public class DuoUniversalTokenServiceTests
         // Assert
         Assert.Contains("client=mobile", result);
         Assert.Contains("deeplinkScheme=https", result);
-        Assert.StartsWith("https://vault.bitwarden.com/duo-redirect-connector.html", result);
+    }
+
+    [Theory]
+    [BitAutoData("invalid")]
+    [BitAutoData("unknown")]
+    [BitAutoData("")]
+    public void BuildDuoTwoFactorRedirectUri_MobileClient_InvalidOverride_DefaultsToBitwardenScheme(
+        string invalidScheme)
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["Bitwarden-Client-Name"] = "mobile";
+        httpContext.Request.Headers["Bitwarden-Deeplink-Scheme"] = invalidScheme;
+        httpContext.Request.Host = new HostString("vault.bitwarden.com");
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.HttpContext.Returns(httpContext);
+
+        var globalSettings = new CoreSettings.GlobalSettings
+        {
+            BaseServiceUri = new CoreSettings.GlobalSettings.BaseServiceUriSettings(new CoreSettings.GlobalSettings()) { Vault = "https://vault.bitwarden.com" }
+        };
+
+        var sut = new DuoUniversalTokenService(currentContext, globalSettings);
+
+        // Act
+        var result = InvokeBuildDuoTwoFactorRedirectUri(sut);
+
+        // Assert
+        Assert.Contains("client=mobile", result);
+        Assert.Contains("deeplinkScheme=bitwarden", result);
     }
 
     [Theory]
@@ -300,6 +393,6 @@ public class DuoUniversalTokenServiceTests
 
         // Assert
         Assert.Contains("client=mobile", result);
-        Assert.Contains("deeplinkScheme=https", result);
+        Assert.Contains("deeplinkScheme=bitwarden", result);
     }
 }

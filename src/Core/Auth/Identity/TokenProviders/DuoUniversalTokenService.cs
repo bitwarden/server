@@ -181,10 +181,13 @@ public class DuoUniversalTokenService(
             return null;
         }
 
-        // Querystring has precedence over header for manual local testing
-        var overrideFromQuery = httpContext.Request.Query["deeplinkScheme"].FirstOrDefault();
-        var overrideFromHeader = httpContext.Request.Headers["Bitwarden-Deeplink-Scheme"].FirstOrDefault();
-        var candidate = (overrideFromQuery ?? overrideFromHeader)?.Trim();
+        // Form data (POST body) has precedence, then header as fallback
+        string overrideFromForm = null;
+        if (httpContext.Request.HasFormContentType)
+        {
+            overrideFromForm = httpContext.Request.Form["deeplinkScheme"].FirstOrDefault();
+        }
+        var candidate = overrideFromForm?.Trim();
 
         // Allow only the two supported values
         return Enum.TryParse<DuoDeeplinkScheme>(candidate, ignoreCase: true, out var scheme) ? scheme : null;
