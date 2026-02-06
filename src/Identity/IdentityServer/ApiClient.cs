@@ -82,7 +82,12 @@ public class ApiClient : Client
         }
         else if (id == "mobile")
         {
-            RedirectUris = new[] { "bitwarden://sso-callback" };
+            RedirectUris = new[] {
+                "bitwarden://sso-callback",
+                "https://bitwarden.com/sso-callback",
+                "https://bitwarden.eu/sso-callback",
+                "https://bitwarden.pw/sso-callback",
+            };
             PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
         }
 

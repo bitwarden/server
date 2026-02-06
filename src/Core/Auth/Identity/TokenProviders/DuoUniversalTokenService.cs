@@ -1,12 +1,16 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Microsoft.AspNetCore.Http;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
@@ -157,13 +161,85 @@ public class DuoUniversalTokenService(
         return false;
     }
 
-    public async Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider)
+    private static bool IsBitwardenCloudHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return false;
+        }
+
+        var normalizedHost = host.ToLowerInvariant();
+        return normalizedHost.EndsWith("bitwarden.com") ||
+               normalizedHost.EndsWith("bitwarden.eu") ||
+               normalizedHost.EndsWith("bitwarden.pw");
+    }
+
+    private static DuoDeeplinkScheme? GetDeeplinkSchemeOverride(HttpContext httpContext)
+    {
+        if (httpContext == null)
+        {
+            return null;
+        }
+
+        // Form data (POST body) has precedence, then header as fallback
+        string overrideFromForm = null;
+        if (httpContext.Request.HasFormContentType)
+        {
+            overrideFromForm = httpContext.Request.Form["deeplinkScheme"].FirstOrDefault();
+        }
+        var candidate = overrideFromForm?.Trim();
+
+        // Allow only the two supported values
+        return Enum.TryParse<DuoDeeplinkScheme>(candidate, ignoreCase: true, out var scheme) ? scheme : null;
+    }
+
+    private string BuildDuoTwoFactorRedirectUri()
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the initiating client
         _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
-            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
+        var clientTypeHeader = bitwardenClientName.FirstOrDefault();
+        var clientType = Enum.TryParse<ClientType>(clientTypeHeader, ignoreCase: true, out var parsedClientType)
+            ? parsedClientType
+            : ClientType.Web;
+        var clientName = clientType.ToString().ToLowerInvariant();
+
+        // Handle mobile case separately because mobile needs to define the scheme ahead of time
+        // for security reasons.
+        if (clientType == ClientType.Mobile)
+        {
+            // TODO: Ticket 31669
+            // var requestHost = _currentContext.HttpContext.Request.Host.Host;
+
+            // var deeplinkScheme =
+            //     IsBitwardenCloudHost(requestHost) ? DuoDeeplinkScheme.Https : DuoDeeplinkScheme.Bitwarden;
+
+            var deeplinkScheme = GetDeeplinkSchemeOverride(_currentContext.HttpContext) ?? DuoDeeplinkScheme.Bitwarden;
+
+            return string.Format(CultureInfo.InvariantCulture,
+                "{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
+                _globalSettings.BaseServiceUri.Vault, clientName, deeplinkScheme.ToString().ToLowerInvariant());
+        }
+
+        // Explicitly have the desktop client use the bitwarden scheme. See the complimentary
+        // duo web connector in the client project.
+        if (clientType == ClientType.Desktop)
+        {
+            return string.Format(CultureInfo.InvariantCulture,
+                "{0}/duo-redirect-connector.html?client={1}&deeplinkScheme={2}",
+                _globalSettings.BaseServiceUri.Vault, clientName, DuoDeeplinkScheme.Bitwarden.ToString().ToLowerInvariant());
+        }
+
+        // All other clients will not provide an explicit handling. See the complimentary
+        // duo web connector in the client project to understand how defaulting is handled.
+        return string.Format(CultureInfo.InvariantCulture,
+            "{0}/duo-redirect-connector.html?client={1}",
+            _globalSettings.BaseServiceUri.Vault, clientName);
+    }
+
+    public async Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider)
+    {
+        var redirectUri = BuildDuoTwoFactorRedirectUri();
 
         var client = new Duo.ClientBuilder(
             (string)provider.MetaData["ClientId"],
