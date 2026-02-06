@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Dirt.Enums;
@@ -707,5 +708,105 @@ public class EventIntegrationHandlerTests
         );
         Assert.NotNull(capturedTags);
         Assert.Contains(expectedTag, capturedTags);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleEventAsync_SubstituteTemplateTags(EventMessage eventMessage)
+    {
+        eventMessage.OrganizationId = _organizationId;
+        var templateJson = @"{
+                ""bw_serviceName"": ""bitwarden"",
+                ""ddsource"": ""bitwarden"",
+                ""service"": ""event-logs"",
+                ""event"": {
+                    ""object"": ""event"",
+                    ""type"": ""#TypeId#"",
+                    ""typeName"": ""#Type#"",
+                    ""userId"": ""#UserId#"",
+                    ""organizationId"": ""#OrganizationId#"",
+                    ""providerId"": ""#ProviderId#"",
+                    ""cipherId"": ""#CipherId#"",
+                    ""collectionId"": ""#CollectionId#"",
+                    ""groupId"": ""#GroupId#"",
+                    ""policyId"": ""#PolicyId#"",
+                    ""organizationUserId"": ""#OrganizationUserId#"",
+                    ""providerUserId"": ""#ProviderUserId#"",
+                    ""providerOrganizationId"": ""#ProviderOrganizationId#"",
+                    ""actingUserId"": ""#ActingUserId#"",
+                    ""installationId"": ""#InstallationId#"",
+                    ""date"": ""#DateIso8601#"",
+                    ""deviceType"": ""#DeviceType#"",
+                    ""deviceTypeId"": ""#DeviceTypeId#"",
+                    ""ipAddress"": ""#IpAddress#"",
+                    ""systemUser"": ""#SystemUser#"",
+                    ""domainName"": ""#DomainName#"",
+                    ""secretId"": ""#SecretId#"",
+                    ""projectId"": ""#ProjectId#"",
+                    ""serviceAccountId"": ""#ServiceAccountId#""
+                }
+            }";
+        var sutProvider = GetSutProvider(OneConfiguration(templateJson));
+
+        await sutProvider.Sut.HandleEventAsync(eventMessage);
+
+        var deviceTypeId = eventMessage.DeviceType is not null ? (int)eventMessage.DeviceType : (int?)null;
+        var systemUser = eventMessage.SystemUser is not null ? (int)eventMessage.SystemUser : (int?)null;
+
+        var parsedJson = $@"{{
+            ""bw_serviceName"": ""bitwarden"",
+            ""ddsource"": ""bitwarden"",
+            ""service"": ""event-logs"",
+            ""event"": {{
+                ""object"": ""event"",
+                ""type"": ""{(int)eventMessage.Type}"",
+                ""typeName"": ""{eventMessage.Type}"",
+                ""userId"": ""{eventMessage.UserId}"",
+                ""organizationId"": ""{eventMessage.OrganizationId}"",
+                ""providerId"": ""{eventMessage.ProviderId}"",
+                ""cipherId"": ""{eventMessage.CipherId}"",
+                ""collectionId"": ""{eventMessage.CollectionId}"",
+                ""groupId"": ""{eventMessage.GroupId}"",
+                ""policyId"": ""{eventMessage.PolicyId}"",
+                ""organizationUserId"": ""{eventMessage.OrganizationUserId}"",
+                ""providerUserId"": ""{eventMessage.ProviderUserId}"",
+                ""providerOrganizationId"": ""{eventMessage.ProviderOrganizationId}"",
+                ""actingUserId"": ""{eventMessage.ActingUserId}"",
+                ""installationId"": ""{eventMessage.InstallationId}"",
+                ""date"": ""{eventMessage.Date.ToString("o")}"",
+                ""deviceType"": ""{eventMessage.DeviceType}"",
+                ""deviceTypeId"": ""{deviceTypeId}"",
+                ""ipAddress"": ""{eventMessage.IpAddress}"",
+                ""systemUser"": ""{systemUser}"",
+                ""domainName"": ""{eventMessage.DomainName}"",
+                ""secretId"": ""{eventMessage.SecretId}"",
+                ""projectId"": ""{eventMessage.ProjectId}"",
+                ""serviceAccountId"": ""{eventMessage.ServiceAccountId}""
+            }}
+        }}";
+        var expectedMessage = EventIntegrationHandlerTests.ExpectedMessage(
+            parsedJson
+        );
+
+        Assert.Single(_eventIntegrationPublisher.ReceivedCalls());
+        await _eventIntegrationPublisher.Received(1)
+        .PublishAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedMessage, new[] { "MessageId", "RenderedTemplate" })));
+
+        // compare renderedTemplate
+        var receivedCalls = _eventIntegrationPublisher.ReceivedCalls().ToList();
+        Assert.Single(receivedCalls);
+
+        var publishCall = receivedCalls.First();
+        var actualMessage = publishCall.GetArguments()[0] as IntegrationMessage<WebhookIntegrationConfigurationDetails>;
+
+        Assert.NotNull(actualMessage);
+        Assert.True(JsonStringsAreEqual(expectedMessage.RenderedTemplate!, actualMessage.RenderedTemplate!),
+            $"Expected: {expectedMessage.RenderedTemplate}\nActual: {actualMessage.RenderedTemplate}");
+    }
+
+    private bool JsonStringsAreEqual(string expectedJson, string actualJson)
+    {
+        var expectedDoc = JsonNode.Parse(expectedJson);
+        var actualDoc = JsonNode.Parse(actualJson);
+        return JsonNode.DeepEquals(expectedDoc, actualDoc);
     }
 }
