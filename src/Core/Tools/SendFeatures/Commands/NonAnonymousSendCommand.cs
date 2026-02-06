@@ -190,11 +190,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             throw new BadRequestException("Can only get a download URL for a file type of Send");
         }
 
-        var now = DateTime.UtcNow;
-        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
-            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now ||
-            send.Disabled ||
-            send.DeletionDate < now)
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
         {
             return (null, SendAccessResult.Denied);
         }

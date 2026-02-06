@@ -65,4 +65,27 @@ public interface INonAnonymousSendCommand
     /// expiration date has passed, or deletion date has been reached.
     /// </remarks>
     Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId);
+
+    /// <summary>
+    /// Determines whether a <see cref="Send" /> can be accessed based on its current state.
+    /// </summary>
+    /// <param name="send">The <see cref="Send" /> to evaluate for access</param>
+    /// <returns><see langword="true" /> if the Send can be accessed, otherwise <see langword="false" /></returns>
+    /// <remarks>
+    /// This method checks if the Send is disabled, if MaxAccessCount has been reached,
+    /// if the expiration date has passed, or if the deletion date has been reached.
+    /// </remarks>
+    static bool SendCanBeAccessed(Send send)
+    {
+        var now = DateTime.UtcNow;
+        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
+            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now ||
+            send.Disabled ||
+            send.DeletionDate < now)
+        {
+            return false;
+        }
+
+        return true;
+    }
 }

@@ -240,6 +240,11 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        {
+            throw new NotFoundException();
+        }
+
         var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
