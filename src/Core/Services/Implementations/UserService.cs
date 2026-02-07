@@ -12,7 +12,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
@@ -35,7 +34,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Fido2NetLib;
-using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -344,148 +342,6 @@ public class UserService : UserManager<User>, IUserService
         }
 
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
-    }
-
-    /// <summary>
-    /// Initiates WebAuthn 2FA credential registration and generates a challenge for adding a new security key.
-    /// </summary>
-    /// <param name="user">The current user.</param>
-    /// <returns></returns>
-    /// <exception cref="BadRequestException">Maximum allowed number of credentials already registered.</exception>
-    public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-        }
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider == null)
-        {
-            provider = new TwoFactorProvider
-            {
-                Enabled = false
-            };
-        }
-        if (provider.MetaData == null)
-        {
-            provider.MetaData = new Dictionary<string, object>();
-        }
-
-        // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
-        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
-            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Count only saved credentials ("Key{id}") toward the limit.
-        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
-            maximumAllowedCredentialCount)
-        {
-            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
-        }
-
-        var fidoUser = new Fido2User
-        {
-            DisplayName = user.Name,
-            Name = user.Email,
-            Id = user.Id.ToByteArray(),
-        };
-
-        var excludeCredentials = provider.MetaData
-            .Where(k => k.Key.StartsWith("Key"))
-            .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
-            .ToList();
-
-        var authenticatorSelection = new AuthenticatorSelection
-        {
-            AuthenticatorAttachment = null,
-            RequireResidentKey = false,
-            UserVerification = UserVerificationRequirement.Discouraged
-        };
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection, AttestationConveyancePreference.None);
-
-        provider.MetaData["pending"] = options.ToJson();
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, false);
-
-        return options;
-    }
-
-    public async Task<bool> CompleteWebAuthRegistrationAsync(User user, int id, string name, AuthenticatorAttestationRawResponse attestationResponse)
-    {
-        var keyId = $"Key{id}";
-
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
-        {
-            return false;
-        }
-
-        // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
-        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
-            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Count only saved credentials ("Key{id}") toward the limit.
-        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
-            maximumAllowedCredentialCount)
-        {
-            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
-        }
-
-        var options = CredentialCreateOptions.FromJson((string)pendingValue);
-
-        // Callback to ensure credential ID is unique. Always return true since we don't care if another
-        // account uses the same 2FA key.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
-
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-
-        provider.MetaData.Remove("pending");
-        provider.MetaData[keyId] = new TwoFactorProvider.WebAuthnData
-        {
-            Name = name,
-            Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
-            PublicKey = success.Result.PublicKey,
-            UserHandle = success.Result.User.Id,
-            SignatureCounter = success.Result.Counter,
-            CredType = success.Result.CredType,
-            RegDate = DateTime.Now,
-            AaGuid = success.Result.Aaguid
-        };
-
-        var providers = user.GetTwoFactorProviders();
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-
-        return true;
-    }
-
-    public async Task<bool> DeleteWebAuthnKeyAsync(User user, int id)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            return false;
-        }
-
-        var keyName = $"Key{id}";
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
-        {
-            return false;
-        }
-
-        if (provider.MetaData.Count < 2)
-        {
-            return false;
-        }
-
-        provider.MetaData.Remove(keyName);
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-        return true;
     }
 
     public async Task SendEmailVerificationAsync(User user)
