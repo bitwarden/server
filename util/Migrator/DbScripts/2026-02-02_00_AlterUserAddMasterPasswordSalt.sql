@@ -4,7 +4,62 @@ BEGIN
 END
 GO
 
-EXECUTE sp_refreshview 'dbo.UserView'
+-- Update UserView to use COALESCE for MaxStorageGb
+CREATE OR ALTER VIEW [dbo].[UserView]
+AS
+SELECT
+    [Id],
+    [Name],
+    [Email],
+    [EmailVerified],
+    [MasterPassword],
+    [MasterPasswordHint],
+    [Culture],
+    [SecurityStamp],
+    [TwoFactorProviders],
+    [TwoFactorRecoveryCode],
+    [EquivalentDomains],
+    [ExcludedGlobalEquivalentDomains],
+    [AccountRevisionDate],
+    [Key],
+    [PublicKey],
+    [PrivateKey],
+    [Premium],
+    [PremiumExpirationDate],
+    [RenewalReminderDate],
+    [Storage],
+    COALESCE([MaxStorageGbIncreased], [MaxStorageGb]) AS [MaxStorageGb],
+    [Gateway],
+    [GatewayCustomerId],
+    [GatewaySubscriptionId],
+    [ReferenceData],
+    [LicenseKey],
+    [ApiKey],
+    [Kdf],
+    [KdfIterations],
+    [KdfMemory],
+    [KdfParallelism],
+    [CreationDate],
+    [RevisionDate],
+    [ForcePasswordReset],
+    [UsesKeyConnector],
+    [FailedLoginCount],
+    [LastFailedLoginDate],
+    [AvatarColor],
+    [LastPasswordChangeDate],
+    [LastKdfChangeDate],
+    [LastKeyRotationDate],
+    [LastEmailChangeDate],
+    [VerifyDevices],
+    [SecurityState],
+    [SecurityVersion],
+    [SignedPublicKey],
+    [MasterPasswordSalt]
+FROM
+    [dbo].[User]
+GO
+
+EXECUTE sp_refreshview '[dbo].[UserView]'
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[User_Create]
