@@ -1,6 +1,6 @@
 services:
   bitwarden_server:
-    image: mcr.microsoft.com/devcontainers/dotnet:8.0
+    image: mcr.microsoft.com/devcontainers/dotnet:10.0
     volumes:
       - ../../:/workspace:cached
     env_file:
