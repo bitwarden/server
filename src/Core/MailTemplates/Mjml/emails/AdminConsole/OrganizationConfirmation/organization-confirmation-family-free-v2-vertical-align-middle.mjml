@@ -1,0 +1,262 @@
+<mjml>
+    <mj-head>
+        <!-- Include shared head styles -->
+        <mj-include path="../../../components/head.mjml" />
+
+        <!-- Include admin console shared styles -->
+        <mj-include path="../../../components/admin-console-head.mjml" />
+    </mj-head>
+
+    <mj-body>
+        <!-- Blue Header Section -->
+        <mj-section
+                border-radius="10px 10px 0px 0px"
+                padding="32px 32px 40px 32px"
+                background-color="#175ddc">
+            <mj-column
+                    width="65%"
+                    padding="0px">
+                <mj-image
+                        padding="0px 0px 24px 0px"
+                        align="left"
+                        width="150px"
+                        src="https://bitwarden.com/images/logo-horizontal-white.png">
+                </mj-image>
+                <mj-text
+                        mj-class="ac-hero-text"
+                        padding="0px 0px 24px 0px">
+                    <p>You can now share passwords with members of <strong>{{OrganizationName}}!</strong></p>
+                </mj-text>
+                <mj-button
+                        mj-class="ac-button"
+                        href="{{WebVaultUrl}}"
+                        padding="0px">
+                    Log in
+                </mj-button>
+            </mj-column>
+            <mj-column
+                    vertical-align="middle"
+                    width="35%">
+                <mj-image
+                        css-class="hide-mobile"
+                        align="center"
+                        padding="0px"
+                        width="155px"
+                        alt="Business Building"
+                        src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png">
+                </mj-image>
+            </mj-column>
+        </mj-section>
+
+        <!-- Spacing -->
+        <mj-section
+                padding="0px">
+            <mj-column
+                    padding="0px">
+                <mj-spacer
+                        height="16px">
+                </mj-spacer>
+            </mj-column>
+        </mj-section>
+
+        <!-- Main Content Section -->
+        <mj-section
+                padding="40px 40px 8px 40px"
+                background-color="#fff">
+            <mj-column>
+                <mj-text
+                        mj-class="ac-text"
+                        padding="0px">
+                    As a member of <b>{{OrganizationName}}</b>:
+                </mj-text>
+            </mj-column>
+        </mj-section>
+
+        <!-- Icon Row 1 -->
+        <mj-section
+                padding="8px 40px"
+                text-align="left"
+                background-color="#fff">
+            <mj-column
+                    width="48px"
+                    css-class="hide-mobile"
+                    vertical-align="middle">
+                <mj-image
+                        src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
+                        alt="Group Users Icon"
+                        width="48px"
+                        border-radius="8px"
+                        padding="0px">
+                </mj-image>
+            </mj-column>
+            <mj-column
+                    css-class="hide-mobile"
+                    width="5%">
+                <mj-spacer
+                        height="1px">
+                </mj-spacer>
+            </mj-column>
+            <mj-column
+                width="80%"
+                vertical-align="middle">
+                <mj-text
+                    mj-class="ac-text"
+                    padding="0px 0px 0px 0px">
+                    You can access passwords {{OrganizationName}} has shared with you. You can access passwords {{OrganizationName}} has shared with you.You can access passwords {{OrganizationName}} has shared with you.You can access passwords {{OrganizationName}} has shared with you.You can access passwords {{OrganizationName}} has shared with you.
+                </mj-text>
+            </mj-column>
+        </mj-section>
+
+        <!-- Icon Row 2 -->
+        <mj-section
+                padding="8px 40px 40px 40px"
+                text-align="left"
+                background-color="#fff">
+            <mj-column
+                    width="48px"
+                    css-class="hide-mobile"
+                    vertical-align="middle">
+                <mj-image
+                        src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
+                        alt="Share Icon"
+                        width="48px"
+                        border-radius="8px"
+                        padding="0px">
+                </mj-image>
+            </mj-column>
+            <mj-column
+                    css-class="hide-mobile"
+                    width="5%">
+                <mj-spacer
+                        height="1px">
+                </mj-spacer>
+            </mj-column>
+            <mj-column
+                    width="80%"
+                    vertical-align="middle">
+                <mj-text
+                        mj-class="ac-text"
+                        padding="0px 0px 0px 0px">
+                    You can easily share passwords with friends, family, or coworkers.
+                    <a href="https://bitwarden.com/help/sharing" class="ac-link">Share passwords in Bitwarden</a>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+
+        <!-- Spacing -->
+        <mj-section
+                padding="0px">
+            <mj-column
+                    padding="0px">
+                <mj-spacer
+                        height="16px">
+                </mj-spacer>
+            </mj-column>
+        </mj-section>
+
+        <!-- Download Mobile Apps Section -->
+        <mj-section background-color="#fff" padding="32px 32px 0px 32px">
+            <mj-column>
+                <mj-text
+                        font-size="16px"
+                        font-weight="700"
+                        line-height="24px"
+                        padding="0 0 16px 0">
+                    Download Bitwarden on all devices
+                </mj-text>
+
+                <mj-text
+                        mj-class="ac-text"
+                        padding="0 0 24px 0">
+                    Already using the <a href="https://bitwarden.com/download/" class="ac-link">browser extension</a>?
+                    Download the Bitwarden mobile app from the
+                    <a href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744" class="ac-link">App Store</a>
+                    or <a href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden" class="ac-link">Google Play</a>
+                    to quickly save logins and autofill forms on the go.
+                </mj-text>
+            </mj-column>
+        </mj-section>
+
+        <mj-section background-color="#fff" padding="0 32px 32px 32px">
+            <mj-group>
+                <mj-column width="159px">
+                    <mj-image
+                            css-class="hide-mobile"
+                            href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744"
+                            src="https://assets.bitwarden.com/email/v1/ac-apple-store.png"
+                            alt="Download on the App Store"
+                            width="135px"
+                            height="40px"
+                            padding="0 24px 0 0"
+                    />
+                </mj-column>
+                <mj-column width="140px">
+                    <mj-image
+                            css-class="hide-mobile"
+                            href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden"
+                            src="https://assets.bitwarden.com/email/v1/ac-google-play.png"
+                            alt="Get it on Google Play"
+                            width="140px"
+                            height="40px"
+                            padding="0"
+                    />
+                </mj-column>
+            </mj-group>
+        </mj-section>
+
+        <!-- Spacing -->
+        <mj-section
+                padding="0px">
+            <mj-column
+                    padding="0px">
+                <mj-spacer
+                        height="16px">
+                </mj-spacer>
+            </mj-column>
+        </mj-section>
+
+        <!-- Learn More Section -->
+        <mj-section
+                border-radius="0px 0px 10px 10px"
+                padding="40px"
+                background-color="#F3F6F9">
+            <mj-column
+                    width="70%">
+                <mj-text
+                        mj-class="ac-heading"
+                        padding="0px 0px 8px 0px">
+                    Learn more about Bitwarden
+                </mj-text>
+                <mj-text
+                        mj-class="ac-text"
+                        padding="0px">
+                    Find user guides, product documentation, and videos on the <a href="https://bitwarden.com/help/" class="ac-link">Bitwarden Help Center</a>.
+                </mj-text>
+            </mj-column>
+            <mj-column
+                    width="30%"
+                    vertical-align="middle">
+                <mj-image
+                        css-class="hide-mobile"
+                        src="https://assets.bitwarden.com/email/v1/spot-community.png"
+                        width="94px"
+                        padding="0px">
+                </mj-image>
+            </mj-column>
+        </mj-section>
+
+        <!-- Spacing -->
+        <mj-section
+                padding="0px">
+            <mj-column
+                    padding="0px">
+                <mj-spacer
+                        height="16px">
+                </mj-spacer>
+            </mj-column>
+        </mj-section>
+
+        <!-- Footer -->
+        <mj-include path="../../../components/footer.mjml" />
+    </mj-body>
+</mjml>
