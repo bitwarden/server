@@ -30,33 +30,6 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
     {
-        return await TwoFactorIsEnabledVNextAsync(userIds);
-    }
-
-    public async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync<T>(IEnumerable<T> users) where T : ITwoFactorProvidersUser
-    {
-        return await TwoFactorIsEnabledVNextAsync(users);
-    }
-
-    public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
-    {
-        var userId = user.GetUserId();
-        if (!userId.HasValue)
-        {
-            return false;
-        }
-
-        var userEntity = user as User ?? await _userRepository.GetByIdAsync(userId.Value);
-        if (userEntity == null)
-        {
-            throw new NotFoundException();
-        }
-
-        return await TwoFactorIsEnabledVNextAsync(userEntity);
-    }
-
-    private async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync(IEnumerable<Guid> userIds)
-    {
         var result = new List<(Guid userId, bool hasTwoFactor)>();
         if (userIds == null || !userIds.Any())
         {
@@ -96,8 +69,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         return result;
     }
 
-    private async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledVNextAsync<T>(IEnumerable<T> users)
-        where T : ITwoFactorProvidersUser
+    public async Task<IEnumerable<(T user, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync<T>(IEnumerable<T> users) where T : ITwoFactorProvidersUser
     {
         var userIds = users
             .Select(u => u.GetUserId())
@@ -105,7 +77,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
             .Select(u => u.Value)
             .ToList();
 
-        var twoFactorResults = await TwoFactorIsEnabledVNextAsync(userIds);
+        var twoFactorResults = await TwoFactorIsEnabledAsync(userIds);
 
         var result = new List<(T user, bool twoFactorIsEnabled)>();
 
@@ -126,10 +98,21 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         return result;
     }
 
-    private async Task<bool> TwoFactorIsEnabledVNextAsync(User user)
+    public async Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user)
     {
-        var enabledProviders = GetEnabledTwoFactorProviders(user);
+        var userId = user.GetUserId();
+        if (!userId.HasValue)
+        {
+            return false;
+        }
 
+        var userEntity = user as User ?? await _userRepository.GetByIdAsync(userId.Value);
+        if (userEntity == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var enabledProviders = GetEnabledTwoFactorProviders(userEntity);
         if (!enabledProviders.Any())
         {
             return false;
@@ -138,7 +121,7 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
         // If all providers require premium, check if user has premium access
         if (enabledProviders.All(TwoFactorProvider.RequiresPremium))
         {
-            return await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id);
+            return await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId.Value);
         }
 
         // User has at least one non-premium provider
