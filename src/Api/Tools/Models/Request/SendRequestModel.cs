@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Api.Tools.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -273,8 +272,9 @@ public class SendRequestModel
         }
         else
         {
-            // Neither Password nor Emails provided - preserve existing values and infer AuthType
-            existingSend.AuthType = SendUtilities.InferAuthType(existingSend);
+            existingSend.Emails = null;
+            existingSend.Password = null;
+            existingSend.AuthType = Core.Tools.Enums.AuthType.None;
         }
 
         existingSend.Disabled = Disabled.GetValueOrDefault();
