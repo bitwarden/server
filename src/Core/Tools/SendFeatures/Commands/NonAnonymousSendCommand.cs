@@ -23,12 +23,10 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly ISendValidationService _sendValidationService;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly ILogger<NonAnonymousSendCommand> _logger;
-    private readonly ISendAuthorizationService _sendAuthorizationService;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService,
         IPushNotificationService pushNotificationService,
-        ISendAuthorizationService sendAuthorizationService,
         ISendValidationService sendValidationService,
         ISendCoreHelperService sendCoreHelperService,
         ILogger<NonAnonymousSendCommand> logger)
@@ -39,7 +37,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _sendValidationService = sendValidationService;
         _sendCoreHelperService = sendCoreHelperService;
         _logger = logger;
-        _sendAuthorizationService = sendAuthorizationService;
     }
 
     public async Task SaveSendAsync(Send send)
