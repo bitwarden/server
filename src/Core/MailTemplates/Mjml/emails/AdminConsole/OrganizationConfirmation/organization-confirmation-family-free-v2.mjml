@@ -221,7 +221,7 @@
                 padding="40px"
                 background-color="#F3F6F9">
             <mj-column
-                    width="70%">
+                    width="60%">
                 <mj-text
                         mj-class="ac-heading"
                         padding="0px 0px 8px 0px">
@@ -234,8 +234,15 @@
                 </mj-text>
             </mj-column>
             <mj-column
+                    css-class="hide-mobile"
+                    width="10%">
+                <mj-spacer
+                        height="1px">
+                </mj-spacer>
+            </mj-column>
+            <mj-column
                     width="30%"
-                    vertical-align="middle">
+                    vertical-align="top">
                 <mj-image
                         css-class="hide-mobile"
                         src="https://assets.bitwarden.com/email/v1/spot-community.png"
