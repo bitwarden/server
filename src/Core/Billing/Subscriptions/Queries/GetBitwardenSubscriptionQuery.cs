@@ -12,9 +12,9 @@ using Stripe;
 
 namespace Bit.Core.Billing.Subscriptions.Queries;
 
-using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 using static StripeConstants;
 using static Utilities;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 
 public interface IGetBitwardenSubscriptionQuery
 {
