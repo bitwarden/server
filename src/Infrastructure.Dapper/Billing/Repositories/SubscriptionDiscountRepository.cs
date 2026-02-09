@@ -36,4 +36,16 @@ public class SubscriptionDiscountRepository(
 
         return result;
     }
+
+    public async Task<ICollection<SubscriptionDiscount>> SearchAsync(int skip, int take)
+    {
+        using var sqlConnection = new SqlConnection(ReadOnlyConnectionString);
+
+        var results = await sqlConnection.QueryAsync<SubscriptionDiscount>(
+            "[dbo].[SubscriptionDiscount_Search]",
+            new { Skip = skip, Take = take },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToArray();
+    }
 }

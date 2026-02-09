@@ -184,4 +184,111 @@ public class SubscriptionDiscountRepositoryTests
         var deletedDiscount = await subscriptionDiscountRepository.GetByIdAsync(discount.Id);
         Assert.Null(deletedDiscount);
     }
+
+    [Theory, DatabaseData]
+    public async Task SearchAsync_ReturnsPagedResults_OrderedByCreationDateDescending(
+        ISubscriptionDiscountRepository subscriptionDiscountRepository)
+    {
+        // Arrange - create discounts with different creation dates
+        var now = DateTime.UtcNow;
+        var discount1 = await subscriptionDiscountRepository.CreateAsync(
+            CreateTestDiscount(
+                stripeCouponId: $"test-search-1-{Guid.NewGuid()}",
+                percentOff: 10.00m,
+                name: "First Discount",
+                creationDate: now.AddMinutes(-30)));
+
+        var discount2 = await subscriptionDiscountRepository.CreateAsync(
+            CreateTestDiscount(
+                stripeCouponId: $"test-search-2-{Guid.NewGuid()}",
+                percentOff: 20.00m,
+                name: "Second Discount",
+                creationDate: now.AddMinutes(-20)));
+
+        var discount3 = await subscriptionDiscountRepository.CreateAsync(
+            CreateTestDiscount(
+                stripeCouponId: $"test-search-3-{Guid.NewGuid()}",
+                percentOff: 30.00m,
+                name: "Third Discount",
+                creationDate: now.AddMinutes(-10)));
+
+        // Act - get first page
+        var result = await subscriptionDiscountRepository.SearchAsync(0, 10);
+
+        // Assert
+        Assert.NotEmpty(result);
+        var resultList = result.ToList();
+
+        // Find the created discounts in the result
+        var foundDiscount1 = resultList.FirstOrDefault(d => d.Id == discount1.Id);
+        var foundDiscount2 = resultList.FirstOrDefault(d => d.Id == discount2.Id);
+        var foundDiscount3 = resultList.FirstOrDefault(d => d.Id == discount3.Id);
+
+        // All three should be in the result
+        Assert.NotNull(foundDiscount3);
+        Assert.NotNull(foundDiscount2);
+        Assert.NotNull(foundDiscount1);
+
+        // Verify ordering (newest first: discount3, discount2, discount1)
+        var index1 = resultList.IndexOf(foundDiscount1);
+        var index2 = resultList.IndexOf(foundDiscount2);
+        var index3 = resultList.IndexOf(foundDiscount3);
+        Assert.True(index3 < index2, "Discount3 should come before Discount2");
+        Assert.True(index2 < index1, "Discount2 should come before Discount1");
+    }
+
+    [Theory, DatabaseData]
+    public async Task SearchAsync_WithSkip_ReturnsCorrectPage(
+        ISubscriptionDiscountRepository subscriptionDiscountRepository)
+    {
+        // Arrange - create several discounts
+        var discounts = new List<SubscriptionDiscount>();
+        for (int i = 0; i < 5; i++)
+        {
+            var discount = await subscriptionDiscountRepository.CreateAsync(
+                CreateTestDiscount(
+                    stripeCouponId: $"test-skip-{i}-{Guid.NewGuid()}",
+                    percentOff: 10.00m + i,
+                    name: $"Discount {i}",
+                    creationDate: DateTime.UtcNow.AddMinutes(-i)));
+            discounts.Add(discount);
+        }
+
+        // Act - get second page (skip 2, take 2)
+        var result = await subscriptionDiscountRepository.SearchAsync(2, 2);
+
+        // Assert
+        var resultList = result.ToList();
+        Assert.Equal(2, resultList.Count);
+
+        // Verify we skipped the first 2 and got the next 2
+        // Since they're ordered by creation date descending, we should get discounts[2] and discounts[3]
+        Assert.Contains(resultList, d => d.Id == discounts[2].Id);
+        Assert.Contains(resultList, d => d.Id == discounts[3].Id);
+        Assert.DoesNotContain(resultList, d => d.Id == discounts[0].Id);
+        Assert.DoesNotContain(resultList, d => d.Id == discounts[1].Id);
+    }
+
+    [Theory, DatabaseData]
+    public async Task SearchAsync_WithTake_LimitsResults(
+        ISubscriptionDiscountRepository subscriptionDiscountRepository)
+    {
+        // Arrange - create 5 discounts
+        for (int i = 0; i < 5; i++)
+        {
+            await subscriptionDiscountRepository.CreateAsync(
+                CreateTestDiscount(
+                    stripeCouponId: $"test-limit-{i}-{Guid.NewGuid()}",
+                    percentOff: 10.00m,
+                    name: $"Discount {i}",
+                    creationDate: DateTime.UtcNow.AddMinutes(-i)));
+        }
+
+        // Act - get only 3 results
+        var result = await subscriptionDiscountRepository.SearchAsync(0, 3);
+
+        // Assert
+        var resultList = result.ToList();
+        Assert.Equal(3, resultList.Count);
+    }
 }

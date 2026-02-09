@@ -63,6 +63,14 @@
                                     <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
                                 </li>
                             }
+                            @if (canCreateTransaction)
+                            {
+                                <li class="nav-item" active-controller="SubscriptionDiscounts">
+                                    <a class="nav-link" asp-controller="SubscriptionDiscounts" asp-action="Index">
+                                        Discounts
+                                    </a>
+                                </li>
+                            }
                             @if (canViewTools)
                             {
                                 <li class="nav-item dropdown" active-controller="tools">

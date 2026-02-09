@@ -1,0 +1,360 @@
+﻿using Bit.Admin.Billing.Controllers;
+using Bit.Admin.Billing.Models;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Entities;
+using Bit.Core.Billing.Subscriptions.Repositories;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Stripe;
+
+namespace Admin.Test.Billing.Controllers;
+
+[ControllerCustomize(typeof(SubscriptionDiscountsController))]
+[SutProviderCustomize]
+public class SubscriptionDiscountsControllerTests
+{
+    [Theory, BitAutoData]
+    public async Task Index_DefaultParameters_ReturnsViewWithDiscounts(
+        List<SubscriptionDiscount> discounts,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .SearchAsync(0, 25)
+            .Returns(discounts);
+
+        var result = await sutProvider.Sut.Index();
+
+        Assert.IsType<ViewResult>(result);
+        var viewResult = (ViewResult)result;
+        var model = Assert.IsType<SubscriptionDiscountPagedModel>(viewResult.Model);
+        Assert.Equal(25, model.Count);
+        Assert.Equal(1, model.Page);
+        Assert.Equal(discounts.Count, model.Items.Count);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Index_WithPagination_CalculatesCorrectSkip(
+        List<SubscriptionDiscount> discounts,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .SearchAsync(50, 25)
+            .Returns(discounts);
+
+        var result = await sutProvider.Sut.Index(page: 3, count: 25);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .SearchAsync(50, 25);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Index_WithInvalidPage_DefaultsToPage1(
+        List<SubscriptionDiscount> discounts,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .SearchAsync(0, 25)
+            .Returns(discounts);
+
+        var result = await sutProvider.Sut.Index(page: -1, count: 25);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .SearchAsync(0, 25);
+    }
+
+    [Theory, BitAutoData]
+    public void Create_Get_ReturnsViewWithEmptyModel(
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var result = sutProvider.Sut.Create();
+
+        Assert.IsType<ViewResult>(result);
+        var viewResult = (ViewResult)result;
+        var model = Assert.IsType<CreateSubscriptionDiscountModel>(viewResult.Model);
+        Assert.False(model.IsImported);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportCoupon_ValidCoupon_ReturnsViewWithStripeProperties(
+        CreateSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var stripeCoupon = new Stripe.Coupon
+        {
+            Name = "Test Coupon",
+            PercentOff = 25,
+            Duration = "once"
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns((SubscriptionDiscount?)null);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>())
+            .Returns(stripeCoupon);
+
+        var result = await sutProvider.Sut.ImportCoupon(model);
+
+        Assert.IsType<ViewResult>(result);
+        var viewResult = (ViewResult)result;
+        Assert.Equal("Create", viewResult.ViewName);
+        var returnedModel = Assert.IsType<CreateSubscriptionDiscountModel>(viewResult.Model);
+        Assert.Equal(stripeCoupon.Name, returnedModel.Name);
+        Assert.Equal(stripeCoupon.PercentOff, returnedModel.PercentOff);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportCoupon_CouponWithProductRestrictions_MapsProductIds(
+        CreateSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var productIds = new List<string> { "prod_test1", "prod_test2", "prod_test3" };
+        var stripeCoupon = new Stripe.Coupon
+        {
+            Name = "Test Coupon",
+            PercentOff = 25,
+            Duration = "once",
+            AppliesTo = new Stripe.CouponAppliesTo
+            {
+                Products = productIds
+            }
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns((SubscriptionDiscount?)null);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>())
+            .Returns(stripeCoupon);
+
+        var products = new List<Stripe.Product>
+        {
+            new() { Id = "prod_test1", Name = "Test Product 1" },
+            new() { Id = "prod_test2", Name = "Test Product 2" },
+            new() { Id = "prod_test3", Name = "Test Product 3" }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListProductsAsync(Arg.Is<ProductListOptions>(o =>
+                o.Ids != null &&
+                o.Ids.Count == 3 &&
+                o.Ids.Contains("prod_test1") &&
+                o.Ids.Contains("prod_test2") &&
+                o.Ids.Contains("prod_test3")))
+            .Returns(products);
+
+        var result = await sutProvider.Sut.ImportCoupon(model);
+
+        Assert.IsType<ViewResult>(result);
+        var viewResult = (ViewResult)result;
+        var returnedModel = Assert.IsType<CreateSubscriptionDiscountModel>(viewResult.Model);
+        Assert.NotNull(returnedModel.AppliesToProducts);
+        Assert.Equal(3, returnedModel.AppliesToProducts.Count);
+        Assert.Equal("Test Product 1", returnedModel.AppliesToProducts["prod_test1"]);
+        Assert.Equal("Test Product 2", returnedModel.AppliesToProducts["prod_test2"]);
+        Assert.Equal("Test Product 3", returnedModel.AppliesToProducts["prod_test3"]);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .ListProductsAsync(Arg.Is<ProductListOptions>(o => o.Ids != null && o.Ids.Count == 3));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportCoupon_EmptyCouponId_ReturnsViewWithError(
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var model = new CreateSubscriptionDiscountModel { StripeCouponId = "" };
+        sutProvider.Sut.ModelState.AddModelError(nameof(model.StripeCouponId), "The Stripe Coupon ID field is required.");
+
+        var result = await sutProvider.Sut.ImportCoupon(model);
+
+        Assert.IsType<ViewResult>(result);
+        var viewResult = (ViewResult)result;
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("required", sutProvider.Sut.ModelState[nameof(model.StripeCouponId)]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportCoupon_DuplicateCoupon_ReturnsViewWithError(
+        CreateSubscriptionDiscountModel model,
+        SubscriptionDiscount existingDiscount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns(existingDiscount);
+
+        var result = await sutProvider.Sut.ImportCoupon(model);
+
+        Assert.IsType<ViewResult>(result);
+        var viewResult = (ViewResult)result;
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("already been imported", sutProvider.Sut.ModelState[nameof(model.StripeCouponId)]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportCoupon_StripeApiError_ReturnsViewWithError(
+        CreateSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns((SubscriptionDiscount?)null);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>())
+            .Throws(new StripeException());
+
+        var result = await sutProvider.Sut.ImportCoupon(model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("not found in Stripe", sutProvider.Sut.ModelState[nameof(model.StripeCouponId)]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportCoupon_WithDurationInMonths_ConvertsToInt(
+        CreateSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var stripeCoupon = new Stripe.Coupon
+        {
+            Name = "Test Coupon",
+            PercentOff = 25,
+            Duration = "repeating",
+            DurationInMonths = 12L
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns((SubscriptionDiscount?)null);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCouponAsync(Arg.Any<string>(), Arg.Any<CouponGetOptions>())
+            .Returns(stripeCoupon);
+
+        var result = await sutProvider.Sut.ImportCoupon(model);
+
+        var viewResult = (ViewResult)result;
+        var returnedModel = Assert.IsType<CreateSubscriptionDiscountModel>(viewResult.Model);
+        Assert.Equal(12, returnedModel.DurationInMonths);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_ValidModel_CreatesDiscountAndRedirects(
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var model = new CreateSubscriptionDiscountModel
+        {
+            StripeCouponId = "TEST123",
+            Name = "Test Coupon",
+            PercentOff = 25,
+            Duration = "once",
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddMonths(1),
+            RestrictToNewUsersOnly = false
+        };
+
+        sutProvider.Sut.ModelState.Clear();
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<RedirectToActionResult>(result);
+        var redirectResult = (RedirectToActionResult)result;
+        Assert.Equal(nameof(SubscriptionDiscountsController.Index), redirectResult.ActionName);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<SubscriptionDiscount>(d =>
+                d.StripeCouponId == model.StripeCouponId &&
+                d.Name == model.Name &&
+                d.StartDate == model.StartDate &&
+                d.EndDate == model.EndDate &&
+                d.AudienceType == DiscountAudienceType.AllUsers));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_WithRestrictToNewUsersOnly_SetsCorrectAudienceType(
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var model = new CreateSubscriptionDiscountModel
+        {
+            StripeCouponId = "TEST123",
+            Name = "Test Coupon",
+            PercentOff = 25,
+            Duration = "once",
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddMonths(1),
+            RestrictToNewUsersOnly = true
+        };
+
+        sutProvider.Sut.ModelState.Clear();
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        var result = await sutProvider.Sut.Create(model);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<SubscriptionDiscount>(d =>
+                d.AudienceType == DiscountAudienceType.UserHasNoPreviousSubscriptions));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_NotImported_ReturnsViewWithError(
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var model = new CreateSubscriptionDiscountModel
+        {
+            StripeCouponId = "TEST123",
+            Name = null
+        };
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("import the coupon", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_RepositoryThrowsException_ReturnsViewWithError(
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var model = new CreateSubscriptionDiscountModel
+        {
+            StripeCouponId = "TEST123",
+            Name = "Test Coupon",
+            PercentOff = 25,
+            Duration = "once",
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddMonths(1)
+        };
+
+        sutProvider.Sut.ModelState.Clear();
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .CreateAsync(Arg.Any<SubscriptionDiscount>())
+            .Throws(new Exception("Database error"));
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("error occurred", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
+    }
+}
