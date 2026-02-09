@@ -373,6 +373,18 @@ public class MailKitSmtpMailDeliveryServiceTests
     [Fact]
     public async Task TestGoogleSmtpWithOAuth()
     {
+        // THIS TEST DOES NOT WORK, the below steps describe how to get the test into the same breaking state as I
+        // have them. So if you find something that works better, please update the instructions.
+
+        // How to test Google SMTP with OAuth:
+        // Sign in to Google Cloud Console with the credentials stored in Bitwarden
+        // and switch to the SMTP testing project. You can either reuse the existing service
+        // account or create a new one.
+        // `GOOGLE_ACCOUNT_EMAIL` should be the email of the service account
+        // Click on the service account you are using and then click "Keys". Click
+        // "Add key" > "Create new key" > "JSON" > "Create" from the file that is downloaded
+        // take the contents of the `privateKey` property and set it to the `GOOGLE_ACCOUNT_KEY`
+        // environment variable.
         var sendToEmail = Environment.GetEnvironmentVariable("TEST_MAILBOX");
         var serviceAccountEmail = Environment.GetEnvironmentVariable("GOOGLE_ACCOUNT_EMAIL");
         var serviceAccountPrivateKey = Environment.GetEnvironmentVariable("GOOGLE_ACCOUNT_KEY");
