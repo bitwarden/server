@@ -57,7 +57,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IUserService _userService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly ICurrentContext _currentContext;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
@@ -90,7 +90,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IUserService userService,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
@@ -123,7 +123,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _userService = userService;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _currentContext = currentContext;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
@@ -155,7 +155,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task<OrganizationUserDetailsResponseModel> Get(Guid orgId, Guid id, bool includeGroups = false)
     {
-        var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
+        var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(id);
         if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
@@ -287,14 +287,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var userId = _userService.GetProperUserId(User);
 
         IEnumerable<Tuple<Core.Entities.OrganizationUser, string>> result;
-        if (_featureService.IsEnabled(FeatureFlagKeys.IncreaseBulkReinviteLimitForCloud))
-        {
-            result = await _bulkResendOrganizationInvitesCommand.BulkResendInvitesAsync(orgId, userId.Value, model.Ids);
-        }
-        else
-        {
-            result = await _organizationService.ResendInvitesAsync(orgId, userId.Value, model.Ids);
-        }
+        result = await _bulkResendOrganizationInvitesCommand.BulkResendInvitesAsync(orgId, userId.Value, model.Ids);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(
             result.Select(t => new OrganizationUserBulkResponseModel(t.Item1.Id, t.Item2)));
@@ -331,6 +324,12 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        if (organizationUser == null || organizationUser.OrganizationId != orgId)
+        {
+            throw new NotFoundException("Organization user mismatch");
+        }
+
         var useMasterPasswordPolicy = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
         ? (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id)).AutoEnrollEnabled(orgId)
         : await ShouldHandleResetPasswordAsync(orgId);
@@ -357,10 +356,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return false;
         }
 
-        var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        var useMasterPasswordPolicy = masterPasswordPolicy != null &&
-                                          masterPasswordPolicy.Enabled &&
-                                          masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+        var masterPasswordPolicy = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
+        var useMasterPasswordPolicy = masterPasswordPolicy.Enabled &&
+                                      masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
 
         return useMasterPasswordPolicy;
     }
@@ -665,11 +663,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRevokeAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.BulkRevokeUsersV2))
-        {
-            return await RestoreOrRevokeUsersAsync(orgId, model, _revokeOrganizationUserCommand.RevokeUsersAsync);
-        }
-
         var currentUserId = _userService.GetProperUserId(User);
         if (currentUserId == null)
         {
@@ -702,7 +695,16 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
-        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId));
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, null));
+    }
+
+
+    [HttpPut("{id}/restore/vnext")]
+    [Authorize<ManageUsersRequirement>]
+    [RequireFeature(FeatureFlagKeys.DefaultUserCollectionRestore)]
+    public async Task RestoreAsync_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserRestoreRequest request)
+    {
+        await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, request.DefaultUserCollectionName));
     }
 
     [HttpPatch("{id}/restore")]
@@ -717,7 +719,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
+        return await RestoreOrRevokeUsersAsync(orgId, model,
+            (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds,
+                restoringUserId, _userService, model.DefaultUserCollectionName));
     }
 
     [HttpPatch("restore")]

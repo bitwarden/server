@@ -13,10 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Settings\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
     <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
@@ -24,7 +20,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bogus" Version="35.*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="..\..\Program.cs" />
   </ItemGroup>
 
+  <!-- Allow integration tests to access internal seeders for validation -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SeederApi.IntegrationTest" />
+  </ItemGroup>
 </Project>

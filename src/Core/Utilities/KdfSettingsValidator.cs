@@ -6,6 +6,7 @@ namespace Bit.Core.Utilities;
 
 public static class KdfSettingsValidator
 {
+    // PM-28143 - Remove below when fixing ticket
     public static IEnumerable<ValidationResult> Validate(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         switch (kdfType)

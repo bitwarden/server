@@ -11,6 +11,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -654,6 +655,8 @@ public class SubscriptionUpdatedHandlerTests
         var plan = new Enterprise2023Plan(true);
         _pricingClient.GetPlanOrThrow(organization.PlanType)
             .Returns(plan);
+        _pricingClient.ListPlans()
+            .Returns(MockPlans.Plans);
 
         var parsedEvent = new Event
         {
@@ -692,6 +695,92 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _stripeFacade.Received(1).DeleteCustomerDiscount(subscription.CustomerId);
         await _stripeFacade.Received(1).DeleteSubscriptionDiscount(subscription.Id);
+    }
+    [Fact]
+    public async Task
+        HandleAsync_WhenUpgradingPlan_AndPreviousPlanHasSecretsManagerTrial_AndCurrentPlanHasSecretsManagerTrial_DoesNotRemovePasswordManagerCoupon()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            Status = StripeSubscriptionStatus.Active,
+            CustomerId = "cus_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    },
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(10),
+                        Plan = new Plan { Id = "secrets-manager-enterprise-seat-annually" }
+                    }
+                ]
+            },
+            Customer = new Customer
+            {
+                Balance = 0,
+                Discount = new Discount { Coupon = new Coupon { Id = "sm-standalone" } }
+            },
+            Discounts = [new Discount { Coupon = new Coupon { Id = "sm-standalone" } }],
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } }
+        };
+
+        // Note: The organization plan is still the previous plan because the subscription is updated before the organization is updated
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsAnnually2023 };
+
+        var plan = new Teams2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType)
+            .Returns(plan);
+        _pricingClient.ListPlans()
+            .Returns(MockPlans.Plans);
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[]
+                        {
+                        new { plan = new { id = "secrets-manager-teams-seat-annually" } },
+                    }
+                    },
+                    Items = new StripeList<SubscriptionItem>
+                    {
+                        Data =
+                        [
+                            new SubscriptionItem { Plan = new Stripe.Plan { Id = "secrets-manager-teams-seat-annually" } },
+                        ]
+                    }
+                })
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(organizationId, null, null));
+
+        _organizationRepository.GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _stripeFacade.DidNotReceive().DeleteCustomerDiscount(subscription.CustomerId);
+        await _stripeFacade.DidNotReceive().DeleteSubscriptionDiscount(subscription.Id);
     }
 
     [Theory]
