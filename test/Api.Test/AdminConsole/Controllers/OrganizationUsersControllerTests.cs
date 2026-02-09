@@ -121,10 +121,37 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Accept_NoMasterPasswordReset(Guid orgId, Guid orgUserId,
-        OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
+    public async Task Accept_WhenOrganizationUserNotFound_ThrowsNotFoundException(
+        Guid orgId, Guid orgUserId, OrganizationUserAcceptRequestModel model, User user,
+        SutProvider<OrganizationUsersController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns((OrganizationUser)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Accept(orgId, orgUserId, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Accept_WhenOrganizationIdMismatch_ThrowsNotFoundException(
+        Guid orgId, Guid orgUserId, OrganizationUserAcceptRequestModel model, User user, OrganizationUser organizationUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organizationUser.OrganizationId = Guid.NewGuid(); // Different org ID
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Accept(orgId, orgUserId, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Accept_NoMasterPasswordReset(Guid orgId, Guid orgUserId,
+        OrganizationUserAcceptRequestModel model, User user, OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organizationUser.OrganizationId = orgId;
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         await sutProvider.Sut.Accept(orgId, orgUserId, model);
 
@@ -137,17 +164,19 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsEnabledAndResetPolicyIsEnabled_ShouldHandleResetPassword(Guid orgId, Guid orgUserId,
-        OrganizationUserAcceptRequestModel model, User user,
+        OrganizationUserAcceptRequestModel model, User user, OrganizationUser organizationUser,
         [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
+        organizationUser.OrganizationId = orgId;
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = true });
 
         policy.Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, });
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         var policyQuery = sutProvider.GetDependency<IPolicyQuery>();
         policyQuery.RunAsync(orgId,
@@ -171,17 +200,19 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsDisabled_ShouldNotHandleResetPassword(Guid orgId, Guid orgUserId,
-        OrganizationUserAcceptRequestModel model, User user,
+        OrganizationUserAcceptRequestModel model, User user, OrganizationUser organizationUser,
         [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
+        organizationUser.OrganizationId = orgId;
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = false });
 
         policy.Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, });
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         var policyQuery = sutProvider.GetDependency<IPolicyQuery>();
         policyQuery.RunAsync(orgId,
@@ -256,7 +287,7 @@ public class OrganizationUsersControllerTests
             .Returns(true);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetDetailsByIdWithCollectionsAsync(organizationUser.Id)
+            .GetDetailsByIdWithSharedCollectionsAsync(organizationUser.Id)
             .Returns((organizationUser, collections));
 
         sutProvider.GetDependency<IGetOrganizationUsersClaimedStatusQuery>()
@@ -360,13 +391,15 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Accept_WhenOrganizationUsePoliciesIsEnabledAndResetPolicyIsEnabled_WithPolicyRequirementsEnabled_ShouldHandleResetPassword(Guid orgId, Guid orgUserId,
-        OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
+        OrganizationUserAcceptRequestModel model, User user, OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
+        organizationUser.OrganizationId = orgId;
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = true });
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         var policy = new Policy
         {
@@ -403,14 +436,16 @@ public class OrganizationUsersControllerTests
     [Theory]
     [BitAutoData]
     public async Task Accept_WithInvalidModelResetPasswordKey_WithPolicyRequirementsEnabled_ThrowsBadRequestException(Guid orgId, Guid orgUserId,
-        OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
+        OrganizationUserAcceptRequestModel model, User user, OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
         model.ResetPasswordKey = " ";
+        organizationUser.OrganizationId = orgId;
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
         applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = true });
 
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         var policy = new Policy
         {

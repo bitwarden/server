@@ -68,8 +68,8 @@ public class SendEmailOtpRequestValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Equal("email is invalid.", result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal("email and otp are required.", result.ErrorDescription);
 
         // Verify no OTP generation or email sending occurred
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -115,7 +115,7 @@ public class SendEmailOtpRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
-        Assert.Equal("email otp sent.", result.ErrorDescription);
+        Assert.Equal("email and otp are required.", result.ErrorDescription);
 
         // Verify OTP generation
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -270,10 +270,8 @@ public class SendEmailOtpRequestValidatorTests
         // Arrange
         var otpTokenProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
         var mailService = Substitute.For<IMailService>();
-        var featureService = Substitute.For<IFeatureService>();
-
         // Act
-        var validator = new SendEmailOtpRequestValidator(featureService, otpTokenProvider, mailService);
+        var validator = new SendEmailOtpRequestValidator(otpTokenProvider, mailService);
 
         // Assert
         Assert.NotNull(validator);
