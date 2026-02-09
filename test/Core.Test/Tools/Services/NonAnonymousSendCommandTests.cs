@@ -29,7 +29,6 @@ public class NonAnonymousSendCommandTests
     private readonly ISendRepository _sendRepository;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendValidationService _sendValidationService;
     private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
@@ -43,7 +42,6 @@ public class NonAnonymousSendCommandTests
         _sendRepository = Substitute.For<ISendRepository>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _featureService = Substitute.For<IFeatureService>();
         _sendValidationService = Substitute.For<ISendValidationService>();
         _currentContext = Substitute.For<ICurrentContext>();
@@ -54,7 +52,6 @@ public class NonAnonymousSendCommandTests
             _sendRepository,
             _sendFileStorageService,
             _pushNotificationService,
-            _sendAuthorizationService,
             _sendValidationService,
             _sendCoreHelperService,
             _logger
