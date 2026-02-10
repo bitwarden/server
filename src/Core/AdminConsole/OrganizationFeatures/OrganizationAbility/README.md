@@ -222,6 +222,8 @@ For manual override capability in the admin portal:
 
 > ⚠️ **WARNING:** Mistakes in organization license changes can disable the entire organization for self-hosted customers!
 > Double-check your work and ask for help if unsure.
+>
+> **Note:** Do not add new properties to the `OrganizationLicense` file - make sure you use the claims-based system below.
 
 Organization features are now **claims-based**. You'll need to:
 
@@ -247,9 +249,6 @@ Map your feature property from the claim to the organization when creating or up
 - `test/Core.Test/Billing/Organizations/Commands/UpdateOrganizationLicenseCommandTests.cs`
   - Exclude from test comparison (line ~91)
 
-> **Note:** The previous JSON-based organization license file approach is partially deprecated in favor of the
-> claims-based system.
-
 ### 9. Implement Business Logic Checks
 
 In your feature's business logic, check the ability flag:
@@ -266,10 +265,16 @@ if (!orgAbility.UseMyFeature)
 // Proceed with feature logic...
 ```
 
-### 10. Feature Flags as Killswitch
+### 10. Feature Flags
 
-**Recommendation:** Keep your existing feature flag in addition to the ability check, at least initially. This lets you
-control rollout in real time and disable the feature if it's causing problems:
+Organization abilities do **not** replace feature flags. They serve different purposes:
+
+- **Feature flags** — Short-lived flags that control feature release and can act as a killswitch for defective features.
+  Can be toggled immediately without a new deployment.
+- **Organization ability flags** — Permanent flags that control access to a feature based on plan type.
+  Require a database migration to toggle in bulk.
+
+You should still use a feature flag to control your feature release:
 
 ```csharp
 if (!_featureService.IsEnabled(FeatureFlagKeys.MyFeature))
@@ -282,9 +287,6 @@ if (!orgAbility.UseMyFeature)
     throw new BadRequestException("Your organization's plan does not support this feature.");
 }
 ```
-
-Unlike feature flags, there's no way to toggle database-level ability flags en masse without writing and deploying a
-SQL migration script.
 
 ## Existing Abilities
 
