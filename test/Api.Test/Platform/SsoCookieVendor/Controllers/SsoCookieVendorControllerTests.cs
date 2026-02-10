@@ -1,13 +1,13 @@
 ﻿#nullable enable
 
-using Bit.Api.Controllers;
+using Bit.Api.Platform.SsoCookieVendor;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.Platform.SsoCookieVendor.Controllers;
 
 public class SsoCookieVendorControllerTests : IDisposable
 {
@@ -129,7 +129,7 @@ public class SsoCookieVendorControllerTests : IDisposable
 
         // Assert
         var redirectResult = Assert.IsType<RedirectResult>(result);
-        Assert.Equal("bitwarden://sso_cookie_vendor?test-cookie=my-token-value-123&d=1", redirectResult.Url);
+        Assert.Equal("bitwarden://sso-cookie-vendor?test-cookie=my-token-value-123&d=1", redirectResult.Url);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class SsoCookieVendorControllerTests : IDisposable
 
         // Assert
         var redirectResult = Assert.IsType<RedirectResult>(result);
-        Assert.StartsWith("bitwarden://sso_cookie_vendor?", redirectResult.Url);
+        Assert.StartsWith("bitwarden://sso-cookie-vendor?", redirectResult.Url);
         Assert.Contains("test-cookie-0=part1", redirectResult.Url);
         Assert.Contains("test-cookie-1=part2", redirectResult.Url);
         Assert.Contains("test-cookie-2=part3", redirectResult.Url);
@@ -256,7 +256,7 @@ public class SsoCookieVendorControllerTests : IDisposable
     public void Get_WhenUriExceedsMaxLength_Returns400()
     {
         // Arrange - create a very long cookie value that will exceed 8192 characters
-        // URI format: "bitwarden://sso_cookie_vendor?test-cookie={value}"
+        // URI format: "bitwarden://sso-cookie-vendor?test-cookie={value}"
         // Base URI length is about 43 characters, so we need value > 8149
         var longValue = new string('a', 8200);
         var cookies = new Dictionary<string, string>
@@ -289,7 +289,7 @@ public class SsoCookieVendorControllerTests : IDisposable
 
         // Assert
         var redirectResult = Assert.IsType<RedirectResult>(result);
-        Assert.Equal("bitwarden://sso_cookie_vendor?test-cookie=single-value&d=1", redirectResult.Url);
+        Assert.Equal("bitwarden://sso-cookie-vendor?test-cookie=single-value&d=1", redirectResult.Url);
     }
 
     [Fact]
