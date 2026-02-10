@@ -1753,10 +1753,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Disabled")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("EmailHashes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
-
                     b.Property<string>("Emails")
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
