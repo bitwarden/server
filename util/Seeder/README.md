@@ -33,6 +33,36 @@ The seeder transforms SDK output to server format before database insertion.
 
 The Seeder is organized around six core patterns, each with a specific responsibility:
 
+#### Pipeline
+
+**Purpose:** Composable architecture for fixture-based and generated seeding.
+
+**When to use:** New bulk operations, especially with presets. Provides ultimate flexibility.
+
+**Flow**: Preset JSON → PresetLoader → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
+
+**Key actors**:
+- **RecipeBuilder**: Fluent API with dependency validation
+- **IStep**: Isolated unit of work (CreateOrganizationStep, CreateUsersStep, etc.)
+- **RecipeExecutor**: Executes steps, captures statistics, commits
+- **PresetExecutor**: Orchestrates preset loading and execution
+- **SeederContext**: Shared mutable state (NOT thread-safe)
+
+**Why this architecture wins**:
+- **Infrastructure as Code**: JSON presets define complete scenarios
+- **Mix & Match**: Fixtures + generation in one preset
+- **Type-safe**: Builder validates at build time
+- **Extensible**: Add entity types via new IStep implementations
+- **Future-ready**: Supports custom DSLs on top of RecipeBuilder
+
+**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Ciphers
+
+**Naming**: `{Purpose}Step` classes implementing `IStep`
+
+**Files**: `Pipeline/` folder
+
+---
+
 #### Factories
 
 **Purpose:** Create individual domain entities with cryptographically correct encrypted data.

@@ -25,4 +25,24 @@ internal static class SecureNoteCipherSeeder
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, organizationId, userId);
     }
+
+    internal static Cipher CreateFromSeed(
+        string encryptionKey,
+        SeedItem item,
+        Guid? organizationId = null,
+        Guid? userId = null)
+    {
+        var cipherView = new CipherViewDto
+        {
+            OrganizationId = organizationId,
+            Name = item.Name,
+            Notes = item.Notes,
+            Type = CipherTypes.SecureNote,
+            SecureNote = new SecureNoteViewDto { Type = 0 },
+            Fields = SeedItemMapping.MapFields(item.Fields)
+        };
+
+        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
+        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, organizationId, userId);
+    }
 }
