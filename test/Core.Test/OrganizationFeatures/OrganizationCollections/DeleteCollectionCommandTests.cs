@@ -14,7 +14,8 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections;
 public class DeleteCollectionCommandTests
 {
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData]
     [OrganizationCustomize]
     public async Task DeleteAsync_DeletesCollection(Collection collection, SutProvider<DeleteCollectionCommand> sutProvider)
     {
@@ -26,7 +27,8 @@ public class DeleteCollectionCommandTests
         await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection, EventType.Collection_Deleted, Arg.Any<DateTime>());
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData]
     [OrganizationCustomize]
     public async Task DeleteManyAsync_DeletesManyCollections(Collection collection, Collection collection2, SutProvider<DeleteCollectionCommand> sutProvider)
     {
@@ -50,7 +52,8 @@ public class DeleteCollectionCommandTests
             a.All(c => collectionIds.Contains(c.Item1.Id) && c.Item2 == EventType.Collection_Deleted)));
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData]
     [OrganizationCustomize]
     public async Task DeleteAsync_WithDefaultUserCollectionType_ThrowsBadRequest(Collection collection, SutProvider<DeleteCollectionCommand> sutProvider)
     {
@@ -68,7 +71,8 @@ public class DeleteCollectionCommandTests
             .LogCollectionEventAsync(default, default, default);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData]
     [OrganizationCustomize]
     public async Task DeleteManyAsync_WithDefaultUserCollectionType_ThrowsBadRequest(Collection collection, Collection collection2, SutProvider<DeleteCollectionCommand> sutProvider)
     {
@@ -88,7 +92,8 @@ public class DeleteCollectionCommandTests
             .LogCollectionEventsAsync(default);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData]
     [OrganizationCustomize]
     public async Task DeleteManyAsync_WithManyCollections_DeletesAllCollections(SutProvider<DeleteCollectionCommand> sutProvider)
     {
@@ -126,7 +131,8 @@ public class DeleteCollectionCommandTests
                 a.All(c => collectionIds.Contains(c.Item1.Id) && c.Item2 == EventType.Collection_Deleted)));
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData]
     [OrganizationCustomize]
     public async Task DeleteManyAsync_WhenEventLoggingFails_StillDeletesCollections(Collection collection, SutProvider<DeleteCollectionCommand> sutProvider)
     {
