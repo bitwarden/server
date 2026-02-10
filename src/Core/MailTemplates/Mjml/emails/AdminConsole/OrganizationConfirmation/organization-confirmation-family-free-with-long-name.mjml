@@ -25,7 +25,7 @@
                 <mj-text
                         mj-class="ac-hero-text"
                         padding="0px 0px 24px 0px">
-                    <p>You can now share passwords with members of <strong>A-50-character-long-organization-name-012345678901!</strong></p>
+                    <p>You can now share passwords with members of <b>A-50-character-long-organization-name-012345678901!</b></p>
                 </mj-text>
                 <mj-button
                         mj-class="ac-button"
@@ -39,11 +39,11 @@
                     width="35%">
                 <mj-image
                         css-class="hide-mobile"
-                        align="center"
+                        align="right"
                         padding="0px"
                         width="155px"
                         alt="Business Building"
-                        src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png">
+                        src="https://assets.bitwarden.com/email/v1/ac-spot-family.png">
                 </mj-image>
             </mj-column>
         </mj-section>
@@ -97,11 +97,11 @@
                 </mj-spacer>
             </mj-column>
             <mj-column
-                width="80%"
-                vertical-align="top">
+                    width="80%"
+                    vertical-align="top">
                 <mj-text
-                    mj-class="ac-text"
-                    padding="0px 0px 0px 0px">
+                        mj-class="ac-text"
+                        padding="0px 0px 0px 0px">
                     You can access passwords A-50-character-long-organization-name-012345678901 has shared with you.
                 </mj-text>
             </mj-column>
@@ -221,7 +221,7 @@
                 padding="40px"
                 background-color="#F3F6F9">
             <mj-column
-                    width="70%">
+                    width="60%">
                 <mj-text
                         mj-class="ac-heading"
                         padding="0px 0px 8px 0px">
@@ -234,10 +234,18 @@
                 </mj-text>
             </mj-column>
             <mj-column
+                    css-class="hide-mobile"
+                    width="10%">
+                <mj-spacer
+                        height="1px">
+                </mj-spacer>
+            </mj-column>
+            <mj-column
                     width="30%"
-                    vertical-align="middle">
+                    vertical-align="top">
                 <mj-image
                         css-class="hide-mobile"
+                        align="right"
                         src="https://assets.bitwarden.com/email/v1/spot-community.png"
                         width="94px"
                         padding="0px">
