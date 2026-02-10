@@ -39,7 +39,7 @@
                     width="35%">
                 <mj-image
                         css-class="hide-mobile"
-                        align="center"
+                        align="right"
                         padding="0px"
                         width="155px"
                         alt="Business Building"
@@ -245,6 +245,7 @@
                     vertical-align="top">
                 <mj-image
                         css-class="hide-mobile"
+                        align="right"
                         src="https://assets.bitwarden.com/email/v1/spot-community.png"
                         width="94px"
                         padding="0px">
