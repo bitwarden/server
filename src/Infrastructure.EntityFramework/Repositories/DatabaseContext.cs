@@ -166,6 +166,8 @@ public class DatabaseContext : DbContext
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
+        eCollectionGroup.ToTable(nameof(CollectionGroup));
+        eCollectionUser.ToTable(nameof(CollectionUser));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));
