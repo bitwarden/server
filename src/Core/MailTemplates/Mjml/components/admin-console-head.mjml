@@ -9,7 +9,7 @@
 
 <mj-attributes>
     <mj-all
-            font-family="'Inter','Helvetica Neue',Helvetica,Arial,sans-serif" />
+            font-family="'Helvetica Neue','Inter',Helvetica,Arial,sans-serif" />
     <mj-class
             name="ac-text"
             font-size="16px"
