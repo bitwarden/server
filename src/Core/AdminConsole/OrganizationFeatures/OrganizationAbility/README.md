@@ -121,13 +121,25 @@ Add a new `UseMyFeature` column to the Organization table:
 - `src/Sql/dbo/Tables/Organization.sql` — Add column with `NOT NULL` constraint and default of `0` (false) for EDD
   backward compatibility
 
-**Stored procedures and views to update:**
+**Stored procedures to update:**
 
 - `src/Sql/dbo/Stored Procedures/Organization_Create.sql`
 - `src/Sql/dbo/Stored Procedures/Organization_Update.sql`
 - `src/Sql/dbo/Stored Procedures/Organization_ReadAbilities.sql`
+
+**Views to update (add the new column):**
+
 - `src/Sql/dbo/Views/OrganizationUserOrganizationDetailsView.sql`
 - `src/Sql/dbo/Views/ProviderUserProviderOrganizationDetailsView.sql`
+- `src/Sql/dbo/Views/OrganizationView.sql`
+
+**Views to refresh (use `sp_refreshview`):**
+
+After schema changes, the following views may need to be refreshed even though they don't explicitly include the new
+column:
+
+- `src/Sql/dbo/Views/OrganizationCipherDetailsCollectionsView.sql`
+- `src/Sql/dbo/Views/ProviderOrganizationOrganizationDetailsView.sql`
 
 **Create a migration script** for these database changes.
 
@@ -177,14 +189,16 @@ Update the mapping code so models receive the new value and new organizations ge
 - `src/Core/AdminConsole/Models/Data/Organizations/OrganizationUsers/OrganizationUserOrganizationDetails.cs`
 - `src/Core/AdminConsole/Models/Data/Provider/ProviderUserOrganizationDetails.cs`
 
-**Plan definition:**
+**Plan definition and signup logic:**
 
-- Work with the Billing Team to add a `HasMyFeature` property to the Plan model and configure which plans include it
+If your feature should be automatically enabled based on plan type at signup (e.g., SSO for Enterprise plans), you'll
+need to:
 
-**Signup logic:**
+1. Work with the Billing Team to add a `HasMyFeature` property to the Plan model and configure which plans include it
+2. Update `src/Core/AdminConsole/OrganizationFeatures/Organizations/CloudOrganizationSignUpCommand.cs` to map
+   `plan.HasMyFeature` to `organization.UseMyFeature`
 
-- `src/Core/AdminConsole/OrganizationFeatures/Organizations/CloudOrganizationSignUpCommand.cs`
-  - Map `plan.HasMyFeature` to `organization.UseMyFeature`
+**Note:** This step is not required if your feature is enabled manually via the Admin Portal.
 
 ### 6. Client Changes
 
@@ -200,7 +214,8 @@ Update the mapping code so models receive the new value and new organizations ge
 
 For manual override capability in the admin portal:
 
-- `src/Admin/AdminConsole/Views/Organizations/_ViewInformation.cshtml` — Add checkbox for the new ability
+- `src/Admin/AdminConsole/Models/OrganizationEditModel.cs` — Map the ability from the organization entity
+- `src/Admin/AdminConsole/Views/Shared/_OrganizationForm.cshtml` — Add checkbox for the new ability
 - `src/Admin/AdminConsole/Controllers/OrganizationsController.cs` — Update `UpdateOrganization()` method mapping
 
 ### 8. Self-Host Licensing
