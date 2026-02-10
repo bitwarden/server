@@ -1,0 +1,31 @@
+<mjml>
+    <mj-head>
+        <mj-include path="../../../../components/head.mjml" />
+    </mj-head>
+    <mj-body css-class="border-fix">
+        <!-- Blue Header Section -->
+        <mj-wrapper css-class="border-fix" padding="20px 20px 0px 20px">
+            <mj-bw-hero title=""/>
+        </mj-wrapper>
+
+        <!-- Main Content -->
+        <mj-wrapper padding="0px 20px 0px 20px">
+            <mj-section background-color="#fff" padding="0px 10px 0px 10px">
+                <mj-column>
+                    <mj-text font-size="16px" line-height="24px" padding="10px 15px">
+                        The following emergency contacts have been removed from your account:
+                        <ul>
+                            {{#each RemovedGranteeEmails}}
+                            <li>{{this}}</li>
+                            {{/each}}
+                        </ul>
+                        Learn more about <a href="{{EmergencyAccessHelpPageUrl}}">emergency access</a>.
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+        </mj-wrapper>
+
+        <!-- Footer -->
+        <mj-include path="../../../../components/footer.mjml" />
+    </mj-body>
+</mjml>

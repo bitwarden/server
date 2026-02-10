@@ -5,7 +5,6 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.IdentityModel.Logging;
 
 namespace Bit.Notifications;
 
@@ -84,8 +83,6 @@ public class Startup
         IWebHostEnvironment env,
         GlobalSettings globalSettings)
     {
-        IdentityModelEventSource.ShowPII = true;
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 

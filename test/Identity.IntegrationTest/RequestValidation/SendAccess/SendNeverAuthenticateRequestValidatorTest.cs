@@ -63,7 +63,7 @@ public class SendNeverAuthenticateRequestValidatorIntegrationTests(
     }
 
     [Fact]
-    public async Task SendAccess_NeverAuthenticateSend_WithEmail_ReturnsEmailInvalid()
+    public async Task SendAccess_NeverAuthenticateSend_WithEmail_ReturnsEmailAndOtpRequired()
     {
         // Arrange
         var email = "test@example.com";
@@ -77,10 +77,10 @@ public class SendNeverAuthenticateRequestValidatorIntegrationTests(
         var content = await response.Content.ReadAsStringAsync();
 
         // should be invalid grant
-        Assert.Contains(OidcConstants.TokenErrors.InvalidGrant, content);
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
 
         // Try to compel the invalid email error
-        var expectedError = SendAccessConstants.EmailOtpValidatorResults.EmailInvalid;
+        var expectedError = SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired;
         Assert.Contains(expectedError, content);
     }
 
