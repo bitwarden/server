@@ -20,6 +20,9 @@ public class UserMapperProfile : Profile
 {
     public UserMapperProfile()
     {
-        CreateMap<Core.Entities.User, User>().ReverseMap();
+        CreateMap<Core.Entities.User, User>()
+        // TODO PM-30351 : remove when MasterPasswordSalt is ready for deviation from Email
+        .ForMember(dest => dest.MasterPasswordSalt, opt => opt.MapFrom(src => src.Email))
+        .ReverseMap();
     }
 }
