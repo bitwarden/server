@@ -22,7 +22,7 @@ public interface IQuery
     /// </summary>
     /// <param name="request">The request object containing parameters for the query operation.</param>
     /// <returns>The query result data as an object.</returns>
-    object Execute(object request);
+    Task<object> Execute(object request);
 }
 
 /// <summary>
@@ -43,7 +43,7 @@ public interface IQuery<TRequest, TResult> : IQuery where TRequest : class where
     /// </summary>
     /// <param name="request">The request object containing parameters for the query operation.</param>
     /// <returns>The typed query result data.</returns>
-    TResult Execute(TRequest request);
+    Task<TResult> Execute(TRequest request);
 
     /// <summary>
     /// Gets the request type for this query.
@@ -56,5 +56,5 @@ public interface IQuery<TRequest, TResult> : IQuery where TRequest : class where
     /// </summary>
     /// <param name="request">The request object to cast and process.</param>
     /// <returns>The typed result cast to object.</returns>
-    object IQuery.Execute(object request) => Execute((TRequest)request);
+    async Task<object> IQuery.Execute(object request) => await Execute((TRequest)request);
 }
