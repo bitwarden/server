@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -76,7 +73,7 @@ public interface IDuoUniversalTokenService
     /// </summary>
     /// <param name="provider">TwoFactorProvider Duo or OrganizationDuo</param>
     /// <returns>Duo.Client object or null</returns>
-    Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider);
+    Task<Duo.Client?> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider);
 }
 
 public class DuoUniversalTokenService(
@@ -181,7 +178,7 @@ public class DuoUniversalTokenService(
             return null;
         }
 
-        string overrideFromForm = null;
+        string? overrideFromForm = null;
         if (httpContext.Request.HasFormContentType)
         {
             overrideFromForm = httpContext.Request.Form["deeplinkScheme"].FirstOrDefault();
@@ -236,7 +233,7 @@ public class DuoUniversalTokenService(
             _globalSettings.BaseServiceUri.Vault, clientName);
     }
 
-    public async Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider)
+    public async Task<Duo.Client?> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider)
     {
         var redirectUri = BuildDuoTwoFactorRedirectUri();
 
