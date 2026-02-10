@@ -37,6 +37,7 @@ BEGIN
             -- smaller batch size to reduce IO/blocking
             FROM [dbo].[User] WITH (INDEX([IX_User_MasterPasswordSalt]))
             WHERE [MasterPasswordSalt] IS NULL
+                AND [MasterPassword] IS NOT NULL -- Only backfill users who have a MasterPassword, as those without can have NULL salt
             ORDER BY [Id]
         )
     UPDATE u
