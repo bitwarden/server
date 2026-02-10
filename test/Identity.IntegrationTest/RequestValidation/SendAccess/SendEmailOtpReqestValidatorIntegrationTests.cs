@@ -3,7 +3,6 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using NSubstitute;
 using Xunit;
@@ -61,7 +60,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
-                    .Returns(new EmailOtp([CryptographyHelper.HashAndEncode(email)]));
+                    .Returns(new EmailOtp([email]));
                 services.AddSingleton(sendAuthQuery);
 
                 // Mock OTP token provider
@@ -85,7 +84,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         // Assert
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
-        Assert.Contains("email otp sent", content);
+        Assert.Contains("email and otp are required", content);
     }
 
     [Fact]
@@ -106,7 +105,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
-                    .Returns(new EmailOtp(new[] { CryptographyHelper.HashAndEncode(email) }));
+                    .Returns(new EmailOtp(new[] { email }));
                 services.AddSingleton(sendAuthQuery);
 
                 // Mock OTP token provider to validate successfully
@@ -150,7 +149,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
-                    .Returns(new EmailOtp(new[] { CryptographyHelper.HashAndEncode(email) }));
+                    .Returns(new EmailOtp(new[] { email }));
                 services.AddSingleton(sendAuthQuery);
 
                 // Mock OTP token provider to validate as false
@@ -192,7 +191,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId)
-                    .Returns(new EmailOtp(new[] { CryptographyHelper.HashAndEncode(email) }));
+                    .Returns(new EmailOtp(new[] { email }));
                 services.AddSingleton(sendAuthQuery);
 
                 // Mock OTP token provider to fail generation

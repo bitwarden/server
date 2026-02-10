@@ -8,7 +8,7 @@ public class Program
     {
         Host
             .CreateDefaultBuilder(args)
-            .ConfigureCustomAppConfiguration(args)
+            .UseBitwardenSdk()
             .ConfigureWebHostDefaults(webBuilder =>
             {
                 webBuilder.ConfigureKestrel(o =>
