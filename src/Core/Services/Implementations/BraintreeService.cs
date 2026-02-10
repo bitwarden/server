@@ -1,11 +1,10 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
-using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Braintree;
+using Braintree.Exceptions;
 using Microsoft.Extensions.Logging;
-using Stripe;
 
 namespace Bit.Core.Services.Implementations;
 
@@ -18,11 +17,34 @@ public class BraintreeService(
     IMailService mailService,
     IStripeAdapter stripeAdapter) : IBraintreeService
 {
-    private readonly ConflictException _problemPayingInvoice = new("There was a problem paying for your invoice. Please contact customer support.");
+    private readonly Exceptions.ConflictException _problemPayingInvoice = new("There was a problem paying for your invoice. Please contact customer support.");
+
+    public async Task<Customer?> GetCustomer(
+        Stripe.Customer customer)
+    {
+        if (!customer.Metadata.TryGetValue(MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
+        {
+            return null;
+        }
+
+        try
+        {
+            return await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
+        }
+        catch (NotFoundException)
+        {
+            logger.LogWarning(
+                "Stripe customer ({CustomerId}) is linked to a Braintree Customer ({BraintreeCustomerId}) that does not exist.",
+                customer.Id,
+                braintreeCustomerId);
+
+            return null;
+        }
+    }
 
     public async Task PayInvoice(
         SubscriberId subscriberId,
-        Invoice invoice)
+        Stripe.Invoice invoice)
     {
         if (invoice.Customer == null)
         {
@@ -93,7 +115,7 @@ public class BraintreeService(
             return;
         }
 
-        await stripeAdapter.UpdateInvoiceAsync(invoice.Id, new InvoiceUpdateOptions
+        await stripeAdapter.UpdateInvoiceAsync(invoice.Id, new Stripe.InvoiceUpdateOptions
         {
             Metadata = new Dictionary<string, string>
             {
@@ -102,6 +124,6 @@ public class BraintreeService(
             }
         });
 
-        await stripeAdapter.PayInvoiceAsync(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+        await stripeAdapter.PayInvoiceAsync(invoice.Id, new Stripe.InvoicePayOptions { PaidOutOfBand = true });
     }
 }

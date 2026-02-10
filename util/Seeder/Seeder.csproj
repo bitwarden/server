@@ -20,7 +20,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bogus" Version="35.*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="..\..\Program.cs" />
   </ItemGroup>
 
+  <!-- Allow integration tests to access internal seeders for validation -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SeederApi.IntegrationTest" />
+  </ItemGroup>
 </Project>

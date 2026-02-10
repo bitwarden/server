@@ -10,8 +10,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<Core.Auth.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
@@ -146,4 +144,23 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         };
     }
 
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entitiesToRemove = from ea in dbContext.EmergencyAccesses
+                               where emergencyAccessIds.Contains(ea.Id)
+                               select ea;
+
+        var granteeIds = entitiesToRemove
+            .Where(ea => ea.Status == EmergencyAccessStatusType.Confirmed)
+            .Where(ea => ea.GranteeId.HasValue)
+            .Select(ea => ea.GranteeId!.Value) // .Value is safe here due to the Where above
+            .Distinct();
+
+        dbContext.EmergencyAccesses.RemoveRange(entitiesToRemove);
+        await dbContext.UserBumpManyAccountRevisionDatesAsync([.. granteeIds]);
+        await dbContext.SaveChangesAsync();
+    }
 }
