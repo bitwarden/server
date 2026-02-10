@@ -5,7 +5,6 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 using NSubstitute;
@@ -68,8 +67,8 @@ public class SendEmailOtpRequestValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, result.Error);
-        Assert.Equal("email is invalid.", result.ErrorDescription);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
+        Assert.Equal("email and otp are required.", result.ErrorDescription);
 
         // Verify no OTP generation or email sending occurred
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -106,8 +105,7 @@ public class SendEmailOtpRequestValidatorTests
                 expectedUniqueId)
             .Returns(generatedToken);
 
-        var emailHash = CryptographyHelper.HashAndEncode(email);
-        emailOtp = emailOtp with { EmailHashes = [emailHash] };
+        emailOtp = emailOtp with { emails = [email] };
 
         // Act
         var result = await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
@@ -115,7 +113,7 @@ public class SendEmailOtpRequestValidatorTests
         // Assert
         Assert.True(result.IsError);
         Assert.Equal(OidcConstants.TokenErrors.InvalidRequest, result.Error);
-        Assert.Equal("email otp sent.", result.ErrorDescription);
+        Assert.Equal("email and otp are required.", result.ErrorDescription);
 
         // Verify OTP generation
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
@@ -146,8 +144,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        var emailHash = CryptographyHelper.HashAndEncode(email);
-        emailOtp = emailOtp with { EmailHashes = [emailHash] };
+        emailOtp = emailOtp with { emails = [email] };
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
@@ -182,8 +179,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        var emailHash = CryptographyHelper.HashAndEncode(email);
-        emailOtp = emailOtp with { EmailHashes = [emailHash] };
+        emailOtp = emailOtp with { emails = [email] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 
@@ -235,8 +231,7 @@ public class SendEmailOtpRequestValidatorTests
             Request = tokenRequest
         };
 
-        var emailHash = CryptographyHelper.HashAndEncode(email);
-        emailOtp = emailOtp with { EmailHashes = [emailHash] };
+        emailOtp = emailOtp with { emails = [email] };
 
         var expectedUniqueId = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
 

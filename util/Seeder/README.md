@@ -102,8 +102,8 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 - Implement `IScene<TRequest>` or `IScene<TRequest, TResult>`
 - Create complete, realistic test scenarios
-- Handle uniqueness constraint mangling for test isolation
-- Return `SceneResult` with mangle map and optional additional operation result data for test assertions
+- Receive `IManglerService` via DI for test isolation—service handles mangling automatically
+- Return `SceneResult` with MangleMap (original→mangled) for test assertions
 - Async operations
 - CAN modify database state
 
@@ -117,7 +117,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **When to use:** Need to READ existing seeded data for verification or follow-up operations.
 
-** Example:** Inviting a user to an organization produces a magic link to accept the invite, a query should be used to retrieve that link because it is easier than interfacing with an external smtp catcher.
+**Example:** Inviting a user to an organization produces a magic link to accept the invite, a query should be used to retrieve that link because it is easier than interfacing with an external smtp catcher.
 
 **Key characteristics:**
 
@@ -143,6 +143,35 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Deterministic (seeded randomness for reproducibility)
 - Composable across regions
 - Enums provide the public API (CompanyType, PasswordStrength, etc.)
+
+**Folder structure:** See `Data/README.md` for Generators and Distributions details.
+
+- `Static/` - Read-only data arrays (Companies, Passwords, Names, OrgStructures)
+- `Generators/` - Seeded data generators via `GeneratorContext`
+- `Distributions/` - Percentage-based selection via `Distribution<T>`
+- `Enums/` - Public API enums
+
+#### Services
+
+**Purpose:** Injectable services that provide cross-cutting functionality via dependency injection.
+
+**`IManglerService`** - Context-aware string mangling for test isolation:
+
+- `Mangle(string)` - Transforms strings with unique prefixes for collision-free test data
+- `GetMangleMap()` - Returns dictionary of original → mangled mappings for assertions
+- `IsEnabled` - Indicates whether mangling is active
+
+**Implementations:**
+
+- `ManglerService` - Scoped stateful service that adds unique prefixes (`{prefix}+user@domain` for emails, `{prefix}-value` for strings)
+- `NoOpManglerService` - Singleton no-op service that returns values unchanged
+
+**Configuration:**
+
+- SeederApi: Enabled when `GlobalSettings.TestPlayIdTrackingEnabled` is true
+- DbSeederUtility: Enabled with `--mangle` CLI flag
+
+---
 
 ## Rust SDK Integration
 
