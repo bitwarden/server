@@ -1,15 +1,17 @@
 ﻿using Bit.Core.Entities;
+using Bit.Seeder.Services;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.DbSeederUtility;
 
 public static class ServiceCollectionExtension
 {
-    public static void ConfigureServices(ServiceCollection services)
+    public static void ConfigureServices(ServiceCollection services, bool enableMangling = false)
     {
         // Load configuration using the GlobalSettingsFactory
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
@@ -29,5 +31,14 @@ public static class ServiceCollectionExtension
             .SetApplicationName("Bitwarden");
 
         services.AddDatabaseRepositories(globalSettings);
+
+        if (enableMangling)
+        {
+            services.TryAddScoped<IManglerService, ManglerService>();
+        }
+        else
+        {
+            services.TryAddSingleton<IManglerService, NoOpManglerService>();
+        }
     }
 }

@@ -1,6 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Scenes;
 
@@ -13,13 +16,15 @@ public struct SingleUserSceneResult
     public string PublicKey { get; init; }
     public string PrivateKey { get; init; }
     public string ApiKey { get; init; }
-
 }
 
 /// <summary>
 /// Creates a single user using the provided account details.
 /// </summary>
-public class SingleUserScene(UserSeeder userSeeder, IUserRepository userRepository) : IScene<SingleUserScene.Request, SingleUserSceneResult>
+public class SingleUserScene(
+    IPasswordHasher<User> passwordHasher,
+    IUserRepository userRepository,
+    IManglerService manglerService) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
     {
@@ -31,22 +36,27 @@ public class SingleUserScene(UserSeeder userSeeder, IUserRepository userReposito
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
     {
-        var user = userSeeder.CreateUser(request.Email, request.EmailVerified, request.Premium);
+        // Pass service to factory - factory will call Mangle()
+        var user = UserSeeder.Create(
+            request.Email,
+            passwordHasher,
+            manglerService,
+            request.EmailVerified,
+            request.Premium);
 
         await userRepository.CreateAsync(user);
 
-        return new SceneResult<SingleUserSceneResult>(result: new SingleUserSceneResult
-        {
-            UserId = user.Id,
-            Kdf = user.Kdf.ToString(),
-            KdfIterations = user.KdfIterations,
-            Key = user.Key!,
-            PublicKey = user.PublicKey!,
-            PrivateKey = user.PrivateKey!,
-            ApiKey = user.ApiKey!,
-        }, mangleMap: userSeeder.GetMangleMap(user, new UserData
-        {
-            Email = request.Email,
-        }));
+        return new SceneResult<SingleUserSceneResult>(
+            result: new SingleUserSceneResult
+            {
+                UserId = user.Id,
+                Kdf = user.Kdf.ToString(),
+                KdfIterations = user.KdfIterations,
+                Key = user.Key!,
+                PublicKey = user.PublicKey!,
+                PrivateKey = user.PrivateKey!,
+                ApiKey = user.ApiKey!,
+            },
+            mangleMap: manglerService.GetMangleMap());
     }
 }
