@@ -7,8 +7,6 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using NSubstitute;
-using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections;
 
@@ -45,7 +43,7 @@ public class DeleteCollectionCommandTests
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.ToArray().SequenceEqual(collectionIds)));
 
         await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventsAsync(
             Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(a =>
@@ -120,7 +118,7 @@ public class DeleteCollectionCommandTests
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.ToArray().SequenceEqual(collectionIds.ToArray())));
 
         await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventsAsync(
             Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(a =>
@@ -149,7 +147,7 @@ public class DeleteCollectionCommandTests
 
         // Assert - Collections should still be deleted
         await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.ToArray().SequenceEqual(collectionIds)));
     }
 
 }
