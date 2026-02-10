@@ -334,7 +334,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act
         var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService);
@@ -408,7 +408,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(-1))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -453,7 +453,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -486,7 +486,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -789,21 +789,7 @@ public class AcceptOrgUserCommandTests
             .Returns(Valid(request));
     }
 
-
-    private string CreateOldToken(SutProvider<AcceptOrgUserCommand> sutProvider,
-        OrganizationUser organizationUser)
-    {
-        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
-            .CreateProtector("OrganizationServiceDataProtector");
-
-        // Token matching the format used in OrganizationService.InviteUserAsync
-        var oldToken = dataProtector.Protect(
-            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
-        return oldToken;
-    }
-
-    private string CreateNewToken(OrganizationUser orgUser)
+    private string CreateToken(OrganizationUser orgUser)
     {
         var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
         var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
