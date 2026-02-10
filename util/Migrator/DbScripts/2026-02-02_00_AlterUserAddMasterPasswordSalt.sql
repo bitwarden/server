@@ -4,59 +4,59 @@ BEGIN
 END
 GO
 
--- Update UserView to use COALESCE for MaxStorageGb
+-- Update UserView to include MasterPasswordSalt
 CREATE OR ALTER VIEW [dbo].[UserView]
 AS
-SELECT
-    [Id],
-    [Name],
-    [Email],
-    [EmailVerified],
-    [MasterPassword],
-    [MasterPasswordHint],
-    [Culture],
-    [SecurityStamp],
-    [TwoFactorProviders],
-    [TwoFactorRecoveryCode],
-    [EquivalentDomains],
-    [ExcludedGlobalEquivalentDomains],
-    [AccountRevisionDate],
-    [Key],
-    [PublicKey],
-    [PrivateKey],
-    [Premium],
-    [PremiumExpirationDate],
-    [RenewalReminderDate],
-    [Storage],
-    COALESCE([MaxStorageGbIncreased], [MaxStorageGb]) AS [MaxStorageGb],
-    [Gateway],
-    [GatewayCustomerId],
-    [GatewaySubscriptionId],
-    [ReferenceData],
-    [LicenseKey],
-    [ApiKey],
-    [Kdf],
-    [KdfIterations],
-    [KdfMemory],
-    [KdfParallelism],
-    [CreationDate],
-    [RevisionDate],
-    [ForcePasswordReset],
-    [UsesKeyConnector],
-    [FailedLoginCount],
-    [LastFailedLoginDate],
-    [AvatarColor],
-    [LastPasswordChangeDate],
-    [LastKdfChangeDate],
-    [LastKeyRotationDate],
-    [LastEmailChangeDate],
-    [VerifyDevices],
-    [SecurityState],
-    [SecurityVersion],
-    [SignedPublicKey],
-    [MasterPasswordSalt]
-FROM
-    [dbo].[User]
+    SELECT
+        [Id],
+        [Name],
+        [Email],
+        [EmailVerified],
+        [MasterPassword],
+        [MasterPasswordHint],
+        [Culture],
+        [SecurityStamp],
+        [TwoFactorProviders],
+        [TwoFactorRecoveryCode],
+        [EquivalentDomains],
+        [ExcludedGlobalEquivalentDomains],
+        [AccountRevisionDate],
+        [Key],
+        [PublicKey],
+        [PrivateKey],
+        [Premium],
+        [PremiumExpirationDate],
+        [RenewalReminderDate],
+        [Storage],
+        COALESCE([MaxStorageGbIncreased], [MaxStorageGb]) AS [MaxStorageGb],
+        [Gateway],
+        [GatewayCustomerId],
+        [GatewaySubscriptionId],
+        [ReferenceData],
+        [LicenseKey],
+        [ApiKey],
+        [Kdf],
+        [KdfIterations],
+        [KdfMemory],
+        [KdfParallelism],
+        [CreationDate],
+        [RevisionDate],
+        [ForcePasswordReset],
+        [UsesKeyConnector],
+        [FailedLoginCount],
+        [LastFailedLoginDate],
+        [AvatarColor],
+        [LastPasswordChangeDate],
+        [LastKdfChangeDate],
+        [LastKeyRotationDate],
+        [LastEmailChangeDate],
+        [VerifyDevices],
+        [SecurityState],
+        [SecurityVersion],
+        [SignedPublicKey],
+        [MasterPasswordSalt]
+    FROM
+        [dbo].[User]
 GO
 
 EXECUTE sp_refreshview '[dbo].[UserView]'
@@ -214,7 +214,7 @@ BEGIN
             @SecurityVersion,
             @SignedPublicKey,
             @MaxStorageGb,
-            COALESCE(@MasterPasswordSalt, LOWER(LTRIM(RTRIM(@Email))))
+            LOWER(LTRIM(RTRIM(@Email)))  -- Do not COALESCE here until we are ready to separate email from salt
     )
 END
 GO
@@ -320,7 +320,7 @@ BEGIN
         [SecurityVersion] = @SecurityVersion,
         [SignedPublicKey] = @SignedPublicKey,
         [MaxStorageGbIncreased] = @MaxStorageGb,
-        [MasterPasswordSalt] =  COALESCE(@MasterPasswordSalt, LOWER(LTRIM(RTRIM(@Email))))
+        [MasterPasswordSalt] = LOWER(LTRIM(RTRIM(@Email))) -- Do not COALESCE here until we are ready to separate email from salt
     WHERE
         [Id] = @Id
 END
