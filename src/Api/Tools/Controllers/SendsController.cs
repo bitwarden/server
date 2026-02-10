@@ -406,7 +406,6 @@ public class SendsController : Controller
         // This allows clients to update other fields without re-submitting sensitive auth data.
         send.Password = null;
         send.Emails = null;
-        send.EmailHashes = null;
         send.AuthType = AuthType.None;
         await _nonAnonymousSendCommand.SaveSendAsync(send);
         return new SendResponseModel(send);
