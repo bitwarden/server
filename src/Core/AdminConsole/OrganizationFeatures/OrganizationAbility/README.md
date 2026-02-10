@@ -142,7 +142,7 @@ EF is primarily used for self-host. Implementations must be kept consistent.
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/OrganizationRepository.cs`
   - Update `GetManyAbilitiesAsync()` to initialize the new property
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/OrganizationUserOrganizationDetailsViewQuery.cs`
-  - Update the integration test: `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepositoryTests.cs`
+  - Update the integration test: `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepository/OrganizationUserRepositoryTests.cs`
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/ProviderUserOrganizationDetailsViewQuery.cs`
 
 ### 4. Data Migrations for Existing Organizations
@@ -183,7 +183,7 @@ Update the mapping code so models receive the new value and new organizations ge
 
 **Signup logic:**
 
-- `src/Core/AdminConsole/OrganizationFeatures/OrganizationSignUp/Implementation/CloudOrganizationSignUpCommand.cs`
+- `src/Core/AdminConsole/OrganizationFeatures/Organizations/CloudOrganizationSignUpCommand.cs`
   - Map `plan.HasMyFeature` to `organization.UseMyFeature`
 
 ### 6. Client Changes
@@ -212,14 +212,14 @@ Organization features are now **claims-based**. You'll need to:
 
 **Add claims for the new feature:**
 
-- `src/Core/AdminConsole/OrganizationFeatures/OrganizationLicenses/OrganizationLicenseConstants.cs`
-- `src/Core/AdminConsole/OrganizationFeatures/OrganizationLicenses/OrganizationLicenseClaimsFactory.cs`
+- `src/Core/Billing/Licenses/LicenseConstants.cs` — Add constant for the new ability in `OrganizationLicenseConstants`
+- `src/Core/Billing/Licenses/Services/Implementations/OrganizationLicenseClaimsFactory.cs`
 
 **Update license verification:**
 
 TODO: verify with billing team if this is needed
 
-- `src/Core/Models/Business/OrganizationLicense.cs`
+- `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
   - `GetDataBytes()` (line ~230) — Exclude your property from the hash/signature
   - `VerifyData()` (line ~424) — Add claims validation
 
@@ -227,12 +227,12 @@ TODO: verify with billing team if this is needed
 
 Map your feature property from the claim to the organization when creating or updating from the license file:
 
-- `src/Core/Entities/OrganizationFactory.cs`
-- `src/Core/AdminConsole/OrganizationFeatures/OrganizationLicenses/UpdateOrganizationLicenseCommand.cs`
+- `src/Core/AdminConsole/Services/OrganizationFactory.cs`
+- `src/Core/Billing/Organizations/Commands/UpdateOrganizationLicenseCommand.cs`
 
 **Update tests:**
 
-- `test/Core.Test/AdminConsole/OrganizationFeatures/OrganizationLicenses/UpdateOrganizationLicenseCommandTests.cs`
+- `test/Core.Test/Billing/Organizations/Commands/UpdateOrganizationLicenseCommandTests.cs`
   - Exclude from test comparison (line ~91)
 
 > **Note:** The previous JSON-based organization license file approach is partially deprecated in favor of the
