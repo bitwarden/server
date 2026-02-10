@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Platform.SsoCookieVendor;
 
 /// <summary>
 /// Provides an endpoint to read an SSO cookie and redirect to a custom URI

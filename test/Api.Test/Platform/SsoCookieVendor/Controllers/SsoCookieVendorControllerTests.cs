@@ -1,13 +1,13 @@
 ﻿#nullable enable
 
-using Bit.Api.Controllers;
+using Bit.Api.Platform.SsoCookieVendor;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.Platform.SsoCookieVendor.Controllers;
 
 public class SsoCookieVendorControllerTests : IDisposable
 {
