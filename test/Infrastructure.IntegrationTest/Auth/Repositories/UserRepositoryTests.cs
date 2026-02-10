@@ -25,6 +25,7 @@ public class UserRepositoryTests
             Email = email,
             ApiKey = "TEST",
             SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
             MasterPasswordSalt = passwordSalt
         };
 
@@ -57,6 +58,7 @@ public class UserRepositoryTests
             Email = originalEmail,
             ApiKey = "TEST",
             SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
             MasterPasswordSalt = passwordSalt
         });
 
@@ -71,5 +73,54 @@ public class UserRepositoryTests
         Assert.Equal(newEmail, updatedUser.Email);
         Assert.Equal(updatedUser.Email, updatedUser.MasterPasswordSalt);
         Assert.NotEqual(passwordSalt, updatedUser.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_ShouldKeepMasterPasswordSaltNullWhenNoMasterPassword(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = originalEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        var newEmail = $"updated+{Guid.NewGuid()}@example.com";
+        user.Email = newEmail;
+        await userRepository.ReplaceAsync(user);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.Null(updatedUser.MasterPasswordSalt);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_ShouldSetMasterPasswordSaltToNullWhenNoMasterPassword(
+    IUserRepository userRepository)
+    {
+        // Arrange
+        var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = originalEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        });
+
+        // Act
+        await userRepository.ReplaceAsync(user);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.MasterPasswordSalt);
     }
 }
