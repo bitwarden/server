@@ -27,7 +27,6 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     public NonAnonymousSendCommand(ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService,
         IPushNotificationService pushNotificationService,
-        ISendAuthorizationService sendAuthorizationService,
         ISendValidationService sendValidationService,
         ISendCoreHelperService sendCoreHelperService,
         ILogger<NonAnonymousSendCommand> logger)
@@ -181,4 +180,21 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         return valid;
     }
 
+    public async Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId)
+    {
+        if (send.Type != SendType.File)
+        {
+            throw new BadRequestException("Can only get a download URL for a file type of Send");
+        }
+
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        {
+            return (null, SendAccessResult.Denied);
+        }
+
+        send.AccessCount++;
+        await _sendRepository.ReplaceAsync(send);
+        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), SendAccessResult.Granted);
+    }
 }
