@@ -67,7 +67,7 @@ public class PushAutoConfirmNotificationCommandTests
         foreach (var customUser in customUsers)
         {
             customUser.UserId = Guid.NewGuid();
-            customUser.Permissions = "{\"ManageUsers\":true}";
+            customUser.Permissions = "{\"manageUsers\":true}";
         }
 
         orgUser.Id = Guid.NewGuid();
@@ -108,7 +108,7 @@ public class PushAutoConfirmNotificationCommandTests
         foreach (var customUser in customUsers)
         {
             customUser.UserId = Guid.NewGuid();
-            customUser.Permissions = "{\"ManageUsers\":false}";
+            customUser.Permissions = "{\"manageUsers\":false}";
         }
 
         orgUser.Id = Guid.NewGuid();
@@ -151,13 +151,13 @@ public class PushAutoConfirmNotificationCommandTests
         foreach (var customUser in customUsersWithPermission)
         {
             customUser.UserId = Guid.NewGuid();
-            customUser.Permissions = "{\"ManageUsers\":true}";
+            customUser.Permissions = "{\"manageUsers\":true}";
         }
 
         foreach (var customUser in customUsersWithoutPermission)
         {
             customUser.UserId = Guid.NewGuid();
-            customUser.Permissions = "{\"ManageUsers\":false}";
+            customUser.Permissions = "{\"manageUsers\":false}";
         }
 
         orgUser.Id = Guid.NewGuid();
@@ -238,7 +238,7 @@ public class PushAutoConfirmNotificationCommandTests
         var customUser = new OrganizationUserUserDetails
         {
             UserId = duplicateUserId,
-            Permissions = "{\"ManageUsers\":true}"
+            Permissions = "{\"manageUsers\":true}"
         };
 
         orgUser.Id = Guid.NewGuid();
