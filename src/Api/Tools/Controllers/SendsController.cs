@@ -387,19 +387,7 @@ public class SendsController : Controller
     [HttpPut("{id}/remove-password")]
     public async Task<SendResponseModel> PutRemovePassword(string id)
     {
-        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
-        var send = await _sendRepository.GetByIdAsync(new Guid(id));
-        if (send == null || send.UserId != userId)
-        {
-            throw new NotFoundException();
-        }
-
-        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
-        // This allows clients to update other fields without re-submitting sensitive auth data.
-        send.Password = null;
-        send.AuthType = AuthType.None;
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send);
+        return await this.PutRemoveAuth(id);
     }
 
     // Removes ALL authentication (email or password) if any is present
