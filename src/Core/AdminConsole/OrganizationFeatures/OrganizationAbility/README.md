@@ -97,20 +97,6 @@ organization.UseEvents = plan.HasEvents;
 
 - Get the organization object from `OrganizationService`, then use it directly: `organization.useMyFeature`
 
-### Modifying Abilities for Existing Organizations
-
-To change abilities for existing organizations (e.g., rolling out a feature to a new plan tier), create a database
-migration that updates the relevant flag:
-
-```sql
--- Example: Enable UseEvents for all Teams organizations
-UPDATE [dbo].[Organization]
-SET UseEvents = 1
-WHERE PlanType IN (17, 18) -- TeamsMonthly = 17, TeamsAnnually = 18
-```
-
-Then update the plan-to-ability assignment code so new organizations get the correct value.
-
 ### Manual Override via Bitwarden Portal
 
 Organization abilities can be manually toggled for specific customers via the Bitwarden Portal → Organizations page.
@@ -121,7 +107,12 @@ This is useful for custom arrangements, early access, or internal testing.
 When developing a new plan-gated feature, follow these steps. We use `MyFeature` as a placeholder for your feature name
 (e.g., `UseEvents`).
 
-### 1. Database Changes (MSSQL)
+### 1. Update Core Entities
+
+- `src/Core/AdminConsole/Entities/Organization.cs` — Add `UseMyFeature` boolean property
+- `src/Core/AdminConsole/OrganizationFeatures/OrganizationAbility/OrganizationAbility.cs` — Add to ability object
+
+### 2. Database Changes (MSSQL)
 
 Add a new `UseMyFeature` column to the Organization table:
 
@@ -140,7 +131,7 @@ Add a new `UseMyFeature` column to the Organization table:
 
 **Create a migration script** for these database changes.
 
-### 2. Entity Framework Changes
+### 3. Entity Framework Changes
 
 EF is primarily used for self-host. Implementations must be kept consistent.
 
@@ -154,12 +145,26 @@ EF is primarily used for self-host. Implementations must be kept consistent.
   - Update the integration test: `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepositoryTests.cs`
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/ProviderUserOrganizationDetailsViewQuery.cs`
 
-### 3. Server Code Changes
+### 4. Data Migrations for Existing Organizations
 
-**Core entities:**
+If your feature should be enabled for existing organizations on certain plan types, create data migrations to set the ability flag:
 
-- `src/Core/AdminConsole/Entities/Organization.cs` — Add `UseMyFeature` property
-- `src/Core/AdminConsole/OrganizationFeatures/OrganizationAbility/OrganizationAbility.cs` — Add to ability object
+**MSSQL migration:**
+
+```sql
+-- Example: Enable UseMyFeature for all Enterprise organizations
+UPDATE [dbo].[Organization]
+SET UseMyFeature = 1
+WHERE PlanType IN (13, 14) -- EnterpriseMonthly = 13, EnterpriseAnnually = 14
+```
+
+**EF migration:**
+
+Create a corresponding data migration for EF databases used by self-hosted instances.
+
+### 5. Server Code Changes
+
+Update the mapping code so models receive the new value and new organizations get the correct value.
 
 **Response models:**
 
@@ -181,7 +186,7 @@ EF is primarily used for self-host. Implementations must be kept consistent.
 - `src/Core/AdminConsole/OrganizationFeatures/OrganizationSignUp/Implementation/CloudOrganizationSignUpCommand.cs`
   - Map `plan.HasMyFeature` to `organization.UseMyFeature`
 
-### 4. Client Changes
+### 6. Client Changes
 
 **TypeScript models to update:**
 
@@ -191,14 +196,14 @@ EF is primarily used for self-host. Implementations must be kept consistent.
 - `libs/common/src/admin-console/models/data/organization.data.ts`
   - Update tests: `libs/common/src/admin-console/models/data/organization.data.spec.ts`
 
-### 5. Bitwarden Portal Changes
+### 7. Bitwarden Portal Changes
 
 For manual override capability in the admin portal:
 
 - `src/Admin/AdminConsole/Views/Organizations/_ViewInformation.cshtml` — Add checkbox for the new ability
 - `src/Admin/AdminConsole/Controllers/OrganizationsController.cs` — Update `UpdateOrganization()` method mapping
 
-### 6. Self-Host Licensing
+### 8. Self-Host Licensing
 
 > ⚠️ **WARNING:** Mistakes in organization license changes can disable the entire organization for self-hosted customers!
 > Double-check your work and ask for help if unsure.
@@ -233,7 +238,7 @@ Map your feature property from the claim to the organization when creating or up
 > **Note:** The previous JSON-based organization license file approach is partially deprecated in favor of the
 > claims-based system.
 
-### 7. Implement Business Logic Checks
+### 9. Implement Business Logic Checks
 
 In your feature's business logic, check the ability flag:
 
@@ -249,7 +254,7 @@ if (!orgAbility.UseMyFeature)
 // Proceed with feature logic...
 ```
 
-### 8. Feature Flags as Killswitch
+### 10. Feature Flags as Killswitch
 
 **Recommendation:** Keep your existing feature flag in addition to the ability check, at least initially. This lets you
 control rollout in real time and disable the feature if it's causing problems:
