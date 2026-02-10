@@ -280,7 +280,7 @@ public class UpcomingInvoiceHandlerTests
                 email.ToEmails.Contains("user@example.com") &&
                 email.Subject == "Your Bitwarden Premium renewal is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (plan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")) &&
-                email.View.DiscountedMonthlyRenewalPrice == (discountedPrice / 12).ToString("C", new CultureInfo("en-US")) &&
+                email.View.DiscountedAnnualRenewalPrice == discountedPrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
             ));
     }
@@ -2436,7 +2436,7 @@ public class UpcomingInvoiceHandlerTests
                 email.Subject == "Your Bitwarden Premium renewal is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (plan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == "30%" &&
-                email.View.DiscountedMonthlyRenewalPrice == (expectedDiscountedPrice / 12).ToString("C", new CultureInfo("en-US"))
+                email.View.DiscountedAnnualRenewalPrice == expectedDiscountedPrice.ToString("C", new CultureInfo("en-US"))
             ));
 
         await _mailService.DidNotReceive().SendInvoiceUpcoming(

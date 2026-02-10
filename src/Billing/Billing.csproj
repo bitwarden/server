@@ -3,12 +3,13 @@
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Label="Server SDK settings">
     <!-- These features will be gradually turned on -->
     <BitIncludeFeatures>false</BitIncludeFeatures>
-    <BitIncludeTelemetry>false</BitIncludeTelemetry>
     <BitIncludeAuthentication>false</BitIncludeAuthentication>
   </PropertyGroup>
 
@@ -20,7 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MarkDig" Version="0.44.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
   </ItemGroup>
 
 </Project>

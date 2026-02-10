@@ -19,7 +19,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 /// <param name="policyDetails">Collection of policy details that apply to this user id</param>
 public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetails> policyDetails) : IPolicyRequirement
 {
-    public bool CannotBeGrantedEmergencyAccess() => policyDetails.Any();
+    public bool CannotHaveEmergencyAccess() => policyDetails.Any();
 
     public bool CannotJoinProvider() => policyDetails.Any();
 

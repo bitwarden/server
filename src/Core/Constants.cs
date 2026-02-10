@@ -141,31 +141,33 @@ public static class FeatureFlagKeys
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
-    public const string IncreaseBulkReinviteLimitForCloud = "pm-28251-increase-bulk-reinvite-limit-for-cloud";
-    public const string BulkRevokeUsersV2 = "pm-28456-bulk-revoke-users-v2";
-    public const string PremiumAccessQuery = "pm-21411-premium-access-query";
+    public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
+    public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
+    public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
+    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
     public const string DesktopMigrationMilestone2 = "desktop-ui-migration-milestone-2";
     public const string DesktopMigrationMilestone3 = "desktop-ui-migration-milestone-3";
+    public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
 
     /* Auth Team */
     public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
-    public const string EmailVerification = "email-verification";
     public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
-    public const string PM23174ManageAccountRecoveryPermissionDrivesTheNeedToSetMasterPassword =
-        "pm-23174-manage-account-recovery-permission-drives-the-need-to-set-master-password";
-    public const string MJMLBasedEmailTemplates = "mjml-based-email-templates";
+    public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
-    public const string RedirectOnSsoRequired = "pm-1632-redirect-on-sso-required";
+    public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
+    public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
+    public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
+    public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
 
     /* Autofill Team */
     public const string SSHAgent = "ssh-agent";
@@ -175,6 +177,7 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
@@ -203,6 +206,8 @@ public static class FeatureFlagKeys
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
+    public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
+    public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -220,31 +225,21 @@ public static class FeatureFlagKeys
 
     /* Platform Team */
     public const string WebPush = "web-push";
-    public const string IpcChannelFramework = "ipc-channel-framework";
+    public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
     public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
     public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
+    public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
 
     /* Tools Team */
     /// <summary>
     /// Enable this flag to share the send view used by the web and browser clients
     /// on the desktop client.
     /// </summary>
-    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
     public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
-
-    /// <summary>
-    /// Enable this flag to output email/OTP authenticated sends from the `GET sends` endpoint. When
-    /// this flag is disabled, the `GET sends` endpoint omits email/OTP authenticated sends.
-    /// </summary>
-    /// <remarks>
-    /// This flag is server-side only, and only inhibits the endpoint returning all sends.
-    /// Email/OTP sends can still be created and downloaded through other endpoints.
-    /// </remarks>
-    public const string PM19051_ListEmailOtpSends = "tools-send-email-otp-listing";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -258,6 +253,8 @@ public static class FeatureFlagKeys
     public const string BrowserPremiumSpotlight = "pm-23384-browser-premium-spotlight";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
+    public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
+    public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
@@ -265,9 +262,14 @@ public static class FeatureFlagKeys
     /* DIRT Team */
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
+    public const string EventManagementForHuntress = "event-management-for-huntress";
+    public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
+
+    /* Secrets Manager Team */
+    public const string SM1719_RemoveSecretsManagerAds = "sm-1719-remove-secrets-manager-ads";
 
     public static List<string> GetAllKeys()
     {

@@ -14,6 +14,8 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Licenses;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Sales;
@@ -59,7 +61,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IPolicyService _policyService;
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
@@ -96,7 +98,7 @@ public class UserService : UserManager<User>, IUserService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IPolicyService policyService,
         IFido2 fido2,
         ICurrentContext currentContext,
@@ -137,7 +139,7 @@ public class UserService : UserManager<User>, IUserService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _policyService = policyService;
         _fido2 = fido2;
         _currentContext = currentContext;
@@ -720,9 +722,8 @@ public class UserService : UserManager<User>, IUserService
         }
 
         // Enterprise policy must be enabled
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+        var resetPasswordPolicy = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }
@@ -982,6 +983,16 @@ public class UserService : UserManager<User>, IUserService
             throw new BadRequestException(exceptionMessage);
         }
 
+        // If the license has a Token (claims-based), extract all properties from claims
+        // Otherwise, fall back to using the properties already on the license object (backward compatibility)
+        if (claimsPrincipal != null)
+        {
+            license.LicenseKey = claimsPrincipal.GetValue<string>(UserLicenseConstants.LicenseKey);
+            license.Premium = claimsPrincipal.GetValue<bool>(UserLicenseConstants.Premium);
+            license.MaxStorageGb = claimsPrincipal.GetValue<short?>(UserLicenseConstants.MaxStorageGb);
+            license.Expires = claimsPrincipal.GetValue<DateTime?>(UserLicenseConstants.Expires);
+        }
+
         var dir = $"{_globalSettings.LicenseDirectory}/user";
         Directory.CreateDirectory(dir);
         using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
@@ -995,6 +1006,7 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
     }
 
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     public async Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb)
     {
         if (user == null)
@@ -1040,6 +1052,7 @@ public class UserService : UserManager<User>, IUserService
         await _paymentService.CancelSubscriptionAsync(user, eop);
     }
 
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     public async Task ReinstatePremiumAsync(User user)
     {
         await _paymentService.ReinstateSubscriptionAsync(user);

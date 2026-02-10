@@ -22,6 +22,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
@@ -56,6 +57,7 @@ using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
 using LaunchDarkly.Sdk.Server;
@@ -78,7 +80,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using StackExchange.Redis;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using NoopRepos = Bit.Core.Repositories.Noop;
@@ -115,6 +117,40 @@ public static class ServiceCollectionExtensions
         }
 
         return provider;
+    }
+
+    /// <summary>
+    /// Registers test PlayId tracking services for test data management and cleanup.
+    /// This infrastructure is isolated to test environments and enables tracking of test-generated entities.
+    /// </summary>
+    public static void AddTestPlayIdTracking(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            var (provider, _) = GetDatabaseProvider(globalSettings);
+
+            // Include PlayIdService for tracking Play Ids in repositories
+            // We need the http context accessor to use the Singleton version, which pulls from the scoped version
+            services.AddHttpContextAccessor();
+
+            services.AddSingleton<IPlayItemService, PlayItemService>();
+            services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
+            services.AddScoped<PlayIdService>();
+
+            // Replace standard repositories with PlayId tracking decorators
+            if (provider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddPlayIdTrackingDapperRepositories();
+            }
+            else
+            {
+                services.AddPlayIdTrackingEFRepositories();
+            }
+        }
+        else
+        {
+            services.AddSingleton<IPlayIdService, NeverPlayIdServices>();
+        }
     }
 
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
@@ -436,11 +472,6 @@ public static class ServiceCollectionExtensions
                 addAuthorization.Invoke(config);
             });
         }
-
-        if (environment.IsDevelopment())
-        {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-        }
     }
 
     public static void AddCustomDataProtectionServices(
@@ -522,6 +553,10 @@ public static class ServiceCollectionExtensions
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            app.UseMiddleware<PlayIdMiddleware>();
+        }
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
@@ -626,7 +661,6 @@ public static class ServiceCollectionExtensions
                     Constants.BrowserExtensions.OperaId
                  };
             }
-
         });
     }
 
@@ -813,19 +847,9 @@ public static class ServiceCollectionExtensions
         });
 
         // Add security requirement
-        config.AddSecurityRequirement(new OpenApiSecurityRequirement
+        config.AddSecurityRequirement((document) => new OpenApiSecurityRequirement
         {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = serverId
-                    },
-                },
-                [ApiScopes.ApiOrganization]
-            }
+            [new OpenApiSecuritySchemeReference(serverId, document)] = [ApiScopes.ApiOrganization]
         });
     }
 }
