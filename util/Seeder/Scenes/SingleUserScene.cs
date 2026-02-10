@@ -30,6 +30,8 @@ public class SingleUserScene(
     {
         [Required]
         public required string Email { get; set; }
+        [Required]
+        public required string Password { get; set; }
         public bool EmailVerified { get; set; } = false;
         public bool Premium { get; set; } = false;
     }
@@ -42,7 +44,8 @@ public class SingleUserScene(
             passwordHasher,
             manglerService,
             request.EmailVerified,
-            request.Premium);
+            request.Premium,
+            password: request.Password);
 
         await userRepository.CreateAsync(user);
 

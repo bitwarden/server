@@ -22,7 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MarkDig" Version="0.44.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
   </ItemGroup>
 
 </Project>

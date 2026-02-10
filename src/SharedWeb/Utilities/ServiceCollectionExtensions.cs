@@ -80,7 +80,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using StackExchange.Redis;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using NoopRepos = Bit.Core.Repositories.Noop;
@@ -847,19 +847,9 @@ public static class ServiceCollectionExtensions
         });
 
         // Add security requirement
-        config.AddSecurityRequirement(new OpenApiSecurityRequirement
+        config.AddSecurityRequirement((document) => new OpenApiSecurityRequirement
         {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = serverId
-                    },
-                },
-                [ApiScopes.ApiOrganization]
-            }
+            [new OpenApiSecuritySchemeReference(serverId, document)] = [ApiScopes.ApiOrganization]
         });
     }
 }

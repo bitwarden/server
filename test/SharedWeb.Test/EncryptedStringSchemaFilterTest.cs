@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Utilities;
 using Bit.SharedWeb.Swagger;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 
@@ -24,7 +24,7 @@ public class EncryptedStringSchemaFilterTest
     {
         var schema = new OpenApiSchema
         {
-            Properties = new Dictionary<string, OpenApiSchema> { { "secretKey", new() } }
+            Properties = new Dictionary<string, IOpenApiSchema> { { "secretKey", new OpenApiSchema() } }
         };
         var context = new SchemaFilterContext(typeof(TestClass), null, null, null);
         var filter = new EncryptedStringSchemaFilter();
@@ -37,7 +37,7 @@ public class EncryptedStringSchemaFilterTest
     {
         var schema = new OpenApiSchema
         {
-            Properties = new Dictionary<string, OpenApiSchema> { { "username", new() } }
+            Properties = new Dictionary<string, IOpenApiSchema> { { "username", new OpenApiSchema() } }
         };
         var context = new SchemaFilterContext(typeof(TestClass), null, null, null);
         var filter = new EncryptedStringSchemaFilter();
@@ -50,7 +50,7 @@ public class EncryptedStringSchemaFilterTest
     {
         var schema = new OpenApiSchema
         {
-            Properties = new Dictionary<string, OpenApiSchema> { { "wrong", new() } }
+            Properties = new Dictionary<string, IOpenApiSchema> { { "wrong", new OpenApiSchema() } }
         };
         var context = new SchemaFilterContext(typeof(TestClass), null, null, null);
         var filter = new EncryptedStringSchemaFilter();
