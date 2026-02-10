@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
 using Xunit;
@@ -37,7 +38,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
         {
             Template = "SingleUserScene",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
+            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, playId);
 
         response.EnsureSuccessStatusCode();
@@ -54,7 +55,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
         {
             Template = "NonExistentScene",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = "test@example.com" })
+            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = "test@example.com", Password = "asdfasdfasdf" })
         });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -82,7 +83,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         var seedResponse = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
         {
             Template = "SingleUserScene",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
+            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, playId);
 
         seedResponse.EnsureSuccessStatusCode();
@@ -119,7 +120,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             var seedResponse = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
             {
                 Template = "SingleUserScene",
-                Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
+                Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
             }, playId);
 
             seedResponse.EnsureSuccessStatusCode();
@@ -151,7 +152,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         var seedResponse = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
         {
             Template = "SingleUserScene",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
+            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, validPlayId);
 
         seedResponse.EnsureSuccessStatusCode();
@@ -184,7 +185,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             var seedResponse = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
             {
                 Template = "SingleUserScene",
-                Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
+                Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
             }, playId);
 
             seedResponse.EnsureSuccessStatusCode();
@@ -204,7 +205,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
         {
             Template = "SingleUserScene",
-            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
+            Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, playId);
 
         response.EnsureSuccessStatusCode();
