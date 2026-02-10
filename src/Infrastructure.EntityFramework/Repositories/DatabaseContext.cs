@@ -150,7 +150,7 @@ public class DatabaseContext : DbContext
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
         eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
         eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
-        eSend.Property(c => c.EmailHashes).HasConversion(dataProtectionConverter);
+        eSend.Property(c => c.Emails).HasConversion(dataProtectionConverter);
 
         if (Database.IsNpgsql())
         {
