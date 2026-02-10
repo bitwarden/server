@@ -83,6 +83,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
         var tokenValidationError = _orgUserInviteTokenDataFactory.TryUnprotect(emailToken, out var decryptedToken) switch
         {
+            // Used by clients to show better error message on token expiration, adjust both as-needed
             true when decryptedToken.IsExpired => "Expired token.",
             true when !(decryptedToken.Valid && decryptedToken.TokenIsValid(orgUser)) => "Invalid token.",
             false => "Invalid token.",
