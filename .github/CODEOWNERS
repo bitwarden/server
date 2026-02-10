@@ -48,6 +48,10 @@ src/Identity @bitwarden/team-auth-dev
 src/Core/Identity @bitwarden/team-auth-dev
 src/Core/IdentityServer @bitwarden/team-auth-dev
 
+# Autofill team
+src/Core/Utilities/StaticStore.cs @bitwarden/team-autofill-dev
+src/Core/Enums/GlobalEquivalentDomainsType.cs @bitwarden/team-autofill-dev
+
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
 
