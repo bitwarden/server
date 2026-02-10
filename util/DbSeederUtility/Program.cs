@@ -82,34 +82,34 @@ public class Program
     [Command("seed", Description = "Seed database using fixture-based presets")]
     public void Seed(SeedArgs args)
     {
-        args.Validate();
-
-        // Handle list mode - no database needed
-        if (args.List)
-        {
-            var available = OrganizationFromPresetRecipe.ListAvailable();
-            PrintAvailableSeeds(available);
-            return;
-        }
-
-        // Create service provider - same pattern as other commands
-        var services = new ServiceCollection();
-        ServiceCollectionExtension.ConfigureServices(services, enableMangling: args.Mangle);
-        var serviceProvider = services.BuildServiceProvider();
-
-        using var scope = serviceProvider.CreateScope();
-        var scopedServices = scope.ServiceProvider;
-
-        var db = scopedServices.GetRequiredService<DatabaseContext>();
-        var mapper = scopedServices.GetRequiredService<IMapper>();
-        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
-        var manglerService = scopedServices.GetRequiredService<IManglerService>();
-
-        // Create recipe - CLI is "dumb", recipe handles complexity
-        var recipe = new OrganizationFromPresetRecipe(db, mapper, passwordHasher, manglerService);
-
         try
         {
+            args.Validate();
+
+            // Handle list mode - no database needed
+            if (args.List)
+            {
+                var available = OrganizationFromPresetRecipe.ListAvailable();
+                PrintAvailableSeeds(available);
+                return;
+            }
+
+            // Create service provider - same pattern as other commands
+            var services = new ServiceCollection();
+            ServiceCollectionExtension.ConfigureServices(services, enableMangling: args.Mangle);
+            var serviceProvider = services.BuildServiceProvider();
+
+            using var scope = serviceProvider.CreateScope();
+            var scopedServices = scope.ServiceProvider;
+
+            var db = scopedServices.GetRequiredService<DatabaseContext>();
+            var mapper = scopedServices.GetRequiredService<IMapper>();
+            var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
+            var manglerService = scopedServices.GetRequiredService<IManglerService>();
+
+            // Create recipe - CLI is "dumb", recipe handles complexity
+            var recipe = new OrganizationFromPresetRecipe(db, mapper, passwordHasher, manglerService);
+
             var stopwatch = Stopwatch.StartNew();
 
             Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
@@ -118,7 +118,7 @@ public class Program
             stopwatch.Stop();
             PrintSeedResult(result, stopwatch.Elapsed);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             Console.Error.WriteLine($"Error: {ex.Message}");
             Environment.Exit(1);
