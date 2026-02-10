@@ -232,10 +232,7 @@ Organization features are now **claims-based**. You'll need to:
 
 **Update license verification:**
 
-TODO: verify with billing team if this is needed
-
 - `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
-  - `GetDataBytes()` (line ~230) — Exclude your property from the hash/signature
   - `VerifyData()` (line ~424) — Add claims validation
 
 **Update license command:**
