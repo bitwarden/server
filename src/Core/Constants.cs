@@ -143,7 +143,6 @@ public static class FeatureFlagKeys
     public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
-    public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
 
     /* Architecture */
