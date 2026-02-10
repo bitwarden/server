@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using LinqToDB.Data;
 using LinqToDB.EntityFrameworkCore;
 using EfCollection = Bit.Infrastructure.EntityFramework.Models.Collection;
 using EfCollectionGroup = Bit.Infrastructure.EntityFramework.Models.CollectionGroup;
@@ -20,6 +21,10 @@ namespace Bit.Seeder.Pipeline;
 /// Most Core entities require AutoMapper conversion to their EF counterparts before insert;
 /// a few (Cipher, CollectionCipher) share the same type across layers and copy directly.
 /// Each list is cleared after insert so the context is ready for the next pipeline run.
+///
+/// CollectionUser and CollectionGroup require an explicit table name in BulkCopyOptions because
+/// they lack both IEntityTypeConfiguration and .ToTable() mappings in DatabaseContext, so LinqToDB
+/// cannot resolve their table names automatically.
 /// </remarks>
 /// <seealso cref="SeederContext"/>
 /// <seealso cref="RecipeExecutor"/>
@@ -39,23 +44,33 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         MapCopyAndClear<Core.Entities.Collection, EfCollection>(context.Collections);
 
-        MapCopyAndClear<Core.Entities.CollectionUser, EfCollectionUser>(context.CollectionUsers);
+        MapCopyAndClear<Core.Entities.CollectionUser, EfCollectionUser>(context.CollectionUsers, nameof(Core.Entities.CollectionUser));
 
-        MapCopyAndClear<Core.Entities.CollectionGroup, EfCollectionGroup>(context.CollectionGroups);
+        MapCopyAndClear<Core.Entities.CollectionGroup, EfCollectionGroup>(context.CollectionGroups, nameof(Core.Entities.CollectionGroup));
 
         CopyAndClear(context.Ciphers);
 
         CopyAndClear(context.CollectionCiphers);
     }
 
-    private void MapCopyAndClear<TCore, TEf>(List<TCore> entities) where TEf : class
+    private void MapCopyAndClear<TCore, TEf>(List<TCore> entities, string? tableName = null) where TEf : class
     {
         if (entities.Count is 0)
         {
             return;
         }
 
-        db.BulkCopy(entities.Select(e => mapper.Map<TEf>(e)));
+        var mapped = entities.Select(e => mapper.Map<TEf>(e));
+
+        if (tableName is not null)
+        {
+            db.BulkCopy(new BulkCopyOptions { TableName = tableName }, mapped);
+        }
+        else
+        {
+            db.BulkCopy(mapped);
+        }
+
         entities.Clear();
     }
 
