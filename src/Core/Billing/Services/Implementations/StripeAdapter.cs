@@ -223,6 +223,6 @@ public class StripeAdapter : IStripeAdapter
     /*************
      ** PRODUCT **
      *************/
-    public async Task<List<Product>> ListProductsAsync(ProductListOptions options) =>
+    public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
         (await _productService.ListAsync(options)).Data;
 }
