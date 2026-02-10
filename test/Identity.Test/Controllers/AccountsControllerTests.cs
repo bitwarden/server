@@ -348,6 +348,8 @@ public class AccountsControllerTests : IDisposable
         {
             KdfType = KdfType.Argon2id,
             Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            Memory = AuthConstants.ARGON2_MEMORY.Default,
+            Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
         };
 
         var newModel = new RegisterFinishRequestModel
