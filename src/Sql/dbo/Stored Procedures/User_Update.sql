@@ -50,6 +50,12 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    /*
+     If the user doesn't have a master password, we can allow the MasterPasswordSalt to be null.
+     We will set it to the email until we are ready to separate the two.
+    */
+    SET @MasterPasswordSalt = CASE WHEN @MasterPassword IS NULL THEN NULL ELSE LOWER(LTRIM(RTRIM(@Email))) END
+
     UPDATE
         [dbo].[User]
     SET
