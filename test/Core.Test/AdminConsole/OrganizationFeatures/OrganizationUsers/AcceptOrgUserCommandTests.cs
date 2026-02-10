@@ -781,6 +781,10 @@ public class AcceptOrgUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
+
         await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
         await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
