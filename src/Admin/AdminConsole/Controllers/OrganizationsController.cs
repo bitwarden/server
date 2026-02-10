@@ -293,7 +293,7 @@ public class OrganizationsController : Controller
 
         if (await CheckOrganizationPolicyComplianceAsync(existingOrganizationData, organization) is { } error)
         {
-            TempData["Error"] = $"Cannot enable automatic user confirmation for organization {existingOrganizationData.Name} because of policy violation: {error.Message}";
+            TempData["Error"] = error.Message;
 
             return RedirectToAction("Edit", new { id });
         }
