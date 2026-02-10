@@ -12,7 +12,9 @@ public abstract class ExpiringTokenable : Tokenable
     /// Checks if the token is still within its valid duration and if its data is valid.
     /// <para>For data validation, this property relies on the <see cref="TokenIsValid"/> method.</para>
     /// </summary>
-    public override bool Valid => ExpirationDate > DateTime.UtcNow && TokenIsValid();
+    public override bool Valid => !IsExpired && TokenIsValid();
+
+    public bool IsExpired => ExpirationDate < DateTime.UtcNow;
 
     /// <summary>
     /// Validates that the token data properties are correct.

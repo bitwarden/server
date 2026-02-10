@@ -464,8 +464,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService));
 
-        Assert.Equal("Invalid token.", exception.Message);
-
+        Assert.Equal("Expired token.", exception.Message);
     }
 
     [Theory]
