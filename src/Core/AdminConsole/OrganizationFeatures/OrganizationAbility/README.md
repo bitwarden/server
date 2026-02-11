@@ -176,7 +176,7 @@ Create a corresponding data migration for EF databases used by self-hosted insta
 
 ### 5. Server Code Changes
 
-Update the mapping code so models receive the new value and new organizations get the correct value.
+Update related models and mapping code so models receive the new value.
 
 **Response models:**
 
@@ -187,6 +187,8 @@ Update the mapping code so models receive the new value and new organizations ge
 
 - `src/Core/AdminConsole/Models/Data/Organizations/OrganizationUsers/OrganizationUserOrganizationDetails.cs`
 - `src/Core/AdminConsole/Models/Data/Provider/ProviderUserOrganizationDetails.cs`
+- `src/Core/AdminConsole/Models/Data/Organizations/SelfHostedOrganizationDetails.cs`
+- `src/Core/AdminConsole/Models/Data/IProfileOrganizationDetails.cs`
 
 **Plan definition and signup logic:**
 
