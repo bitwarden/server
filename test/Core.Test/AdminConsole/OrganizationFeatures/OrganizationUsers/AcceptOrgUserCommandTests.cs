@@ -468,6 +468,37 @@ public class AcceptOrgUserCommandTests
     }
 
     [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByToken_InvalidNewToken_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, OrganizationUser orgUser)
+    {
+        // Arrange
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order
+        // to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(Task.FromResult(orgUser));
+
+        // Must come after common mocks as they mutate the org user.
+        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(null!)
+        {
+            ExpirationDate = DateTime.UtcNow.AddDays(1),
+        });
+
+        var newToken = CreateNewToken(orgUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService));
+
+        Assert.Equal("Invalid token.", exception.Message);
+    }
+
+    [Theory]
     [BitAutoData(OrganizationUserStatusType.Accepted,
         "Invitation already accepted. You will receive an email when your organization membership is confirmed.")]
     [BitAutoData(OrganizationUserStatusType.Confirmed,
