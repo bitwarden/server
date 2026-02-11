@@ -181,8 +181,7 @@ Update the mapping code so models receive the new value and new organizations ge
 **Response models:**
 
 - `src/Api/AdminConsole/Models/Response/Organizations/OrganizationResponseModel.cs`
-- `src/Api/AdminConsole/Models/Response/ProfileOrganizationResponseModel.cs`
-- `src/Api/AdminConsole/Models/Response/ProfileProviderOrganizationResponseModel.cs`
+- `src/Api/AdminConsole/Models/Response/BaseProfileOrganizationResponseModel.cs`
 
 **Data models:**
 
