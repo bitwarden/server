@@ -484,6 +484,7 @@ public class AcceptOrgUserCommandTests
             .Returns(Task.FromResult(orgUser));
 
         // Must come after common mocks as they mutate the org user.
+        // Send a null org-user to force an invalid token result
         _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(null!)
         {
             ExpirationDate = DateTime.UtcNow.AddDays(1),
