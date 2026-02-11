@@ -31,16 +31,17 @@ public class PushAutoConfirmNotificationCommand : IPushAutoConfirmNotificationCo
             organizationId,
             OrganizationUserType.Admin);
 
-        var customUsers = await _organizationUserRepository.GetManyDetailsByRoleAsync(
-            organizationId,
-            OrganizationUserType.Custom);
+        var customUsersWithManagePermission = (await _organizationUserRepository.GetManyDetailsByRoleAsync(
+                organizationId,
+                OrganizationUserType.Custom))
+            .Where(c => c.GetPermissions()?.ManageUsers == true)
+            .Select(c => c.UserId);
 
         var userIds = admins
-            .Where(a => a.UserId.HasValue)
-            .Select(a => a.UserId!.Value)
-            .Concat(customUsers
-                .Where(c => c.UserId.HasValue && c.GetPermissions()?.ManageUsers == true)
-                .Select(c => c.UserId!.Value))
+            .Select(a => a.UserId)
+            .Concat(customUsersWithManagePermission)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
             .Distinct();
 
         foreach (var adminUserId in userIds)
