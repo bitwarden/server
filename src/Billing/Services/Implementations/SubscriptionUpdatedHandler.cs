@@ -69,7 +69,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var currentPeriodEnd = subscription.GetCurrentPeriodEnd();
 
-        if (SubscriptionWentUnpaid(parsedEvent, subscription))
+        if (SubscriptionWentUnpaidOrIncompleteExpired(parsedEvent, subscription))
         {
             await DisableSubscriberAsync(subscriberId, currentPeriodEnd);
             await SetSubscriptionToCancelAsync(subscription);
@@ -96,7 +96,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             _ => Task.CompletedTask);
     }
 
-    private static bool SubscriptionWentUnpaid(
+    private static bool SubscriptionWentUnpaidOrIncompleteExpired(
         Event parsedEvent,
         Subscription currentSubscription) =>
         parsedEvent.Data.PreviousAttributes.ToObject<Subscription>() is Subscription
@@ -107,7 +107,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             SubscriptionStatus.PastDue
         } && currentSubscription is
         {
-            Status: SubscriptionStatus.Unpaid,
+            Status: SubscriptionStatus.Unpaid or 
+            SubscriptionStatus.IncompleteExpired,
             LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
         };
 
