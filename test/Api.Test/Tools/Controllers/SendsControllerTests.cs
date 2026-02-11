@@ -820,10 +820,7 @@ public class SendsControllerTests : IDisposable
         _userService.GetUserByIdAsync(creator.Id).Returns(creator);
         _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP).Returns(false);
 
-        var result = await _sut.AccessUsingAuth();
-
-        Assert.NotNull(result);
-        Assert.IsType<UnauthorizedResult>(result);
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
     }
 
     [Theory, AutoData]
@@ -1093,10 +1090,7 @@ public class SendsControllerTests : IDisposable
         _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId).Returns(expectedUrl);
         _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP).Returns(false);
 
-        var result = await _sut.GetSendFileDownloadDataUsingAuth(fileId);
-
-        Assert.NotNull(result);
-        Assert.IsType<UnauthorizedResult>(result);
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
     }
 
     [Theory, AutoData]

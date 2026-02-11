@@ -84,7 +84,7 @@ public class SendsController : Controller
 
         if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         var sendAuthResult =
@@ -137,7 +137,7 @@ public class SendsController : Controller
 
         if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
@@ -239,7 +239,7 @@ public class SendsController : Controller
         var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
         if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
@@ -287,7 +287,7 @@ public class SendsController : Controller
         var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
         if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
