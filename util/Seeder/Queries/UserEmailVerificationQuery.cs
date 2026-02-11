@@ -28,7 +28,7 @@ public class UserEmailVerificationQuery(IUserRepository userRepository) : IQuery
         };
     }
 
-    public string Url(string token, string email, string? fromMarketing = null)
+    private string Url(string token, string email, string? fromMarketing = null)
     {
         return string.Format(CultureInfo.InvariantCulture, "/redirect-connector.html#finish-signup?token={0}&email={1}&fromEmail=true{2}",
             token,

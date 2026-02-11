@@ -4,8 +4,8 @@
 /// Base interface for query operations in the seeding system. The base interface should not be used directly, rather use `IQuery&lt;TRequest, TResult&gt;`.
 /// </summary>
 /// <remarks>
-/// Queries are synchronous, read-only operations that retrieve data from the seeding context.
-/// Unlike scenes which create data, queries fetch existing data based on request parameters.
+/// Queries are read-only operations that retrieve data from the seeding context.
+/// Unlike scenes, which create data, queries fetch existing data based on request parameters.
 /// They follow a type-safe pattern using generics to ensure proper request/response handling
 /// while maintaining a common non-generic interface for dynamic invocation.
 /// </remarks>
@@ -26,13 +26,13 @@ public interface IQuery
 }
 
 /// <summary>
-/// Generic query interface for synchronous, read-only operations with specific request and result types.
+/// Generic query interface for read-only operations with specific request and result types.
 /// </summary>
 /// <typeparam name="TRequest">The type of request object this query accepts.</typeparam>
 /// <typeparam name="TResult">The type of data this query returns.</typeparam>
 /// <remarks>
 /// Use this interface when you need to retrieve existing data from the seeding context based on
-/// specific request parameters. Queries are synchronous and do not modify data - they only read
+/// specific request parameters. Queries do not modify data - they only read
 /// and return information. The explicit interface implementations allow dynamic invocation while
 /// maintaining type safety in the implementation.
 /// </remarks>
