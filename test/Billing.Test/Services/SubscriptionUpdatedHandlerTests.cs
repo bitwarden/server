@@ -544,9 +544,6 @@ public class SubscriptionUpdatedHandlerTests
         await _userService.DidNotReceive().DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
         await _userService.Received(1).UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
         await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-        // Assert
-        await _userService.Received(1)
-            .DisablePremiumAsync(userId, currentPeriodEnd);
         await _stripeFacade.DidNotReceive()
             .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
         await _stripeFacade.DidNotReceive()
