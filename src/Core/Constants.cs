@@ -207,6 +207,7 @@ public static class FeatureFlagKeys
     public const string DataRecoveryTool = "pm-28813-data-recovery-tool";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
+    public const string UnlockViaSdk = "unlock-via-sdk";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
@@ -254,6 +255,7 @@ public static class FeatureFlagKeys
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
+    public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";

@@ -976,14 +976,14 @@ public class CiphersController : Controller
     public async Task DeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await GetByIdAsync(id, userId);
+        var cipher = await GetByIdAsyncAdmin(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        await _cipherService.DeleteAsync(cipher, userId, true);
+        await _cipherService.DeleteAsync(new CipherDetails(cipher), userId, true);
     }
 
     [HttpPost("{id}/delete-admin")]
