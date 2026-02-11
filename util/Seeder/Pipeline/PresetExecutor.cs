@@ -3,17 +3,13 @@ using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
 
 /// <summary>
 /// Orchestrates preset-based seeding by coordinating the Pipeline infrastructure.
 /// </summary>
-/// <remarks>
-/// This executor encapsulates all the internal Pipeline complexity (SeedReader,
-/// SeederContext, RecipeBuilder, Steps, RecipeExecutor, BulkCommitter) and exposes
-/// only a simple Execute method that returns statistics.
-/// </remarks>
 internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
 {
     /// <summary>
@@ -28,12 +24,12 @@ internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService)
     {
-        var seedReader = new SeedReader();
-        var context = new SeederContext(db, passwordHasher, manglerService, seedReader);
+        using var serviceProvider = BuildServiceProvider(passwordHasher, manglerService);
+        var context = new SeederContext(serviceProvider);
         var committer = new BulkCommitter(db, mapper);
         var executor = new RecipeExecutor(committer);
 
-        var builder = PresetLoader.Load(presetName, seedReader);
+        var builder = PresetLoader.Load(presetName, serviceProvider.GetRequiredService<ISeedReader>());
         var steps = builder.Build();
 
         return executor.Execute(steps, context);
@@ -59,6 +55,18 @@ internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
                 g => (IReadOnlyList<string>)g.ToList());
 
         return new AvailableSeeds(presets, fixtures);
+    }
+
+    private ServiceProvider BuildServiceProvider(
+        IPasswordHasher<User> passwordHasher,
+        IManglerService manglerService)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(passwordHasher);
+        services.AddSingleton(manglerService);
+        services.AddSingleton<ISeedReader, SeedReader>();
+        services.AddSingleton(db);
+        return services.BuildServiceProvider();
     }
 }
 

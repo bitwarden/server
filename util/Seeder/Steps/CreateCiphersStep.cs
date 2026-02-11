@@ -15,7 +15,7 @@ internal sealed class CreateCiphersStep(string fixtureName) : IStep
     {
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
-        var seedFile = context.SeedReader.Read<SeedFile>($"ciphers.{fixtureName}");
+        var seedFile = context.GetSeedReader().Read<SeedFile>($"ciphers.{fixtureName}");
         var collectionIds = context.Registry.CollectionIds;
 
         var ciphers = new List<Cipher>();

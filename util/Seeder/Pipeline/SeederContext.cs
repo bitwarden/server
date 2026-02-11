@@ -1,11 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Data;
-using Bit.Seeder.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -16,12 +13,8 @@ namespace Bit.Seeder.Pipeline;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The context holds mutable state that accumulates as steps execute:
-/// <list type="bullet">
-/// <item><description>Organization, Owner properties are set by early steps</description></item>
-/// <item><description>Entity lists (Users, Ciphers, etc.) accumulate entities</description></item>
-/// <item><description>Registry tracks entity IDs for cross-step references</description></item>
-/// </list>
+/// Steps resolve services from <see cref="Services"/> instead of accessing fixed properties.
+/// Use the convenience extension methods in <see cref="SeederContextExtensions"/> for common services.
 /// </para>
 /// <para>
 /// <strong>Context Lifecycle:</strong>
@@ -35,52 +28,19 @@ namespace Bit.Seeder.Pipeline;
 /// </list>
 /// </para>
 /// <para>
-/// <strong>DatabaseContext Ownership:</strong>
-/// The caller is responsible for managing the DatabaseContext lifetime.
-/// This context does NOT take ownership or dispose the database connection.
-/// </para>
-/// <para>
 /// Use the <c>Require*()</c> methods instead of accessing nullable properties directly —
 /// they throw with step-ordering guidance if a prerequisite step hasn't run yet.
 /// </para>
-/// <example>
-/// <code>
-/// using var db = new DatabaseContext(connectionString);
-/// var context = new SeederContext(db, passwordHasher, mangler, seedReader);
-///
-/// var recipe = new RecipeBuilder()
-///     .WithStep(new CreateOrganizationStep("acme.com"))
-///     .WithStep(new CreateOwnerStep())
-///     .Build();
-///
-/// var executor = new RecipeExecutor();
-/// await executor.Execute(recipe, context);
-///
-/// </code>
-/// </example>
 /// </remarks>
-/// <param name="db">
-/// DatabaseContext instance. CALLER IS RESPONSIBLE FOR DISPOSAL.
-/// This context does not take ownership of the database connection.
+/// <param name="services">
+/// Service provider for resolving dependencies. Steps access services via
+/// <see cref="SeederContextExtensions"/> convenience methods.
 /// </param>
-/// <param name="passwordHasher">Service for hashing user passwords</param>
-/// <param name="manglerService">Service for ID mangling in SeederApi scenarios</param>
-/// <param name="seedReader">Service for reading embedded seed fixture JSON files</param>
 /// <seealso cref="EntityRegistry"/>
 /// <seealso cref="BulkCommitter"/>
-internal sealed class SeederContext(
-    DatabaseContext db,
-    IPasswordHasher<User> passwordHasher,
-    IManglerService manglerService,
-    ISeedReader seedReader)
+internal sealed class SeederContext(IServiceProvider services)
 {
-    internal DatabaseContext Db { get; } = db;
-
-    internal IPasswordHasher<User> PasswordHasher { get; } = passwordHasher;
-
-    internal IManglerService Mangler { get; } = manglerService;
-
-    internal ISeedReader SeedReader { get; } = seedReader;
+    internal IServiceProvider Services { get; } = services;
 
     internal Organization? Organization { get; set; }
 

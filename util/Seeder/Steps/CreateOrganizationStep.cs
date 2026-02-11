@@ -42,7 +42,7 @@ internal sealed class CreateOrganizationStep : IStep
 
         if (_fixtureName is not null)
         {
-            var fixture = context.SeedReader.Read<SeedOrganization>($"organizations.{_fixtureName}");
+            var fixture = context.GetSeedReader().Read<SeedOrganization>($"organizations.{_fixtureName}");
             name = fixture.Name;
             domain = fixture.Domain;
             seats = fixture.Seats;

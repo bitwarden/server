@@ -2,9 +2,9 @@
 
 /// <summary>
 /// Reads seed data files from embedded JSON resources.
-/// Internal to the Seeder library — seeds are pantry ingredients for Recipes, Steps, and Scenes.
+/// Seeds are pantry ingredients for Recipes, Steps, and Scenes.
 /// </summary>
-internal interface ISeedReader
+public interface ISeedReader
 {
     /// <summary>
     /// Reads and deserializes a seed file by name (without extension).

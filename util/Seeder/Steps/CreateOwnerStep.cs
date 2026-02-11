@@ -13,7 +13,7 @@ internal sealed class CreateOwnerStep : IStep
     public void Execute(SeederContext context)
     {
         var org = context.RequireOrganization();
-        var owner = UserSeeder.Create($"owner@{context.RequireDomain()}", context.PasswordHasher, context.Mangler);
+        var owner = UserSeeder.Create($"owner@{context.RequireDomain()}", context.GetPasswordHasher(), context.GetMangler());
 
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(owner.PublicKey!, context.RequireOrgKey());
         var ownerOrgUser = org.CreateOrganizationUserWithKey(

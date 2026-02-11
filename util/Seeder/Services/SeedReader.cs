@@ -6,7 +6,7 @@ namespace Bit.Seeder.Services;
 /// <summary>
 /// Reads seed data from embedded JSON resources shipped with the Seeder library.
 /// </summary>
-internal sealed class SeedReader : ISeedReader
+public sealed class SeedReader : ISeedReader
 {
     private const string _resourcePrefix = "Bit.Seeder.Seeds.fixtures.";
     private const string _resourceSuffix = ".json";

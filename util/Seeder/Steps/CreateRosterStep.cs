@@ -17,7 +17,7 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
         var orgKey = context.RequireOrgKey();
         var orgId = context.RequireOrgId();
         var domain = context.RequireDomain();
-        var roster = context.SeedReader.Read<SeedRoster>($"rosters.{fixtureName}");
+        var roster = context.GetSeedReader().Read<SeedRoster>($"rosters.{fixtureName}");
 
         // Phase 1: Create users — build emailPrefix → orgUserId lookup
         var userLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
@@ -35,9 +35,9 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
             }
 
             var email = $"{emailPrefix}@{domain}";
-            var mangledEmail = context.Mangler.Mangle(email);
+            var mangledEmail = context.GetMangler().Mangle(email);
             var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, UserSeeder.DefaultPassword);
-            var user = UserSeeder.Create(mangledEmail, context.PasswordHasher, context.Mangler, keys: userKeys);
+            var user = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys);
             var userOrgKey = RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey);
             var orgUserType = ParseRole(rosterUser.Role);
             var orgUser = org.CreateOrganizationUserWithKey(
