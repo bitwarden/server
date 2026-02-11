@@ -83,7 +83,6 @@ public class SendsControllerTests : IDisposable
         send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
         send.AuthType = AuthType.None;
         send.Emails = null;
-        send.EmailHashes = null;
         send.HideEmail = true;
 
         _sendRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(send);
