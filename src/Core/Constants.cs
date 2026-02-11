@@ -140,7 +140,6 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
-    public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
