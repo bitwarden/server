@@ -144,6 +144,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UsePhishingBlocker { get; set; }
 
+    /// <summary>
+    /// If set to true, the organization can create My Items for organization ownership.
+    /// </summary>
+    public bool UseMyItems { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))

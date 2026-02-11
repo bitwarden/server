@@ -236,6 +236,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("INTEGER");
 
@@ -940,6 +943,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<decimal?>("PercentOff")
+                        .HasPrecision(5, 2)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
@@ -963,8 +967,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
-                        .HasAnnotation("SqlServer:Clustered", false)
-                        .HasAnnotation("SqlServer:Include", new[] { "StripeProductIds", "AudienceType" });
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("SubscriptionDiscount", (string)null);
                 });

@@ -93,7 +93,7 @@ public class UpdateOrganizationLicenseCommandTests
                         "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
                         "ExpirationWithoutGracePeriod", "Token", "LimitCollectionCreationDeletion",
                         "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems",
-                        "UseOrganizationDomains", "UseAdminSponsoredFamilies", "UseAutomaticUserConfirmation", "UsePhishingBlocker", "UseDisableSmAdsForUsers") &&
+                        "UseOrganizationDomains", "UseAdminSponsoredFamilies", "UseAutomaticUserConfirmation", "UsePhishingBlocker", "UseDisableSmAdsForUsers", "UseMyItems") &&
                          // Same property but different name, use explicit mapping
                          org.ExpirationDate == license.Expires));
         }

@@ -498,6 +498,7 @@ public class OrganizationsController : Controller
             organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
             organization.UseDisableSmAdsForUsers = model.UseDisableSmAdsForUsers;
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
+            organization.UseMyItems = model.UseMyItems;
 
             //secrets
             organization.SmSeats = model.SmSeats;
