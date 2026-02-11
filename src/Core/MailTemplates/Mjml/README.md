@@ -53,7 +53,7 @@ Not all `MJML` tags have the same attributes, it is highly recommended to review
 
 ### Testing the mail template with `IMailer`
 
-After the email is developed in the [initial step](#developing-the-mail-template), we need to make sure that the email `{{variables}}` are populated properly by Handlebars. We can do this by running it through an `IMailer` implementation. The `IMailer`, documented [here](../../Platform/Mail/README.md#step-3-create-handlebars-templates), requires that the ViewModel, the `.html.hbs` `MJML` build artifact, and `.text.hbs` files be in the same directory. 
+After the email is developed in the [initial step](#developing-the-mail-template), we need to make sure that the email `{{variables}}` are populated properly by Handlebars. We can do this by running it through an `IMailer` implementation. The `IMailer`, documented [here](../../Platform/Mail/README.md#step-3-create-handlebars-templates), requires that the ViewModel, the `.html.hbs` `MJML` build artifact, and `.text.hbs` files be in the same directory.
 
 1. Run `npm run build:hbs`.
 2. Copy built `*.html.hbs` files from the build directory to the directory that the `IMailer` expects. All files in the `Core/MailTemplates/Mjml/out` directory should be copied to the `/src/Core/MailTemplates/Mjml` directory, ensuring that the files are in the same directory as the corresponding ViewModels. If a shared component is modified it is important to copy and overwrite all files in that directory to capture changes in the `*.html.hbs` files.
@@ -70,8 +70,8 @@ After the email is developed from the [initial step](#developing-the-mail-templa
 
 1. Run `npm run build:hbs`
 2. Copy built `*.html.hbs` files from the build directory to a location the mail service can consume them.
-  1. All files in the `Core/MailTemplates/Mjml/out` directory should be copied to the `src/Core/MailTemplates/Handlebars/MJML` directory. If a shared component is modified it is important to copy and overwrite all files in that directory to capture changes in the `*.html.hbs`.
-3. Run code that will send the email.
+3. All files in the `Core/MailTemplates/Mjml/out` directory should be copied to the `src/Core/MailTemplates/Handlebars/MJML` directory. If a shared component is modified it is important to copy and overwrite all files in that directory to capture changes in the `*.html.hbs`.
+4. Run code that will send the email.
 
 The minified `html.hbs` artifacts are deliverables and must be placed into the correct `src/Core/MailTemplates/Handlebars/` directories in order to be used by `IMailService` implementations, see 2.1 above.
 
@@ -80,6 +80,7 @@ The minified `html.hbs` artifacts are deliverables and must be placed into the c
 There is currently a `mj-bw-hero` tag you can use within your `*.mjml` templates. This is a good example of how to create a component that takes in attribute values allowing us to be more DRY in our development of emails. Since the attribute's input is a string we are able to define whatever we need into the component, in this case `mj-bw-hero`.
 
 In order to view the custom component you have written you will need to include it in the `.mjmlconfig` and reference it in a `.mjml` template file.
+
 ```html
 <!-- Custom component implementation-->
 <mj-bw-hero
@@ -89,6 +90,7 @@ In order to view the custom component you have written you will need to include 
 ```
 
 Attributes in custom components are defined by the developer. They can be required or optional depending on implementation. See the official `MJML` [documentation](https://documentation.mjml.io/#components) for more information.
+
 ```js
 static allowedAttributes = {
   "img-src": "string", // REQUIRED: Source for the image displayed in the right-hand side of the blue header area
@@ -121,6 +123,7 @@ You are also able to reference other more static `MJML` templates in your `MJML`
 ```
 
 #### `head.mjml`
+
 Currently we include the `head.mjml` file in all `MJML` templates as it contains shared styling and formatting that ensures consistency across all email implementations.
 
 In the future we may deviate from this practice to support different layouts. At that time we will modify the docs with direction.
