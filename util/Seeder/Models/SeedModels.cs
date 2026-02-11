@@ -2,10 +2,10 @@
 
 internal record SeedFile
 {
-    public required List<SeedItem> Items { get; init; }
+    public required List<SeedVaultItem> Items { get; init; }
 }
 
-internal record SeedItem
+internal record SeedVaultItem
 {
     public required string Type { get; init; }
     public required string Name { get; init; }

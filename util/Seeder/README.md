@@ -42,6 +42,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 **Flow**: Preset JSON → PresetLoader → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
 
 **Key actors**:
+
 - **RecipeBuilder**: Fluent API with dependency validation
 - **IStep**: Isolated unit of work (CreateOrganizationStep, CreateUsersStep, etc.)
 - **RecipeExecutor**: Executes steps, captures statistics, commits
@@ -49,9 +50,9 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **SeederContext**: Shared mutable state (NOT thread-safe)
 
 **Why this architecture wins**:
+
 - **Infrastructure as Code**: JSON presets define complete scenarios
 - **Mix & Match**: Fixtures + generation in one preset
-- **Type-safe**: Builder validates at build time
 - **Extensible**: Add entity types via new IStep implementations
 - **Future-ready**: Supports custom DSLs on top of RecipeBuilder
 

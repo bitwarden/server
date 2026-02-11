@@ -29,7 +29,7 @@ internal static class IdentityCipherSeeder
 
     internal static Cipher CreateFromSeed(
         string encryptionKey,
-        SeedItem item,
+        SeedVaultItem item,
         Guid? organizationId = null,
         Guid? userId = null)
     {

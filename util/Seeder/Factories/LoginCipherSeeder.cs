@@ -43,7 +43,7 @@ internal static class LoginCipherSeeder
 
     internal static Cipher CreateFromSeed(
         string encryptionKey,
-        SeedItem item,
+        SeedVaultItem item,
         Guid? organizationId = null,
         Guid? userId = null)
     {

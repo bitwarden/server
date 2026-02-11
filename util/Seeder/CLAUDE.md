@@ -38,6 +38,7 @@ Need to create test data?
 **Flow**: Preset JSON → PresetLoader → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
 
 **Key actors**:
+
 - **RecipeBuilder**: Fluent API with dependency validation
 - **IStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.)
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
