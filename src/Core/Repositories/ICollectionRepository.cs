@@ -45,7 +45,7 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// Optionally, you can include access relationships for other Groups/Users and the collections.
     /// Excludes default collections (My Items collections) - used by Admin Console Collections tab.
     /// </summary>
-    Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
+    Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
 
     /// <summary>
     /// Returns the collection by Id, including permission info for the specified user.

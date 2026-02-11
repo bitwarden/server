@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Platform.SsoCookieVendor;
 
 /// <summary>
 /// Provides an endpoint to read an SSO cookie and redirect to a custom URI
@@ -114,6 +114,6 @@ public class SsoCookieVendorController(IGlobalSettings globalSettings) : Control
         // event a user agent decides the URI is too long.
         queryParams.Add("d=1");
 
-        return $"bitwarden://sso_cookie_vendor?{string.Join("&", queryParams)}";
+        return $"bitwarden://sso-cookie-vendor?{string.Join("&", queryParams)}";
     }
 }
