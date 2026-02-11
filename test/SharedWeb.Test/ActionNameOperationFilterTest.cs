@@ -1,8 +1,7 @@
 ﻿using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace SharedWeb.Test;
@@ -13,7 +12,10 @@ public class ActionNameOperationFilterTest
     public void WithValidActionNameAddsActionNameExtensions()
     {
         // Arrange
-        var operation = new OpenApiOperation();
+        var operation = new OpenApiOperation
+        {
+            Extensions = new Dictionary<string, IOpenApiExtension>()
+        };
         var actionDescriptor = new ActionDescriptor();
         actionDescriptor.RouteValues["action"] = "GetUsers";
 
@@ -22,7 +24,7 @@ public class ActionNameOperationFilterTest
             ActionDescriptor = actionDescriptor
         };
 
-        var context = new OperationFilterContext(apiDescription, null, null, null);
+        var context = new OperationFilterContext(apiDescription, null, null, null, null);
         var filter = new ActionNameOperationFilter();
 
         // Act
@@ -32,20 +34,23 @@ public class ActionNameOperationFilterTest
         Assert.True(operation.Extensions.ContainsKey("x-action-name"));
         Assert.True(operation.Extensions.ContainsKey("x-action-name-snake-case"));
 
-        var actionNameExt = operation.Extensions["x-action-name"] as OpenApiString;
-        var actionNameSnakeCaseExt = operation.Extensions["x-action-name-snake-case"] as OpenApiString;
+        var actionNameExt = operation.Extensions["x-action-name"] as JsonNodeExtension;
+        var actionNameSnakeCaseExt = operation.Extensions["x-action-name-snake-case"] as JsonNodeExtension;
 
         Assert.NotNull(actionNameExt);
         Assert.NotNull(actionNameSnakeCaseExt);
-        Assert.Equal("GetUsers", actionNameExt.Value);
-        Assert.Equal("get_users", actionNameSnakeCaseExt.Value);
+        Assert.Equal("GetUsers", actionNameExt.Node.ToString());
+        Assert.Equal("get_users", actionNameSnakeCaseExt.Node.ToString());
     }
 
     [Fact]
     public void WithMissingActionRouteValueDoesNotAddExtensions()
     {
         // Arrange
-        var operation = new OpenApiOperation();
+        var operation = new OpenApiOperation
+        {
+            Extensions = new Dictionary<string, IOpenApiExtension>()
+        };
         var actionDescriptor = new ActionDescriptor();
         // Not setting the "action" route value at all
 
@@ -54,7 +59,7 @@ public class ActionNameOperationFilterTest
             ActionDescriptor = actionDescriptor
         };
 
-        var context = new OperationFilterContext(apiDescription, null, null, null);
+        var context = new OperationFilterContext(apiDescription, null, null, null, null);
         var filter = new ActionNameOperationFilter();
 
         // Act

@@ -1,6 +1,7 @@
-﻿using Bit.Seeder.Data.Enums;
+﻿using Bit.Seeder.Data.Distributions;
+using Bit.Seeder.Data.Enums;
 
-namespace Bit.Seeder.Data;
+namespace Bit.Seeder.Data.Static;
 
 /// <summary>
 /// Password collections by zxcvbn strength level (0-4) for realistic test data.
@@ -10,7 +11,7 @@ internal static class Passwords
     /// <summary>
     /// Score 0 - Too guessable: keyboard walks, simple sequences, single words.
     /// </summary>
-    public static readonly string[] VeryWeak =
+    internal static readonly string[] VeryWeak =
     [
         "password", "123456", "qwerty", "abc123", "letmein",
         "admin", "welcome", "monkey", "dragon", "master",
@@ -23,7 +24,7 @@ internal static class Passwords
     /// <summary>
     /// Score 1 - Very guessable: common patterns with minor complexity.
     /// </summary>
-    public static readonly string[] Weak =
+    internal static readonly string[] Weak =
     [
         "Password1", "Qwerty123", "Welcome1", "Admin123", "Letmein1",
         "Dragon123", "Master123", "Shadow123", "Michael1", "Jennifer1",
@@ -36,7 +37,7 @@ internal static class Passwords
     /// <summary>
     /// Score 2 - Somewhat guessable: meets basic complexity but predictable patterns.
     /// </summary>
-    public static readonly string[] Fair =
+    internal static readonly string[] Fair =
     [
         "Summer2024!", "Winter2023#", "Spring2024@", "Autumn2023$", "January2024!",
         "Welcome123!", "Company2024#", "Secure123!", "Access2024@", "Login2024!",
@@ -49,7 +50,7 @@ internal static class Passwords
     /// <summary>
     /// Score 3 - Safely unguessable: good entropy, mixed character types.
     /// </summary>
-    public static readonly string[] Strong =
+    internal static readonly string[] Strong =
     [
         "k#9Lm$vQ2@xR7nP!", "Yx8&mK3$pL5#wQ9@", "Nv4%jH7!bT2@sF6#",
         "Rm9#cX5$gW1@zK8!", "Qp3@hY6#nL9$tB2!", "Wz7!mF4@kS8#xC1$",
@@ -64,7 +65,7 @@ internal static class Passwords
     /// <summary>
     /// Score 4 - Very unguessable: high entropy, long passphrases, random strings.
     /// </summary>
-    public static readonly string[] VeryStrong =
+    internal static readonly string[] VeryStrong =
     [
         "Kx9#mL4$pQ7@wR2!vN5hT8", "Yz3@hT8#bF1$cS6!nM9wK4", "Wv5!rK2@jG9#tX4$mL7nB3",
         "Qn7$sB3@yH6#pC1!zF8kW2", "Tm2@xD5#kW9$vL4!rJ7gN1", "Pf4!nC8@bR3#yL6$hS9mV2",
@@ -77,71 +78,24 @@ internal static class Passwords
     ];
 
     /// <summary>All passwords combined for mixed/random selection.</summary>
-    public static readonly string[] All = [.. VeryWeak, .. Weak, .. Fair, .. Strong, .. VeryStrong];
+    internal static readonly string[] All = [.. VeryWeak, .. Weak, .. Fair, .. Strong, .. VeryStrong];
 
-    /// <summary>
-    /// Realistic distribution based on breach data and security research.
-    /// Sources: NordPass annual reports, Have I Been Pwned analysis, academic studies.
-    /// Distribution: 25% VeryWeak, 30% Weak, 25% Fair, 15% Strong, 5% VeryStrong
-    /// </summary>
-    private static readonly (PasswordStrength Strength, int CumulativePercent)[] RealisticDistribution =
-    [
-        (PasswordStrength.VeryWeak, 25),    // 25% - most common breached passwords
-        (PasswordStrength.Weak, 55),         // 30% - simple patterns with numbers
-        (PasswordStrength.Fair, 80),         // 25% - meets basic requirements
-        (PasswordStrength.Strong, 95),       // 15% - good passwords
-        (PasswordStrength.VeryStrong, 100)   // 5%  - password manager users
-    ];
-
-    public static string[] GetByStrength(PasswordStrength strength) => strength switch
+    internal static string[] GetByStrength(PasswordStrength strength) => strength switch
     {
         PasswordStrength.VeryWeak => VeryWeak,
         PasswordStrength.Weak => Weak,
         PasswordStrength.Fair => Fair,
         PasswordStrength.Strong => Strong,
         PasswordStrength.VeryStrong => VeryStrong,
-        PasswordStrength.Realistic => All, // For direct array access, use All
         _ => Strong
     };
 
     /// <summary>
-    /// Gets a password with realistic strength distribution.
-    /// Uses deterministic selection based on index for reproducible test data.
+    /// Gets a password using the provided distribution to select strength.
     /// </summary>
-    public static string GetRealisticPassword(int index)
+    internal static string GetPassword(int index, int total, Distribution<PasswordStrength> distribution)
     {
-        var strength = GetRealisticStrength(index);
-        var passwords = GetByStrength(strength);
-        return passwords[index % passwords.Length];
-    }
-
-    /// <summary>
-    /// Gets a password strength following realistic distribution.
-    /// Deterministic based on index for reproducible results.
-    /// </summary>
-    public static PasswordStrength GetRealisticStrength(int index)
-    {
-        // Use modulo 100 for percentage-based bucket selection
-        var bucket = index % 100;
-
-        foreach (var (strength, cumulativePercent) in RealisticDistribution)
-        {
-            if (bucket < cumulativePercent)
-            {
-                return strength;
-            }
-        }
-
-        return PasswordStrength.Strong; // Fallback
-    }
-
-    public static string GetPassword(PasswordStrength strength, int index)
-    {
-        if (strength == PasswordStrength.Realistic)
-        {
-            return GetRealisticPassword(index);
-        }
-
+        var strength = distribution.Select(index, total);
         var passwords = GetByStrength(strength);
         return passwords[index % passwords.Length];
     }

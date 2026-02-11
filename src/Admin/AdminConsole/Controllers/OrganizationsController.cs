@@ -11,8 +11,10 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Services;
@@ -60,6 +62,7 @@ public class OrganizationsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceValidator _automaticUserConfirmationOrganizationPolicyComplianceValidator;
     private readonly IOrganizationAutoConfirmEnabledNotificationCommand _organizationAutoConfirmEnabledNotificationCommand;
 
     public OrganizationsController(
@@ -87,6 +90,7 @@ public class OrganizationsController : Controller
         IPricingClient pricingClient,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IOrganizationBillingService organizationBillingService,
+        IAutomaticUserConfirmationOrganizationPolicyComplianceValidator automaticUserConfirmationOrganizationPolicyComplianceValidator,
         IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand)
     {
         _organizationRepository = organizationRepository;
@@ -113,6 +117,7 @@ public class OrganizationsController : Controller
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _organizationBillingService = organizationBillingService;
+        _automaticUserConfirmationOrganizationPolicyComplianceValidator = automaticUserConfirmationOrganizationPolicyComplianceValidator;
         _organizationAutoConfirmEnabledNotificationCommand = organizationAutoConfirmEnabledNotificationCommand;
     }
 
@@ -255,7 +260,7 @@ public class OrganizationsController : Controller
             Status = organization.Status,
             PlanType = organization.PlanType,
             Seats = organization.Seats,
-            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
+            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation
         };
 
         if (model.PlanType.HasValue)
@@ -287,6 +292,13 @@ public class OrganizationsController : Controller
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
             TempData["Error"] = "Plan does not support Secrets Manager";
+            return RedirectToAction("Edit", new { id });
+        }
+
+        if (await CheckOrganizationPolicyComplianceAsync(existingOrganizationData, organization) is { } error)
+        {
+            TempData["Error"] = error.Message;
+
             return RedirectToAction("Edit", new { id });
         }
 
@@ -328,6 +340,19 @@ public class OrganizationsController : Controller
         }
 
         return RedirectToAction("Edit", new { id });
+    }
+
+    private async Task<Error> CheckOrganizationPolicyComplianceAsync(Organization existingOrganizationData, Organization updatedOrganization)
+    {
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && updatedOrganization.UseAutomaticUserConfirmation)
+        {
+            var validationResult = await _automaticUserConfirmationOrganizationPolicyComplianceValidator.IsOrganizationCompliantAsync(
+                new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(existingOrganizationData.Id));
+
+            return validationResult.Match(error => error, _ => null);
+        }
+
+        return null;
     }
 
     [HttpPost]
