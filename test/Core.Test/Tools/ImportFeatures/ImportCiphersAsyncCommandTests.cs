@@ -326,4 +326,101 @@ public class ImportCiphersAsyncCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_WithArchivedCiphers_PreservesArchiveStatus(
+        Guid importingUserId,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        var archivedDate = DateTime.UtcNow.AddDays(-1);
+        ciphers[0].UserId = importingUserId;
+        ciphers[0].ArchivedDate = archivedDate;
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.OrganizationDataOwnership)
+            .Returns(false);
+
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder>());
+
+        var folders = new List<Folder>();
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(importingUserId,
+                Arg.Is<List<CipherDetails>>(c =>
+                    c[0].Archives != null &&
+                    c[0].Archives.Contains(importingUserId.ToString().ToUpperInvariant()) &&
+                    c[0].Archives.Contains(archivedDate.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"))),
+                Arg.Any<List<Folder>>());
+    }
+
+    /*
+     * Archive functionality is a per-user function. When importing archived ciphers into an organization vault,
+     * the Archives field should be set for the importing user only. This allows the importing user to see
+     * items as archived, while other organization members will not see them as archived.
+     */
+    [Theory, BitAutoData]
+    public async Task ImportIntoOrganizationalVaultAsync_WithArchivedCiphers_SetsArchivesForImportingUserOnly(
+        Organization organization,
+        Guid importingUserId,
+        OrganizationUser importingOrganizationUser,
+        List<Collection> collections,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        var archivedDate = DateTime.UtcNow.AddDays(-1);
+        organization.MaxCollections = null;
+        importingOrganizationUser.OrganizationId = organization.Id;
+
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        ciphers[0].ArchivedDate = archivedDate;
+        ciphers[0].Archives = null;
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns(importingOrganizationUser);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Collection>());
+
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .CreateAsync(
+                Arg.Is<List<CipherDetails>>(c =>
+                    c[0].ArchivedDate == archivedDate &&
+                    c[0].Archives != null &&
+                    c[0].Archives.Contains(importingUserId.ToString().ToUpperInvariant()) &&
+                    c[0].Archives.Contains(archivedDate.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ"))),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Any<IEnumerable<CollectionCipher>>(),
+                Arg.Any<IEnumerable<CollectionUser>>());
+    }
 }

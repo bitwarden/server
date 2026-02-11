@@ -242,6 +242,11 @@ public class SendsController : Controller
             return new UnauthorizedResult();
         }
 
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        {
+            throw new NotFoundException();
+        }
+
         var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
@@ -249,9 +254,19 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        send.AccessCount++;
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        /*
+         * AccessCount is incremented differently for File and Text Send types:
+         * - Text Sends are incremented at every access
+         * - File Sends are incremented only when the file is downloaded
+         *
+         * Note that this endpoint is initially called for all Send types
+         */
+        if (send.Type == SendType.Text)
+        {
+            send.AccessCount++;
+            await _sendRepository.ReplaceAsync(send);
+            await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        }
 
         return new ObjectResult(sendResponse);
     }
@@ -275,11 +290,12 @@ public class SendsController : Controller
             return new UnauthorizedResult();
         }
 
-        var url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId);
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
 
-        send.AccessCount++;
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        if (result.Equals(SendAccessResult.Denied))
+        {
+            throw new NotFoundException();
+        }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }
@@ -395,19 +411,7 @@ public class SendsController : Controller
     [HttpPut("{id}/remove-password")]
     public async Task<SendResponseModel> PutRemovePassword(string id)
     {
-        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
-        var send = await _sendRepository.GetByIdAsync(new Guid(id));
-        if (send == null || send.UserId != userId)
-        {
-            throw new NotFoundException();
-        }
-
-        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
-        // This allows clients to update other fields without re-submitting sensitive auth data.
-        send.Password = null;
-        send.AuthType = AuthType.None;
-        await _nonAnonymousSendCommand.SaveSendAsync(send);
-        return new SendResponseModel(send);
+        return await this.PutRemoveAuth(id);
     }
 
     // Removes ALL authentication (email or password) if any is present

@@ -14,7 +14,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
 using Bit.SharedWeb.Health;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -301,44 +301,44 @@ public class Startup
                 // Remove all Bitwarden cloud servers and only register the local server
                 config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
-                    swaggerDoc.Servers.Clear();
-                    swaggerDoc.Servers.Add(new OpenApiServer
-                    {
-                        Url = globalSettings.BaseServiceUri.Api,
-                    });
-
-                    swaggerDoc.Components.SecuritySchemes.Clear();
-                    swaggerDoc.Components.SecuritySchemes.Add("oauth2-client-credentials", new OpenApiSecurityScheme
-                    {
-                        Type = SecuritySchemeType.OAuth2,
-                        Flows = new OpenApiOAuthFlows
+                    swaggerDoc.Servers =
+                    [
+                        new()
                         {
-                            ClientCredentials = new OpenApiOAuthFlow
+                            Url = globalSettings.BaseServiceUri.Api,
+                        }
+                    ];
+
+                    swaggerDoc.Components ??= new OpenApiComponents();
+                    swaggerDoc.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
+                    {
+                        {
+                            "oauth2-client-credentials",
+                            new OpenApiSecurityScheme
                             {
-                                TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
-                                Scopes = new Dictionary<string, string>
+                                Type = SecuritySchemeType.OAuth2,
+                                Flows = new OpenApiOAuthFlows
+                                {
+                                    ClientCredentials = new OpenApiOAuthFlow
+                                    {
+                                        TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
+                                        Scopes = new Dictionary<string, string>
                                 {
                                     { ApiScopes.ApiOrganization, "Organization APIs" }
                                 }
+                                    }
+                                }
                             }
                         }
-                    });
+                    };
 
-                    swaggerDoc.SecurityRequirements.Clear();
-                    swaggerDoc.SecurityRequirements.Add(new OpenApiSecurityRequirement
-                    {
+                    swaggerDoc.Security =
+                    [
+                        new OpenApiSecurityRequirement
                         {
-                            new OpenApiSecurityScheme
-                            {
-                                Reference = new OpenApiReference
-                                {
-                                    Type = ReferenceType.SecurityScheme,
-                                    Id = "oauth2-client-credentials"
-                                }
-                            },
-                            [ApiScopes.ApiOrganization]
-                        }
-                    });
+                            [new OpenApiSecuritySchemeReference("oauth2-client-credentials")] = [ApiScopes.ApiOrganization]
+                        },
+                    ];
                 });
             });
 

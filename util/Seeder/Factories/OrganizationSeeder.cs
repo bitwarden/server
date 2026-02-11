@@ -2,16 +2,17 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Seeder.Factories;
 
-public class OrganizationSeeder
+internal static class OrganizationSeeder
 {
-    public static Organization CreateEnterprise(string name, string domain, int seats, string? publicKey = null, string? privateKey = null)
+    internal static Organization Create(string name, string domain, int seats, string? publicKey = null, string? privateKey = null)
     {
         return new Organization
         {
-            Id = Guid.NewGuid(),
+            Id = CoreHelpers.GenerateComb(),
             Name = name,
             BillingEmail = $"billing@{domain}",
             Plan = "Enterprise (Annually)",
@@ -46,13 +47,13 @@ public class OrganizationSeeder
     }
 }
 
-public static class OrganizationExtensions
+internal static class OrganizationExtensions
 {
     /// <summary>
     /// Creates an OrganizationUser with a dynamically provided encrypted org key.
     /// The encryptedOrgKey should be generated using sdkService.GenerateUserOrganizationKey().
     /// </summary>
-    public static OrganizationUser CreateOrganizationUserWithKey(
+    internal static OrganizationUser CreateOrganizationUserWithKey(
         this Organization organization,
         User user,
         OrganizationUserType type,
@@ -64,7 +65,7 @@ public static class OrganizationExtensions
 
         return new OrganizationUser
         {
-            Id = Guid.NewGuid(),
+            Id = CoreHelpers.GenerateComb(),
             OrganizationId = organization.Id,
             UserId = shouldLinkUserId ? user.Id : null,
             Email = shouldLinkUserId ? null : user.Email,
