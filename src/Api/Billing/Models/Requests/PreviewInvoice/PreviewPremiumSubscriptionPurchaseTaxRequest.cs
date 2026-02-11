@@ -13,5 +13,7 @@ public record PreviewPremiumSubscriptionPurchaseTaxRequest
     [Required]
     public required MinimalBillingAddressRequest BillingAddress { get; set; }
 
-    public (short, BillingAddress) ToDomain() => (AdditionalStorage, BillingAddress.ToDomain());
+    public string? Coupon { get; set; }
+
+    public (short, BillingAddress, string?) ToDomain() => (AdditionalStorage, BillingAddress.ToDomain(), Coupon);
 }

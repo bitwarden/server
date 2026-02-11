@@ -15,8 +15,9 @@ public class PremiumCloudHostedSubscriptionRequest : IValidatableObject
     [Range(0, 99)]
     public short AdditionalStorageGb { get; set; } = 0;
 
+    public string? Coupon { get; set; }
 
-    public (PaymentMethod, BillingAddress, short) ToDomain()
+    public (PaymentMethod, BillingAddress, short, string?) ToDomain()
     {
         // Check if TokenizedPaymentMethod or NonTokenizedPaymentMethod is provided.
         var tokenizedPaymentMethod = TokenizedPaymentMethod?.ToDomain();
@@ -28,7 +29,7 @@ public class PremiumCloudHostedSubscriptionRequest : IValidatableObject
 
         var billingAddress = BillingAddress.ToDomain();
 
-        return (paymentMethod, billingAddress, AdditionalStorageGb);
+        return (paymentMethod, billingAddress, AdditionalStorageGb, Coupon);
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

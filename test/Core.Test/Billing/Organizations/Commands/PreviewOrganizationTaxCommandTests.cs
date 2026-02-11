@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
@@ -60,7 +60,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress);
+        var result = await _command.Run(purchase, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -118,7 +118,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress);
+        var result = await _command.Run(purchase, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -181,7 +181,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress);
+        var result = await _command.Run(purchase, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -242,7 +242,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress);
+        var result = await _command.Run(purchase, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -294,7 +294,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress);
+        var result = await _command.Run(purchase, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -347,7 +347,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress);
+        var result = await _command.Run(purchase, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -368,6 +368,620 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-seat-monthly" &&
             options.SubscriptionDetails.Items[0].Quantity == 15 &&
             options.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_WithCoupon_AppliesCouponToStripe()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 400 }],
+            Total = 4400
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(purchase, billingAddress, "TEST_COUPON_20");
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(4.00m, tax);
+        Assert.Equal(44.00m, total);
+
+        // Verify the coupon is correctly applied to Stripe API call
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "TEST_COUPON_20"));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_WithCouponAndStorage_AppliesCouponCorrectly()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Enterprise,
+            Cadence = PlanCadenceType.Annually,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 10,
+                AdditionalStorage = 5,
+                Sponsored = false
+            },
+            SecretsManager = new OrganizationSubscriptionPurchase.SecretsManagerSelections
+            {
+                Seats = 8,
+                AdditionalServiceAccounts = 2,
+                Standalone = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "CA",
+            PostalCode = "K1A 0A6"
+        };
+
+        var plan = new EnterprisePlan(true);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 1500 }],
+            Total = 16500
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(purchase, billingAddress, "ENTERPRISE_DISCOUNT_15");
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(15.00m, tax);
+        Assert.Equal(165.00m, total);
+
+        // Verify coupon is applied alongside all subscription items
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "CA" &&
+            options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
+            options.SubscriptionDetails.Items.Count == 4 &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "2023-enterprise-org-seat-annually" && item.Quantity == 10) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "storage-gb-annually" && item.Quantity == 5) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "secrets-manager-enterprise-seat-annually" && item.Quantity == 8) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "secrets-manager-service-account-2024-annually" && item.Quantity == 2) &&
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "ENTERPRISE_DISCOUNT_15"));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_SponsoredPlanWithCoupon_IgnoresCoupon()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Families,
+            Cadence = PlanCadenceType.Annually,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 6,
+                AdditionalStorage = 0,
+                Sponsored = true
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new FamiliesPlan();
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 500 }],
+            Total = 5500
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(purchase, billingAddress, "TEST_COUPON_IGNORED");
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(5.00m, tax);
+        Assert.Equal(55.00m, total);
+
+        // Verify coupon is ignored for sponsored plans (no discounts applied)
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2021-family-for-enterprise-annually" &&
+            options.SubscriptionDetails.Items[0].Quantity == 1 &&
+            options.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_StandaloneSecretsManagerWithCoupon_UsesSystemCoupon()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            },
+            SecretsManager = new OrganizationSubscriptionPurchase.SecretsManagerSelections
+            {
+                Seats = 3,
+                AdditionalServiceAccounts = 0,
+                Standalone = true
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "CA",
+            PostalCode = "K1A 0A6"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 750 }],
+            Total = 8250
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(purchase, billingAddress, "USER_COUPON_IGNORED");
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(7.50m, tax);
+        Assert.Equal(82.50m, total);
+
+        // Verify user coupon is ignored and system coupon (SecretsManagerStandalone) is used instead
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "CA" &&
+            options.CustomerDetails.Address.PostalCode == "K1A 0A6" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.Reverse &&
+            options.SubscriptionDetails.Items.Count == 2 &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "2023-teams-org-seat-monthly" && item.Quantity == 5) &&
+            options.SubscriptionDetails.Items.Any(item =>
+                item.Price == "secrets-manager-teams-seat-monthly" && item.Quantity == 3) &&
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == CouponIDs.SecretsManagerStandalone));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_EmptyStringCoupon_TreatedAsNull()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(purchase, billingAddress, "");
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        // Verify empty string coupon is treated same as null (no discounts applied)
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_NullCoupon_NoDiscountApplied()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(purchase, billingAddress, null);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        // Verify null coupon results in no discounts applied
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_WhitespaceOnlyCoupon_TreatedAsNull()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        // Whitespace-only strings are now trimmed and treated as null/empty, so no discount is applied
+        var result = await _command.Run(purchase, billingAddress, "   ");
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        // Verify whitespace-only coupon is treated as null (no discount applied)
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts == null));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_CouponWithLeadingTrailingWhitespace_TrimmedBeforeApplying()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 400 }],
+            Total = 4400
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        // Coupon with leading and trailing whitespace should be trimmed before applying
+        var result = await _command.Run(purchase, billingAddress, "  TEST_COUPON_20  ");
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(4.00m, tax);
+        Assert.Equal(44.00m, total);
+
+        // Verify the coupon is trimmed before being sent to Stripe
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "TEST_COUPON_20"));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_VeryLongCouponString_PassedThroughToStripe()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        // Very long coupon string (200 characters)
+        var longCoupon = new string('A', 200);
+        var result = await _command.Run(purchase, billingAddress, longCoupon);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        // Verify very long coupon string is passed through to Stripe (Stripe will handle validation)
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == longCoupon));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_CouponWithSpecialCharacters_PassedThroughToStripe()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        // Coupon with special characters (hyphens, underscores, numbers are common in Stripe coupon IDs)
+        var specialCoupon = "TEST-COUPON_2024-50%OFF";
+        var result = await _command.Run(purchase, billingAddress, specialCoupon);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        // Verify coupon with special characters is passed through to Stripe (Stripe will handle validation)
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == specialCoupon));
+    }
+
+    [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_CouponWithUnicodeCharacters_PassedThroughToStripe()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        // Coupon with unicode characters (though unlikely for real Stripe coupons, tests edge case)
+        var unicodeCoupon = "TEST-优惠券-2024";
+        var result = await _command.Run(purchase, billingAddress, unicodeCoupon);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        // Verify coupon with unicode characters is passed through to Stripe (Stripe will handle validation)
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "US" &&
+            options.CustomerDetails.Address.PostalCode == "12345" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 5 &&
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == unicodeCoupon));
     }
 
     #endregion

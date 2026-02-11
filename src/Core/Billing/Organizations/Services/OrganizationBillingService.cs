@@ -34,11 +34,21 @@ public class OrganizationBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
+    ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
-        var (organization, customerSetup, subscriptionSetup) = sale;
+        var (organization, customerSetup, subscriptionSetup, owner) = sale;
+
+        if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon) && owner != null)
+        {
+            var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(owner, customerSetup.Coupon.Trim());
+            if (!isValid)
+            {
+                throw new BadRequestException("The coupon code is invalid or you are not eligible for this discount.");
+            }
+        }
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
@@ -484,7 +494,7 @@ public class OrganizationBillingService(
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = !string.IsNullOrEmpty(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon }] : null,
+            Discounts = !string.IsNullOrWhiteSpace(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon.Trim() }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {

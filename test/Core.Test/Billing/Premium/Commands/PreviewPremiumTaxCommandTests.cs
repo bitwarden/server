@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -52,7 +52,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(0, billingAddress);
+        var result = await _command.Run(0, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -86,7 +86,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(5, billingAddress);
+        var result = await _command.Run(5, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -122,7 +122,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(0, billingAddress);
+        var result = await _command.Run(0, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -156,7 +156,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(20, billingAddress);
+        var result = await _command.Run(20, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -192,7 +192,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(10, billingAddress);
+        var result = await _command.Run(10, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -228,7 +228,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(0, billingAddress);
+        var result = await _command.Run(0, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -262,7 +262,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(-5, billingAddress);
+        var result = await _command.Run(-5, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -297,7 +297,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(0, billingAddress);
+        var result = await _command.Run(0, billingAddress, null);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;

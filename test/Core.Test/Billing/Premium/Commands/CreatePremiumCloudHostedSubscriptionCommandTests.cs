@@ -40,6 +40,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
     private readonly IUpdatePaymentMethodCommand _updatePaymentMethodCommand = Substitute.For<IUpdatePaymentMethodCommand>();
+    private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
     private readonly CreatePremiumCloudHostedSubscriptionCommand _command;
 
     public CreatePremiumCloudHostedSubscriptionCommandTests()
@@ -71,7 +72,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             Substitute.For<ILogger<CreatePremiumCloudHostedSubscriptionCommand>>(),
             _pricingClient,
             _hasPaymentMethodQuery,
-            _updatePaymentMethodCommand);
+            _updatePaymentMethodCommand,
+            _subscriptionDiscountService);
     }
 
     [Theory, BitAutoData]
@@ -84,7 +86,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         user.Premium = true;
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT1);
@@ -102,7 +104,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         user.Premium = false;
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, -1);
+        var result = await _command.Run(user, paymentMethod, billingAddress, -1, null);
 
         // Assert
         Assert.True(result.IsT1);
@@ -157,7 +159,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -210,7 +212,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -258,7 +260,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -319,7 +321,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage);
+        var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -373,7 +375,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -432,7 +434,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -498,7 +500,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -555,7 +557,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -611,7 +613,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -671,7 +673,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             .Returns(Task.FromResult(new List<SetupIntent>())); // Empty list - no setup intent found
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT3);
@@ -718,7 +720,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         // Assert
         Assert.True(result.IsT0);
@@ -743,7 +745,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         billingAddress.PostalCode = "12345";
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
 
         //Assert
         Assert.True(result.IsT3); // Assuming T3 is the Unhandled result
@@ -804,7 +806,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage);
+        var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage, null);
 
         // Assert
         Assert.True(result.IsT0);

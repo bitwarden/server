@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -22,7 +22,8 @@ public interface IPreviewOrganizationTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         OrganizationSubscriptionPurchase purchase,
-        BillingAddress billingAddress);
+        BillingAddress billingAddress,
+        string? coupon);
 
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         Organization organization,
@@ -42,7 +43,8 @@ public class PreviewOrganizationTaxCommand(
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         OrganizationSubscriptionPurchase purchase,
-        BillingAddress billingAddress)
+        BillingAddress billingAddress,
+        string? coupon)
         => HandleAsync<(decimal, decimal)>(async () =>
         {
             var plan = await pricingClient.GetPlanOrThrow(purchase.PlanType);
@@ -75,6 +77,8 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
+                    // System coupon takes precedence for standalone Secrets Manager purchases.
+                    // Any user-provided coupons are ignored in this scenario.
                     options.Discounts =
                     [
                         new InvoiceDiscountOptions
@@ -118,6 +122,11 @@ public class PreviewOrganizationTaxCommand(
                                 Quantity = purchase.SecretsManager.AdditionalServiceAccounts
                             });
                         }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(coupon))
+                    {
+                        options.Discounts = [new InvoiceDiscountOptions { Coupon = coupon.Trim() }];
                     }
 
                     break;

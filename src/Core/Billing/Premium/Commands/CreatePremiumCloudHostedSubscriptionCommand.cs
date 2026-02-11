@@ -40,12 +40,14 @@ public interface ICreatePremiumCloudHostedSubscriptionCommand
     /// <param name="paymentMethod">The tokenized payment method containing the payment type and token for billing.</param>
     /// <param name="billingAddress">The billing address information required for tax calculation and customer creation.</param>
     /// <param name="additionalStorageGb">Additional storage in GB beyond the base 1GB included with premium (must be >= 0).</param>
+    /// <param name="coupon">Optional Stripe coupon code to apply a discount to the subscription.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
         PaymentMethod paymentMethod,
         BillingAddress billingAddress,
-        short additionalStorageGb);
+        short additionalStorageGb,
+        string? coupon);
 }
 
 public class CreatePremiumCloudHostedSubscriptionCommand(
@@ -60,7 +62,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger,
     IPricingClient pricingClient,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand)
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
+    ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
     private static readonly List<string> _expand = ["tax"];
@@ -70,7 +73,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         User user,
         PaymentMethod paymentMethod,
         BillingAddress billingAddress,
-        short additionalStorageGb) => HandleAsync<None>(async () =>
+        short additionalStorageGb,
+        string? coupon) => HandleAsync<None>(async () =>
     {
         if (user.Premium)
         {
@@ -80,6 +84,15 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         if (additionalStorageGb < 0)
         {
             return new BadRequest("Additional storage must be greater than 0.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(coupon))
+        {
+            var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(user, coupon.Trim());
+            if (!isValid)
+            {
+                return new BadRequest("The coupon code is invalid or you are not eligible for this discount.");
+            }
         }
 
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
@@ -111,7 +124,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         customer = await ReconcileBillingLocationAsync(customer, billingAddress);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, additionalStorageGb > 0 ? additionalStorageGb : null);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, additionalStorageGb > 0 ? additionalStorageGb : null, coupon);
 
         paymentMethod.Switch(
             tokenized =>
@@ -310,7 +323,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Guid userId,
         Customer customer,
         Pricing.Premium.Plan premiumPlan,
-        int? storage)
+        int? storage,
+        string? coupon)
     {
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
@@ -351,6 +365,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 : null,
             OffSession = true
         };
+
+        if (!string.IsNullOrWhiteSpace(coupon))
+        {
+            subscriptionCreateOptions.Discounts = [new SubscriptionDiscountOptions { Coupon = coupon.Trim() }];
+        }
 
         var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 

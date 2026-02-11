@@ -11,7 +11,8 @@ public interface IPreviewPremiumTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         int additionalStorage,
-        BillingAddress billingAddress);
+        BillingAddress billingAddress,
+        string? coupon);
 }
 
 public class PreviewPremiumTaxCommand(
@@ -21,7 +22,8 @@ public class PreviewPremiumTaxCommand(
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         int additionalStorage,
-        BillingAddress billingAddress)
+        BillingAddress billingAddress,
+        string? coupon)
         => HandleAsync<(decimal, decimal)>(async () =>
         {
             var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
@@ -54,6 +56,11 @@ public class PreviewPremiumTaxCommand(
                     Price = premiumPlan.Storage.StripePriceId,
                     Quantity = additionalStorage
                 });
+            }
+
+            if (!string.IsNullOrWhiteSpace(coupon))
+            {
+                options.Discounts = [new InvoiceDiscountOptions { Coupon = coupon.Trim() }];
             }
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
