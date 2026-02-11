@@ -17,12 +17,13 @@ internal static class UserSeeder
         IManglerService manglerService,
         bool emailVerified = true,
         bool premium = false,
-        UserKeys? keys = null)
+        UserKeys? keys = null,
+        string? password = null)
     {
         // When keys are provided, caller owns email/key consistency - don't mangle
         var mangledEmail = keys == null ? manglerService.Mangle(email) : email;
 
-        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, DefaultPassword);
+        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, password ?? DefaultPassword);
 
         var user = new User
         {
