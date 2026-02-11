@@ -19,7 +19,7 @@ using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class OrganizationEditModel : OrganizationViewModel
+public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
 {
     private readonly List<Plan> _plans;
 
@@ -340,5 +340,16 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         existingOrganization.UseMyItems = UseMyItems;
         return existingOrganization;
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (UseMyItems && !UsePolicies)
+        {
+            var displayName = nameof(UseMyItems).GetDisplayAttribute<OrganizationEditModel>()?.GetName() ?? nameof(UseMyItems);
+            yield return new ValidationResult(
+                $"The {displayName} feature requires Policies to be enabled.",
+                [nameof(UseMyItems)]);
+        }
     }
 }
