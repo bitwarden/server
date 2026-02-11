@@ -105,7 +105,7 @@ BEGIN
         [SecurityVersion] = @SecurityVersion,
         [SignedPublicKey] = @SignedPublicKey,
         [MaxStorageGbIncreased] = @MaxStorageGb,
-        [MasterPasswordSalt] = COALESCE(@MasterPasswordSalt, LOWER(LTRIM(RTRIM(@Email))))
+        [MasterPasswordSalt] = @MasterPasswordSalt
     WHERE
         [Id] = @Id
 END

@@ -156,6 +156,6 @@ BEGIN
         @SecurityVersion,
         @SignedPublicKey,
         @MaxStorageGb,
-        COALESCE(@MasterPasswordSalt, LOWER(LTRIM(RTRIM(@Email))))
+        @MasterPasswordSalt
     )
 END
