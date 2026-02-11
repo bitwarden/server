@@ -48,7 +48,7 @@ public enum GlobalEquivalentDomainsType : byte
     Mercado = 43,
     Zendesk = 44,
     Autodesk = 45,
-    RailNation = 46,
+    RailNation = 46, // deprecated
     Wpcu = 47,
     Mathletics = 48,
     Discountbank = 49,
