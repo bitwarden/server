@@ -1976,9 +1976,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("MasterPasswordSalt")
-                        .HasColumnType("TEXT");
-
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("INTEGER");
 
