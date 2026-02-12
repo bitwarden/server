@@ -363,10 +363,12 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint unsigned");
 
                     b.Property<string>("GatewayCustomerId")
-                        .HasColumnType("varchar(255)");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("GatewaySubscriptionId")
-                        .HasColumnType("varchar(255)");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("Name")
                         .HasColumnType("longtext");
@@ -983,8 +985,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
-                        .HasAnnotation("SqlServer:Clustered", false)
-                        .HasAnnotation("SqlServer:Include", new[] { "StripeProductIds", "AudienceType" });
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("SubscriptionDiscount", (string)null);
                 });
