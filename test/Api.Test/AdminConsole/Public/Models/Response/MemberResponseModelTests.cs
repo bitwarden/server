@@ -10,13 +10,12 @@ namespace Bit.Api.Test.AdminConsole.Public.Models.Response;
 public class MemberResponseModelTests
 {
     [Fact]
-    public void ResetPasswordEnrolled_ShouldBeTrue_WhenUserHasResetPasswordKey()
+    public void ResetPasswordEnrolled_ShouldBeTrue_WhenUserIsResetPasswordEnrolled()
     {
         // Arrange
         var user = Substitute.For<OrganizationUser>();
         var collections = Substitute.For<IEnumerable<CollectionAccessSelection>>();
         user.ResetPasswordKey = "none-empty";
-
 
         // Act
         var sut = new MemberResponseModel(user, collections);
