@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Users;
@@ -184,5 +185,197 @@ public class PatchUserCommandTests
             });
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.PatchUserAsync(organizationId, organizationUserId, scimPatchModel));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_ExternalIdFromPath_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        var newExternalId = "new-external-id-123";
+        organizationUser.ExternalId = "old-external-id";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>());
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalId == newExternalId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_ExternalIdFromValue_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        var newExternalId = "new-external-id-456";
+        organizationUser.ExternalId = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>());
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"externalId\":\"{newExternalId}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalId == newExternalId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_ExternalIdDuplicate_ThrowsConflict(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser, OrganizationUserUserDetails existingUser)
+    {
+        var duplicateExternalId = "duplicate-id";
+        organizationUser.ExternalId = "old-id";
+        existingUser.ExternalId = duplicateExternalId;
+        existingUser.Id = Guid.NewGuid(); // Different user
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails> { existingUser });
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{duplicateExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<ConflictException>(async () =>
+            await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_ExternalIdTooLong_ThrowsBadRequest(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        var tooLongExternalId = new string('a', 301); // Exceeds 300 character limit
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{tooLongExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_ExternalIdNull_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        organizationUser.ExternalId = "existing-id";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>());
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse("null").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalId == null));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_UnsupportedOperation_ThrowsBadRequest(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "add",
+                    Path = "displayName",
+                    Value = JsonDocument.Parse("\"John Doe\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
     }
 }

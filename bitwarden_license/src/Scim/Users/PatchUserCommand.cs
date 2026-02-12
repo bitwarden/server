@@ -5,6 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Users;
 
@@ -38,7 +39,7 @@ public class PatchUserCommand : IPatchUserCommand
         foreach (var operation in model.Operations)
         {
             // Replace operations
-            if (operation.Op?.ToLowerInvariant() == "replace")
+            if (operation.Op?.ToLowerInvariant() == PatchOps.Replace)
             {
                 // Active from path
                 if (operation.Path?.ToLowerInvariant() == "active")
@@ -60,13 +61,28 @@ public class PatchUserCommand : IPatchUserCommand
                         operationHandled = handled;
                     }
                 }
+                // ExternalId from path
+                else if (operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId)
+                {
+                    var newExternalId = operation.Value.GetString();
+                    await HandleExternalIdOperationAsync(orgUser, newExternalId);
+                    operationHandled = true;
+                }
+                // ExternalId from value object
+                else if (string.IsNullOrWhiteSpace(operation.Path) &&
+                    operation.Value.TryGetProperty("externalId", out var externalIdProperty))
+                {
+                    var newExternalId = externalIdProperty.GetString();
+                    await HandleExternalIdOperationAsync(orgUser, newExternalId);
+                    operationHandled = true;
+                }
             }
         }
 
         if (!operationHandled)
         {
-            _logger.LogWarning("User patch operation not handled: {operation} : ",
-                string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
+            throw new BadRequestException(
+                $"PATCH operation not supported: {string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}"))}");
         }
     }
 
@@ -83,5 +99,29 @@ public class PatchUserCommand : IPatchUserCommand
             return true;
         }
         return false;
+    }
+
+    private async Task HandleExternalIdOperationAsync(Core.Entities.OrganizationUser orgUser, string? newExternalId)
+    {
+        // Validate max length (300 chars per OrganizationUser.cs line 59)
+        if (!string.IsNullOrWhiteSpace(newExternalId) && newExternalId.Length > 300)
+        {
+            throw new BadRequestException("ExternalId cannot exceed 300 characters.");
+        }
+
+        // Check for duplicate externalId (same validation as PostUserCommand.cs)
+        if (!string.IsNullOrWhiteSpace(newExternalId))
+        {
+            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgUser.OrganizationId);
+            if (existingUsers.Any(u => u.Id != orgUser.Id &&
+                !string.IsNullOrWhiteSpace(u.ExternalId) &&
+                u.ExternalId.Equals(newExternalId, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ConflictException("ExternalId already exists for another user.");
+            }
+        }
+
+        orgUser.ExternalId = newExternalId;
+        await _organizationUserRepository.ReplaceAsync(orgUser);
     }
 }
