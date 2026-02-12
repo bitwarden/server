@@ -7,9 +7,6 @@ BEGIN
 END
 GO
 
-EXECUTE sp_refreshview 'dbo.UserView'
-GO
-
 CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
@@ -272,4 +269,61 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
+
+CREATE OR ALTER VIEW [dbo].[UserView]
+AS
+SELECT
+    [Id],
+    [Name],
+    [Email],
+    [EmailVerified],
+    [MasterPassword],
+    [MasterPasswordHint],
+    [Culture],
+    [SecurityStamp],
+    [TwoFactorProviders],
+    [TwoFactorRecoveryCode],
+    [EquivalentDomains],
+    [ExcludedGlobalEquivalentDomains],
+    [AccountRevisionDate],
+    [Key],
+    [PublicKey],
+    [PrivateKey],
+    [Premium],
+    [PremiumExpirationDate],
+    [RenewalReminderDate],
+    [Storage],
+    COALESCE([MaxStorageGbIncreased], [MaxStorageGb]) AS [MaxStorageGb],
+    [Gateway],
+    [GatewayCustomerId],
+    [GatewaySubscriptionId],
+    [ReferenceData],
+    [LicenseKey],
+    [ApiKey],
+    [Kdf],
+    [KdfIterations],
+    [KdfMemory],
+    [KdfParallelism],
+    [CreationDate],
+    [RevisionDate],
+    [ForcePasswordReset],
+    [UsesKeyConnector],
+    [FailedLoginCount],
+    [LastFailedLoginDate],
+    [AvatarColor],
+    [LastPasswordChangeDate],
+    [LastKdfChangeDate],
+    [LastKeyRotationDate],
+    [LastEmailChangeDate],
+    [VerifyDevices],
+    [SecurityState],
+    [SecurityVersion],
+    [SignedPublicKey],
+    [V2UpgradeToken]
+FROM
+    [dbo].[User]
+GO
+
+EXECUTE sp_refreshview 'dbo.UserView'
 GO
