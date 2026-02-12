@@ -10,6 +10,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -311,6 +312,105 @@ public class OrganizationsControllerTests
 
         // Annul
         await organizationRepository.DeleteAsync(organization);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_UseAutomaticUserConfirmation_EnabledByPortal_LogsEvent(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.TeamsMonthly,
+            UseAutomaticUserConfirmation = true
+        };
+
+        organization.UseAutomaticUserConfirmation = false;
+        organization.Enabled = true;
+        organization.UseEvents = true;
+
+        sutProvider.GetDependency<IAccessControlService>()
+                .UserHasPermission(Permission.Org_Plan_Edit)
+                .Returns(true);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationEventAsync(
+                Arg.Is<Organization>(o => o.Id == organization.Id),
+                EventType.Organization_AutoConfirmEnabled_Portal,
+                EventSystemUser.BitwardenPortal);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_UseAutomaticUserConfirmation_DisabledByPortal_LogsEvent(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.TeamsMonthly,
+            UseAutomaticUserConfirmation = false
+        };
+
+        organization.UseAutomaticUserConfirmation = true;
+        organization.Enabled = true;
+        organization.UseEvents = true;
+
+        sutProvider.GetDependency<IAccessControlService>()
+                .UserHasPermission(Permission.Org_Plan_Edit)
+                .Returns(true);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationEventAsync(
+                Arg.Is<Organization>(o => o.Id == organization.Id),
+                EventType.Organization_AutoConfirmDisabled_Portal,
+                EventSystemUser.BitwardenPortal);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_UseAutomaticUserConfirmation_NoChange_DoesNotLogEvent(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.TeamsMonthly,
+            UseAutomaticUserConfirmation = true
+        };
+
+        organization.UseAutomaticUserConfirmation = true;
+        organization.Enabled = true;
+        organization.UseEvents = true;
+
+        sutProvider.GetDependency<IAccessControlService>()
+                .UserHasPermission(Permission.Org_Plan_Edit)
+                .Returns(true);
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        _ = await sutProvider.Sut.Edit(organization.Id, update);
+
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogOrganizationEventAsync(
+                Arg.Any<Organization>(),
+                Arg.Any<EventType>(),
+                Arg.Any<EventSystemUser>());
     }
 
     #endregion

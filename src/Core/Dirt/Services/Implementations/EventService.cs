@@ -309,6 +309,25 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
+    public async Task LogOrganizationEventAsync(Organization organization, EventType type, EventSystemUser systemUser, DateTime? date = null)
+    {
+        if (!organization.Enabled || !organization.UseEvents)
+        {
+            return;
+        }
+
+        var EventMessage = new EventMessage
+        {
+            OrganizationId = organization.Id,
+            ProviderId = await GetProviderIdAsync(organization.Id),
+            Type = type,
+            SystemUser = systemUser,
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            DeviceType = DeviceType.Server
+        };
+        await _eventWriteService.CreateAsync(EventMessage);
+    }
+
     public async Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null)
     {
         await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
