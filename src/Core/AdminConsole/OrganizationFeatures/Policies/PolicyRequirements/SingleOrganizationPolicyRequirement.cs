@@ -8,9 +8,14 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 
 public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> policyDetails) : IPolicyRequirement
 {
-    public record UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy() : BadRequestError("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+    public record UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy() : BadRequestError("Member cannot join the organization because they are in another organization which forbids it.");
 
-    public record UserIsAMemberOfAnotherOrganizationError() : BadRequestError("Cannot confirm this member to the organization until they leave or remove all other organizations.");
+    public record UserIsAMemberOfAnotherOrganizationError() : BadRequestError("Member cannot join the organization until they leave or remove all other organizations.");
+
+    public record UserCannotCreateOrg() : BadRequestError("Cannot create organization because single organization policy is enabled for another organization.");
+
+
+    public Error? CanCreateOrganization() => policyDetails.Any() ? new UserCannotCreateOrg() : null;
 
     public Error? CanJoinOrganization(Guid organizationId, OrganizationUser organizationUser) =>
         IsCompliantForOrganizationToJoin(organizationId, organizationUser)
