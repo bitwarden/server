@@ -13,7 +13,7 @@ public partial class UseMyItemsDataMigration : Migration
         migrationBuilder.Sql(@"
             UPDATE `Organization`
             SET `UseMyItems` = 1
-            WHERE `PlanType` IN (4, 5, 10, 11, 14, 15, 19, 20);
+            WHERE `UsePolicies` = 1;
         ");
     }
 
@@ -23,7 +23,7 @@ public partial class UseMyItemsDataMigration : Migration
         migrationBuilder.Sql(@"
             UPDATE `Organization`
             SET `UseMyItems` = 0
-            WHERE `PlanType` IN (4, 5, 10, 11, 14, 15, 19, 20);
+            WHERE `UsePolicies` = 1;
         ");
     }
 }
