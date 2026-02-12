@@ -90,7 +90,15 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
-        user.SecurityStamp = Guid.NewGuid().ToString();
+
+        if (model.V2UpgradeToken == null)
+        {
+            user.SecurityStamp = Guid.NewGuid().ToString();
+        }
+        else
+        {
+            user.V2UpgradeToken = model.V2UpgradeToken.ToJson();
+        }
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
 
@@ -99,7 +107,17 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         UpdateUserData(model, user, saveEncryptedDataActions);
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
-        await _pushService.PushLogOutAsync(user.Id);
+
+        if (model.V2UpgradeToken != null)
+        {
+            await _pushService.PushLogOutAsync(user.Id,
+                reason: PushNotificationLogOutReason.KeyRotation);
+        }
+        else
+        {
+            await _pushService.PushLogOutAsync(user.Id);
+        }
+
         return IdentityResult.Success;
     }
 

@@ -3,6 +3,7 @@ using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey.Implementations;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
@@ -389,7 +390,75 @@ public class RotateUserAccountKeysCommandTests
         }
     }
 
-    // Helper functions to set valid test parameters that match each other to the model and user. 
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithV2UpgradeToken_NoLogout(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        var wrappedKey1 = "2.key1==|data1==|hmac1==";
+        var wrappedKey2 = "2.key2==|data2==|hmac2==";
+        model.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = wrappedKey1,
+            WrappedUserKey2 = wrappedKey2
+        };
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Security stamp is not updated
+        Assert.Equal(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Token is stored on user
+        Assert.NotNull(user.V2UpgradeToken);
+        Assert.Contains(wrappedKey1, user.V2UpgradeToken);
+        Assert.Contains(wrappedKey2, user.V2UpgradeToken);
+
+        // Assert - Push notification sent with KeyRotation reason
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id, false, Enums.PushNotificationLogOutReason.KeyRotation);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithoutV2UpgradeToken_Logout(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        model.V2UpgradeToken = null;
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Security stamp is updated
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Token is not stored on user
+        Assert.Null(user.V2UpgradeToken);
+
+        // Assert - Push notification sent without reason
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id);
+    }
+
+    // Helper functions to set valid test parameters that match each other to the model and user.
     private static void SetTestKdfAndSaltForUserAndModel(User user, RotateUserAccountKeysData model)
     {
         user.Kdf = Enums.KdfType.Argon2id;

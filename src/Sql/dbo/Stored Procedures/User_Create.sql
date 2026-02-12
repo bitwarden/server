@@ -44,7 +44,8 @@
     @VerifyDevices BIT = 1,
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
-    @SignedPublicKey VARCHAR(MAX) = NULL
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @V2UpgradeToken VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -97,6 +98,7 @@ BEGIN
         [SecurityState],
         [SecurityVersion],
         [SignedPublicKey],
+        [V2UpgradeToken],
         [MaxStorageGbIncreased]
     )
     VALUES
@@ -147,6 +149,7 @@ BEGIN
         @SecurityState,
         @SecurityVersion,
         @SignedPublicKey,
+        @V2UpgradeToken,
         @MaxStorageGb
     )
 END
