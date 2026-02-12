@@ -130,9 +130,12 @@ public class NginxConfigBuilder
                 // Also based on Mozilla's Intermediate list
                 SslProtocols = "TLSv1.2 TLSv1.3";
             }
-            if (!string.IsNullOrWhiteSpace(context.Config.SslCurves)) {
+            if (!string.IsNullOrWhiteSpace(context.Config.SslCurves))
+            {
                 SslCurves = context.Config.SslCurves;
-            } else {
+            }
+            else
+            {
                 // Also based on Mozilla's Intermediate list with one addition, the X25519MLKEM768 curve
                 // for post quantum cryptography, X25519MLKEM768 has been adopted by most browsers at this
                 // time. See https://blog.cloudflare.com/pq-2025/ for an in depth explanation.

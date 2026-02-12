@@ -47,7 +47,7 @@ public class Configuration
 
     [Description("SSL curves (groups in TLS 1.3) used by Nginx (ssl_ecdh_curve). Leave empty for recommended default.\n" +
     "Similar to the cipher list, this is a colon separated list of human readable names or NIDs.\n" +
-    "NID list: https://boringssl.googlesource.com/boringssl/+/refs/heads/master/include/openssl/nid.h\n"+
+    "NID list: https://boringssl.googlesource.com/boringssl/+/refs/heads/master/include/openssl/nid.h\n" +
     "Learn more: https://wiki.mozilla.org/Security/Server_Side_TLS")]
     public string SslCurves { get; set; }
 
