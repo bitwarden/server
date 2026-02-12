@@ -60,6 +60,7 @@
         </mj-section>
 
         <!-- Main Content Section -->
+        <!-- Main Text -->
         <mj-section
                 padding="40px 40px 8px 40px"
                 background-color="#fff">
