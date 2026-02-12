@@ -18,6 +18,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -510,6 +511,131 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
         Assert.Null(userNewState.V2UpgradeToken);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        // Arrange
+        var user = await SetupUserForKeyRotationAsync();
+
+        // Add existing stale token to user BEFORE rotation
+        var staleToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+        user.V2UpgradeToken = staleToken.ToJson();
+        await _userRepository.ReplaceAsync(user);
+
+        // Setup request WITHOUT V2UpgradeToken
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        request.AccountUnlockData.V2UpgradeToken = null; // Explicit: No new token
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+
+        // Critical: Verify stale token is cleared
+        Assert.Null(userNewState.V2UpgradeToken);
+
+        // Verify logout behavior (SecurityStamp should be different)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithNewToken_ReplacesToken(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        // Arrange
+        var user = await SetupUserForKeyRotationAsync();
+
+        // Add existing old token to user BEFORE rotation
+        // Use Type 2 encryption strings for the old token
+        var oldToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = "2.OLD1==|OLD1data==|OLD1hmac==",
+            WrappedUserKey2 = "2.OLD2==|OLD2data==|OLD2hmac=="
+        };
+        user.V2UpgradeToken = oldToken.ToJson();
+        await _userRepository.ReplaceAsync(user);
+
+        // Setup request WITH new V2UpgradeToken
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: false);
+        request.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
+        {
+            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.NotNull(userNewState.V2UpgradeToken);
+
+        // Verify new token is present
+        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+
+        // Verify old token is NOT present
+        Assert.DoesNotContain("OLD1", userNewState.V2UpgradeToken);
+        Assert.DoesNotContain("OLD2", userNewState.V2UpgradeToken);
+
+        // Verify NO logout (SecurityStamp should be the same for key rotation with token)
+        Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_V2Crypto_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken(
+        RotateUserAccountKeysAndDataRequestModel request)
+    {
+        // Arrange
+        var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, createSignatureKeyPair: true);
+
+        // Add existing stale token to V2 crypto user BEFORE rotation
+        var staleToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey2 = _mockEncryptedString
+        };
+        user.V2UpgradeToken = staleToken.ToJson();
+        await _userRepository.ReplaceAsync(user);
+
+        // Setup request WITHOUT V2UpgradeToken
+        SetupRotateUserAccountUnlockData(request, user);
+        SetupRotateUserAccountData(request);
+        SetupRotateUserAccountKeys(request, isV2Crypto: true);
+        request.AccountUnlockData.V2UpgradeToken = null; // Explicit: No new token
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
+        response.EnsureSuccessStatusCode();
+
+        // Assert
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+
+        // Critical: Verify stale token is cleared for V2 crypto users
+        Assert.Null(userNewState.V2UpgradeToken);
+
+        // Verify logout behavior (SecurityStamp should be different)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
     }
 
     [Fact]
