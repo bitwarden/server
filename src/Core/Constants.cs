@@ -254,6 +254,7 @@ public static class FeatureFlagKeys
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
+    public const string PM32180_PremiumUpsellAccountAge = "pm-32180-premium-upsell-account-age";
     public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
 
