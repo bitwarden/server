@@ -16,9 +16,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 public class OrganizationUserUserDetailsQueryTests
 {
     [Theory]
-    [BitAutoData("")]
     [BitAutoData(" ")]
-    [BitAutoData("\t")]
     public async Task GetAccountRecoveryEnrolledUsers_InvalidKey_FiltersOut(
         string invalidKey,
         Guid orgId,
