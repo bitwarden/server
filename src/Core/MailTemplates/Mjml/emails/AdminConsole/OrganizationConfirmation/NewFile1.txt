@@ -1,7 +1,0 @@
-<div data-block="False" data-icon="None" data-state="Default" data-variant="Primary" style="width: 100%; height: 100%; flex-direction: column; justify-content: flex-start; align-items: flex-start; display: inline-flex">
-    <div data-counter="False" data-nav-link="False" data-size="Default" style="padding-left: 24px; padding-right: 24px; padding-top: 12px; padding-bottom: 12px; background: var(--Color-Text-Contrast, white); border-radius: 9999px; flex-direction: column; justify-content: center; align-items: center; display: flex">
-        <div style="justify-content: center; align-items: center; gap: 8px; display: inline-flex">
-            <div style="text-align: center; justify-content: center; display: flex; flex-direction: column; color: var(--Color-Primary-Primary---700, #1A41AC); font-size: 16px; font-family: Roboto; font-weight: 700; line-height: 24px; word-wrap: break-word">Log in</div>
-        </div>
-    </div>
-</div>

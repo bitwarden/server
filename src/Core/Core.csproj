@@ -78,6 +78,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="MailTemplates\Mjml\out\AdminConsole\" />
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
   </ItemGroup>
