@@ -1158,12 +1158,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        return user.Premium || await HasPremiumFromOrganization(user);
+        return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<bool> HasPremiumFromOrganization(User user)
@@ -1174,25 +1169,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        // orgUsers in the Invited status are not associated with a userId yet, so this will get
-        // orgUsers in Accepted and Confirmed states only
-        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
-
-        if (!orgUsers.Any())
-        {
-            return false;
-        }
-
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        return orgUsers.Any(ou =>
-            orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
-            orgAbility.UsersGetPremium &&
-            orgAbility.Enabled);
+        return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)
