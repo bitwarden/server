@@ -107,7 +107,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             SubscriptionStatus.PastDue
         } && currentSubscription is
         {
-            Status: SubscriptionStatus.Unpaid or 
+            Status: SubscriptionStatus.Unpaid or
             SubscriptionStatus.IncompleteExpired,
             LatestInvoice.BillingReason: BillingReasons.SubscriptionCreate or BillingReasons.SubscriptionCycle
         };
