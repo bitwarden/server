@@ -1,0 +1,105 @@
+<mjml>
+    <mj-head>
+        <!-- Include shared head styles -->
+        <mj-include path="../../../components/head.mjml" />
+
+        <!-- Include admin console shared styles -->
+        <mj-include path="../../../components/admin-console-head.mjml" />
+    </mj-head>
+
+    <mj-body>
+        <!-- Blue Header Section -->
+        <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+            <mj-bw-hero
+                    title="You can now share passwords with members of {{OrganizationName}}!"
+                    img-src="https://assets.bitwarden.com/email/v1/ac-spot-family.png"
+                    button-text="Log in"
+                    button-url="{{WebVaultUrl}}">
+            </mj-bw-hero>
+        </mj-wrapper>
+
+        <!-- Main Content -->
+        <mj-wrapper padding="5px 20px 8px 20px">
+            <mj-section background-color="#fff" padding="10px 10px 16px 10px">
+                <mj-column>
+                    <mj-text font-size="16px" line-height="24px" padding="15px 15px 0px 15px">
+                        As a member of <b>{{OrganizationName}}</b>:
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+            <mj-bw-icon-row
+                    icon-src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
+                    icon-alt="Group Users Icon"
+                    text="You can access passwords {{OrganizationName}} has shared with you.">
+            </mj-bw-icon-row>
+            <mj-bw-icon-row
+                    icon-src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
+                    icon-alt="Share Icon"
+                    text="You can easily share passwords with friends, family, or coworkers."
+                    foot-url-text="Share passwords in Bitwarden"
+                    foot-url="https://bitwarden.com/help/sharing">
+            </mj-bw-icon-row>
+        </mj-wrapper>
+
+        <!-- Download Mobile Apps Section -->
+        <mj-wrapper padding="8px 20px 10px 20px">
+            <mj-section background-color="#fff" padding="32px 32px 0px 32px">
+                <mj-column>
+                    <mj-text
+                            font-size="16px"
+                            font-weight="700"
+                            line-height="24px"
+                            padding="0 0 16px 0">
+                        Download Bitwarden on all devices
+                    </mj-text>
+
+                    <mj-text
+                            mj-class="ac-text"
+                            padding="0 0 24px 0">
+                        Already using the <a href="https://bitwarden.com/download/" class="ac-link">browser extension</a>?
+                        Download the Bitwarden mobile app from the
+                        <a href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744" class="ac-link">App Store</a>
+                        or <a href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden" class="ac-link">Google Play</a>
+                        to quickly save logins and autofill forms on the go.
+                    </mj-text>
+                </mj-column>
+            </mj-section>
+
+            <mj-section background-color="#fff" padding="0 32px 32px 32px">
+                <mj-group>
+                    <mj-column width="159px">
+                        <mj-image
+                                css-class="hide-mobile"
+                                href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744"
+                                src="https://assets.bitwarden.com/email/v1/ac-apple-store.png"
+                                alt="Download on the App Store"
+                                width="135px"
+                                height="40px"
+                                padding="0 24px 0 0"
+                        />
+                    </mj-column>
+                    <mj-column width="140px">
+                        <mj-image
+                                css-class="hide-mobile"
+                                href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden"
+                                src="https://assets.bitwarden.com/email/v1/ac-google-play.png"
+                                alt="Get it on Google Play"
+                                width="140px"
+                                height="40px"
+                                padding="0"
+                        />
+                    </mj-column>
+                </mj-group>
+            </mj-section>
+        </mj-wrapper>
+
+
+        <!-- Learn More Section -->
+        <mj-wrapper padding="8px 20px 10px 20px">
+            <mj-bw-learn-more-footer />
+        </mj-wrapper>
+
+        <!-- Footer -->
+        <mj-include path="../../../components/footer.mjml" />
+    </mj-body>
+</mjml>
