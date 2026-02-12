@@ -26,7 +26,7 @@ BEGIN
         [KdfParallelism] = @KdfParallelism,
         [RevisionDate] = @RevisionDate,
         [AccountRevisionDate] = @AccountRevisionDate,
-        [MasterPasswordSalt] = [User].[Email]
+        [MasterPasswordSalt] = LOWER(LTRIM(RTRIM([User].[Email])))
     WHERE
         [Id] = @Id
 END
