@@ -534,7 +534,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
             //TODO- PM-30355: Update MasterPasswordSalt to the MasterPasswordUnlockData.Salt instead of matching Email.
-            userEntity.MasterPasswordSalt = userEntity.Email;
+            userEntity.MasterPasswordSalt = userEntity.Email.ToLowerInvariant().Trim();
 
             await dbContext.SaveChangesAsync();
         };
