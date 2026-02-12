@@ -10,7 +10,7 @@ FROM [dbo].[User]
 WHERE
     [MasterPassword] IS NOT NULL AND
     [MasterPasswordSalt] IS NULL)
-    THROW 50000, 'MasterPasswordSalt contains NULLs; cannot finalize.', 1;
+    THROW 50000, 'MasterPasswordSalt contains NULLs for MasterPassword users; cannot finalize.', 1;
 
 ALTER TABLE [dbo].[User] ADD CONSTRAINT [CK_User_MasterPasswordSalt_Required] CHECK ([MasterPassword] IS NULL OR [MasterPasswordSalt] IS NOT NULL);
 GO

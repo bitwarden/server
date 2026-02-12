@@ -4,7 +4,7 @@
 
     This script performs the following steps:
     1) Creates a temporary index on the MasterPasswordSalt column to speed up the backfill process.
-    2) Performs a batched update to populate the MasterPasswordSalt column for existing users.
+    2) Performs a batched update to populate the MasterPasswordSalt column for existing MasterPassword users.
     3) Drops the temporary index after the backfill is complete.
 
     Note: The MasterPasswordSalt is populated by normalizing the Email field (lowercase and trimmed).
