@@ -9,7 +9,7 @@
     <mj-body>
         <!-- Blue Header Section -->
         <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
-            <mj-bw-hero
+            <mj-bw-ac-hero
                     title="You can now share passwords with members of <b>{{OrganizationName}}!</b>"
                     img-src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png"
                     button-text="Log in"
@@ -26,12 +26,12 @@
                     </mj-text>
                 </mj-column>
             </mj-section>
-            <mj-bw-icon-row
+            <mj-bw-ac-icon-row
                     icon-src="https://assets.bitwarden.com/email/v1/icon-enterprise.png"
                     icon-alt="Organization Icon"
                     text="Your account is owned by {{OrganizationName}} and is subject to their security and management policies."
             />
-            <mj-bw-icon-row
+            <mj-bw-ac-icon-row
                     icon-src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
                     icon-alt="Share Icon"
                     text="You can easily access and share passwords with your team."
@@ -42,7 +42,7 @@
 
         <!-- Learn More Section -->
         <mj-wrapper padding="8px 20px 10px 20px">
-            <mj-bw-learn-more-footer />
+            <mj-bw-ac-learn-more-footer />
         </mj-wrapper>
 
         <!-- Footer -->
