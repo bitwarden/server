@@ -34,7 +34,7 @@ public class OrganizationUserRotationValidator : IRotationValidator<IEnumerable<
         }
 
         // Exclude any account recovery that do not have a key.
-        existing = existing.Where(o => !string.IsNullOrEmpty(o.ResetPasswordKey)).ToList();
+        existing = existing.Where(o => OrganizationUser.IsValidResetPasswordKey(o.ResetPasswordKey)).ToList();
 
         foreach (var ou in existing)
         {
@@ -44,7 +44,7 @@ public class OrganizationUserRotationValidator : IRotationValidator<IEnumerable<
                 throw new BadRequestException("All existing reset password keys must be included in the rotation.");
             }
 
-            if (organizationUser.ResetPasswordKey == null)
+            if (!OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey))
             {
                 throw new BadRequestException("Reset Password keys cannot be set to null during rotation.");
             }

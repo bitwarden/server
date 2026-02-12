@@ -199,4 +199,68 @@ public class OrganizationUserRotationValidatorTests
         await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<ResetPasswordWithOrgIdRequestModel>()));
     }
+
+    [Theory]
+    [BitAutoData(" ")]
+    public async Task ValidateAsync_WhitespaceOnlyKey_Throws(
+        string whitespaceKey,
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        ResetPasswordWithOrgIdRequestModel validResetPasswordKey)
+    {
+        // Arrange
+        var existingUserResetPassword = new List<OrganizationUser>
+        {
+            new OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = validResetPasswordKey.OrganizationId,
+                ResetPasswordKey = "existing-valid-key"
+            }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
+            .Returns(existingUserResetPassword);
+
+        // Set the incoming key to whitespace
+        validResetPasswordKey.ResetPasswordKey = whitespaceKey;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.ValidateAsync(user, new[] { validResetPasswordKey }));
+    }
+
+    [Theory]
+    [BitAutoData(" ")]
+    public async Task ValidateAsync_WhitespaceOnlyExistingKey_FiltersOut(
+        string whitespaceKey,
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        ResetPasswordWithOrgIdRequestModel validResetPasswordKey)
+    {
+        // Arrange
+        var existingUserResetPassword = new List<OrganizationUser>
+        {
+            new OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = validResetPasswordKey.OrganizationId,
+                ResetPasswordKey = validResetPasswordKey.ResetPasswordKey
+            },
+            // Whitespace-only key should be filtered out
+            new OrganizationUser
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = Guid.NewGuid(),
+                ResetPasswordKey = whitespaceKey
+            }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
+            .Returns(existingUserResetPassword);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, new[] { validResetPasswordKey });
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal(validResetPasswordKey.OrganizationId, result[0].OrganizationId);
+    }
 }
