@@ -21,7 +21,7 @@
             Log in to the web app to turn on the policy.
           </mj-text>
           <mj-button
-            padding="12px 24px"
+            inner-padding="12px 24px"
             border-radius="20px"
             font-weight="600"
             align="left"
