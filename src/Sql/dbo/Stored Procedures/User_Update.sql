@@ -98,8 +98,8 @@ BEGIN
         [SecurityState] = @SecurityState,
         [SecurityVersion] = @SecurityVersion,
         [SignedPublicKey] = @SignedPublicKey,
-        [V2UpgradeToken] = @V2UpgradeToken,
-        [MaxStorageGbIncreased] = @MaxStorageGb
+        [MaxStorageGbIncreased] = @MaxStorageGb,
+        [V2UpgradeToken] = @V2UpgradeToken
     WHERE
         [Id] = @Id
 END

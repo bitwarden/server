@@ -98,8 +98,8 @@ BEGIN
         [SecurityState],
         [SecurityVersion],
         [SignedPublicKey],
-        [V2UpgradeToken],
-        [MaxStorageGbIncreased]
+        [MaxStorageGbIncreased],
+        [V2UpgradeToken]
     )
     VALUES
     (
@@ -149,7 +149,7 @@ BEGIN
         @SecurityState,
         @SecurityVersion,
         @SignedPublicKey,
-        @V2UpgradeToken,
-        @MaxStorageGb
+        @MaxStorageGb,
+        @V2UpgradeToken
     )
 END

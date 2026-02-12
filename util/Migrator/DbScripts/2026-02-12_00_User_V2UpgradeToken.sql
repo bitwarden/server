@@ -54,6 +54,9 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
+    @SecurityState VARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL,
     @V2UpgradeToken VARCHAR(MAX) = NULL
 AS
 BEGIN
@@ -104,6 +107,10 @@ BEGIN
         [LastKeyRotationDate],
         [LastEmailChangeDate],
         [VerifyDevices],
+        [SecurityState],
+        [SecurityVersion],
+        [SignedPublicKey],
+        [MaxStorageGbIncreased],
         [V2UpgradeToken]
     )
     VALUES
@@ -151,6 +158,10 @@ BEGIN
         @LastKeyRotationDate,
         @LastEmailChangeDate,
         @VerifyDevices,
+        @SecurityState,
+        @SecurityVersion,
+        @SignedPublicKey,
+        @MaxStorageGb,
         @V2UpgradeToken
     )
 END
@@ -200,6 +211,9 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LastKeyRotationDate DATETIME2(7) = NULL,
     @LastEmailChangeDate DATETIME2(7) = NULL,
     @VerifyDevices BIT = 1,
+    @SecurityState VARCHAR(MAX) = NULL,
+    @SecurityVersion INT = NULL,
+    @SignedPublicKey VARCHAR(MAX) = NULL,
     @V2UpgradeToken VARCHAR(MAX) = NULL
 AS
 BEGIN
@@ -250,6 +264,10 @@ BEGIN
         [LastKeyRotationDate] = @LastKeyRotationDate,
         [LastEmailChangeDate] = @LastEmailChangeDate,
         [VerifyDevices] = @VerifyDevices,
+        [SecurityState] = @SecurityState,
+        [SecurityVersion] = @SecurityVersion,
+        [SignedPublicKey] = @SignedPublicKey,
+        [MaxStorageGbIncreased] = @MaxStorageGb,
         [V2UpgradeToken] = @V2UpgradeToken
     WHERE
         [Id] = @Id
