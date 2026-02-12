@@ -539,7 +539,7 @@ public class UserRepositoryTests
         IUserRepository userRepository)
     {
         // Arrange
-        var email = $"test+{Guid.NewGuid()}@example.com";
+        var email = $"TesT+{Guid.NewGuid()}@example.com";
         var passwordSalt = "NotTrackedSalt";
         var user = new User
         {
@@ -557,7 +557,8 @@ public class UserRepositoryTests
         // Assert
         var createdUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(createdUser);
-        Assert.Equal(createdUser.Email, createdUser.MasterPasswordSalt);
+        Assert.Equal(createdUser.Email.ToLowerInvariant().Trim(), createdUser.MasterPasswordSalt);
+        Assert.NotEqual(createdUser.Email, createdUser.MasterPasswordSalt);
         Assert.NotEqual(passwordSalt, createdUser.MasterPasswordSalt);
     }
 
@@ -585,7 +586,7 @@ public class UserRepositoryTests
         });
 
         // Act
-        var newEmail = $"updated+{Guid.NewGuid()}@example.com";
+        var newEmail = $"UpDAted+{Guid.NewGuid()}@example.com";
         user.Email = newEmail;
         await userRepository.ReplaceAsync(user);
 
@@ -593,7 +594,8 @@ public class UserRepositoryTests
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(updatedUser);
         Assert.Equal(newEmail, updatedUser.Email);
-        Assert.Equal(updatedUser.Email, updatedUser.MasterPasswordSalt);
+        Assert.Equal(updatedUser.Email.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
+        Assert.NotEqual(updatedUser.Email, updatedUser.MasterPasswordSalt);
         Assert.NotEqual(passwordSalt, updatedUser.MasterPasswordSalt);
     }
 
@@ -612,7 +614,7 @@ public class UserRepositoryTests
         });
 
         // Act
-        var newEmail = $"updated+{Guid.NewGuid()}@example.com";
+        var newEmail = $"UpDAted+{Guid.NewGuid()}@example.com";
         user.Email = newEmail;
         await userRepository.ReplaceAsync(user);
 
@@ -628,7 +630,7 @@ public class UserRepositoryTests
     IUserRepository userRepository)
     {
         // Arrange
-        var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+        var originalEmail = $"OriGinaL+{Guid.NewGuid()}@example.com";
         var user = new User
         {
             Name = "Test User",
@@ -664,7 +666,7 @@ public class UserRepositoryTests
             MasterKeyWrappedUserKey = "wrapped-user-key",
             Salt = "UnlockDataSalt"
         };
-        var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+        var originalEmail = $"OriGinaL+{Guid.NewGuid()}@example.com";
 
         // Create user with no master password so that the MasterPasswordSalt will be null initially and we can verify it gets set on update.
         var user = await userRepository.CreateAsync(new User
@@ -683,7 +685,7 @@ public class UserRepositoryTests
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(updatedUser);
         Assert.NotNull(updatedUser.MasterPasswordSalt);
-        Assert.Equal(updatedUser.Email, updatedUser.MasterPasswordSalt);
+        Assert.Equal(updatedUser.Email.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
     }
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
