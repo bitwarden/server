@@ -22,7 +22,6 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
     private readonly GlobalSettings _globalSettings;
     private readonly IMailService _mailService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _tokenDataFactory;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     public SendVerificationEmailForRegistrationCommand(
@@ -31,7 +30,6 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         GlobalSettings globalSettings,
         IMailService mailService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
-        IFeatureService featureService,
         IOrganizationDomainRepository organizationDomainRepository)
     {
         _logger = logger;
@@ -39,7 +37,6 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         _globalSettings = globalSettings;
         _mailService = mailService;
         _tokenDataFactory = tokenDataFactory;
-        _featureService = featureService;
         _organizationDomainRepository = organizationDomainRepository;
 
     }
@@ -57,17 +54,14 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         }
 
         // Check if the email domain is blocked by an organization policy
-        if (_featureService.IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation))
-        {
-            var emailDomain = EmailValidation.GetDomain(email);
+        var emailDomain = EmailValidation.GetDomain(email);
 
-            if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
-            {
-                _logger.LogInformation(
-                    "User registration email verification blocked by domain claim policy. Domain: {Domain}",
-                    emailDomain);
-                throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
-            }
+        if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
+        {
+            _logger.LogInformation(
+                "User registration email verification blocked by domain claim policy. Domain: {Domain}",
+                emailDomain);
+            throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
         }
 
         // Check to see if the user already exists
