@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICreatePremiumCloudHostedSubscriptionCommand, CreatePremiumCloudHostedSubscriptionCommand>();
         services.AddScoped<ICreatePremiumSelfHostedSubscriptionCommand, CreatePremiumSelfHostedSubscriptionCommand>();
         services.AddTransient<IPreviewPremiumTaxCommand, PreviewPremiumTaxCommand>();
+        services.AddScoped<IPreviewPremiumUpgradeProrationCommand, PreviewPremiumUpgradeProrationCommand>();
         services.AddScoped<IUpdatePremiumStorageCommand, UpdatePremiumStorageCommand>();
         services.AddScoped<IUpgradePremiumToOrganizationCommand, UpgradePremiumToOrganizationCommand>();
     }

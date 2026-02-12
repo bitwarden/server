@@ -162,7 +162,7 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
 
         var testKey = $"test-key-{Guid.NewGuid()}";
 
-        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@example.com";
+        var userToConfirmEmail = $"org-user-to-confirm-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(userToConfirmEmail);
 
         await _factory.GetService<IPolicyRepository>().CreateAsync(new Policy
@@ -190,15 +190,17 @@ public class OrganizationUserControllerAutoConfirmTests : IClassFixture<ApiAppli
             new Permissions(),
             OrganizationUserStatusType.Accepted);
 
-        var tenRequests = Enumerable.Range(0, 10)
-            .Select(_ => _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
+        var results = new List<HttpResponseMessage>();
+
+        foreach (var _ in Enumerable.Range(0, 10))
+        {
+            results.Add(await _client.PostAsJsonAsync($"organizations/{organization.Id}/users/{organizationUser.Id}/auto-confirm",
                 new OrganizationUserConfirmRequestModel
                 {
                     Key = testKey,
                     DefaultUserCollectionName = _mockEncryptedString
-                })).ToList();
-
-        var results = await Task.WhenAll(tenRequests);
+                }));
+        }
 
         Assert.Contains(results, r => r.StatusCode == HttpStatusCode.NoContent);
 

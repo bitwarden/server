@@ -627,7 +627,7 @@ public class UpcomingInvoiceHandler(
             {
                 BaseMonthlyRenewalPrice = (premiumPlan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")),
                 DiscountAmount = $"{coupon.PercentOff}%",
-                DiscountedMonthlyRenewalPrice = (discountedAnnualRenewalPrice / 12).ToString("C", new CultureInfo("en-US"))
+                DiscountedAnnualRenewalPrice = discountedAnnualRenewalPrice.ToString("C", new CultureInfo("en-US"))
             }
         };
 

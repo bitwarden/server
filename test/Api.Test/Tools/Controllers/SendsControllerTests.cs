@@ -657,7 +657,7 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task Put_WithoutPasswordOrEmails_PreservesExistingPassword(Guid userId, Guid sendId)
+    public async Task Put_WithoutPasswordOrEmails_ClearsExistingPassword(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         var existingSend = new Send
@@ -685,13 +685,13 @@ public class SendsControllerTests : IDisposable
         Assert.Equal(sendId, result.Id);
         await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
             s.Id == sendId &&
-            s.AuthType == AuthType.Password &&
-            s.Password == "hashed-password" &&
+            s.AuthType == AuthType.None &&
+            s.Password == null &&
             s.Emails == null));
     }
 
     [Theory, AutoData]
-    public async Task Put_WithoutPasswordOrEmails_PreservesExistingEmails(Guid userId, Guid sendId)
+    public async Task Put_WithoutPasswordOrEmails_ClearsExistingEmails(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         var existingSend = new Send
@@ -719,9 +719,9 @@ public class SendsControllerTests : IDisposable
         Assert.Equal(sendId, result.Id);
         await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
             s.Id == sendId &&
-            s.AuthType == AuthType.Email &&
-            s.Emails == "test@example.com" &&
-            s.Password == null));
+            s.AuthType == AuthType.None &&
+            s.Password == null &&
+            s.Emails == null));
     }
 
     [Theory, AutoData]
@@ -904,6 +904,106 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
+    public async Task AccessUsingAuth_WithDisabledSend_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = true,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithMaxAccessCountReached_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 10,
+            MaxAccessCount = 10
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithExpiredSend_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(-1), // Expired yesterday
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithDeletionDatePassed_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(-1), // Deletion date has passed
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
     public async Task GetSendFileDownloadDataUsingAuth_WithValidFileId_ReturnsDownloadUrl(
         Guid sendId, string fileId, string expectedUrl)
     {
@@ -922,7 +1022,8 @@ public class SendsControllerTests : IDisposable
         var user = CreateUserWithSendIdClaim(sendId);
         _sut.ControllerContext = CreateControllerContextWithUser(user);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
-        _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId).Returns(expectedUrl);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns((expectedUrl, SendAccessResult.Granted));
 
         var result = await _sut.GetSendFileDownloadDataUsingAuth(fileId);
 
@@ -932,7 +1033,7 @@ public class SendsControllerTests : IDisposable
         Assert.Equal(fileId, response.Id);
         Assert.Equal(expectedUrl, response.Url);
         await _sendRepository.Received(1).GetByIdAsync(sendId);
-        await _sendFileStorageService.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+        await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
     }
 
     [Theory, AutoData]
@@ -948,175 +1049,20 @@ public class SendsControllerTests : IDisposable
 
         Assert.Equal("Could not locate send", exception.Message);
         await _sendRepository.Received(1).GetByIdAsync(sendId);
-        await _sendFileStorageService.DidNotReceive()
+        await _nonAnonymousSendCommand.DidNotReceive()
             .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
     }
 
     [Theory, AutoData]
-    public async Task GetSendFileDownloadDataUsingAuth_WithTextSend_StillReturnsResponse(
-        Guid sendId, string fileId, string expectedUrl)
-    {
-        var send = new Send
-        {
-            Id = sendId,
-            Type = SendType.Text,
-            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
-            DeletionDate = DateTime.UtcNow.AddDays(7),
-            ExpirationDate = null,
-            Disabled = false,
-            AccessCount = 0,
-            MaxAccessCount = null
-        };
-        var user = CreateUserWithSendIdClaim(sendId);
-        _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
-        _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId).Returns(expectedUrl);
-
-        var result = await _sut.GetSendFileDownloadDataUsingAuth(fileId);
-
-        Assert.NotNull(result);
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        var response = Assert.IsType<SendFileDownloadDataResponseModel>(objectResult.Value);
-        Assert.Equal(fileId, response.Id);
-        Assert.Equal(expectedUrl, response.Url);
-    }
-
-    #region AccessUsingAuth Validation Tests
-
-    [Theory, AutoData]
-    public async Task AccessUsingAuth_WithExpiredSend_ThrowsNotFoundException(Guid sendId)
-    {
-        var send = new Send
-        {
-            Id = sendId,
-            UserId = Guid.NewGuid(),
-            Type = SendType.Text,
-            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
-            DeletionDate = DateTime.UtcNow.AddDays(7),
-            ExpirationDate = DateTime.UtcNow.AddDays(-1), // Expired yesterday
-            Disabled = false,
-            AccessCount = 0,
-            MaxAccessCount = null
-        };
-        var user = CreateUserWithSendIdClaim(sendId);
-        _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
-
-        await _sendRepository.Received(1).GetByIdAsync(sendId);
-    }
-
-    [Theory, AutoData]
-    public async Task AccessUsingAuth_WithDeletedSend_ThrowsNotFoundException(Guid sendId)
-    {
-        var send = new Send
-        {
-            Id = sendId,
-            UserId = Guid.NewGuid(),
-            Type = SendType.Text,
-            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
-            DeletionDate = DateTime.UtcNow.AddDays(-1), // Should have been deleted yesterday
-            ExpirationDate = null,
-            Disabled = false,
-            AccessCount = 0,
-            MaxAccessCount = null
-        };
-        var user = CreateUserWithSendIdClaim(sendId);
-        _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
-
-        await _sendRepository.Received(1).GetByIdAsync(sendId);
-    }
-
-    [Theory, AutoData]
-    public async Task AccessUsingAuth_WithDisabledSend_ThrowsNotFoundException(Guid sendId)
-    {
-        var send = new Send
-        {
-            Id = sendId,
-            UserId = Guid.NewGuid(),
-            Type = SendType.Text,
-            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
-            DeletionDate = DateTime.UtcNow.AddDays(7),
-            ExpirationDate = null,
-            Disabled = true, // Disabled
-            AccessCount = 0,
-            MaxAccessCount = null
-        };
-        var user = CreateUserWithSendIdClaim(sendId);
-        _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
-
-        await _sendRepository.Received(1).GetByIdAsync(sendId);
-    }
-
-    [Theory, AutoData]
-    public async Task AccessUsingAuth_WithAccessCountExceeded_ThrowsNotFoundException(Guid sendId)
-    {
-        var send = new Send
-        {
-            Id = sendId,
-            UserId = Guid.NewGuid(),
-            Type = SendType.Text,
-            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
-            DeletionDate = DateTime.UtcNow.AddDays(7),
-            ExpirationDate = null,
-            Disabled = false,
-            AccessCount = 5,
-            MaxAccessCount = 5 // Limit reached
-        };
-        var user = CreateUserWithSendIdClaim(sendId);
-        _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
-
-        await _sendRepository.Received(1).GetByIdAsync(sendId);
-    }
-
-    #endregion
-
-    #region GetSendFileDownloadDataUsingAuth Validation Tests
-
-    [Theory, AutoData]
-    public async Task GetSendFileDownloadDataUsingAuth_WithExpiredSend_ThrowsNotFoundException(
+    public async Task GetSendFileDownloadDataUsingAuth_WithTextSend_ThrowsBadRequestException(
         Guid sendId, string fileId)
     {
         var send = new Send
         {
             Id = sendId,
-            Type = SendType.File,
-            Data = JsonSerializer.Serialize(new SendFileData("Test", "Notes", "file.pdf")),
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
             DeletionDate = DateTime.UtcNow.AddDays(7),
-            ExpirationDate = DateTime.UtcNow.AddDays(-1), // Expired
-            Disabled = false,
-            AccessCount = 0,
-            MaxAccessCount = null
-        };
-        var user = CreateUserWithSendIdClaim(sendId);
-        _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
-
-        await _sendRepository.Received(1).GetByIdAsync(sendId);
-    }
-
-    [Theory, AutoData]
-    public async Task GetSendFileDownloadDataUsingAuth_WithDeletedSend_ThrowsNotFoundException(
-        Guid sendId, string fileId)
-    {
-        var send = new Send
-        {
-            Id = sendId,
-            Type = SendType.File,
-            Data = JsonSerializer.Serialize(new SendFileData("Test", "Notes", "file.pdf")),
-            DeletionDate = DateTime.UtcNow.AddDays(-1), // Deleted
             ExpirationDate = null,
             Disabled = false,
             AccessCount = 0,
@@ -1125,61 +1071,46 @@ public class SendsControllerTests : IDisposable
         var user = CreateUserWithSendIdClaim(sendId);
         _sut.ControllerContext = CreateControllerContextWithUser(user);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand
+            .When(x => x.GetSendFileDownloadUrlAsync(send, fileId))
+            .Do(x => throw new BadRequestException("Can only get a download URL for a file type of Send"));
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.GetSendFileDownloadDataUsingAuth(fileId));
 
+        Assert.Equal("Can only get a download URL for a file type of Send", exception.Message);
         await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
     }
 
     [Theory, AutoData]
-    public async Task GetSendFileDownloadDataUsingAuth_WithDisabledSend_ThrowsNotFoundException(
+    public async Task GetSendFileDownloadDataUsingAuth_WithAccessDenied_ThrowsNotFoundException(
         Guid sendId, string fileId)
     {
+        var fileData = new SendFileData("Test File", "Notes", "document.pdf") { Id = fileId, Size = 2048 };
         var send = new Send
         {
             Id = sendId,
             Type = SendType.File,
-            Data = JsonSerializer.Serialize(new SendFileData("Test", "Notes", "file.pdf")),
+            Data = JsonSerializer.Serialize(fileData),
             DeletionDate = DateTime.UtcNow.AddDays(7),
             ExpirationDate = null,
-            Disabled = true, // Disabled
+            Disabled = false,
             AccessCount = 0,
             MaxAccessCount = null
         };
         var user = CreateUserWithSendIdClaim(sendId);
         _sut.ControllerContext = CreateControllerContextWithUser(user);
         _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns((null, SendAccessResult.Denied));
 
         await Assert.ThrowsAsync<NotFoundException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
 
         await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
     }
 
-    [Theory, AutoData]
-    public async Task GetSendFileDownloadDataUsingAuth_WithAccessCountExceeded_ThrowsNotFoundException(
-        Guid sendId, string fileId)
-    {
-        var send = new Send
-        {
-            Id = sendId,
-            Type = SendType.File,
-            Data = JsonSerializer.Serialize(new SendFileData("Test", "Notes", "file.pdf")),
-            DeletionDate = DateTime.UtcNow.AddDays(7),
-            ExpirationDate = null,
-            Disabled = false,
-            AccessCount = 10,
-            MaxAccessCount = 10 // Limit reached
-        };
-        var user = CreateUserWithSendIdClaim(sendId);
-        _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
-
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
-
-        await _sendRepository.Received(1).GetByIdAsync(sendId);
-    }
-
-    #endregion
 
     #endregion
 

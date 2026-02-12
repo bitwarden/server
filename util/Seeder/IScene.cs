@@ -72,7 +72,7 @@ public interface IScene<TRequest> : IScene where TRequest : class
 /// and entity tracking information. The explicit interface implementations allow dynamic invocation
 /// while preserving type safety in the implementation.
 /// </remarks>
-public interface IScene<TRequest, TResult> : IScene where TRequest : class where TResult : class
+public interface IScene<TRequest, TResult> : IScene where TRequest : class
 {
     /// <summary>
     /// Seeds data based on the provided strongly-typed request and returns typed result data.
