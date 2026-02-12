@@ -660,7 +660,7 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task Put_WithoutPasswordOrEmails_PreservesExistingPassword(Guid userId, Guid sendId)
+    public async Task Put_WithoutPasswordOrEmails_ClearsExistingPassword(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         var existingSend = new Send
@@ -688,13 +688,13 @@ public class SendsControllerTests : IDisposable
         Assert.Equal(sendId, result.Id);
         await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
             s.Id == sendId &&
-            s.AuthType == AuthType.Password &&
-            s.Password == "hashed-password" &&
+            s.AuthType == AuthType.None &&
+            s.Password == null &&
             s.Emails == null));
     }
 
     [Theory, AutoData]
-    public async Task Put_WithoutPasswordOrEmails_PreservesExistingEmails(Guid userId, Guid sendId)
+    public async Task Put_WithoutPasswordOrEmails_ClearsExistingEmails(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         var existingSend = new Send
@@ -722,9 +722,9 @@ public class SendsControllerTests : IDisposable
         Assert.Equal(sendId, result.Id);
         await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
             s.Id == sendId &&
-            s.AuthType == AuthType.Email &&
-            s.Emails == "test@example.com" &&
-            s.Password == null));
+            s.AuthType == AuthType.None &&
+            s.Password == null &&
+            s.Emails == null));
     }
 
     [Theory, AutoData]
