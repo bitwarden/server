@@ -9,7 +9,7 @@ public class QueryExecutor(
     IServiceProvider serviceProvider) : IQueryExecutor
 {
 
-    public object Execute(string queryName, JsonElement? arguments)
+    public async Task<object> Execute(string queryName, JsonElement? arguments)
     {
         try
         {
@@ -18,7 +18,7 @@ public class QueryExecutor(
 
             var requestType = query.GetRequestType();
             var requestModel = DeserializeRequestModel(queryName, requestType, arguments);
-            var result = query.Execute(requestModel);
+            var result = await query.Execute(requestModel);
 
             logger.LogInformation("Successfully executed query: {QueryName}", queryName);
             return result;
