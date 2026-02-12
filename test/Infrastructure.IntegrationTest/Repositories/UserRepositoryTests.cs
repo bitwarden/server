@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
@@ -528,7 +529,7 @@ public class UserRepositoryTests
     }
 
     /// <summary>
-    /// Ensures the creation of a new user sets the MasterPasswordSalt to match the Email regardless of the value provided  for the MasterPasswordSalt.
+    /// Ensures the creation of a new user sets the MasterPasswordSalt to match the Email regardless of the value provided for the MasterPasswordSalt.
     /// This will need to be changed when PM-30351 is completed and the MasterPasswordSalt is allowed to deviate from the Email.
     /// </summary>
     /// <param name="userRepository"></param>
@@ -628,6 +629,44 @@ public class UserRepositoryTests
     {
         // Arrange
         var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+        var user = new User
+        {
+            Name = "Test User",
+            Email = originalEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp"
+        };
+
+        // Act
+        await userRepository.CreateAsync(user);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.MasterPasswordSalt);
+    }
+
+    // todo- pm-30355 change to test the MasterPasswordSalt is updated to a new value instead of being set to match the email.
+    [Theory, DatabaseData]
+    public async Task UpdateMasterPassword_UpdateMasterPasswordSaltMatchesEmail(
+        IUserRepository userRepository, Database database)
+    {
+        // Arrange
+        var masterPasswordUnlockData = new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.Argon2id,
+                Iterations = AuthConstants.ARGON2_ITERATIONS.Default,
+                Memory = AuthConstants.ARGON2_MEMORY.Default,
+                Parallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            },
+            MasterKeyWrappedUserKey = "wrapped-user-key",
+            Salt = "UnlockDataSalt"
+        };
+        var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+
+        // Create user with no master password so that the MasterPasswordSalt will be null initially and we can verify it gets set on update.
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
@@ -637,12 +676,14 @@ public class UserRepositoryTests
         });
 
         // Act
-        await userRepository.ReplaceAsync(user);
+        var result = userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newMasterPasswordHash", "hint");
+        Assert.NotNull(result);
+        await RunUpdateUserDataAsync(result, database);
 
-        // Assert
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(updatedUser);
-        Assert.Null(updatedUser.MasterPasswordSalt);
+        Assert.NotNull(updatedUser.MasterPasswordSalt);
+        Assert.Equal(updatedUser.Email, updatedUser.MasterPasswordSalt);
     }
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
