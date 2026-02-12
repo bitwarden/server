@@ -93,6 +93,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         if (model.V2UpgradeToken == null)
         {
+            user.V2UpgradeToken = null;
             user.SecurityStamp = Guid.NewGuid().ToString();
         }
         else

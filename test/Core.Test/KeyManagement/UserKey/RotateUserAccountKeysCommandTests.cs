@@ -439,6 +439,7 @@ public class RotateUserAccountKeysCommandTests
         SetV1ModelUser(model);
 
         var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        user.V2UpgradeToken = null;
         model.V2UpgradeToken = null;
 
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
@@ -456,6 +457,98 @@ public class RotateUserAccountKeysCommandTests
         // Assert - Push notification sent without reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushLogOutAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithExistingToken_WithoutNewToken_ClearsStaleToken(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+
+        // User has existing stale token from previous rotation
+        var staleToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = "2.stale1==|data1==|hmac1==",
+            WrappedUserKey2 = "2.stale2==|data2==|hmac2=="
+        };
+        user.V2UpgradeToken = staleToken.ToJson();
+
+        // Model does NOT provide new token
+        model.V2UpgradeToken = null;
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Stale token explicitly cleared
+        Assert.Null(user.V2UpgradeToken);
+
+        // Assert - Security stamp is updated (logout behavior)
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Push notification sent without reason (standard logout)
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithExistingToken_WithNewToken_UpdatesToken(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+
+        // User has existing token from previous rotation
+        var oldToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = "2.old1==|data1==|hmac1==",
+            WrappedUserKey2 = "2.old2==|data2==|hmac2=="
+        };
+        user.V2UpgradeToken = oldToken.ToJson();
+
+        // Model provides NEW token
+        var newWrappedKey1 = "2.new1==|data1==|hmac1==";
+        var newWrappedKey2 = "2.new2==|data2==|hmac2==";
+        model.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = newWrappedKey1,
+            WrappedUserKey2 = newWrappedKey2
+        };
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Security stamp is not updated (no logout)
+        Assert.Equal(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Token contains new wrapped keys
+        Assert.NotNull(user.V2UpgradeToken);
+        Assert.Contains(newWrappedKey1, user.V2UpgradeToken);
+        Assert.Contains(newWrappedKey2, user.V2UpgradeToken);
+
+        // Assert - Token does NOT contain old wrapped keys
+        Assert.DoesNotContain(oldToken.WrappedUserKey1, user.V2UpgradeToken);
+        Assert.DoesNotContain(oldToken.WrappedUserKey2, user.V2UpgradeToken);
+
+        // Assert - Push notification sent with KeyRotation reason (no logout)
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id, false, Enums.PushNotificationLogOutReason.KeyRotation);
     }
 
     // Helper functions to set valid test parameters that match each other to the model and user.
