@@ -25,8 +25,8 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
         policyDetails.Any(p => p.OrganizationId == targetOrganizationId);
 
     public Error? IsCompliantForOrganizationToJoin(Guid targetOrganizationId, OrganizationUser organizationUser) =>
-        IsEnabledForTargetOrganization(targetOrganizationId)
-        && policyDetails.Single(x => x.OrganizationUserId == organizationUser.Id)
+        !IsEnabledForTargetOrganization(targetOrganizationId)
+        || policyDetails.Single(x => x.OrganizationUserId == organizationUser.Id)
             .HasRole([OrganizationUserType.Admin, OrganizationUserType.Owner])
             ? null
             : new UserIsAMemberOfAnotherOrganizationError();

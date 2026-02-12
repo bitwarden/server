@@ -213,9 +213,21 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             }
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var orgUser = userOrgs.First(ou => ou.OrganizationId == organizationId);
+            var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+            var error = singleOrgRequirement.CanJoinOrganization(organizationId, orgUser);
+            if (error is not null)
+            {
+                throw new BadRequestException(error.Message);
+            }
+
+            return;
+        }
+
         var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
-        var otherSingleOrgPolicies =
-            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
+        var otherSingleOrgPolicies = singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
         // Enforce Single Organization Policy for this organization
         if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
         {
