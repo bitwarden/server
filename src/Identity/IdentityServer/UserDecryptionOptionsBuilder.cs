@@ -145,8 +145,8 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
         var hasManageResetPasswordPermission = await EvaluateHasManageResetPasswordPermission();
 
-        // They are only able to be approved by an admin if they have enrolled is reset password
-        var hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+        // They are only able to be approved by an admin if they have enrolled in account recovery
+        var hasAdminApproval = organizationUser != null && organizationUser.IsEnrolledInAccountRecovery();
 
         _options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
             hasAdminApproval,
