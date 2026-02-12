@@ -66,16 +66,9 @@ class MjBwIconRow extends BodyComponent {
 
     const footAnchorElement =
       this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
-        ? `<mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
+        ? `<mj-text css-class="mj-bw-icon-row-text" padding="0px" ${BODY_TEXT_STYLES}>
                 <a href="${this.getAttribute("foot-url")}" class="link">
                     ${this.getAttribute("foot-url-text")}
-                    <span style="text-decoration: none">
-                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
-                        alt="External Link Icon"
-                        width="16px"
-                        style="vertical-align: middle;"
-                      />
-                    </span>
               </a>
           </mj-text>`
         : "";

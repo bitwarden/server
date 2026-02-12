@@ -10,7 +10,7 @@
         <!-- Blue Header Section -->
         <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
             <mj-bw-hero
-                    title="You can now share passwords with members of {{OrganizationName}}!"
+                    title="You can now share passwords with members of <b>{{OrganizationName}}!</b>"
                     img-src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png"
                     button-text="Log in"
                     button-url="{{WebVaultUrl}}"
