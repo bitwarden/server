@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Pipeline;
+﻿using Bit.Seeder;
+using Bit.Seeder.Pipeline;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -8,10 +9,9 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void UseRoster_AfterAddUsers_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         builder.AddUsers(10);
         var ex = Assert.Throws<InvalidOperationException>(() => builder.UseRoster("test"));
         Assert.Contains("Cannot call UseRoster() after AddUsers()", ex.Message);
@@ -20,10 +20,9 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void AddUsers_AfterUseRoster_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         builder.UseRoster("test");
         var ex = Assert.Throws<InvalidOperationException>(() => builder.AddUsers(10));
         Assert.Contains("Cannot call AddUsers() after UseRoster()", ex.Message);
@@ -32,10 +31,9 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void UseCiphers_AfterAddCiphers_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         builder.AddCiphers(10);
         var ex = Assert.Throws<InvalidOperationException>(() => builder.UseCiphers("test"));
         Assert.Contains("Cannot call UseCiphers() after AddCiphers()", ex.Message);
@@ -44,10 +42,9 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void AddCiphers_AfterUseCiphers_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         builder.UseCiphers("test");
         var ex = Assert.Throws<InvalidOperationException>(() => builder.AddCiphers(10));
         Assert.Contains("Cannot call AddCiphers() after UseCiphers()", ex.Message);
@@ -56,10 +53,9 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void AddGroups_WithoutUsers_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() => builder.AddGroups(5));
         Assert.Contains("Groups require users", ex.Message);
     }
@@ -67,10 +63,9 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void AddCollections_WithoutUsers_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() => builder.AddCollections(5));
         Assert.Contains("Collections require users", ex.Message);
     }
@@ -78,10 +73,9 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void AddGroups_AfterAddUsers_Succeeds()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert - Should not throw
         builder.AddUsers(10);
         builder.AddGroups(5);
     }
@@ -89,50 +83,75 @@ public class RecipeBuilderValidationTests
     [Fact]
     public void AddCollections_AfterUseRoster_Succeeds()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert - Should not throw
         builder.UseRoster("test");
         builder.AddCollections(5);
     }
 
     [Fact]
-    public void Build_WithoutOrg_ThrowsInvalidOperationException()
+    public void Validate_WithoutOrg_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         builder.AddOwner();
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
         Assert.Contains("Organization is required", ex.Message);
     }
 
     [Fact]
-    public void Build_WithoutOwner_ThrowsInvalidOperationException()
+    public void Validate_WithoutOwner_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         builder.UseOrganization("test");
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
         Assert.Contains("Owner is required", ex.Message);
     }
 
     [Fact]
-    public void Build_AddCiphersWithoutGenerator_ThrowsInvalidOperationException()
+    public void Validate_AddCiphersWithoutGenerator_ThrowsInvalidOperationException()
     {
-        // Arrange
-        var builder = new RecipeBuilder();
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
 
-        // Act & Assert
         builder.UseOrganization("test");
         builder.AddOwner();
         builder.AddUsers(10);
         builder.AddCiphers(50);
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
         Assert.Contains("Generated ciphers require a generator", ex.Message);
+    }
+
+    [Fact]
+    public void StepsExecuteInRegistrationOrder()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.UseOrganization("test-org");
+        builder.AddOwner();
+        builder.WithGenerator("test.com");
+        builder.AddUsers(5);
+        builder.AddGroups(2);
+        builder.AddCollections(3);
+        builder.AddCiphers(10);
+
+        builder.Validate();
+
+        using var provider = services.BuildServiceProvider();
+        var steps = provider.GetKeyedServices<IStep>("test").ToList();
+
+        Assert.Equal(7, steps.Count);
+
+        // Verify steps are wrapped in OrderedStep with sequential order values
+        var orderedSteps = steps.Cast<OrderedStep>().ToList();
+        for (var i = 0; i < orderedSteps.Count; i++)
+        {
+            Assert.Equal(i, orderedSteps[i].Order);
+        }
     }
 }

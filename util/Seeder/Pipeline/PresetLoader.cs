@@ -1,21 +1,22 @@
 ﻿using Bit.Seeder.Models;
 using Bit.Seeder.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
 
 /// <summary>
-/// Loads preset fixtures and transforms them into configured RecipeBuilder instances.
+/// Loads preset fixtures and registers them as recipes on <see cref="IServiceCollection"/>.
 /// </summary>
 internal static class PresetLoader
 {
     /// <summary>
-    /// Loads a preset from embedded fixtures and builds a RecipeBuilder with configured steps.
+    /// Loads a preset from embedded fixtures and registers its steps as a recipe.
     /// </summary>
     /// <param name="presetName">Preset name without extension (e.g., "dunder-mifflin-full")</param>
     /// <param name="reader">Service for reading embedded seed JSON files</param>
-    /// <returns>Configured RecipeBuilder ready to build step list</returns>
+    /// <param name="services">The service collection to register steps in</param>
     /// <exception cref="InvalidOperationException">Thrown when preset lacks organization configuration</exception>
-    internal static RecipeBuilder Load(string presetName, ISeedReader reader)
+    internal static void RegisterRecipe(string presetName, ISeedReader reader, IServiceCollection services)
     {
         var preset = reader.Read<SeedPreset>($"presets.{presetName}");
 
@@ -25,18 +26,18 @@ internal static class PresetLoader
                 $"Preset '{presetName}' must specify an organization.");
         }
 
-        return BuildFromPreset(preset, reader);
+        BuildRecipe(presetName, preset, reader, services);
     }
 
     /// <summary>
-    /// Builds RecipeBuilder from preset configuration, resolving fixtures and generation counts.
+    /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
     /// Resolution order: Org → Owner → Generator → Roster → Users → Groups → Collections → Ciphers
     /// </remarks>
-    private static RecipeBuilder BuildFromPreset(SeedPreset preset, ISeedReader reader)
+    private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
-        var builder = new RecipeBuilder();
+        var builder = services.AddRecipe(presetName);
         var org = preset.Organization!;
 
         // Resolve domain - either from preset or from fixture
@@ -96,6 +97,6 @@ internal static class PresetLoader
             builder.AddCiphers(preset.Ciphers.Count);
         }
 
-        return builder;
+        builder.Validate();
     }
 }

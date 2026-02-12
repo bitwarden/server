@@ -1,22 +1,38 @@
-﻿namespace Bit.Seeder.Pipeline;
+﻿using Microsoft.Extensions.DependencyInjection;
 
-internal sealed class RecipeExecutor(BulkCommitter committer)
+namespace Bit.Seeder.Pipeline;
+
+/// <summary>
+/// Resolves steps from DI by recipe key and executes them in order.
+/// </summary>
+internal sealed class RecipeExecutor
 {
-    /// <summary>
-    /// Executes a recipe pipeline by running all steps in sequence and persisting the results.
-    /// </summary>
-    /// <param name="steps">The ordered sequence of steps to execute.</param>
-    /// <param name="context">The seeder context containing shared state.</param>
-    /// <returns>Execution result with organization ID and entity statistics.</returns>
-    /// <remarks>
-    /// IMPORTANT: This method clears the EntityRegistry at the start to ensure a clean slate.
-    /// Any entities registered in the context from previous executions will be removed.
-    ///
-    /// Entity counts are captured BEFORE committing to the database, since BulkCommitter
-    /// clears the entity lists after bulk copy for memory efficiency.
-    /// </remarks>
-    internal ExecutionResult Execute(IReadOnlyList<IStep> steps, SeederContext context)
+    private readonly string _recipeName;
+
+    private readonly IServiceProvider _serviceProvider;
+
+    private readonly BulkCommitter _committer;
+
+    internal RecipeExecutor(string recipeName, IServiceProvider serviceProvider, BulkCommitter committer)
     {
+        _recipeName = recipeName;
+        _serviceProvider = serviceProvider;
+        _committer = committer;
+    }
+
+    /// <summary>
+    /// Executes the recipe by resolving keyed steps, running them in order, and committing results.
+    /// </summary>
+    /// <remarks>
+    /// Clears the EntityRegistry at the start to ensure a clean slate for each run.
+    /// </remarks>
+    internal ExecutionResult Execute()
+    {
+        var steps = _serviceProvider.GetKeyedServices<IStep>(_recipeName)
+            .OrderBy(s => s is OrderedStep os ? os.Order : int.MaxValue)
+            .ToList();
+
+        var context = new SeederContext(_serviceProvider);
         context.Registry.Clear();
 
         foreach (var step in steps)
@@ -33,7 +49,7 @@ internal sealed class RecipeExecutor(BulkCommitter committer)
             context.Collections.Count,
             context.Ciphers.Count);
 
-        committer.Commit(context);
+        _committer.Commit(context);
         return result;
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Bit.Seeder;
 
-internal interface IStep
+public interface IStep
 {
     void Execute(SeederContext context);
 }

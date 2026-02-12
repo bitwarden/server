@@ -13,7 +13,7 @@ namespace Bit.Seeder.Pipeline;
 internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
 {
     /// <summary>
-    /// Executes a preset by loading it, building the pipeline, and executing all steps.
+    /// Executes a preset by registering its recipe, building a service provider, and running all steps.
     /// </summary>
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
     /// <param name="passwordHasher">Password hasher for user creation</param>
@@ -24,15 +24,21 @@ internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService)
     {
-        using var serviceProvider = BuildServiceProvider(passwordHasher, manglerService);
-        var context = new SeederContext(serviceProvider);
+        var reader = new SeedReader();
+
+        var services = new ServiceCollection();
+        services.AddSingleton(passwordHasher);
+        services.AddSingleton(manglerService);
+        services.AddSingleton<ISeedReader>(reader);
+        services.AddSingleton(db);
+
+        PresetLoader.RegisterRecipe(presetName, reader, services);
+
+        using var serviceProvider = services.BuildServiceProvider();
         var committer = new BulkCommitter(db, mapper);
-        var executor = new RecipeExecutor(committer);
+        var executor = new RecipeExecutor(presetName, serviceProvider, committer);
 
-        var builder = PresetLoader.Load(presetName, serviceProvider.GetRequiredService<ISeedReader>());
-        var steps = builder.Build();
-
-        return executor.Execute(steps, context);
+        return executor.Execute();
     }
 
     /// <summary>
@@ -55,18 +61,6 @@ internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
                 g => (IReadOnlyList<string>)g.ToList());
 
         return new AvailableSeeds(presets, fixtures);
-    }
-
-    private ServiceProvider BuildServiceProvider(
-        IPasswordHasher<User> passwordHasher,
-        IManglerService manglerService)
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton(passwordHasher);
-        services.AddSingleton(manglerService);
-        services.AddSingleton<ISeedReader, SeedReader>();
-        services.AddSingleton(db);
-        return services.BuildServiceProvider();
     }
 }
 

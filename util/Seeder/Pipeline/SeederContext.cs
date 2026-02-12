@@ -38,7 +38,7 @@ namespace Bit.Seeder.Pipeline;
 /// </param>
 /// <seealso cref="EntityRegistry"/>
 /// <seealso cref="BulkCommitter"/>
-internal sealed class SeederContext(IServiceProvider services)
+public sealed class SeederContext(IServiceProvider services)
 {
     internal IServiceProvider Services { get; } = services;
 
