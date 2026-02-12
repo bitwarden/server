@@ -118,5 +118,6 @@ public static class OrganizationFactory
             UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation,
             UseDisableSmAdsForUsers = license.UseDisableSmAdsForUsers,
             UsePhishingBlocker = license.UsePhishingBlocker,
+            UseMyItems = license.UseMyItems,
         };
 }

@@ -95,6 +95,7 @@ public class ProviderBillingService(
         organization.MaxCollections = plan.PasswordManager.MaxCollections;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = plan.HasPolicies;
+        organization.UseMyItems = plan.HasPolicies; // TODO: use the plan property when added
         organization.UseSso = plan.HasSso;
         organization.UseOrganizationDomains = plan.HasOrganizationDomains;
         organization.UseGroups = plan.HasGroups;
