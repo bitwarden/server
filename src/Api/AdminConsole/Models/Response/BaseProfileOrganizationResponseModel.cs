@@ -5,6 +5,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -57,7 +58,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         Key = organizationDetails.Key;
         HasPublicAndPrivateKeys = organizationDetails.PublicKey != null && organizationDetails.PrivateKey != null;
         SsoBound = !string.IsNullOrWhiteSpace(organizationDetails.SsoExternalId);
-        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(organizationDetails.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationDetails.ResetPasswordKey);
         ProviderId = organizationDetails.ProviderId;
         ProviderName = organizationDetails.ProviderName;
         ProviderType = organizationDetails.ProviderType;
