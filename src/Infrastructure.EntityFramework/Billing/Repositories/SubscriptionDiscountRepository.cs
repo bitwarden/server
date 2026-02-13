@@ -49,7 +49,7 @@ public class SubscriptionDiscountRepository(
         return result == null ? null : Mapper.Map<SubscriptionDiscount>(result);
     }
 
-    public async Task<ICollection<SubscriptionDiscount>> SearchAsync(int skip, int take)
+    public async Task<ICollection<SubscriptionDiscount>> ListAsync(int skip, int take)
     {
         using var serviceScope = ServiceScopeFactory.CreateScope();
         var databaseContext = GetDatabaseContext(serviceScope);

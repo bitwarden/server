@@ -200,7 +200,7 @@ public class SubscriptionDiscountRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task SearchAsync_ReturnsPagedResults_OrderedByCreationDateDescending(
+    public async Task ListAsync_ReturnsPagedResults_OrderedByCreationDateDescending(
         ISubscriptionDiscountRepository subscriptionDiscountRepository)
     {
         // Arrange - create discounts with future timestamps (should be at top)
@@ -227,7 +227,7 @@ public class SubscriptionDiscountRepositoryTests
                 creationDate: farFuture.AddSeconds(-1)));
 
         // Act - get first page
-        var result = await subscriptionDiscountRepository.SearchAsync(0, 10);
+        var result = await subscriptionDiscountRepository.ListAsync(0, 100);
 
         // Assert
         Assert.NotEmpty(result);
@@ -245,7 +245,7 @@ public class SubscriptionDiscountRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task SearchAsync_WithSkip_ReturnsCorrectPage(
+    public async Task ListAsync_WithSkip_ReturnsCorrectPage(
         ISubscriptionDiscountRepository subscriptionDiscountRepository)
     {
         // Arrange - create several discounts with future timestamps (should be at top)
@@ -263,14 +263,14 @@ public class SubscriptionDiscountRepositoryTests
         }
 
         // Act - get first page to find where our discounts are
-        var allResults = await subscriptionDiscountRepository.SearchAsync(0, 100);
+        var allResults = await subscriptionDiscountRepository.ListAsync(0, 100);
         var allResultsList = allResults.ToList();
 
         // Find the indices of our created discounts
         var indices = discounts.Select(d => allResultsList.FindIndex(r => r.Id == d.Id)).Where(i => i >= 0).OrderBy(i => i).ToList();
 
         // Act - skip the first 2 of OUR discounts, take 2
-        var result = await subscriptionDiscountRepository.SearchAsync(indices[2], 2);
+        var result = await subscriptionDiscountRepository.ListAsync(indices[2], 2);
 
         // Assert
         var resultList = result.ToList();
@@ -288,7 +288,7 @@ public class SubscriptionDiscountRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task SearchAsync_WithTake_LimitsResults(
+    public async Task ListAsync_WithTake_LimitsResults(
         ISubscriptionDiscountRepository subscriptionDiscountRepository)
     {
         // Arrange - create 5 discounts
@@ -305,7 +305,7 @@ public class SubscriptionDiscountRepositoryTests
         }
 
         // Act - get only 3 results
-        var result = await subscriptionDiscountRepository.SearchAsync(0, 3);
+        var result = await subscriptionDiscountRepository.ListAsync(0, 3);
 
         // Assert
         var resultList = result.ToList();

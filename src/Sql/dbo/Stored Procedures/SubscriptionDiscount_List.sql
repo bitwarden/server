@@ -1,5 +1,4 @@
--- Add SubscriptionDiscount_Search stored procedure for pagination
-CREATE OR ALTER PROCEDURE [dbo].[SubscriptionDiscount_Search]
+CREATE PROCEDURE [dbo].[SubscriptionDiscount_List]
     @Skip INT = 0,
     @Take INT = 25
 AS
@@ -14,4 +13,3 @@ BEGIN
     OFFSET @Skip ROWS
     FETCH NEXT @Take ROWS ONLY
 END
-GO

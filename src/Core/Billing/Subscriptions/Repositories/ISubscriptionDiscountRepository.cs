@@ -22,11 +22,11 @@ public interface ISubscriptionDiscountRepository : IRepository<SubscriptionDisco
     Task<SubscriptionDiscount?> GetByStripeCouponIdAsync(string stripeCouponId);
 
     /// <summary>
-    /// Searches subscription discounts with pagination support.
+    /// Lists subscription discounts with pagination support.
     /// Returns discounts ordered by creation date descending (newest first).
     /// </summary>
     /// <param name="skip">Number of records to skip (for pagination).</param>
     /// <param name="take">Number of records to take (page size).</param>
     /// <returns>A collection of subscription discounts for the requested page.</returns>
-    Task<ICollection<SubscriptionDiscount>> SearchAsync(int skip, int take);
+    Task<ICollection<SubscriptionDiscount>> ListAsync(int skip, int take);
 }

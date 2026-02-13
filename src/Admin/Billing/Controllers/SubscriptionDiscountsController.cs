@@ -35,7 +35,7 @@ public class SubscriptionDiscountsController(
         }
 
         var skip = (page - 1) * count;
-        var discounts = await subscriptionDiscountRepository.SearchAsync(skip, count);
+        var discounts = await subscriptionDiscountRepository.ListAsync(skip, count);
 
         var discountViewModels = discounts.Select(d => new SubscriptionDiscountViewModel
         {
@@ -99,9 +99,12 @@ public class SubscriptionDiscountsController(
             }
             catch (StripeException ex)
             {
-                logger.LogError(ex, "Stripe coupon not found: {CouponId}", model.StripeCouponId);
-                ModelState.AddModelError(nameof(model.StripeCouponId),
-                    "Coupon not found in Stripe. Please verify the coupon ID.");
+                var errorMessage = ex.StripeError?.Code == "resource_missing"
+                    ? "Coupon not found in Stripe. Please verify the coupon ID."
+                    : "An error occurred while fetching the coupon from Stripe.";
+
+                logger.LogError(ex, "Stripe coupon error: {CouponId}", model.StripeCouponId);
+                ModelState.AddModelError(nameof(model.StripeCouponId), errorMessage);
                 return View("Create", model);
             }
 
@@ -110,7 +113,7 @@ public class SubscriptionDiscountsController(
             model.AmountOff = coupon.AmountOff;
             model.Currency = coupon.Currency;
             model.Duration = coupon.Duration;
-            model.DurationInMonths = coupon.DurationInMonths.HasValue ? (int?)coupon.DurationInMonths.Value : null;
+            model.DurationInMonths = (int?)coupon.DurationInMonths;
 
             var productIds = coupon.AppliesTo?.Products;
             if (productIds != null && productIds.Count != 0)
@@ -127,17 +130,18 @@ public class SubscriptionDiscountsController(
                 }
                 catch (StripeException ex)
                 {
-                    logger.LogError(ex, "Failed to fetch the coupon's associated products from Stripe");
+                    logger.LogError(ex, "Failed to fetch the coupon's associated products from Stripe. Coupon ID: {CouponId}", model.StripeCouponId);
                     ModelState.AddModelError(string.Empty, "Failed to fetch the coupon's associated products from Stripe.");
                     return View("Create", model);
                 }
             }
 
+            model.IsImported = true;
             return View("Create", model);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error importing coupon from Stripe");
+            logger.LogError(ex, "Error importing coupon from Stripe. Coupon ID: {CouponId}", model.StripeCouponId);
             ModelState.AddModelError(string.Empty, "An error occurred while importing the coupon.");
             return View("Create", model);
         }
@@ -169,7 +173,7 @@ public class SubscriptionDiscountsController(
                 PercentOff = model.PercentOff,
                 AmountOff = model.AmountOff,
                 Currency = model.Currency,
-                Duration = model.Duration!,
+                Duration = model.Duration,
                 DurationInMonths = model.DurationInMonths,
                 StripeProductIds = model.AppliesToProducts?.Keys.ToList(),
                 StartDate = model.StartDate,
@@ -186,7 +190,7 @@ public class SubscriptionDiscountsController(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error creating subscription discount");
+            logger.LogError(ex, "Error creating subscription discount. Coupon ID: {CouponId}", model.StripeCouponId);
             ModelState.AddModelError(string.Empty, "An error occurred while saving the discount.");
             return View(model);
         }

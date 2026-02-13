@@ -14,7 +14,7 @@ public class CreateSubscriptionDiscountModel : IValidatableObject
     public decimal? PercentOff { get; set; }
     public long? AmountOff { get; set; }
     public string? Currency { get; set; }
-    public string? Duration { get; set; }
+    public string Duration { get; set; } = string.Empty;
     public int? DurationInMonths { get; set; }
     public Dictionary<string, string>? AppliesToProducts { get; set; } // Key: ProductId, Value: ProductName
 
@@ -33,7 +33,7 @@ public class CreateSubscriptionDiscountModel : IValidatableObject
         ? DiscountAudienceType.UserHasNoPreviousSubscriptions
         : DiscountAudienceType.AllUsers;
 
-    public bool IsImported => !string.IsNullOrEmpty(Name);
+    public bool IsImported { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

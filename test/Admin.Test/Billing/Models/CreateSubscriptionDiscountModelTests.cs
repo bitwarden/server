@@ -6,39 +6,6 @@ namespace Admin.Test.Billing.Models;
 public class CreateSubscriptionDiscountModelTests
 {
     [Fact]
-    public void IsImported_WhenNameIsNull_ReturnsFalse()
-    {
-        var model = new CreateSubscriptionDiscountModel
-        {
-            Name = null
-        };
-
-        Assert.False(model.IsImported);
-    }
-
-    [Fact]
-    public void IsImported_WhenNameIsEmpty_ReturnsFalse()
-    {
-        var model = new CreateSubscriptionDiscountModel
-        {
-            Name = string.Empty
-        };
-
-        Assert.False(model.IsImported);
-    }
-
-    [Fact]
-    public void IsImported_WhenNameHasValue_ReturnsTrue()
-    {
-        var model = new CreateSubscriptionDiscountModel
-        {
-            Name = "Test Coupon"
-        };
-
-        Assert.True(model.IsImported);
-    }
-
-    [Fact]
     public void AudienceType_WhenCheckboxUnchecked_ReturnsAllUsers()
     {
         var model = new CreateSubscriptionDiscountModel
