@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Premium.Models;
+﻿namespace Bit.Core.Billing.Premium.Models;
 
 public record PremiumPurchasePreview
 {

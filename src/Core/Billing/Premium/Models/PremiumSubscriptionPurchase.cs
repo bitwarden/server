@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Payment.Models;
+﻿using Bit.Core.Billing.Payment.Models;
 
 namespace Bit.Core.Billing.Premium.Models;
 
