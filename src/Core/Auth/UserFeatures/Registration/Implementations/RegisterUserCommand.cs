@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -110,7 +111,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-    public async Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, RegisterFinishData registerFinishData,
         string orgInviteToken, Guid? orgUserId)
     {
         TryValidateOrgInviteToken(orgInviteToken, orgUserId, user);
@@ -128,7 +129,7 @@ public class RegisterUserCommand : IRegisterUserCommand
             user.EmailVerified = true;
         }
 
-        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        var result = await _userService.CreateUserAsync(user, registerFinishData);
         var organization = await GetOrganizationUserOrganization(orgUserId ?? Guid.Empty, orgUser);
         if (result == IdentityResult.Success)
         {
@@ -279,7 +280,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
     }
 
-    public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, RegisterFinishData registerFinishData,
         string emailVerificationToken)
     {
         ValidateOpenRegistrationAllowed();
@@ -291,7 +292,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         user.Name = tokenable.Name;
         user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
 
-        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        var result = await _userService.CreateUserAsync(user, registerFinishData);
         if (result == IdentityResult.Success)
         {
             await SendWelcomeEmailAsync(user);
@@ -300,7 +301,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-    public async Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, RegisterFinishData registerFinishData,
         string orgSponsoredFreeFamilyPlanInviteToken)
     {
         ValidateOpenRegistrationAllowed();
@@ -310,7 +311,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         user.EmailVerified = true;
         user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
 
-        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        var result = await _userService.CreateUserAsync(user, registerFinishData);
         if (result == IdentityResult.Success)
         {
             await SendWelcomeEmailAsync(user);
@@ -321,7 +322,7 @@ public class RegisterUserCommand : IRegisterUserCommand
 
 
     // TODO: in future, consider how we can consolidate base registration logic to reduce code duplication
-    public async Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, RegisterFinishData registerFinishData,
         string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         ValidateOpenRegistrationAllowed();
@@ -331,7 +332,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         user.EmailVerified = true;
         user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
 
-        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        var result = await _userService.CreateUserAsync(user, registerFinishData);
         if (result == IdentityResult.Success)
         {
             await SendWelcomeEmailAsync(user);
@@ -340,7 +341,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
-    public async Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, string masterPasswordHash,
+    public async Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, RegisterFinishData registerFinishData,
         string providerInviteToken, Guid providerUserId)
     {
         ValidateOpenRegistrationAllowed();
@@ -350,7 +351,7 @@ public class RegisterUserCommand : IRegisterUserCommand
         user.EmailVerified = true;
         user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
 
-        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        var result = await _userService.CreateUserAsync(user, registerFinishData);
         if (result == IdentityResult.Success)
         {
             await SendWelcomeEmailAsync(user);
