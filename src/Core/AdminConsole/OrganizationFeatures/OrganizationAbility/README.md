@@ -217,6 +217,7 @@ For manual override capability in the admin portal:
 
 - `src/Admin/AdminConsole/Models/OrganizationEditModel.cs` — Map the ability from the organization entity
 - `src/Admin/AdminConsole/Views/Shared/_OrganizationForm.cshtml` — Add checkbox for the new ability
+- `src/Admin/AdminConsole/Views/Shared/_OrganizationFormScripts.cshtml` — Add the new ability to the `togglePlanFeatures()` function so it's automatically set when a plan type is selected
 - `src/Admin/AdminConsole/Controllers/OrganizationsController.cs` — Update `UpdateOrganization()` method mapping
 
 ### 8. Self-Host Licensing
