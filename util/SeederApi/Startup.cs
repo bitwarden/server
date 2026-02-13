@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Core.Settings;
 using Bit.SeederApi.Extensions;
+using Bit.SeederApi.HostedServices;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -28,7 +29,17 @@ public class Startup
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
         services.AddTokenizers();
-        services.AddDatabaseRepositories(globalSettings);
+        var databaseProvider = services.AddDatabaseRepositories(globalSettings);
+
+        // Register database migrator based on provider
+        switch (databaseProvider)
+        {
+            case Core.Enums.SupportedDatabaseProviders.Sqlite:
+                services.AddSingleton<Core.Utilities.IDbMigrator, SqliteMigrations.SqliteDbMigrator>();
+                services.AddHostedService<DatabaseMigrationHostedService>();
+                break;
+        }
+
         services.AddTestPlayIdTracking(globalSettings);
         services.AddManglerService(globalSettings);
 

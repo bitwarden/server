@@ -1,0 +1,85 @@
+services:
+  # Identity Service
+  identity:
+    build:
+      context: ..
+      dockerfile: ./src/Identity/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      globalSettings__selfHosted: "false"
+      globalSettings__baseServiceUri__vault: "http://localhost:8080"
+      globalSettings__baseServiceUri__api: "http://api:5000"
+      globalSettings__baseServiceUri__identity: "http://identity:5000"
+      globalSettings__databaseProvider: "sqlite"
+      globalSettings__sqlite__connectionString: "Data Source=/etc/bitwarden/db/vault_dev.db"
+      globalSettings__licenseDirectory: "/etc/bitwarden/core/licenses"
+      globalSettings__attachment__baseDirectory: "/etc/bitwarden/core/attachments"
+      globalSettings__dataProtection__directory: "/etc/bitwarden/core/aspnet-dataprotection"
+      globalSettings__developmentDirectory: "/etc/bitwarden/dev"
+      globalSettings__logDirectory: "/etc/bitwarden/logs"
+    ports:
+      - "33656:5000"
+    volumes:
+      - ./.data/db:/etc/bitwarden/db
+      - ./.data/dev:/etc/bitwarden/dev
+    networks:
+      - bitwarden
+
+  # API Service
+  api:
+    build:
+      context: ..
+      dockerfile: ./src/Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      globalSettings__selfHosted: "false"
+      globalSettings__baseServiceUri__vault: "http://localhost:8080"
+      globalSettings__baseServiceUri__api: "http://api:5000"
+      globalSettings__baseServiceUri__identity: "http://identity:5000"
+      globalSettings__databaseProvider: "sqlite"
+      globalSettings__sqlite__connectionString: "Data Source=/etc/bitwarden/db/vault_dev.db"
+      globalSettings__licenseDirectory: "/etc/bitwarden/core/licenses"
+      globalSettings__attachment__baseDirectory: "/etc/bitwarden/core/attachments"
+      globalSettings__dataProtection__directory: "/etc/bitwarden/core/aspnet-dataprotection"
+      globalSettings__logDirectory: "/etc/bitwarden/logs"
+    ports:
+      - "4000:5000"
+    volumes:
+      - ./.data/api:/etc/bitwarden
+      - ./.data/db:/etc/bitwarden/db
+    depends_on:
+      - identity
+    networks:
+      - bitwarden
+
+  # Seeder API Service
+  seeder:
+    build:
+      context: ..
+      dockerfile: ./util/SeederApi/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      globalSettings__selfHosted: "false"
+      globalSettings__baseServiceUri__vault: "http://localhost:8080"
+      globalSettings__baseServiceUri__api: "http://api:5000"
+      globalSettings__baseServiceUri__identity: "http://identity:5000"
+      globalSettings__databaseProvider: "sqlite"
+      globalSettings__sqlite__connectionString: "Data Source=/etc/bitwarden/db/vault_dev.db"
+      globalSettings__licenseDirectory: "/etc/bitwarden/core/licenses"
+      globalSettings__attachment__baseDirectory: "/etc/bitwarden/core/attachments"
+      globalSettings__dataProtection__directory: "/etc/bitwarden/core/aspnet-dataprotection"
+      globalSettings__logDirectory: "/etc/bitwarden/logs"
+    ports:
+      - "5100:5000"
+    volumes:
+      - ./.data/seeder:/etc/bitwarden
+      - ./.data/db:/etc/bitwarden/db
+    depends_on:
+      - api
+      - identity
+    networks:
+      - bitwarden
+
+networks:
+  bitwarden:
+    driver: bridge
