@@ -6,7 +6,7 @@
   <mj-body css-class="border-fix">
     <!-- Blue Header Section -->
     <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
-      <mj-bw-hero
+      <mj-bw-ac-hero
         img-src="https://assets.bitwarden.com/email/v1/spot-family-homes.png"
         title="<b>{{OrganizationName}}</b> invited you to join them on Bitwarden"
         button-text="<b>{{ButtonText}}</b>"
@@ -23,17 +23,17 @@
           </mj-text>
         </mj-column>
       </mj-section>
-      <mj-bw-icon-row
+      <mj-bw-ac-icon-row
         icon-src="https://assets.bitwarden.com/email/v1/icon-item-type.png"
         icon-alt="Store Icon"
         text="Store logins securely so you never forget your passwords."
       />
-      <mj-bw-icon-row
+      <mj-bw-ac-icon-row
         icon-src="https://assets.bitwarden.com/email/v1/icon-autofill.png"
         icon-alt="Autofill Icon"
         text="Sign in to accounts quickly by filling passwords with one click."
       />
-      <mj-bw-icon-row
+      <mj-bw-ac-icon-row
         icon-src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png"
         icon-alt="Share Icon"
         text="Share logins easily with your friends, family, or coworkers."
@@ -53,7 +53,7 @@
 
     <!-- Learn More Section -->
     <mj-wrapper padding="8px 20px 10px 20px">
-      <mj-bw-learn-more-footer />
+      <mj-bw-ac-learn-more-footer />
     </mj-wrapper>
 
     <!-- Footer -->
