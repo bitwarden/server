@@ -44,7 +44,9 @@ public class OrganizationUserRotationValidator : IRotationValidator<IEnumerable<
                 throw new BadRequestException("All existing reset password keys must be included in the rotation.");
             }
 
-            if (!OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey))
+            // Should be migrated to: if (!OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey))
+            // after https://bitwarden.atlassian.net/browse/PM-31001 is resolved
+            if (organizationUser.ResetPasswordKey == null)
             {
                 throw new BadRequestException("Reset Password keys cannot be set to null during rotation.");
             }
