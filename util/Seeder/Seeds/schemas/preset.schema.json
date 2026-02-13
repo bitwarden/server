@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "preset.schema.json",
+  "title": "Bitwarden Seeder Preset",
+  "description": "Defines a complete seeding preset that composes organization, users, groups, collections, and ciphers.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "organization": {
+      "type": "object",
+      "description": "Organization configuration. Use 'fixture' for a named fixture, or 'name'+'domain' for inline creation.",
+      "additionalProperties": false,
+      "properties": {
+        "fixture": {
+          "type": "string",
+          "description": "Name of an organization fixture file (e.g., 'dunder-mifflin')."
+        },
+        "name": {
+          "type": "string",
+          "description": "Organization display name (used with inline creation)."
+        },
+        "domain": {
+          "type": "string",
+          "description": "Organization domain (used with inline creation and generator seeding)."
+        },
+        "seats": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10,
+          "description": "Number of seats in the organization."
+        }
+      }
+    },
+    "roster": {
+      "type": "object",
+      "description": "Named roster fixture for users, groups, and collections.",
+      "additionalProperties": false,
+      "properties": {
+        "fixture": {
+          "type": "string",
+          "description": "Name of a roster fixture file (e.g., 'dunder-mifflin')."
+        }
+      },
+      "required": ["fixture"]
+    },
+    "users": {
+      "type": "object",
+      "description": "Generate random users.",
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of users to generate."
+        },
+        "realisticStatusMix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true and count >= 10, creates realistic mix: 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked."
+        }
+      },
+      "required": ["count"]
+    },
+    "groups": {
+      "type": "object",
+      "description": "Generate random groups with round-robin user assignment.",
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of groups to generate."
+        }
+      },
+      "required": ["count"]
+    },
+    "collections": {
+      "type": "object",
+      "description": "Generate random collections with user assignments.",
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of collections to generate."
+        }
+      },
+      "required": ["count"]
+    },
+    "ciphers": {
+      "type": "object",
+      "description": "Cipher configuration. Use 'fixture' for a named fixture, or 'count' for random generation.",
+      "additionalProperties": false,
+      "properties": {
+        "fixture": {
+          "type": "string",
+          "description": "Name of a cipher fixture file (e.g., 'autofill-testing')."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of random ciphers to generate."
+        }
+      }
+    }
+  }
+}

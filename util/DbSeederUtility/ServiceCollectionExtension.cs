@@ -25,6 +25,7 @@ public static class ServiceCollectionExtension
         });
         services.AddSingleton(globalSettings);
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
+        services.TryAddSingleton<ISeedReader, SeedReader>();
 
         // Add Data Protection services
         services.AddDataProtection()

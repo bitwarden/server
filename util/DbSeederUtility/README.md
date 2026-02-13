@@ -1,66 +1,68 @@
 # Bitwarden Database Seeder Utility
 
-A command-line utility for generating and managing test data for Bitwarden databases.
+A CLI wrapper around the Seeder library for generating test data in your local Bitwarden database.
 
-## Overview
+## Getting Started
 
-DbSeederUtility is an executable wrapper around the Seeder class library that provides a convenient command-line
-interface for executing seed-recipes in your local environment.
+Build and run from the `util/DbSeederUtility` directory:
 
-## Installation
-
-The utility can be built and run as a .NET 8 application:
-
-```
+```bash
 dotnet build
 dotnet run -- <command> [options]
 ```
 
-Or directly using the compiled executable:
+**Login Credentials:** All seeded users use password `asdfasdfasdf`. The owner email is `owner@<domain>`.
 
-```
-DbSeeder.exe <command> [options]
-```
+## Commands
 
-## Examples
-
-### Generate and load test organization
+### `seed` - Fixture-Based Seeding
 
 ```bash
-# Generate an organization called "seeded" with 10000 users using the @large.test email domain.
-# Login using "owner@large.test" with password "asdfasdfasdf"
-DbSeeder.exe organization -n seeded -u 10000 -d large.test
+# List available presets and fixtures
+dotnet run -- seed --list
 
-# Generate an organization with 5 users and 100 encrypted ciphers
-DbSeeder.exe vault-organization -n TestOrg -u 5 -d test.com -c 100
+# Load the Dunder Mifflin preset (58 users, 14 groups, 15 collections, ciphers)
+dotnet run -- seed --preset dunder-mifflin-full
 
-# Generate with Spotify-style collections (tribes, chapters, guilds)
-DbSeeder.exe vault-organization -n TestOrg -u 10 -d test.com -c 50 -o Spotify
+# Load with ID mangling for test isolation
+dotnet run -- seed --preset dunder-mifflin-full --mangle
 
-# Generate a small test organization with ciphers for manual testing
-DbSeeder.exe vault-organization -n DevOrg -u 2 -d dev.local -c 10
-
-# Generate an organization using a traditional structure
-dotnet run --project DbSeederUtility.csproj -- vault-organization -n Test001 -d test001.com -u 50 -c 1000 -g 15 -o Traditional -m
-
-# Generate an organization using a modern structure with a small vault
-dotnet run --project DbSeederUtility.csproj -- vault-organization -n Test002 -d test002.com -u 500 -c 10000 -g 85 -o Modern -m
-
-# Generate an organization using a spotify structure with a large vault
-dotnet run --project DbSeederUtility.csproj -- vault-organization -n Test003 -d test003.com -u 8000 -c 100000 -g 125 -o Spotify -m
-
-# Generate an organization using a traditional structure with a very small vault with European regional data
-dotnet run --project DbSeederUtility.csproj  -- vault-organization -n “TestOneEurope” -u 10 -c 100 -g 5 -d testOneEurope.com -o Traditional --region Europe
-
-# Generate an organization using a traditional structure with a very small vault with Asia Pacific regional data
-dotnet run --project DbSeederUtility.csproj  -- vault-organization -n “TestOneAsiaPacific” -u 17 -c 600 -g 12 -d testOneAsiaPacific.com -o Traditional --region AsiaPacific
-
+# Large enterprise preset for performance testing
+dotnet run -- seed --preset large-enterprise
 ```
 
-## Dependencies
+### `organization` - Users Only (No Vault Data)
 
-This utility depends on:
+```bash
+# 100 users
+dotnet run -- organization -n MyOrg -u 100 -d myorg.com
 
-- The Seeder class library
-- CommandDotNet for command-line parsing
-- .NET 8.0 runtime
+# 10,000 users for load testing
+dotnet run -- organization -n seeded -u 10000 -d large.test
+```
+
+### `vault-organization` - Users + Encrypted Vault Data
+
+```bash
+# Tiny org — quick sanity check
+dotnet run -- vault-organization -n SmallOrg -d small.test -u 3 -c 10 -g 5 -o Traditional -m
+
+# Mid-size Traditional org with realistic status mix
+dotnet run -- vault-organization -n MidOrg -d mid.test -u 50 -c 1000 -g 15 -o Traditional -m
+
+# Mid-size with dense cipher-to-user ratio
+dotnet run -- vault-organization -n DenseOrg -d dense.test -u 75 -c 650 -g 20 -o Traditional -m
+
+# Large Modern org
+dotnet run -- vault-organization -n LargeOrg -d large.test -u 500 -c 10000 -g 85 -o Modern -m
+
+# Stress test — massive Spotify-style org
+dotnet run -- vault-organization -n StressOrg -d stress.test -u 8000 -c 100000 -g 125 -o Spotify -m
+
+# Regional data variants
+dotnet run -- vault-organization -n EuropeOrg -d europe.test -u 10 -c 100 -g 5 --region Europe
+dotnet run -- vault-organization -n ApacOrg -d apac.test -u 17 -c 600 -g 12 --region AsiaPacific
+
+# With ID mangling for test isolation (prevents collisions with existing data)
+dotnet run -- vault-organization -n IsolatedOrg -d isolated.test -u 5 -c 25 -g 4 -o Spotify --mangle
+```

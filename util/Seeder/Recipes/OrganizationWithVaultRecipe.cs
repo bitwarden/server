@@ -13,6 +13,7 @@ using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
+using LinqToDB.Data;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
@@ -158,7 +159,7 @@ public class OrganizationWithVaultRecipe(
                             manage: j == 0));
                 })
                 .ToList();
-            db.BulkCopy(collectionUsers);
+            db.BulkCopy(new BulkCopyOptions { TableName = nameof(CollectionUser) }, collectionUsers);
         }
 
         return collections.Select(c => c.Id).ToList();
