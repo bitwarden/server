@@ -27,13 +27,6 @@ public interface IOrganizationBillingService
     Task Finalize(OrganizationSale sale);
 
     /// <summary>
-    /// Retrieve metadata about the organization represented bsy the provided <paramref name="organizationId"/>.
-    /// </summary>
-    /// <param name="organizationId">The ID of the organization to retrieve metadata for.</param>
-    /// <returns>An <see cref="OrganizationMetadata"/> record.</returns>
-    Task<OrganizationMetadata?> GetMetadata(Guid organizationId);
-
-    /// <summary>
     /// Updates the provided <paramref name="organization"/>'s payment source and tax information.
     /// If the <paramref name="organization"/> does not have a Stripe <see cref="Stripe.Customer"/>, this method will create one using the provided
     /// <paramref name="tokenizedPaymentSource"/> and <paramref name="taxInformation"/>.
