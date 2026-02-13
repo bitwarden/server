@@ -6,6 +6,7 @@ using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
+using Bit.Core;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
@@ -80,6 +81,8 @@ public class SendsControllerTests : IDisposable
         send.Id = default;
         send.Type = SendType.Text;
         send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
+        send.AuthType = AuthType.None;
+        send.Emails = null;
         send.HideEmail = true;
 
         _sendRepository.GetByIdAsync(Arg.Any<Guid>()).Returns(send);
@@ -794,6 +797,33 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
+    public async Task AccessUsingAuth_WithEmailProtectedSend_WithFfDisabled_ReturnsUnauthorizedResult(Guid sendId, User creator)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = creator.Id,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            HideEmail = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            AuthType = AuthType.Email,
+            Emails = "test@example.com",
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _userService.GetUserByIdAsync(creator.Id).Returns(creator);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+    }
+
+    [Theory, AutoData]
     public async Task AccessUsingAuth_WithHideEmail_DoesNotIncludeCreatorIdentifier(Guid sendId, User creator)
     {
         var send = new Send
@@ -1034,6 +1064,33 @@ public class SendsControllerTests : IDisposable
         Assert.Equal(expectedUrl, response.Url);
         await _sendRepository.Received(1).GetByIdAsync(sendId);
         await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSendFileDownloadDataUsingAuth_WithEmailProtectedSend_WithFfDisabled_ReturnsUnauthorizedResult(
+        Guid sendId, string fileId, string expectedUrl)
+    {
+        var fileData = new SendFileData("Test File", "Notes", "document.pdf") { Id = fileId, Size = 2048 };
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            AuthType = AuthType.Email,
+            Emails = "test@example.com",
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId).Returns(expectedUrl);
+        _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
     }
 
     [Theory, AutoData]
