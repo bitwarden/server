@@ -39,6 +39,17 @@ public static class Constants
     public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
 
     /// <summary>
+    /// Server permitted SSO callback redirect URIs for mobile clients.
+    /// </summary>
+    public static readonly string[] BitwardenMobileSsoCallbackUris =
+    [
+        "bitwarden://sso-callback",
+        "https://bitwarden.com/sso-callback",
+        "https://bitwarden.eu/sso-callback",
+        "https://bitwarden.pw/sso-callback",
+    ];
+
+    /// <summary>
     /// Used by IdentityServer to identify our own provider.
     /// </summary>
     public const string IdentityProvider = "bitwarden";

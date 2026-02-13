@@ -83,9 +83,7 @@ public class ApiClient : Client
         }
         else if (id == "mobile")
         {
-            RedirectUris = new[] { "bitwarden://sso-callback" }
-                .Concat(Constants.BitwardenCloudDomains.Select(d => $"https://{d}/sso-callback"))
-                .ToArray();
+            RedirectUris = Constants.BitwardenMobileSsoCallbackUris;
             PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
         }
 
