@@ -37,10 +37,11 @@ if (organization.PlanType == PlanType.Enterprise && organization.UseEvents)
 
 ```csharp
 // Check the explicit ability flag
-if (organization.UseEvents)
+if (!organization.UseEvents)
 {
-    // allow UseEvents feature...
+    throw new BadRequestException("Your organization does not have access to this feature.");
 }
+// proceed with feature logic...
 ```
 
 ## Why This Pattern Matters
@@ -53,17 +54,19 @@ Using explicit ability flags instead of plan type checks provides several benefi
    creation/upgrade. No need to hunt through the codebase for scattered plan type checks.
 
 3. **Flexibility** — Abilities can be set independently of plan type, enabling:
-
-    - Early access programs for features not yet tied to a plan
-    - Trial access to help customers evaluate a feature before upgrading
-    - Custom arrangements for specific customers
-    - A/B testing of features across different cohorts
+   - Early access programs for features not yet tied to a plan
+   - Trial access to help customers evaluate a feature before upgrading
+   - Custom arrangements for specific customers (can be manually toggled in Bitwarden Portal)
+   - A/B testing of features across different cohorts
+   - Gating high-risk features behind internal support teams (e.g., Key Connector)
 
 4. **Safe Refactoring** — When plans change (e.g., adding a new plan tier, renaming plans, or moving features between
    tiers), we only update the ability assignment logic—not every place the feature is used.
 
 5. **Graceful Downgrades** — When an organization downgrades, we update their abilities. All feature checks
    automatically respect the new access level.
+
+6. **Semantic Code** — The code clearly expresses what capability is being checked, making it more maintainable.
 
 ## How It Works
 
@@ -81,49 +84,218 @@ organization.UseEvents = plan.HasEvents;
 // ... etc
 ```
 
-### Modifying Abilities for Existing Organizations
+### Accessing Abilities in Code
 
-To change abilities for existing organizations (e.g., rolling out a feature to a new plan tier), create a database
-migration that updates the relevant flag:
+**Server-side:**
 
-```sql
--- Example: Enable UseEvents for all Teams organizations
-UPDATE [dbo].[Organization]
-SET UseEvents = 1
-WHERE PlanType IN (17, 18) -- TeamsMonthly = 17, TeamsAnnually = 18
-```
+- If you already have the full `Organization` object in scope, use it directly: `organization.UseMyFeature`
+- If not, use the in-memory cache to avoid hitting the database: `IApplicationCacheService.GetOrganizationAbilityAsync(orgId)`
+  - This returns an `OrganizationAbility` object - a simplified, cached representation of the ability flags
+  - Note: some older flags may be missing from `OrganizationAbility` but can be added if needed
 
-Then update the plan-to-ability assignment code so new organizations get the correct value.
+**Client-side:**
+
+- Get the organization object from `OrganizationService`, then use it directly: `organization.useMyFeature`
+
+### Manual Override via Bitwarden Portal
+
+Organization abilities can be manually toggled for specific customers via the Bitwarden Portal → Organizations page.
+This is useful for custom arrangements, early access, or internal testing.
 
 ## Adding a New Ability
 
-When developing a new plan-gated feature:
+When developing a new plan-gated feature, follow these steps. We use `MyFeature` as a placeholder for your feature name
+(e.g., `UseEvents`).
 
-1. **Add the ability to the Organization and OrganizationAbility entities** — Create a `Use[FeatureName]` boolean
-   property.
+### 1. Update Core Entities
 
-2. **Add a database migration** — Add the new column to the Organization table.
+- `src/Core/AdminConsole/Entities/Organization.cs` — Add `UseMyFeature` boolean property
+- `src/Core/AdminConsole/OrganizationFeatures/OrganizationAbility/OrganizationAbility.cs` — Add to ability object
 
-3. **Update plan definitions** — Add a corresponding `Has[FeatureName]` property to the Plan model and configure which
-   plans include it.
+### 2. Database Changes (MSSQL)
 
-4. **Update organization creation/upgrade logic** — Ensure the ability is set based on the plan.
+Add a new `UseMyFeature` column to the Organization table:
 
-5. **Update the organization license claims** (if applicable) - to make the feature available on self-hosted instances.
+**Files to modify:**
 
-6. **Implement checks throughout client and server** — Use the ability consistently everywhere the feature is accessed.
-    - Clients: get the organization object from `OrganizationService`.
-    - Server: if you already have the full `Organization` object in scope, you can use it directly. If not, use the
-      `IApplicationCacheService` to retrieve the `OrganizationAbility`, which is a simplified, cached representation
-      of the organization ability flags. Note that some older flags may be missing from `OrganizationAbility` but
-      can be added if needed.
+- `src/Sql/dbo/Tables/Organization.sql` — Add column with `NOT NULL` constraint and default of `0` (false) for EDD
+  backward compatibility
+
+**Stored procedures to update:**
+
+- `src/Sql/dbo/Stored Procedures/Organization_Create.sql`
+- `src/Sql/dbo/Stored Procedures/Organization_Update.sql`
+- `src/Sql/dbo/Stored Procedures/Organization_ReadAbilities.sql`
+
+**Views to update (add the new column):**
+
+- `src/Sql/dbo/Views/OrganizationUserOrganizationDetailsView.sql`
+- `src/Sql/dbo/Views/ProviderUserProviderOrganizationDetailsView.sql`
+- `src/Sql/dbo/Views/OrganizationView.sql`
+
+**Views to refresh (use `sp_refreshview`):**
+
+After schema changes, the following views may need to be refreshed even though they don't explicitly include the new
+column:
+
+- `src/Sql/dbo/Views/OrganizationCipherDetailsCollectionsView.sql`
+- `src/Sql/dbo/Views/ProviderOrganizationOrganizationDetailsView.sql`
+
+**Create a migration script** for these database changes.
+
+### 3. Entity Framework Changes
+
+EF is primarily used for self-host. Implementations must be kept consistent.
+
+**Generate EF migrations** for the new column.
+
+**Update queries and initialization code:**
+
+- `src/Infrastructure.EntityFramework/AdminConsole/Repositories/OrganizationRepository.cs`
+  - Update `GetManyAbilitiesAsync()` to initialize the new property
+- `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/OrganizationUserOrganizationDetailsViewQuery.cs`
+  - Update the integration test: `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepository/OrganizationUserRepositoryTests.cs`
+- `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/ProviderUserOrganizationDetailsViewQuery.cs`
+
+### 4. Data Migrations for Existing Organizations
+
+If your feature should be enabled for existing organizations on certain plan types, create data migrations to set the ability flag:
+
+**MSSQL migration:**
+
+```sql
+-- Example: Enable UseMyFeature for all Enterprise organizations
+UPDATE [dbo].[Organization]
+SET UseMyFeature = 1
+WHERE PlanType IN (13, 14) -- EnterpriseMonthly = 13, EnterpriseAnnually = 14
+```
+
+**EF migration:**
+
+Create a corresponding data migration for EF databases used by self-hosted instances.
+
+### 5. Server Code Changes
+
+Update related models and mapping code so models receive the new value.
+
+**Response models:**
+
+- `src/Api/AdminConsole/Models/Response/Organizations/OrganizationResponseModel.cs`
+- `src/Api/AdminConsole/Models/Response/BaseProfileOrganizationResponseModel.cs`
+
+**Data models:**
+
+- `src/Core/AdminConsole/Models/Data/Organizations/OrganizationUsers/OrganizationUserOrganizationDetails.cs`
+- `src/Core/AdminConsole/Models/Data/Provider/ProviderUserOrganizationDetails.cs`
+- `src/Core/AdminConsole/Models/Data/Organizations/SelfHostedOrganizationDetails.cs`
+- `src/Core/AdminConsole/Models/Data/IProfileOrganizationDetails.cs`
+
+**Plan definition and signup logic:**
+
+If your feature should be automatically enabled based on plan type at signup (e.g., SSO for Enterprise plans), you'll
+need to:
+
+1. Work with the Billing Team to add a `HasMyFeature` property to the Plan model and configure which plans include it
+2. Update `src/Core/AdminConsole/OrganizationFeatures/Organizations/CloudOrganizationSignUpCommand.cs` to map
+   `plan.HasMyFeature` to `organization.UseMyFeature`
+
+**Note:** This step is not required if your feature is enabled manually via the Admin Portal.
+
+### 6. Client Changes
+
+**TypeScript models to update:**
+
+- `libs/common/src/admin-console/models/response/profile-organization.response.ts`
+- `libs/common/src/admin-console/models/response/organization.response.ts`
+- `libs/common/src/admin-console/models/domain/organization.ts`
+- `libs/common/src/admin-console/models/data/organization.data.ts`
+  - Update tests: `libs/common/src/admin-console/models/data/organization.data.spec.ts`
+
+### 7. Bitwarden Portal Changes
+
+For manual override capability in the admin portal:
+
+- `src/Admin/AdminConsole/Models/OrganizationEditModel.cs` — Map the ability from the organization entity
+- `src/Admin/AdminConsole/Views/Shared/_OrganizationForm.cshtml` — Add checkbox for the new ability
+- `src/Admin/AdminConsole/Views/Shared/_OrganizationFormScripts.cshtml` — Add the new ability to the `togglePlanFeatures()` function so it's automatically set when a plan type is selected
+- `src/Admin/AdminConsole/Controllers/OrganizationsController.cs` — Update `UpdateOrganization()` method mapping
+
+### 8. Self-Host Licensing
+
+> ⚠️ **WARNING:** Mistakes in organization license changes can disable the entire organization for self-hosted customers!
+> Double-check your work and ask for help if unsure.
+>
+> **Note:** Do not add new properties to the `OrganizationLicense` file - make sure you use the claims-based system below.
+
+Organization features are now **claims-based**. You'll need to:
+
+**Add claims for the new feature:**
+
+- `src/Core/Billing/Licenses/LicenseConstants.cs` — Add constant for the new ability in `OrganizationLicenseConstants`
+- `src/Core/Billing/Licenses/Services/Implementations/OrganizationLicenseClaimsFactory.cs`
+
+**Update license verification:**
+
+- `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
+  - `VerifyData()` (line ~424) — Add claims validation
+
+**Update license command:**
+
+Map your feature property from the claim to the organization when creating or updating from the license file:
+
+- `src/Core/AdminConsole/Services/OrganizationFactory.cs`
+- `src/Core/Billing/Organizations/Commands/UpdateOrganizationLicenseCommand.cs`
+
+**Update tests:**
+
+- `test/Core.Test/Billing/Organizations/Commands/UpdateOrganizationLicenseCommandTests.cs`
+  - Exclude from test comparison (line ~91)
+
+### 9. Implement Business Logic Checks
+
+In your feature's business logic, check the ability flag:
+
+```csharp
+// Retrieve the organization ability (uses cache, avoids DB hit)
+var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+
+if (!orgAbility.UseMyFeature)
+{
+    throw new BadRequestException("Your organization's plan does not support this feature.");
+}
+
+// Proceed with feature logic...
+```
+
+### 10. Feature Flags
+
+Organization abilities do **not** replace feature flags. They serve different purposes:
+
+- **Feature flags** — Short-lived flags that control feature release and can act as a killswitch for defective features.
+  Can be toggled immediately without a new deployment.
+- **Organization ability flags** — Permanent flags that control access to a feature based on plan type.
+  Require a database migration to toggle in bulk.
+
+You should still use a feature flag to control your feature release:
+
+```csharp
+if (!_featureService.IsEnabled(FeatureFlagKeys.MyFeature))
+{
+    throw new BadRequestException("This feature is not available.");
+}
+
+if (!orgAbility.UseMyFeature)
+{
+    throw new BadRequestException("Your organization's plan does not support this feature.");
+}
+```
 
 ## Existing Abilities
 
 For reference, here are some current organization ability flags (not a complete list):
 
-| Ability                  | Description                   | Plans             |
-|--------------------------|-------------------------------|-------------------|
+| Ability                  | Description                   | Typical Plans     |
+| ------------------------ | ----------------------------- | ----------------- |
 | `UseGroups`              | Group-based collection access | Teams, Enterprise |
 | `UseDirectory`           | Directory Connector sync      | Teams, Enterprise |
 | `UseEvents`              | Event logging                 | Teams, Enterprise |
