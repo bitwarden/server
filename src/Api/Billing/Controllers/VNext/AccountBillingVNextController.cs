@@ -80,9 +80,8 @@ public class AccountBillingVNextController(
         [BindNever] User user,
         [FromBody] PremiumCloudHostedSubscriptionRequest request)
     {
-        var (paymentMethod, billingAddress, additionalStorageGb, coupon) = request.ToDomain();
-        var result = await createPremiumCloudHostedSubscriptionCommand.Run(
-            user, paymentMethod, billingAddress, additionalStorageGb, coupon);
+        var subscriptionPurchase = request.ToDomain();
+        var result = await createPremiumCloudHostedSubscriptionCommand.Run(user, subscriptionPurchase);
         return Handle(result);
     }
 

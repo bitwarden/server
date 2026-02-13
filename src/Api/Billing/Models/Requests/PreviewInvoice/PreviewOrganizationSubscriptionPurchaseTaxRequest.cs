@@ -14,8 +14,6 @@ public record PreviewOrganizationSubscriptionPurchaseTaxRequest
     [Required]
     public required CheckoutBillingAddressRequest BillingAddress { get; set; }
 
-    public string? Coupon { get; set; }
-
-    public (OrganizationSubscriptionPurchase, BillingAddress, string?) ToDomain() =>
-        (Purchase.ToDomain(), BillingAddress.ToDomain(), Coupon);
+    public (OrganizationSubscriptionPurchase, BillingAddress) ToDomain() =>
+        (Purchase.ToDomain(), BillingAddress.ToDomain());
 }

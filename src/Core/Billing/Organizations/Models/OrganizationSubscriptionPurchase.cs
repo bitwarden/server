@@ -8,6 +8,7 @@ public record OrganizationSubscriptionPurchase
     public PlanCadenceType Cadence { get; init; }
     public required PasswordManagerSelections PasswordManager { get; init; }
     public SecretsManagerSelections? SecretsManager { get; init; }
+    public string? Coupon { get; init; }
 
     public PlanType PlanType =>
         // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault

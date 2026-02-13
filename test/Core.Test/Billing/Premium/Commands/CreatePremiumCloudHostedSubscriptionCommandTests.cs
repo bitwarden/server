@@ -1,11 +1,13 @@
 ﻿using Bit.Core.Billing;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -76,17 +78,62 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             _subscriptionDiscountService);
     }
 
+    #region Helper Methods
+
+    private static PremiumSubscriptionPurchase CreateSubscriptionPurchase(
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress,
+        short additionalStorageGb = 0,
+        string? coupon = null)
+    {
+        return new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = additionalStorageGb,
+            Coupon = coupon
+        };
+    }
+
+    private static StripeCustomer CreateMockCustomer(string customerId = "cust_123", string country = "US", string postalCode = "12345")
+    {
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = customerId;
+        mockCustomer.Address = new Address { Country = country, PostalCode = postalCode };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+        return mockCustomer;
+    }
+
+    private static StripeSubscription CreateMockActiveSubscription(string subscriptionId = "sub_123")
+    {
+        var mockSubscription = Substitute.For<StripeSubscription>();
+        mockSubscription.Id = subscriptionId;
+        mockSubscription.Status = "active";
+        mockSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
+        return mockSubscription;
+    }
+
+    #endregion
+
     [Theory, BitAutoData]
     public async Task Run_UserAlreadyPremium_ReturnsBadRequest(
         User user,
-        TokenizedPaymentMethod paymentMethod,
-        BillingAddress billingAddress)
+        PremiumSubscriptionPurchase subscriptionPurchase)
     {
         // Arrange
         user.Premium = true;
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT1);
@@ -97,14 +144,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     [Theory, BitAutoData]
     public async Task Run_NegativeStorageAmount_ReturnsBadRequest(
         User user,
-        TokenizedPaymentMethod paymentMethod,
-        BillingAddress billingAddress)
+        PremiumSubscriptionPurchase subscriptionPurchase)
     {
         // Arrange
         user.Premium = false;
+        subscriptionPurchase = subscriptionPurchase with { AdditionalStorageGb = -1 };
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, -1, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT1);
@@ -126,6 +173,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         paymentMethod.Token = "bank_token_123";
         billingAddress.Country = "US";
         billingAddress.PostalCode = "12345";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
 
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "cust_123";
@@ -159,7 +214,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -183,6 +238,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         paymentMethod.Token = "card_token_123";
         billingAddress.Country = "US";
         billingAddress.PostalCode = "12345";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
 
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "cust_123";
@@ -212,7 +275,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -237,6 +300,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         billingAddress.Country = "US";
         billingAddress.PostalCode = "12345";
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
+
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "cust_123";
         mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
@@ -260,7 +331,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -293,6 +364,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         billingAddress.PostalCode = "12345";
         const short additionalStorage = 2;
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = additionalStorage,
+            Coupon = null
+        };
+
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "cust_123";
         mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
@@ -321,7 +400,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -346,6 +425,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         paymentMethod.Type = TokenizablePaymentMethodType.Card;
         billingAddress.Country = "US";
         billingAddress.PostalCode = "12345";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
 
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "existing_customer_123";
@@ -375,7 +462,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -397,6 +484,14 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         paymentMethod.Token = "card_token_123";
         billingAddress.Country = "US";
         billingAddress.PostalCode = "12345";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
 
         var mockCustomer = Substitute.For<StripeCustomer>();
         mockCustomer.Id = "existing_customer_123";
@@ -434,7 +529,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -499,8 +594,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
+
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -556,8 +659,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
+
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -612,8 +723,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
         _subscriberService.CreateBraintreeCustomer(Arg.Any<User>(), Arg.Any<string>()).Returns("bt_customer_123");
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
+
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -672,8 +791,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.ListSetupIntentsAsync(Arg.Any<SetupIntentListOptions>())
             .Returns(Task.FromResult(new List<SetupIntent>())); // Empty list - no setup intent found
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
+
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT3);
@@ -719,8 +846,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
+
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
@@ -744,8 +879,16 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         billingAddress.Country = "US";
         billingAddress.PostalCode = "12345";
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupon = null
+        };
+
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         //Assert
         Assert.True(result.IsT3); // Assuming T3 is the Unhandled result
@@ -802,16 +945,153 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             ]
         };
 
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = additionalStorage,
+            Coupon = null
+        };
+
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, additionalStorage, null);
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
         Assert.Equal((short)3, user.MaxStorageGb); // 1 (provided) + 2 (additional) = 3
         await _userService.Received(1).SaveUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ValidCoupon_AppliesCouponSuccessfully(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+
+        var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "VALID_COUPON");
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "VALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(true);
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT0);
+        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "VALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
+            opts.Discounts != null &&
+            opts.Discounts.Count == 1 &&
+            opts.Discounts[0].Coupon == "VALID_COUPON"));
+        await _userService.Received(1).SaveUserAsync(user);
+        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_InvalidCoupon_ReturnsBadRequest(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "INVALID_COUPON");
+
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(false);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal("The coupon code is invalid or you are not eligible for this discount.", badRequest.Response);
+        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserNotEligibleForCoupon_ReturnsBadRequest(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = "existing_customer_123";
+        user.GatewaySubscriptionId = null;
+        var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "NEW_USER_ONLY_COUPON");
+
+        // User has previous subscriptions, so they're not eligible
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(false);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal("The coupon code is invalid or you are not eligible for this discount.", badRequest.Response);
+        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        await _stripeAdapter.DidNotReceive().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_CouponWithWhitespace_TrimsCouponCode(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+
+        var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "  WHITESPACE_COUPON  ");
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "WHITESPACE_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(true);
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT0);
+        // Verify the coupon was trimmed before validation
+        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "WHITESPACE_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        // Verify the coupon was trimmed before passing to Stripe
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
+            opts.Discounts != null &&
+            opts.Discounts.Count == 1 &&
+            opts.Discounts[0].Coupon == "WHITESPACE_COUPON"));
     }
 
 }

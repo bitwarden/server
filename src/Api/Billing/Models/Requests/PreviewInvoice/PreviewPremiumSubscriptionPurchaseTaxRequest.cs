@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Premium.Models;
 
 namespace Bit.Api.Billing.Models.Requests.PreviewInvoice;
 
@@ -13,7 +14,14 @@ public record PreviewPremiumSubscriptionPurchaseTaxRequest
     [Required]
     public required MinimalBillingAddressRequest BillingAddress { get; set; }
 
+    [MaxLength(50)]
     public string? Coupon { get; set; }
 
-    public (short, BillingAddress, string?) ToDomain() => (AdditionalStorage, BillingAddress.ToDomain(), Coupon);
+    public (PremiumPurchasePreview, BillingAddress) ToDomain() => (
+        new PremiumPurchasePreview
+        {
+            AdditionalStorageGb = AdditionalStorage,
+            Coupon = Coupon
+        },
+        BillingAddress.ToDomain());
 }

@@ -22,8 +22,7 @@ public interface IPreviewOrganizationTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         OrganizationSubscriptionPurchase purchase,
-        BillingAddress billingAddress,
-        string? coupon);
+        BillingAddress billingAddress);
 
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         Organization organization,
@@ -43,10 +42,14 @@ public class PreviewOrganizationTaxCommand(
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
         OrganizationSubscriptionPurchase purchase,
-        BillingAddress billingAddress,
-        string? coupon)
+        BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
         {
+            if (!string.IsNullOrWhiteSpace(purchase.Coupon) && purchase.Tier != ProductTierType.Families)
+            {
+                return new BadRequest("Coupons can only be applied to Families plan subscriptions.");
+            }
+
             var plan = await pricingClient.GetPlanOrThrow(purchase.PlanType);
 
             var options = GetBaseOptions(billingAddress, purchase.Tier != ProductTierType.Families);
@@ -124,9 +127,9 @@ public class PreviewOrganizationTaxCommand(
                         }
                     }
 
-                    if (!string.IsNullOrWhiteSpace(coupon))
+                    if (!string.IsNullOrWhiteSpace(purchase.Coupon))
                     {
-                        options.Discounts = [new InvoiceDiscountOptions { Coupon = coupon.Trim() }];
+                        options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
                     }
 
                     break;

@@ -60,7 +60,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, null);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -118,7 +118,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, null);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -181,7 +181,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, null);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -242,7 +242,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, null);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -294,7 +294,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, null);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -347,7 +347,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, null);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -382,7 +382,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 5,
                 AdditionalStorage = 0,
                 Sponsored = false
-            }
+            },
+            Coupon = "TEST_COUPON_20"
         };
 
         var billingAddress = new BillingAddress
@@ -402,7 +403,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, "TEST_COUPON_20");
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -442,7 +443,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 8,
                 AdditionalServiceAccounts = 2,
                 Standalone = false
-            }
+            },
+            Coupon = "ENTERPRISE_DISCOUNT_15"
         };
 
         var billingAddress = new BillingAddress
@@ -462,7 +464,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, "ENTERPRISE_DISCOUNT_15");
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -502,7 +504,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 6,
                 AdditionalStorage = 0,
                 Sponsored = true
-            }
+            },
+            Coupon = "TEST_COUPON_IGNORED"
         };
 
         var billingAddress = new BillingAddress
@@ -522,7 +525,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, "TEST_COUPON_IGNORED");
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -560,7 +563,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 3,
                 AdditionalServiceAccounts = 0,
                 Standalone = true
-            }
+            },
+            Coupon = "USER_COUPON_IGNORED"
         };
 
         var billingAddress = new BillingAddress
@@ -580,7 +584,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, "USER_COUPON_IGNORED");
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -616,7 +620,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 5,
                 AdditionalStorage = 0,
                 Sponsored = false
-            }
+            },
+            Coupon = ""
         };
 
         var billingAddress = new BillingAddress
@@ -636,7 +641,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, "");
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -688,7 +693,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(purchase, billingAddress, null);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -720,7 +725,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 5,
                 AdditionalStorage = 0,
                 Sponsored = false
-            }
+            },
+            Coupon = "   "
         };
 
         var billingAddress = new BillingAddress
@@ -741,7 +747,7 @@ public class PreviewOrganizationTaxCommandTests
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         // Whitespace-only strings are now trimmed and treated as null/empty, so no discount is applied
-        var result = await _command.Run(purchase, billingAddress, "   ");
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -773,7 +779,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 5,
                 AdditionalStorage = 0,
                 Sponsored = false
-            }
+            },
+            Coupon = "  TEST_COUPON_20  "
         };
 
         var billingAddress = new BillingAddress
@@ -794,7 +801,7 @@ public class PreviewOrganizationTaxCommandTests
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         // Coupon with leading and trailing whitespace should be trimmed before applying
-        var result = await _command.Run(purchase, billingAddress, "  TEST_COUPON_20  ");
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -819,6 +826,9 @@ public class PreviewOrganizationTaxCommandTests
     [Fact]
     public async Task Run_OrganizationSubscriptionPurchase_VeryLongCouponString_PassedThroughToStripe()
     {
+        // Very long coupon string (200 characters)
+        var longCoupon = new string('A', 200);
+
         var purchase = new OrganizationSubscriptionPurchase
         {
             Tier = ProductTierType.Teams,
@@ -828,7 +838,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 5,
                 AdditionalStorage = 0,
                 Sponsored = false
-            }
+            },
+            Coupon = longCoupon
         };
 
         var billingAddress = new BillingAddress
@@ -848,9 +859,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        // Very long coupon string (200 characters)
-        var longCoupon = new string('A', 200);
-        var result = await _command.Run(purchase, billingAddress, longCoupon);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -875,6 +884,9 @@ public class PreviewOrganizationTaxCommandTests
     [Fact]
     public async Task Run_OrganizationSubscriptionPurchase_CouponWithSpecialCharacters_PassedThroughToStripe()
     {
+        // Coupon with special characters (hyphens, underscores, numbers are common in Stripe coupon IDs)
+        var specialCoupon = "TEST-COUPON_2024-50%OFF";
+
         var purchase = new OrganizationSubscriptionPurchase
         {
             Tier = ProductTierType.Teams,
@@ -884,7 +896,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 5,
                 AdditionalStorage = 0,
                 Sponsored = false
-            }
+            },
+            Coupon = specialCoupon
         };
 
         var billingAddress = new BillingAddress
@@ -904,9 +917,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        // Coupon with special characters (hyphens, underscores, numbers are common in Stripe coupon IDs)
-        var specialCoupon = "TEST-COUPON_2024-50%OFF";
-        var result = await _command.Run(purchase, billingAddress, specialCoupon);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -931,6 +942,9 @@ public class PreviewOrganizationTaxCommandTests
     [Fact]
     public async Task Run_OrganizationSubscriptionPurchase_CouponWithUnicodeCharacters_PassedThroughToStripe()
     {
+        // Coupon with unicode characters (though unlikely for real Stripe coupons, tests edge case)
+        var unicodeCoupon = "TEST-COUPON-2024";
+
         var purchase = new OrganizationSubscriptionPurchase
         {
             Tier = ProductTierType.Teams,
@@ -940,7 +954,8 @@ public class PreviewOrganizationTaxCommandTests
                 Seats = 5,
                 AdditionalStorage = 0,
                 Sponsored = false
-            }
+            },
+            Coupon = unicodeCoupon
         };
 
         var billingAddress = new BillingAddress
@@ -960,9 +975,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        // Coupon with unicode characters (though unlikely for real Stripe coupons, tests edge case)
-        var unicodeCoupon = "TEST-优惠券-2024";
-        var result = await _command.Run(purchase, billingAddress, unicodeCoupon);
+        var result = await _command.Run(purchase, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
