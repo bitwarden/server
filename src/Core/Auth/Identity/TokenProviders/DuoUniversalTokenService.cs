@@ -166,7 +166,7 @@ public class DuoUniversalTokenService(
         }
 
         var normalizedHost = host.ToLowerInvariant();
-        return Constants.BitwardenCloudDomains.Any(d => normalizedHost.EndsWith(d));
+        return Constants.BitwardenCloudDomains.Any(d => normalizedHost == d || normalizedHost.EndsWith("." + d));
     }
 
     private static DuoDeeplinkScheme? GetDeeplinkSchemeOverride(HttpContext httpContext)
