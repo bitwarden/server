@@ -180,7 +180,7 @@ public class SingleOrganizationPolicyRequirementTests
         var result = sut.IsCompliantWithTargetOrganization(targetOrgId, allOrgUsers);
 
         Assert.NotNull(result);
-        Assert.IsType<SingleOrganizationPolicyRequirement.UserIsAMemberOfAnotherOrganizationError>(result);
+        Assert.IsType<SingleOrganizationPolicyRequirement.UserIsAMemberOfAnotherOrganization>(result);
     }
 
     [Theory]
@@ -403,7 +403,7 @@ public class SingleOrganizationPolicyRequirementTests
         var result = sut.CanJoinOrganization(targetOrgId, allOrgUsers);
 
         Assert.NotNull(result);
-        Assert.IsType<SingleOrganizationPolicyRequirement.UserIsAMemberOfAnotherOrganizationError>(result);
+        Assert.IsType<SingleOrganizationPolicyRequirement.UserIsAMemberOfAnotherOrganization>(result);
     }
 
     [Theory]
@@ -464,7 +464,7 @@ public class SingleOrganizationPolicyRequirementTests
 
         Assert.NotNull(result);
         // Target org check returns first since it's checked first via ??
-        Assert.IsType<SingleOrganizationPolicyRequirement.UserIsAMemberOfAnotherOrganizationError>(result);
+        Assert.IsType<SingleOrganizationPolicyRequirement.UserIsAMemberOfAnotherOrganization>(result);
     }
 
     [Theory]

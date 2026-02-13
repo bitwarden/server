@@ -11,13 +11,17 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
     public record UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy() : BadRequestError(
         "Member cannot join the organization because they are in another organization which forbids it.");
 
-    public record UserIsAMemberOfAnotherOrganizationError()
+    public record UserIsAMemberOfAnotherOrganization()
         : BadRequestError("Member cannot join the organization until they leave or remove all other organizations.");
 
     public record UserCannotCreateOrg()
         : BadRequestError(
             "Cannot create organization because single organization policy is enabled for another organization.");
 
+    /// <summary>
+    /// Returns an error if the user cannot create an organization due to being a part of another organization.
+    /// </summary>
+    /// <returns>UserCannotCreateOrg error if the user cannot create an organization, otherwise null.</returns>
     public Error? CanCreateOrganization() => policyDetails
         .Any(p => p.HasStatus([OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]))
         ? new UserCannotCreateOrg()
@@ -28,7 +32,10 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
     /// </summary>
     /// <param name="organizationId">Organization the user is attempting to join.</param>
     /// <param name="allOrgUsers">All organization users that a given user is linked to.</param>
-    /// <returns>Error if the user cannot join the organization, otherwise null.</returns>
+    /// <returns>
+    /// UserIsAMemberOfAnotherOrganization or UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy if the user cannot
+    /// join the organization, otherwise null.
+    /// </returns>
     public Error? CanJoinOrganization(Guid organizationId, ICollection<OrganizationUser> allOrgUsers) =>
         IsCompliantWithTargetOrganization(organizationId, allOrgUsers)
         ?? IsEnabledForOtherOrganizationsUserIsAPartOf(organizationId);
@@ -47,18 +54,24 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
     /// </summary>
     /// <param name="targetOrganizationId">Organization Id the user is attempting to join</param>
     /// <param name="allOrgUsers">All organization users associated with the user id</param>
-    /// <returns>Error if the user cannot join the target organization, otherwise null.</returns>
-    public Error? IsCompliantWithTargetOrganization(Guid targetOrganizationId, ICollection<OrganizationUser> allOrgUsers) =>
+    /// <returns>
+    /// UserIsAMemberOfAnotherOrganization if the user cannot join the target organization, otherwise null.
+    /// </returns>
+    public Error? IsCompliantWithTargetOrganization(Guid targetOrganizationId,
+        ICollection<OrganizationUser> allOrgUsers) =>
         IsEnabledForTargetOrganization(targetOrganizationId)
         && allOrgUsers.Any(ou => ou.OrganizationId != targetOrganizationId)
-            ? new UserIsAMemberOfAnotherOrganizationError()
+            ? new UserIsAMemberOfAnotherOrganization()
             : null;
 
     /// <summary>
     /// Returns an error if the user is a member of another organization that has enabled the Single Organization policy.
     /// </summary>
     /// <param name="targetOrganizationId">Organization Id the user is attempting to join</param>
-    /// <returns>Error if the user is a member of another organization that has enabled the Single Organization policy, otherwise null.</returns>
+    /// <returns>
+    /// UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy if the user is a member of another organization that has
+    /// enabled the Single Organization policy, otherwise null.
+    /// </returns>
     public Error? IsEnabledForOtherOrganizationsUserIsAPartOf(Guid targetOrganizationId) =>
         policyDetails.Any(p => p.OrganizationId != targetOrganizationId
             && p.HasStatus([OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]))
@@ -66,8 +79,7 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
             : null;
 }
 
-public class
-    SingleOrganizationPolicyRequirementFactory : BasePolicyRequirementFactory<SingleOrganizationPolicyRequirement>
+public class SingleOrganizationPolicyRequirementFactory : BasePolicyRequirementFactory<SingleOrganizationPolicyRequirement>
 {
     public override PolicyType PolicyType => PolicyType.SingleOrg;
 
