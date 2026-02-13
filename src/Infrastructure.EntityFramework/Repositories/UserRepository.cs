@@ -233,6 +233,12 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.AccountRevisionDate = user.AccountRevisionDate;
         userEntity.RevisionDate = user.RevisionDate;
 
+        userEntity.SignedPublicKey = user.SignedPublicKey;
+        userEntity.SecurityState = user.SecurityState;
+        userEntity.SecurityVersion = user.SecurityVersion;
+
+        userEntity.V2UpgradeToken = user.V2UpgradeToken;
+
         await dbContext.SaveChangesAsync();
 
         //  Update re-encrypted data

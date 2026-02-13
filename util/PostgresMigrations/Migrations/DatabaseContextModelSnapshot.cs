@@ -980,8 +980,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
-                        .HasAnnotation("SqlServer:Clustered", false)
-                        .HasAnnotation("SqlServer:Include", new[] { "StripeProductIds", "AudienceType" });
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("SubscriptionDiscount", (string)null);
                 });
@@ -2048,6 +2047,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("text");
 
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("boolean");
