@@ -166,6 +166,15 @@ public class SubscriptionDiscountsController(
 
         try
         {
+            // Check for duplicate coupon to prevent race condition
+            var existing = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(model.StripeCouponId);
+            if (existing != null)
+            {
+                ModelState.AddModelError(nameof(model.StripeCouponId),
+                    "This coupon has already been imported.");
+                return View(model);
+            }
+
             var discount = new SubscriptionDiscount
             {
                 StripeCouponId = model.StripeCouponId,

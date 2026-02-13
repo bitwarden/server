@@ -319,6 +319,10 @@ public class SubscriptionDiscountsControllerTests
             IsImported = true
         };
 
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns((SubscriptionDiscount?)null);
+
         sutProvider.Sut.ModelState.Clear();
         var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
         sutProvider.Sut.TempData = tempData;
@@ -355,6 +359,10 @@ public class SubscriptionDiscountsControllerTests
             IsImported = true
         };
 
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns((SubscriptionDiscount?)null);
+
         sutProvider.Sut.ModelState.Clear();
         var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
         sutProvider.Sut.TempData = tempData;
@@ -382,6 +390,41 @@ public class SubscriptionDiscountsControllerTests
         Assert.IsType<ViewResult>(result);
         Assert.False(sutProvider.Sut.ModelState.IsValid);
         Assert.Contains("import the coupon", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Create_DuplicateCoupon_ReturnsViewWithError(
+        SubscriptionDiscount existingDiscount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        var model = new CreateSubscriptionDiscountModel
+        {
+            StripeCouponId = "TEST123",
+            Name = "Test Coupon",
+            PercentOff = 25,
+            Duration = "once",
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddMonths(1),
+            IsImported = true
+        };
+
+        // Simulate race condition: another admin imported the same coupon between import and save
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(model.StripeCouponId)
+            .Returns(existingDiscount);
+
+        sutProvider.Sut.ModelState.Clear();
+
+        var result = await sutProvider.Sut.Create(model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("already been imported", sutProvider.Sut.ModelState[nameof(model.StripeCouponId)]!.Errors[0].ErrorMessage);
+
+        // Verify CreateAsync was NOT called since we detected the duplicate
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .DidNotReceive()
+            .CreateAsync(Arg.Any<SubscriptionDiscount>());
     }
 
     [Theory, BitAutoData]
