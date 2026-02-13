@@ -316,6 +316,12 @@ public class AcceptOrgUserCommandTests
             .IsEnabled(FeatureFlagKeys.PolicyRequirements)
             .Returns(true);
 
+        // User is part of another org
+        var otherOrgUser = new OrganizationUser { UserId = user.Id, OrganizationId = Guid.NewGuid() };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(Task.FromResult<ICollection<OrganizationUser>>(new List<OrganizationUser> { otherOrgUser }));
+
         // Target org has SingleOrg policy, user is a regular User (not exempt)
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)

@@ -225,7 +225,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
-            var error = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, orgUser);
+            var error = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
             if (error is not null)
             {
                 throw new BadRequestException(error.Message);

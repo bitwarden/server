@@ -299,7 +299,7 @@ public class RestoreOrganizationUserCommand(
         if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(userId);
-            var singleOrgError = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, orgUser);
+            var singleOrgError = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
 
             var twoFactorCompliant = true;
             if (!userHasTwoFactorEnabled)

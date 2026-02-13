@@ -215,9 +215,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            var orgUser = userOrgs.First(ou => ou.OrganizationId == organizationId);
             var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
-            var error = singleOrgRequirement.CanJoinOrganization(organizationId, orgUser);
+            var error = singleOrgRequirement.CanJoinOrganization(organizationId, userOrgs);
             if (error is not null)
             {
                 throw new BadRequestException(error.Message);
