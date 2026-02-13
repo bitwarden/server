@@ -45,11 +45,6 @@ public class PreviewOrganizationTaxCommand(
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
         {
-            if (!string.IsNullOrWhiteSpace(purchase.Coupon) && purchase.Tier != ProductTierType.Families)
-            {
-                return new BadRequest("Coupons can only be applied to Families plan subscriptions.");
-            }
-
             var plan = await pricingClient.GetPlanOrThrow(purchase.PlanType);
 
             var options = GetBaseOptions(billingAddress, purchase.Tier != ProductTierType.Families);
