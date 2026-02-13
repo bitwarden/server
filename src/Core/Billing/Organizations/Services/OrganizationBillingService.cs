@@ -38,7 +38,7 @@ public class OrganizationBillingService(
 {
     public async Task Finalize(OrganizationSale sale)
     {
-        var (organization, customerSetup, subscriptionSetup) = sale;
+        var (organization, customerSetup, subscriptionSetup, owner) = sale;
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
@@ -484,7 +484,7 @@ public class OrganizationBillingService(
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = !string.IsNullOrEmpty(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon }] : null,
+            Discounts = !string.IsNullOrWhiteSpace(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon.Trim() }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {

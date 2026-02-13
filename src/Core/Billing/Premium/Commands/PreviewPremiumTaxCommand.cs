@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace Bit.Core.Billing.Premium.Commands;
 public interface IPreviewPremiumTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
-        int additionalStorage,
+        PremiumPurchasePreview preview,
         BillingAddress billingAddress);
 }
 
@@ -20,7 +21,7 @@ public class PreviewPremiumTaxCommand(
     IStripeAdapter stripeAdapter) : BaseBillingCommand<PreviewPremiumTaxCommand>(logger), IPreviewPremiumTaxCommand
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
-        int additionalStorage,
+        PremiumPurchasePreview preview,
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
         {
@@ -47,13 +48,18 @@ public class PreviewPremiumTaxCommand(
                 }
             };
 
-            if (additionalStorage > 0)
+            if (preview.AdditionalStorageGb > 0)
             {
                 options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
                     Price = premiumPlan.Storage.StripePriceId,
-                    Quantity = additionalStorage
+                    Quantity = preview.AdditionalStorageGb
                 });
+            }
+
+            if (!string.IsNullOrWhiteSpace(preview.Coupon))
+            {
+                options.Discounts = [new InvoiceDiscountOptions { Coupon = preview.Coupon.Trim() }];
             }
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);

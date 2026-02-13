@@ -52,8 +52,8 @@ public class PreviewInvoiceController(
     public async Task<IResult> PreviewPremiumSubscriptionPurchaseTaxAsync(
         [FromBody] PreviewPremiumSubscriptionPurchaseTaxRequest request)
     {
-        var (purchase, billingAddress) = request.ToDomain();
-        var result = await previewPremiumTaxCommand.Run(purchase, billingAddress);
+        var (preview, billingAddress) = request.ToDomain();
+        var result = await previewPremiumTaxCommand.Run(preview, billingAddress);
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 

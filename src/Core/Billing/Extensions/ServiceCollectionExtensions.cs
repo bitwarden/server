@@ -21,6 +21,7 @@ using Bit.Core.Services.Implementations;
 namespace Bit.Core.Billing.Extensions;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -31,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
+        services.TryAddTransient<ISubscriptionDiscountService, SubscriptionDiscountService>();
         services.AddLicenseServices();
         services.AddLicenseOperations();
         services.AddPricingClient();

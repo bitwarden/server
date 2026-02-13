@@ -75,6 +75,8 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
+                    // System coupon takes precedence for standalone Secrets Manager purchases.
+                    // Any user-provided coupons are ignored in this scenario.
                     options.Discounts =
                     [
                         new InvoiceDiscountOptions
@@ -118,6 +120,11 @@ public class PreviewOrganizationTaxCommand(
                                 Quantity = purchase.SecretsManager.AdditionalServiceAccounts
                             });
                         }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(purchase.Coupon))
+                    {
+                        options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
                     }
 
                     break;
