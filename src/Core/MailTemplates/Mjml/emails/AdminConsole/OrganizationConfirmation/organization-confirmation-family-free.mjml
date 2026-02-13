@@ -13,7 +13,7 @@
             <mj-bw-ac-hero
                     title="You can now share passwords with members of <b>{{OrganizationName}}!</b>"
                     img-src="https://assets.bitwarden.com/email/v1/ac-spot-family.png"
-                    button-text="Log in"
+                    button-text="<b>Log in</b>"
                     button-url="{{WebVaultUrl}}">
             </mj-bw-ac-hero>
         </mj-wrapper>
