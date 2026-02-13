@@ -3,8 +3,7 @@
         <!-- Include shared head styles -->
         <mj-include path="../../../components/head.mjml" />
 
-        <!-- Include admin console shared styles -->
-        <mj-include path="../../../components/admin-console-head.mjml" />
+        <!-- Include admin console shared styles --><mj-include path="../components/admin-console-head.mjml" />
     </mj-head>
 
     <mj-body>
