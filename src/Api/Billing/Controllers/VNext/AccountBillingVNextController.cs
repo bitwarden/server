@@ -101,7 +101,7 @@ public class AccountBillingVNextController(
         [BindNever] User user)
     {
         var subscription = await getBitwardenSubscriptionQuery.Run(user);
-        return TypedResults.Ok(subscription);
+        return subscription == null ? TypedResults.NotFound() : TypedResults.Ok(subscription);
     }
 
     [HttpPost("subscription/reinstate")]
