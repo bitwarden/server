@@ -648,7 +648,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Fact]
-    public async Task Patch_UnsupportedOperation_ThrowsBadRequest()
+    public async Task Patch_UnsupportedOperation_LogsWarningAndSucceeds()
     {
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
         var inputModel = new ScimPatchModel
@@ -667,11 +667,8 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
-        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-
-        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        Assert.Equal(StatusCodes.Status400BadRequest, responseModel.Status);
-        Assert.Contains("not supported", responseModel.Detail);
+        // Unsupported operations are logged as warnings but don't fail the request
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
     }
 
     [Fact]

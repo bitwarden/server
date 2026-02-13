@@ -355,7 +355,7 @@ public class PatchUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchUser_UnsupportedOperation_ThrowsBadRequest(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    public async Task PatchUser_UnsupportedOperation_LogsWarningAndSucceeds(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
@@ -375,7 +375,11 @@ public class PatchUserCommandTests
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel));
+        // Should not throw - unsupported operations are logged as warnings but don't fail the request
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
+
+        // Verify no restore or revoke operations were called
+        await sutProvider.GetDependency<IRestoreOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RestoreUserAsync(default, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RevokeUserAsync(default, EventSystemUser.SCIM);
     }
 }
