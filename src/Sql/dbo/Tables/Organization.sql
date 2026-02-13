@@ -76,3 +76,13 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]
     ON [dbo].[Organization]([Identifier] ASC)
     WHERE [Identifier] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewayCustomerId]
+    ON [dbo].[Organization]([GatewayCustomerId])
+    WHERE [GatewayCustomerId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewaySubscriptionId]
+    ON [dbo].[Organization]([GatewaySubscriptionId])
+    WHERE [GatewaySubscriptionId] IS NOT NULL;
