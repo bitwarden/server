@@ -81,8 +81,8 @@ public class PatchUserCommand : IPatchUserCommand
 
         if (!operationHandled)
         {
-            throw new BadRequestException(
-                $"PATCH operation not supported: {string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}"))}");
+            _logger.LogWarning("User patch operation not handled: {operation} : ",
+                string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
         }
     }
 
