@@ -1009,7 +1009,13 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0
+        };
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0); // Should succeed, not return "Already a premium user"
@@ -1063,7 +1069,13 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0
+        };
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0); // Should succeed, not return "Already a premium user"
@@ -1091,7 +1103,13 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId).Returns(existingActiveSubscription);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0
+        };
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT1);
@@ -1144,7 +1162,13 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0
+        };
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert - Should proceed successfully despite the exception
         Assert.True(result.IsT0);
@@ -1206,7 +1230,13 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
 
         // Act
-        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0
+        };
+        var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
         Assert.True(result.IsT0);
