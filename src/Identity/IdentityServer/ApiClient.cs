@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
@@ -82,12 +83,9 @@ public class ApiClient : Client
         }
         else if (id == "mobile")
         {
-            RedirectUris = new[] {
-                "bitwarden://sso-callback",
-                "https://bitwarden.com/sso-callback",
-                "https://bitwarden.eu/sso-callback",
-                "https://bitwarden.pw/sso-callback",
-            };
+            RedirectUris = new[] { "bitwarden://sso-callback" }
+                .Concat(Constants.BitwardenCloudDomains.Select(d => $"https://{d}/sso-callback"))
+                .ToArray();
             PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
         }
 

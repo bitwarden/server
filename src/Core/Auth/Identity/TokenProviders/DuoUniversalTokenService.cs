@@ -166,9 +166,7 @@ public class DuoUniversalTokenService(
         }
 
         var normalizedHost = host.ToLowerInvariant();
-        return normalizedHost.EndsWith("bitwarden.com") ||
-               normalizedHost.EndsWith("bitwarden.eu") ||
-               normalizedHost.EndsWith("bitwarden.pw");
+        return Constants.BitwardenCloudDomains.Any(d => normalizedHost.EndsWith(d));
     }
 
     private static DuoDeeplinkScheme? GetDeeplinkSchemeOverride(HttpContext httpContext)

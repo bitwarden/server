@@ -34,6 +34,11 @@ public static class Constants
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
+    /// Domain suffixes for Bitwarden cloud-hosted environments.
+    /// </summary>
+    public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
+
+    /// <summary>
     /// Used by IdentityServer to identify our own provider.
     /// </summary>
     public const string IdentityProvider = "bitwarden";
