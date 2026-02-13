@@ -29,6 +29,7 @@ $projects = @{
     IntegrationTests = "../test/Infrastructure.IntegrationTest"
     SeederApi        = "../util/SeederApi"
     SeederUtility    = "../util/DbSeederUtility"
+    AppHost = "../AppHost"
 }
 
 foreach ($key in $projects.keys) {
