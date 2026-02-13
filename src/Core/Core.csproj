@@ -58,7 +58,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="Braintree" Version="5.36.0" />
-    <PackageReference Include="Stripe.net" Version="48.5.0" />
+    <PackageReference Include="Stripe.net" Version="50.3.0" />
     <PackageReference Include="Otp.NET" Version="1.4.0" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.10" />
