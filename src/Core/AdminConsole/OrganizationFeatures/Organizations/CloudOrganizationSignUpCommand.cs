@@ -252,6 +252,18 @@ public class CloudOrganizationSignUpCommand(
             }
         }
 
+        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
+            var error = singleOrgRequirement.CanCreateOrganization();
+            if (error is not null)
+            {
+                throw new BadRequestException(error.Message);
+            }
+
+            return;
+        }
+
         var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {
