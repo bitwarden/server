@@ -42,6 +42,9 @@ class MjBwAcIconRow extends BodyComponent {
         .mj-bw-ac-icon-row-text-column {
           width: 100% !important;
         }
+        .mj-bw-ac-icon-row-bullet {
+          display: inline !important;
+        }
       }
     `;
   };
@@ -89,7 +92,7 @@ class MjBwAcIconRow extends BodyComponent {
           <mj-column width="85%" vertical-align="middle" css-class="mj-bw-ac-icon-row-text-column">
               ${headAnchorElement}
               <mj-text css-class="mj-bw-ac-icon-row-text" padding="0px 0px 0px 0px" ${BODY_TEXT_STYLES}>
-                ${this.getAttribute("text")}
+                <span class="mj-bw-ac-icon-row-bullet" style="display: none;">&#8226;&nbsp;</span>${this.getAttribute("text")}
               </mj-text>
               ${footAnchorElement}
           </mj-column>
