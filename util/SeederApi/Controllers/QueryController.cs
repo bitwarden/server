@@ -9,13 +9,13 @@ namespace Bit.SeederApi.Controllers;
 public class QueryController(ILogger<QueryController> logger, IQueryExecutor queryExecutor) : Controller
 {
     [HttpPost]
-    public IActionResult Query([FromBody] QueryRequestModel request)
+    public async Task<IActionResult> Query([FromBody] QueryRequestModel request)
     {
         logger.LogInformation("Executing query: {Query}", request.Template);
 
         try
         {
-            var result = queryExecutor.Execute(request.Template, request.Arguments);
+            var result = await queryExecutor.Execute(request.Template, request.Arguments);
 
             return Json(result);
         }

@@ -140,7 +140,6 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
-    public const string BlockClaimedDomainAccountCreation = "pm-28297-block-uninvited-claimed-domain-registration";
     public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
     public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
@@ -256,6 +255,7 @@ public static class FeatureFlagKeys
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
     public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
+    public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
