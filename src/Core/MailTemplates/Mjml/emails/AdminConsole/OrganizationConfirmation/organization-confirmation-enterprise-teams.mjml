@@ -19,7 +19,8 @@
       <mj-section background-color="#fff" padding="15px 10px 10px 10px">
         <mj-column>
           <mj-text font-size="16px" line-height="24px" padding="10px 15px">
-            As a member of <b>{{OrganizationName}}</b>:
+            As a member of <b>{{ OrganizationName }}</b
+            >:
           </mj-text>
         </mj-column>
       </mj-section>
