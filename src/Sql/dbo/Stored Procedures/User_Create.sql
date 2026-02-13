@@ -44,10 +44,17 @@
     @VerifyDevices BIT = 1,
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
-    @SignedPublicKey VARCHAR(MAX) = NULL
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
+
+    /*
+     If the user doesn't have a master password, we can allow the MasterPasswordSalt to be null.
+     We will set it to the email until we are ready to separate the two.
+    */
+    SET @MasterPasswordSalt = CASE WHEN @MasterPassword IS NULL THEN NULL ELSE LOWER(LTRIM(RTRIM(@Email))) END
 
     INSERT INTO [dbo].[User]
     (
@@ -97,7 +104,8 @@ BEGIN
         [SecurityState],
         [SecurityVersion],
         [SignedPublicKey],
-        [MaxStorageGbIncreased]
+        [MaxStorageGbIncreased],
+        [MasterPasswordSalt]
     )
     VALUES
     (
@@ -147,6 +155,7 @@ BEGIN
         @SecurityState,
         @SecurityVersion,
         @SignedPublicKey,
-        @MaxStorageGb
+        @MaxStorageGb,
+        @MasterPasswordSalt
     )
 END

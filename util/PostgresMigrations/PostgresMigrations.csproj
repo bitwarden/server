@@ -33,5 +33,6 @@
     <EmbeddedResource Include="HelperScripts\2024-08-26_00_FinalFlexibleCollectionsDataMigrations.psql" />
     <EmbeddedResource Include="HelperScripts\2024-09-05_00_SyncDuoVersionFourMetadataToVersionTwo.psql" />
     <EmbeddedResource Include="HelperScripts\2025-05-13_00_AddUseOrganizationDomains.psql" />
+    <EmbeddedResource Include="HelperScripts\2026-02-11_00_HydrateUserMasterPasswordSalt.psql" />
   </ItemGroup>
 </Project>

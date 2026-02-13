@@ -46,6 +46,7 @@ SELECT
     [VerifyDevices],
     [SecurityState],
     [SecurityVersion],
-    [SignedPublicKey]
+    [SignedPublicKey],
+    [MasterPasswordSalt]
 FROM
     [dbo].[User]

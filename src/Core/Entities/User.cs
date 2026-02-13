@@ -105,8 +105,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
-    // PM-28827 Uncomment below line.
-    // public string? MasterPasswordSalt { get; set; }
+    public string? MasterPasswordSalt { get; set; }
 
     public string GetMasterPasswordSalt()
     {
