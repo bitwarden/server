@@ -36,9 +36,8 @@ class MjBwHero extends BodyComponent {
             color="#1A41AC"
             border-radius="20px"
             align="left"
-            inner-padding="12px 24px"
           >
-            ${this.getAttribute("button-text")}
+              ${this.getAttribute("button-text")}
             </mj-button
           >` : "";
     const subTitleElement = this.getAttribute("sub-title") ?
@@ -63,7 +62,7 @@ class MjBwHero extends BodyComponent {
             height="30px"
           ></mj-image>
           <mj-text color="#fff" padding-top="0" padding-bottom="0">
-            <h1 style="font-weight: 400; font-size: 24px; line-height: 32px">
+            <h1 style="font-weight: normal; font-size: 24px; line-height: 32px">
               ${this.getAttribute("title")}
             </h1>
             ` +
@@ -78,8 +77,7 @@ class MjBwHero extends BodyComponent {
             src="${this.getAttribute("img-src")}"
             alt=""
             width="155px"
-            padding="0px 20px 0px 0px"
-            align="right"
+            padding="0px"
             css-class="mj-bw-hero-responsive-img"
             />
         </mj-column>

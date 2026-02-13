@@ -1,7 +1,7 @@
 const { BodyComponent } = require("mjml-core");
 
 const BODY_TEXT_STYLES = `
-  font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+  font-family="Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif"
   font-size="16px"
   font-weight="400"
   line-height="24px"
@@ -30,17 +30,12 @@ class MjBwIconRow extends BodyComponent {
     return `
       @media only screen and (max-width:${breakpoint}) {
         .mj-bw-icon-row-text {
-          padding-left: 15px !important;
-          padding-right: 15px !important;
+          padding-left: 5px !important;
           line-height: 20px;
         }
-        .mj-bw-icon-row-icon {
-          display: none !important;
-          width: 0 !important;
-          max-width: 0 !important;
-        }
-        .mj-bw-icon-row-text-column {
-          width: 100% !important;
+        .mj-bw-icon-row {
+          padding: 10px 15px;
+          width: fit-content !important;
         }
       }
     `;
@@ -66,29 +61,36 @@ class MjBwIconRow extends BodyComponent {
 
     const footAnchorElement =
       this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
-        ? `<mj-text css-class="mj-bw-icon-row-text" padding="0px" ${BODY_TEXT_STYLES}>
+        ? `<mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 <a href="${this.getAttribute("foot-url")}" class="link">
                     ${this.getAttribute("foot-url-text")}
+                    <span style="text-decoration: none">
+                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png"
+                        alt="External Link Icon"
+                        width="16px"
+                        style="vertical-align: middle;"
+                      />
+                    </span>
               </a>
           </mj-text>`
         : "";
 
     return this.renderMJML(
       `
-      <mj-section background-color="#fff" padding="0px 10px 24px 10px">
+      <mj-section background-color="#fff" padding="10px 10px 10px 10px">
         <mj-group css-class="mj-bw-icon-row">
-          <mj-column width="15%" vertical-align="middle" css-class="mj-bw-icon-row-icon">
+          <mj-column width="15%" vertical-align="top">
             <mj-image
               src="${this.getAttribute("icon-src")}"
               alt="${this.getAttribute("icon-alt")}"
               width="48px"
-              padding="0px 10px 0px 5px"
+              padding="0px"
               border-radius="8px"
             />
           </mj-column>
-          <mj-column width="85%" vertical-align="middle" css-class="mj-bw-icon-row-text-column">
+          <mj-column width="85%" vertical-align="top">
               ${headAnchorElement}
-              <mj-text css-class="mj-bw-icon-row-text" padding="0px 0px 0px 0px" ${BODY_TEXT_STYLES}>
+              <mj-text css-class="mj-bw-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 ${this.getAttribute("text")}
               </mj-text>
               ${footAnchorElement}
