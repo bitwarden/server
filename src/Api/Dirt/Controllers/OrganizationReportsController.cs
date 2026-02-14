@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Dirt.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
@@ -67,6 +68,74 @@ public class OrganizationReportsController : Controller
         return Ok(response);
     }
 
+    [HttpGet("{organizationId}/latest/download")]
+    public async Task<IActionResult> DownloadLatestOrganizationReportAsync(Guid organizationId)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
+
+        if (latestReport == null)
+        {
+            throw new NotFoundException("No report found for the specified organization.");
+        }
+
+        var stream = new MemoryStream();
+        using (var writer = new StreamWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+        {
+            writer.Write("{");
+            writer.Write($"\"id\":\"{latestReport.Id}\",");
+            writer.Write($"\"organizationId\":\"{latestReport.OrganizationId}\",");
+
+            // ReportData is an encrypted string - needs to be JSON-encoded as a string value
+            if (latestReport.ReportData != null)
+            {
+                var escapedReportData = EscapeJsonString(latestReport.ReportData);
+                writer.Write($"\"reportData\":\"{escapedReportData}\",");
+            }
+            else
+            {
+                writer.Write("\"reportData\":null,");
+            }
+
+            // ContentEncryptionKey is a string value
+            var escapedKey = EscapeJsonString(latestReport.ContentEncryptionKey);
+            writer.Write($"\"contentEncryptionKey\":\"{escapedKey}\",");
+
+            // SummaryData is an encrypted string - needs to be JSON-encoded as a string value
+            if (latestReport.SummaryData != null)
+            {
+                var escapedSummaryData = EscapeJsonString(latestReport.SummaryData);
+                writer.Write($"\"summaryData\":\"{escapedSummaryData}\",");
+            }
+            else
+            {
+                writer.Write("\"summaryData\":null,");
+            }
+
+            // ApplicationData is an encrypted string - needs to be JSON-encoded as a string value
+            if (latestReport.ApplicationData != null)
+            {
+                var escapedApplicationData = EscapeJsonString(latestReport.ApplicationData);
+                writer.Write($"\"applicationData\":\"{escapedApplicationData}\",");
+            }
+            else
+            {
+                writer.Write("\"applicationData\":null,");
+            }
+
+            writer.Write($"\"creationDate\":\"{latestReport.CreationDate:o}\",");
+            writer.Write($"\"revisionDate\":\"{latestReport.RevisionDate:o}\"");
+            writer.Write("}");
+        }
+        stream.Position = 0;
+
+        return File(stream, "application/json", $"organization-report-{latestReport.Id}.json");
+    }
+
     [HttpGet("{organizationId}/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
@@ -91,6 +160,7 @@ public class OrganizationReportsController : Controller
     }
 
     [HttpPost("{organizationId}")]
+    [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> CreateOrganizationReportAsync(Guid organizationId, [FromBody] AddOrganizationReportRequest request)
     {
         if (!await _currentContext.AccessReports(organizationId))
@@ -104,7 +174,7 @@ public class OrganizationReportsController : Controller
         }
 
         var report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
-        var response = report == null ? null : new OrganizationReportResponseModel(report);
+        var response = report == null ? null : new OrganizationReportIdResponseModel(report);
         return Ok(response);
     }
 
@@ -214,6 +284,7 @@ public class OrganizationReportsController : Controller
     }
 
     [HttpPatch("{organizationId}/data/report/{reportId}")]
+    [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid organizationId, Guid reportId, [FromBody] UpdateOrganizationReportDataRequest request)
     {
         if (!await _currentContext.AccessReports(organizationId))
@@ -232,7 +303,7 @@ public class OrganizationReportsController : Controller
         }
 
         var updatedReport = await _updateOrganizationReportDataCommand.UpdateOrganizationReportDataAsync(request);
-        var response = new OrganizationReportResponseModel(updatedReport);
+        var response = new OrganizationReportIdResponseModel(updatedReport);
 
         return Ok(response);
     }
@@ -298,4 +369,21 @@ public class OrganizationReportsController : Controller
     }
 
     #endregion
+
+    private static string EscapeJsonString(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        return value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\n", "\\n")
+            .Replace("\r", "\\r")
+            .Replace("\t", "\\t")
+            .Replace("\b", "\\b")
+            .Replace("\f", "\\f");
+    }
 }
