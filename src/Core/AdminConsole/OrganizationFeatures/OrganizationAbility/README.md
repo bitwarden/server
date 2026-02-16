@@ -54,11 +54,11 @@ Using explicit ability flags instead of plan type checks provides several benefi
    creation/upgrade. No need to hunt through the codebase for scattered plan type checks.
 
 3. **Flexibility** — Abilities can be set independently of plan type, enabling:
-   - Early access programs for features not yet tied to a plan
-   - Trial access to help customers evaluate a feature before upgrading
-   - Custom arrangements for specific customers (can be manually toggled in Bitwarden Portal)
-   - A/B testing of features across different cohorts
-   - Gating high-risk features behind internal support teams (e.g., Key Connector)
+    - Early access programs for features not yet tied to a plan
+    - Trial access to help customers evaluate a feature before upgrading
+    - Custom arrangements for specific customers (can be manually toggled in Bitwarden Portal)
+    - A/B testing of features across different cohorts
+    - Gating high-risk features behind internal support teams (e.g., Key Connector)
 
 4. **Safe Refactoring** — When plans change (e.g., adding a new plan tier, renaming plans, or moving features between
    tiers), we only update the ability assignment logic—not every place the feature is used.
@@ -89,9 +89,10 @@ organization.UseEvents = plan.HasEvents;
 **Server-side:**
 
 - If you already have the full `Organization` object in scope, use it directly: `organization.UseMyFeature`
-- If not, use the in-memory cache to avoid hitting the database: `IApplicationCacheService.GetOrganizationAbilityAsync(orgId)`
-  - This returns an `OrganizationAbility` object - a simplified, cached representation of the ability flags
-  - Note: some older flags may be missing from `OrganizationAbility` but can be added if needed
+- If not, use the in-memory cache to avoid hitting the database:
+  `IApplicationCacheService.GetOrganizationAbilityAsync(orgId)`
+    - This returns an `OrganizationAbility` object - a simplified, cached representation of the ability flags
+    - Note: some older flags may be missing from `OrganizationAbility` but can be added if needed
 
 **Client-side:**
 
@@ -152,14 +153,16 @@ EF is primarily used for self-host. Implementations must be kept consistent.
 **Update queries and initialization code:**
 
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/OrganizationRepository.cs`
-  - Update `GetManyAbilitiesAsync()` to initialize the new property
+    - Update `GetManyAbilitiesAsync()` to initialize the new property
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/OrganizationUserOrganizationDetailsViewQuery.cs`
-  - Update the integration test: `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepository/OrganizationUserRepositoryTests.cs`
+    - Update the integration test:
+      `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepository/OrganizationUserRepositoryTests.cs`
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/ProviderUserOrganizationDetailsViewQuery.cs`
 
 ### 4. Data Migrations for Existing Organizations
 
-If your feature should be enabled for existing organizations on certain plan types, create data migrations to set the ability flag:
+If your feature should be enabled for existing organizations on certain plan types, create data migrations to set the
+ability flag:
 
 **MSSQL migration:**
 
@@ -209,7 +212,7 @@ need to:
 - `libs/common/src/admin-console/models/response/organization.response.ts`
 - `libs/common/src/admin-console/models/domain/organization.ts`
 - `libs/common/src/admin-console/models/data/organization.data.ts`
-  - Update tests: `libs/common/src/admin-console/models/data/organization.data.spec.ts`
+    - Update tests: `libs/common/src/admin-console/models/data/organization.data.spec.ts`
 
 ### 7. Bitwarden Portal Changes
 
@@ -217,12 +220,14 @@ For manual override capability in the admin portal:
 
 - `src/Admin/AdminConsole/Models/OrganizationEditModel.cs` — Map the ability from the organization entity
 - `src/Admin/AdminConsole/Views/Shared/_OrganizationForm.cshtml` — Add checkbox for the new ability
-- `src/Admin/AdminConsole/Views/Shared/_OrganizationFormScripts.cshtml` — Add the new ability to the `togglePlanFeatures()` function so it's automatically set when a plan type is selected
+- `src/Admin/AdminConsole/Views/Shared/_OrganizationFormScripts.cshtml` — Add the new ability to the
+  `togglePlanFeatures()` function so it's automatically set when a plan type is selected
 - `src/Admin/AdminConsole/Controllers/OrganizationsController.cs` — Update `UpdateOrganization()` method mapping
 
 ### 8. Self-Host Licensing
 
-> ⚠️ **WARNING:** Mistakes in organization license changes can disable the entire organization for self-hosted customers!
+> ⚠️ **WARNING:** Mistakes in organization license changes can disable the entire organization for self-hosted
+> customers!
 > Double-check your work and ask for help if unsure.
 >
 > **Note:** New properties must be added to both the `OrganizationLicense` class and the claims-based system.
@@ -230,9 +235,10 @@ For manual override capability in the admin portal:
 **Update OrganizationLicense:**
 
 - `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
-  - Add the new property to the class
-  - `VerifyData()` — Add claims validation
-  - `GetDataBytes()` — Add the new property to the ignored fields section (below the comment `// any new fields added need to be added here so that they're ignored`)
+    - Add the new property to the class
+    - `VerifyData()` — Add claims validation
+    - `GetDataBytes()` — Add the new property to the ignored fields section (below the comment
+      `// any new fields added need to be added here so that they're ignored`)
 
 **Add property to Organization entity mapper:**
 
@@ -253,8 +259,8 @@ Map your feature property from the claim to the organization when creating or up
 **Update tests:**
 
 - `test/Core.Test/Billing/Organizations/Commands/UpdateOrganizationLicenseCommandTests.cs`
-  - Add the new property to `UpdateLicenseAsync_WithClaimsPrincipal_ExtractsAllPropertiesFromClaims` test
-  - The comparison tests will automatically include the new property since it's added to both classes
+    - Add the new property to `UpdateLicenseAsync_WithClaimsPrincipal_ExtractsAllPropertiesFromClaims` test
+    - The comparison tests will automatically include the new property since it's added to both classes
 
 > **Tip:** Running tests in `UpdateOrganizationLicenseCommandTests.cs` will help identify any missing changes.
 > Test failures will guide you to all areas that need updates.
@@ -303,7 +309,7 @@ if (!orgAbility.UseMyFeature)
 For reference, here are some current organization ability flags (not a complete list):
 
 | Ability                  | Description                   | Typical Plans     |
-| ------------------------ | ----------------------------- | ----------------- |
+|--------------------------|-------------------------------|-------------------|
 | `UseGroups`              | Group-based collection access | Teams, Enterprise |
 | `UseDirectory`           | Directory Connector sync      | Teams, Enterprise |
 | `UseEvents`              | Event logging                 | Teams, Enterprise |
