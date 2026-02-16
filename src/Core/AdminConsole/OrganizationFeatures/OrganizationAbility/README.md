@@ -225,19 +225,23 @@ For manual override capability in the admin portal:
 > ⚠️ **WARNING:** Mistakes in organization license changes can disable the entire organization for self-hosted customers!
 > Double-check your work and ask for help if unsure.
 >
-> **Note:** Do not add new properties to the `OrganizationLicense` file - make sure you use the claims-based system below.
+> **Note:** New properties must be added to both the `OrganizationLicense` class and the claims-based system.
 
-Organization features are now **claims-based**. You'll need to:
+**Update OrganizationLicense:**
+
+- `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
+  - Add the new property to the class
+  - `VerifyData()` (line ~424) — Add claims validation
+  - `GetDataBytes()` — Add the new property to the ignored fields section (below the comment `// any new fields added need to be added here so that they're ignored`)
+
+**Add property to Organization entity mapper:**
+
+- `src/Core/AdminConsole/Entities/Organization.cs` — Add the new property to the `UpdateFromLicense()` method
 
 **Add claims for the new feature:**
 
 - `src/Core/Billing/Licenses/LicenseConstants.cs` — Add constant for the new ability in `OrganizationLicenseConstants`
 - `src/Core/Billing/Licenses/Services/Implementations/OrganizationLicenseClaimsFactory.cs`
-
-**Update license verification:**
-
-- `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
-  - `VerifyData()` (line ~424) — Add claims validation
 
 **Update license command:**
 
@@ -249,7 +253,11 @@ Map your feature property from the claim to the organization when creating or up
 **Update tests:**
 
 - `test/Core.Test/Billing/Organizations/Commands/UpdateOrganizationLicenseCommandTests.cs`
-  - Exclude from test comparison (line ~91)
+  - Add the new property to `UpdateLicenseAsync_WithClaimsPrincipal_ExtractsAllPropertiesFromClaims` test
+  - The comparison tests will automatically include the new property since it's added to both classes
+
+> **Tip:** Running tests in `UpdateOrganizationLicenseCommandTests.cs` will help identify any missing changes.
+> Test failures will guide you to all areas that need updates.
 
 ### 9. Implement Business Logic Checks
 
