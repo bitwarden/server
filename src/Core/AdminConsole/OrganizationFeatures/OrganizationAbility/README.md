@@ -231,7 +231,7 @@ For manual override capability in the admin portal:
 
 - `src/Core/Billing/Organizations/Models/OrganizationLicense.cs`
   - Add the new property to the class
-  - `VerifyData()` (line ~424) — Add claims validation
+  - `VerifyData()` — Add claims validation
   - `GetDataBytes()` — Add the new property to the ignored fields section (below the comment `// any new fields added need to be added here so that they're ignored`)
 
 **Add property to Organization entity mapper:**
