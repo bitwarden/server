@@ -90,7 +90,7 @@ public class PolicyService : IPolicyService
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         return organizationUserPolicyDetails.Where(o =>
             (!orgAbilities.TryGetValue(o.OrganizationId, out var orgAbility) || orgAbility.UsePolicies) &&
             o.PolicyEnabled &&
