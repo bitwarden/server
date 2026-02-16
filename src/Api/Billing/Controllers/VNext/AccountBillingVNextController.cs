@@ -102,7 +102,7 @@ public class AccountBillingVNextController(
         [BindNever] User user)
     {
         var subscription = await getBitwardenSubscriptionQuery.Run(user);
-        return TypedResults.Ok(subscription);
+        return subscription == null ? TypedResults.NotFound() : TypedResults.Ok(subscription);
     }
 
     [HttpPost("subscription/reinstate")]
@@ -132,8 +132,8 @@ public class AccountBillingVNextController(
         [BindNever] User user,
         [FromBody] UpgradePremiumToOrganizationRequest request)
     {
-        var (organizationName, key, planType) = request.ToDomain();
-        var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, planType);
+        var (organizationName, key, planType, billingAddress) = request.ToDomain();
+        var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, planType, billingAddress);
         return Handle(result);
     }
 }

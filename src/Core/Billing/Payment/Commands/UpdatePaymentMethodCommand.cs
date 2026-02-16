@@ -3,7 +3,9 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -23,6 +25,7 @@ public interface IUpdatePaymentMethodCommand
 
 public class UpdatePaymentMethodCommand(
     IBraintreeGateway braintreeGateway,
+    IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
     ILogger<UpdatePaymentMethodCommand> logger,
     ISetupIntentCache setupIntentCache,
@@ -123,12 +126,10 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        Braintree.Customer braintreeCustomer;
+        var braintreeCustomer = await braintreeService.GetCustomer(customer);
 
-        if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
+        if (braintreeCustomer != null)
         {
-            braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
             await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
         }
         else
@@ -141,6 +142,24 @@ public class UpdatePaymentMethodCommand(
             };
 
             await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
+        }
+
+        // If the subscriber has an incomplete subscription, pay the invoice with the new PayPal payment method
+        if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
+
+            if (subscription.Status == StripeConstants.SubscriptionStatus.Incomplete)
+            {
+                var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId,
+                    new InvoiceUpdateOptions
+                    {
+                        AutoAdvance = false,
+                        Expand = ["customer"]
+                    });
+
+                await braintreeService.PayInvoice(new UserId(subscriber.Id), invoice);
+            }
         }
 
         var payPalAccount = braintreeCustomer.DefaultPaymentMethod as PayPalAccount;

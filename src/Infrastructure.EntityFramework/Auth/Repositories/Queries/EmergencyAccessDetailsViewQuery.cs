@@ -2,8 +2,6 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 
 public class EmergencyAccessDetailsViewQuery : IQuery<EmergencyAccessDetails>

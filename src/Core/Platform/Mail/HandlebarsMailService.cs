@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -13,6 +11,7 @@ using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.Auth;
@@ -633,16 +632,19 @@ public class HandlebarsMailService : IMailService
     public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
-            CreateMessage(email, emailList.Organization)));
+            CreateMessage(email, emailList.Organization, emailList.DomainName)));
         return;
 
-        MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
+        MailQueueMessage CreateMessage(string emailAddress, Organization org, string domainName) =>
             new(CreateDefaultMessage($"Important update to your Bitwarden account", emailAddress),
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Important update to your Bitwarden account",
-                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
+                    TitleFirst = $"Important update to your<br>Bitwarden account",
+                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false),
+                    DomainName = domainName,
+                    EmailDomain = emailAddress.Split('@').LastOrDefault() ?? "",
+                    UserEmail = emailAddress
                 });
     }
 
@@ -1020,6 +1022,11 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
     {
+        if (string.IsNullOrEmpty(emergencyAccess.Email))
+        {
+            throw new BadRequestException("Emergency Access not valid.");
+        }
+
         var message = CreateDefaultMessage($"Emergency Access Contact Invite", emergencyAccess.Email);
         var model = new EmergencyAccessInvitedViewModel
         {
