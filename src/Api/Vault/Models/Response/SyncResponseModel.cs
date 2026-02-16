@@ -53,7 +53,7 @@ public class SyncResponseModel() : ResponseModel("sync")
             new CipherDetailsResponseModel(
                 cipher,
                 user,
-                organizationAbilities,
+                GetOrganizationAbility(cipher, organizationAbilities),
                 globalSettings,
                 collectionCiphersDict));
         Collections = collections?.Select(
@@ -99,4 +99,17 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
+
+    private static OrganizationAbility GetOrganizationAbility(CipherDetails cipher, IDictionary<Guid, OrganizationAbility> organizationAbilities)
+    {
+        if (cipher.OrganizationId.HasValue)
+        {
+            if (!organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility))
+            {
+                throw new Exception("OrganizationAbility not found for organization cipher.");
+            }
+            return organizationAbility;
+        }
+        return null;
+    }
 }

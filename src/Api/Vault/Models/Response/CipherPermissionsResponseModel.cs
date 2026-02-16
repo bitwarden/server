@@ -16,14 +16,8 @@ public record CipherPermissionsResponseModel
     public CipherPermissionsResponseModel(
         User user,
         CipherDetails cipherDetails,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities)
+        OrganizationAbility organizationAbility)
     {
-        OrganizationAbility organizationAbility = null;
-        if (cipherDetails.OrganizationId.HasValue && !organizationAbilities.TryGetValue(cipherDetails.OrganizationId.Value, out organizationAbility))
-        {
-            throw new Exception("OrganizationAbility not found for organization cipher.");
-        }
-
         Delete = NormalCipherPermissions.CanDelete(user, cipherDetails, organizationAbility);
         Restore = NormalCipherPermissions.CanRestore(user, cipherDetails, organizationAbility);
     }
