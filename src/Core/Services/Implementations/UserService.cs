@@ -1044,7 +1044,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         return orgUsers.Any(ou =>
             orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
             orgAbility.UsersGetPremium &&
