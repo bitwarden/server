@@ -38,6 +38,8 @@ public class FeatureRoutedCacheService(
         return await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
     }
 
+    public Task<IDictionary<Guid, OrganizationAbility>> FakeGetOrganizationAbilitiesAsync() => throw new NotImplementedException();
+
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))

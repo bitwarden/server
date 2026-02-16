@@ -123,7 +123,7 @@ public class SyncController : Controller
         var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var webAuthnCredentials = _featureService.IsEnabled(FeatureFlagKeys.PM2035PasskeyUnlock)
             ? await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id)
             : [];
