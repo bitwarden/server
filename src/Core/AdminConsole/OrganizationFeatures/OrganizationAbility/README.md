@@ -1,4 +1,4 @@
-# Organization Ability Flags
+# Organization ability flags
 
 ## Overview
 
@@ -7,11 +7,11 @@ while Event Logs are available to Teams and Enterprise plans. When developing fe
 control, we use **Organization Ability Flags** (or simply _abilities_) — explicit boolean properties on the Organization
 entity that indicate whether an organization can use a specific feature.
 
-## The Rule
+## The rule
 
 **Never check plan types to control feature access.** Always use a dedicated ability flag on the Organization entity.
 
-### ❌ Don't Do This
+### ❌ Don't do this
 
 ```csharp
 // Checking plan type directly
@@ -23,7 +23,7 @@ if (organization.PlanType == PlanType.Enterprise ||
 }
 ```
 
-### ❌ Don't Do This
+### ❌ Don't do this
 
 ```csharp
 // Piggybacking off another feature's ability
@@ -33,7 +33,7 @@ if (organization.PlanType == PlanType.Enterprise && organization.UseEvents)
 }
 ```
 
-### ✅ Do This Instead
+### ✅ Do this instead
 
 ```csharp
 // Check the explicit ability flag
@@ -44,7 +44,7 @@ if (!organization.UseEvents)
 // proceed with feature logic...
 ```
 
-## Why This Pattern Matters
+## Why this pattern matters
 
 Using explicit ability flags instead of plan type checks provides several benefits:
 
@@ -68,11 +68,11 @@ Using explicit ability flags instead of plan type checks provides several benefi
 
 6. **Semantic Code** — The code clearly expresses what capability is being checked, making it more maintainable.
 
-## Organization Abilities and Other Features
+## Organization abilities and other features
 
 Organization abilities work alongside other access control mechanisms. Understanding the differences helps you choose the right tool:
 
-|                   | **Organization Abilities** (this document)                                                         | **Feature Flags**                                                | **Enterprise Policies**                                                 |
+|                   | **Organization abilities** (this document)                                                         | **Feature flags**                                                | **Enterprise policies**                                                 |
 |-------------------|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------|-------------------------------------------------------------------------|
 | **Purpose**       | Control whether an organization has **access** to a feature                                        | Control feature **rollout** and act as a killswitch if necessary | Control **behavior** of features the organization already has access to |
 | **Set by**        | Subscription plan (automatically) or internal support teams (manual override via Bitwarden Portal) | Engineering teams                                                | Organization admins and owners                                          |
@@ -81,7 +81,7 @@ Organization abilities work alongside other access control mechanisms. Understan
 | **Toggle method** | Bitwarden Portal (single) or data migration (bulk)                                                 | LaunchDarkly                                                     | In-product via Admin Console                                            |
 | **Examples**      | Can the org use SSO? Can they use SCIM? Can they use Events?                                       | Is the new API available? Is the redesigned UI enabled?          | Require 2FA for all users, enforce password complexity                  |
 
-### When to Use Which?
+### When to use which?
 
 **Use an organization ability** when the feature will be permanently gated behind a subscription tier or our support teams.
 
@@ -91,9 +91,9 @@ Organization abilities work alongside other access control mechanisms. Understan
 
 **Use multiple together** when appropriate. For example, a new enterprise feature might use all three: a feature flag to control initial rollout, an organization ability to restrict it to Enterprise plans, and a policy to let admins configure enforcement rules.
 
-## How It Works
+## How it works
 
-### Ability Assignment at Signup/Upgrade
+### Ability assignment at signup/upgrade
 
 When an organization is created or changes plans, the ability flags are set based on the plan's capabilities:
 
@@ -107,7 +107,7 @@ organization.UseEvents = plan.HasEvents;
 // ... etc
 ```
 
-### Accessing Abilities in Code
+### Accessing abilities in code
 
 **Server-side:**
 
@@ -121,22 +121,22 @@ organization.UseEvents = plan.HasEvents;
 
 - Get the organization object from `OrganizationService`, then use it directly: `organization.useMyFeature`
 
-### Manual Override via Bitwarden Portal
+### Manual override via Bitwarden Portal
 
 Organization abilities can be manually toggled for specific customers via the Bitwarden Portal → Organizations page.
 This is useful for custom arrangements, early access, or internal testing.
 
-## Adding a New Ability
+## Adding a new ability
 
 When developing a new plan-gated feature, follow these steps. We use `MyFeature` as a placeholder for your feature name
 (e.g., `UseEvents`).
 
-### 1. Update Core Entities
+### 1. Update core entities
 
 - `src/Core/AdminConsole/Entities/Organization.cs` — Add `UseMyFeature` boolean property
 - `src/Core/AdminConsole/OrganizationFeatures/OrganizationAbility/OrganizationAbility.cs` — Add to ability object
 
-### 2. Database Changes (MSSQL)
+### 2. Database changes (MSSQL)
 
 Add a new `UseMyFeature` column to the Organization table:
 
@@ -167,7 +167,7 @@ column:
 
 **Create a migration script** for these database changes.
 
-### 3. Entity Framework Changes
+### 3. Entity Framework changes
 
 EF is primarily used for self-host. Implementations must be kept consistent.
 
@@ -182,7 +182,7 @@ EF is primarily used for self-host. Implementations must be kept consistent.
       `test/Infrastructure.IntegrationTest/AdminConsole/Repositories/OrganizationUserRepository/OrganizationUserRepositoryTests.cs`
 - `src/Infrastructure.EntityFramework/AdminConsole/Repositories/Queries/ProviderUserOrganizationDetailsViewQuery.cs`
 
-### 4. Data Migrations for Existing Organizations
+### 4. Data migrations for existing organizations
 
 If your feature should be enabled for existing organizations on certain plan types, create data migrations to set the
 ability flag:
@@ -200,7 +200,7 @@ WHERE PlanType IN (13, 14) -- EnterpriseMonthly = 13, EnterpriseAnnually = 14
 
 Create a corresponding data migration for EF databases used by self-hosted instances.
 
-### 5. Server Code Changes
+### 5. Server code changes
 
 Update related models and mapping code so models receive the new value.
 
@@ -227,7 +227,7 @@ need to:
 
 **Note:** This step is not required if your feature is enabled manually via the Admin Portal.
 
-### 6. Client Changes
+### 6. Client changes
 
 **TypeScript models to update:**
 
@@ -237,7 +237,7 @@ need to:
 - `libs/common/src/admin-console/models/data/organization.data.ts`
     - Update tests: `libs/common/src/admin-console/models/data/organization.data.spec.ts`
 
-### 7. Bitwarden Portal Changes
+### 7. Bitwarden Portal changes
 
 For manual override capability in the admin portal:
 
@@ -247,7 +247,7 @@ For manual override capability in the admin portal:
   `togglePlanFeatures()` function so it's automatically set when a plan type is selected
 - `src/Admin/AdminConsole/Controllers/OrganizationsController.cs` — Update `UpdateOrganization()` method mapping
 
-### 8. Self-Host Licensing
+### 8. Self-host licensing
 
 > ⚠️ **WARNING:** Mistakes in organization license changes can disable the entire organization for self-hosted
 > customers!
@@ -288,7 +288,7 @@ Map your feature property from the claim to the organization when creating or up
 > **Tip:** Running tests in `UpdateOrganizationLicenseCommandTests.cs` will help identify any missing changes.
 > Test failures will guide you to all areas that need updates.
 
-### 9. Implement Business Logic Checks
+### 9. Implement business logic checks
 
 In your feature's business logic, check the ability flag:
 
@@ -321,7 +321,7 @@ if (!orgAbility.UseMyFeature)
 }
 ```
 
-## Existing Abilities
+## Existing abilities
 
 For reference, here are some current organization ability flags (not a complete list):
 
