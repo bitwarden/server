@@ -59,7 +59,12 @@ AS
         [dbo].[User]
 GO
 
-EXECUTE sp_refreshview '[dbo].[UserView]'
+-- Refresh views that depend on UserView to ensure they include the new MasterPasswordSalt column
+EXEC sp_refreshview N'[dbo].[EmergencyAccessDetailsView]';
+EXEC sp_refreshview N'[dbo].[OrganizationUserUserDetailsView]';
+EXEC sp_refreshview N'[dbo].[ProviderUserUserDetailsView]';
+EXEC sp_refreshview N'[dbo].[UserEmailDomainView]';
+EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[User_Create]
