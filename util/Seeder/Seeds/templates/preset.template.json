@@ -1,0 +1,14 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "organization": {
+    "name": "Acme Corporation",
+    "domain": "acme.example.com",
+    "seats": 50
+  },
+  "roster": {
+    "fixture": "my-roster-fixture"
+  },
+  "ciphers": {
+    "fixture": "my-cipher-fixture"
+  }
+}
