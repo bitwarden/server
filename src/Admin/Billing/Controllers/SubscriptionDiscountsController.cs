@@ -205,5 +205,80 @@ public class SubscriptionDiscountsController(
         }
     }
 
+    [HttpGet("{id}")]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
+    public async Task<IActionResult> Edit(Guid id)
+    {
+        var discount = await subscriptionDiscountRepository.GetByIdAsync(id);
+        if (discount == null)
+        {
+            return NotFound();
+        }
+
+        var model = new EditSubscriptionDiscountModel(discount);
+
+        if (model.StripeProductIds != null && model.StripeProductIds.Count != 0)
+        {
+            try
+            {
+                var products = await stripeAdapter.ListProductsAsync(new ProductListOptions
+                {
+                    Ids = model.StripeProductIds.ToList()
+                });
+                model.AppliesToProducts = products.ToDictionary(p => p.Id, p => p.Name);
+            }
+            catch (StripeException ex)
+            {
+                logger.LogError(ex, "Failed to fetch associated products from Stripe for coupon: {CouponId}", discount.StripeCouponId);
+            }
+        }
+
+        return View(model);
+    }
+
+    [HttpPost("{id}")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
+    public async Task<IActionResult> Edit(Guid id, EditSubscriptionDiscountModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var discount = await subscriptionDiscountRepository.GetByIdAsync(id);
+        if (discount == null)
+        {
+            return NotFound();
+        }
+
+        discount.StartDate = model.StartDate;
+        discount.EndDate = model.EndDate;
+        discount.AudienceType = model.AudienceType;
+        discount.RevisionDate = DateTime.UtcNow;
+
+        await subscriptionDiscountRepository.ReplaceAsync(discount);
+
+        PersistSuccessMessage($"Discount '{discount.StripeCouponId}' updated successfully.");
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("{id}/delete")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var discount = await subscriptionDiscountRepository.GetByIdAsync(id);
+        if (discount == null)
+        {
+            return NotFound();
+        }
+
+        await subscriptionDiscountRepository.DeleteAsync(discount);
+
+        PersistSuccessMessage($"Discount '{discount.StripeCouponId}' deleted successfully.");
+        return RedirectToAction(nameof(Index));
+    }
+
     private void PersistSuccessMessage(string message) => TempData[SuccessKey] = message;
 }
