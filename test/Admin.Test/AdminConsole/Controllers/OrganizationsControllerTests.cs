@@ -489,6 +489,11 @@ public class OrganizationsControllerTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
+        var request = new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(organization.Id);
+        sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()
+            .IsOrganizationCompliantAsync(Arg.Any<AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest>())
+            .Returns(Valid(request));
+
         _ = await sutProvider.Sut.Edit(organization.Id, update);
 
         await sutProvider.GetDependency<IEventService>().Received(1)
