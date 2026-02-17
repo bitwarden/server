@@ -21,12 +21,14 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyQuery, PolicyQuery>();
         services.AddScoped<IPolicyEventHandlerFactory, PolicyEventHandlerHandlerFactory>();
 
+        services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementValidator, AutomaticUserConfirmationPolicyEnforcementValidator>();
+        services.AddScoped<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator, AutomaticUserConfirmationOrganizationPolicyComplianceValidator>();
+
         services.AddPolicyValidators();
         services.AddPolicyRequirements();
         services.AddPolicySideEffects();
         services.AddPolicyUpdateEvents();
 
-        services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementValidator, AutomaticUserConfirmationPolicyEnforcementValidator>();
     }
 
     [Obsolete("Use AddPolicyUpdateEvents instead.")]

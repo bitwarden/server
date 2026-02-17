@@ -32,6 +32,30 @@ public class GetBitwardenSubscriptionQueryTests
     }
 
     [Fact]
+    public async Task Run_UserWithoutGatewaySubscriptionId_ReturnsNull()
+    {
+        var user = CreateUser();
+        user.GatewaySubscriptionId = null;
+
+        var result = await _query.Run(user);
+
+        Assert.Null(result);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
+    public async Task Run_UserWithEmptyGatewaySubscriptionId_ReturnsNull()
+    {
+        var user = CreateUser();
+        user.GatewaySubscriptionId = string.Empty;
+
+        var result = await _query.Run(user);
+
+        Assert.Null(result);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
     public async Task Run_IncompleteStatus_ReturnsBitwardenSubscriptionWithSuspension()
     {
         var user = CreateUser();
@@ -461,6 +485,77 @@ public class GetBitwardenSubscriptionQueryTests
         Assert.Equal(PlanCadenceType.Annually, result.Cart.Cadence);
     }
 
+    [Fact]
+    public async Task Run_UserOnLegacyPricing_ReturnsCostFromPricingService()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        var premiumPlans = CreatePremiumPlans();
+        var availablePlan = premiumPlans.First(p => p.Available);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+
+        var previewInvoice = CreateInvoicePreview(totalTax: 150);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(previewInvoice);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Equal(availablePlan.Seat.Price, result.Cart.PasswordManager.Seats.Cost);
+        Assert.Equal(1.50m, result.Cart.EstimatedTax);
+    }
+
+    [Fact]
+    public async Task Run_UserOnLegacyPricing_CallsPreviewInvoiceWithRebuiltSubscription()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: true);
+        var premiumPlans = CreatePremiumPlans();
+        var availablePlan = premiumPlans.First(p => p.Available);
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+
+        var previewInvoice = CreateInvoicePreview();
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(previewInvoice);
+
+        await _query.Run(user);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(
+            Arg.Is<InvoiceCreatePreviewOptions>(opts =>
+                opts.Subscription == null &&
+                opts.AutomaticTax != null &&
+                opts.AutomaticTax.Enabled == true &&
+                opts.SubscriptionDetails != null &&
+                opts.SubscriptionDetails.Items.Any(i =>
+                    i.Price == availablePlan.Seat.StripePriceId &&
+                    i.Quantity == 1)));
+    }
+
+    [Fact]
+    public async Task Run_UserOnCurrentPricing_ReturnsCostFromSubscriptionItem()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active, legacyPricing: false);
+        var premiumPlans = CreatePremiumPlans();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Equal(19.80m, result.Cart.PasswordManager.Seats.Cost);
+    }
+
     #region Helper Methods
 
     private static User CreateUser()
@@ -477,11 +572,14 @@ public class GetBitwardenSubscriptionQueryTests
     private static Subscription CreateSubscription(
         string status,
         bool includeStorage = false,
+        bool legacyPricing = false,
         DateTime? cancelAt = null,
         DateTime? canceledAt = null,
         string collectionMethod = "charge_automatically")
     {
         var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var seatPriceId = legacyPricing ? "price_legacy_premium_seat" : "price_premium_seat";
+        var seatUnitAmount = legacyPricing ? 1000 : 1980;
         var items = new List<SubscriptionItem>
         {
             new()
@@ -489,8 +587,8 @@ public class GetBitwardenSubscriptionQueryTests
                 Id = "si_premium_seat",
                 Price = new Price
                 {
-                    Id = "price_premium_seat",
-                    UnitAmountDecimal = 1000,
+                    Id = seatPriceId,
+                    UnitAmountDecimal = seatUnitAmount,
                     Product = new Product { Id = "prod_premium_seat" }
                 },
                 Quantity = 1,
@@ -521,6 +619,7 @@ public class GetBitwardenSubscriptionQueryTests
             Id = "sub_test123",
             Status = status,
             Created = DateTime.UtcNow.AddMonths(-1),
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
             Customer = new Customer
             {
                 Id = "cus_test123",
@@ -548,6 +647,24 @@ public class GetBitwardenSubscriptionQueryTests
                 Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
                 {
                     StripePriceId = "price_premium_seat",
+                    Price = 19.80m,
+                    Provided = 1
+                },
+                Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable
+                {
+                    StripePriceId = "price_storage",
+                    Price = 4.0m,
+                    Provided = 1
+                }
+            },
+            new()
+            {
+                Name = "Premium",
+                Available = false,
+                LegacyYear = 2024,
+                Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable
+                {
+                    StripePriceId = "price_legacy_premium_seat",
                     Price = 10.0m,
                     Provided = 1
                 },
