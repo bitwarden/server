@@ -80,7 +80,7 @@
         // Password Manager features
         document.getElementById('@(nameof(Model.UseTotp))').checked = plan.hasTotp;
         document.getElementById('@(nameof(Model.UsersGetPremium))').checked = plan.usersGetPremium;
-        document.getElementById('@(nameof(Model.UseMyItems))').checked = plan.hasPolicies; // TODO: use the plan property when added
+        document.getElementById('@(nameof(Model.UseMyItems))').checked = plan.hasPolicies; // TODO: use the plan property when added (PM-32366)
 
         document.getElementById('@(nameof(Model.MaxStorageGb))').value =
             document.getElementById('@(nameof(Model.MaxStorageGb))').value ||
