@@ -2,4 +2,3 @@
 UPDATE [dbo].[Organization]
 SET [UseMyItems] = 1
 WHERE [UsePolicies] = 1;
-GO
