@@ -99,4 +99,7 @@ public enum PushType : byte
 
     [NotificationInfo("@bitwarden/team-admin-console-dev", typeof(Models.SyncPolicyPushNotification))]
     PolicyChanged = 25,
+
+    [NotificationInfo("@bitwarden/team-admin-console-dev", typeof(Models.AutoConfirmPushNotification))]
+    AutoConfirm = 26,
 }

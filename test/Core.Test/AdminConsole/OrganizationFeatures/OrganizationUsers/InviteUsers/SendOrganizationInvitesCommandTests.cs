@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Models.Mail.Mailer.OrganizationInvite;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -10,6 +11,8 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
+using Bit.Core.Platform.Mail.Mailer;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
@@ -20,6 +23,7 @@ using Bit.Test.Common.Fakes;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using CoreGlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -110,5 +114,392 @@ public class SendOrganizationInvitesCommandTests
                 info.OrgUserTokenPairs.FirstOrDefault(x => x.OrgUser.Email == invite.Email).OrgUser == invite &&
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
                 info.OrganizationName == organization.Name));
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually, false)]
+    [BitAutoData(PlanType.EnterpriseMonthly2023, false)]
+    [BitAutoData(PlanType.TeamsAnnually, false)]
+    [BitAutoData(PlanType.TeamsStarter, false)]
+    [BitAutoData(PlanType.EnterpriseAnnually, true)]
+    [BitAutoData(PlanType.TeamsAnnually, true)]
+    public async Task SendInvitesAsync_WithFeatureFlag_EnterpriseAndTeamsPlans_SendsEnterpriseTemplate(
+        PlanType planType,
+        bool userExists,
+        Organization organization,
+        OrganizationUser invite,
+        User invitingUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = planType;
+        invite.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns(userExists ? [new User { Email = invite.Email }] : []);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(invitingUser.Id)
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, invitingUser.Id));
+
+        // Assert
+        if (userExists)
+        {
+            await sutProvider.GetDependency<IMailer>().Received(1)
+                .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsExistingUser>());
+        }
+        else
+        {
+            await sutProvider.GetDependency<IMailer>().Received(1)
+                .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsNewUser>());
+        }
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually, false)]
+    [BitAutoData(PlanType.FamiliesAnnually2025, false)]
+    [BitAutoData(PlanType.FamiliesAnnually, true)]
+    public async Task SendInvitesAsync_WithFeatureFlag_FamiliesPlans_SendsFamiliesTemplate(
+        PlanType planType,
+        bool userExists,
+        Organization organization,
+        OrganizationUser invite,
+        User invitingUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = planType;
+        invite.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns(userExists ? [new User { Email = invite.Email }] : []);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(invitingUser.Id)
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, invitingUser.Id));
+
+        // Assert
+        if (userExists)
+        {
+            await sutProvider.GetDependency<IMailer>().Received(1)
+                .SendEmail(Arg.Any<OrganizationInviteFamiliesExistingUser>());
+        }
+        else
+        {
+            await sutProvider.GetDependency<IMailer>().Received(1)
+                .SendEmail(Arg.Any<OrganizationInviteFamiliesNewUser>());
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WithFeatureFlag_FreePlan_SendsFreeTemplate(
+        Organization organization,
+        OrganizationUser invite,
+        User invitingUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = PlanType.Free;
+        invite.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(invitingUser.Id)
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, invitingUser.Id));
+
+        // Assert
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Any<OrganizationInviteFree>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WithFeatureFlag_CustomPlan_SendsEnterpriseTemplate(
+        Organization organization,
+        OrganizationUser invite,
+        User invitingUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = PlanType.Custom;
+        invite.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(invitingUser.Id)
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, invitingUser.Id));
+
+        // Assert
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsNewUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WithFeatureFlagEnabled_UsesNewMailer(
+        Organization organization,
+        OrganizationUser invite,
+        User invitingUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([new User { Email = invite.Email }]);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(invitingUser.Id)
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, invitingUser.Id));
+
+        // Assert - verify new mailer is called, not legacy mail service
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsExistingUser>());
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationInviteEmailsAsync(Arg.Any<OrganizationInvitesInfo>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WithFeatureFlagDisabled_UsesLegacyMailService(
+        Organization organization,
+        OrganizationUser invite,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(false);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization));
+
+        // Assert - verify legacy mail service is called, not new mailer
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationInviteEmailsAsync(Arg.Any<OrganizationInvitesInfo>());
+
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceive()
+            .SendEmail(Arg.Any<BaseMail<OrganizationInviteBaseView>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WithInvitingUserId_PopulatesInviterEmail(
+        Organization organization,
+        OrganizationUser invite,
+        User invitingUser,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(invitingUser.Id)
+            .Returns(invitingUser);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, invitingUser.Id));
+
+        // Assert
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
+                mail.View.InviterEmail == invitingUser.Email));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WithNullInvitingUserId_SendsEmailWithoutInviter(
+        Organization organization,
+        OrganizationUser invite,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act - pass null for InvitingUserId
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, null));
+
+        // Assert
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
+                mail.View.InviterEmail == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendInvitesAsync_WithNonExistentInvitingUserId_SendsEmailWithoutInviter(
+        Organization organization,
+        OrganizationUser invite,
+        Guid nonExistentUserId,
+        SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        SetupSutProvider(sutProvider);
+
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
+            .Returns(true);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
+            .Returns([]);
+
+        // Mock GetByIdAsync to return null for non-existent user
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(nonExistentUserId)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+            .CreateToken(Arg.Any<OrganizationUser>())
+            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+            {
+                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+            });
+
+        // Act
+        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization, false, nonExistentUserId));
+
+        // Assert
+        await sutProvider.GetDependency<IMailer>().Received(1)
+            .SendEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
+                mail.View.InviterEmail == null));
+    }
+
+    private void SetupSutProvider(SutProvider<SendOrganizationInvitesCommand> sutProvider)
+    {
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.SetDependency(new CoreGlobalSettings { BaseServiceUri = new CoreGlobalSettings.BaseServiceUriSettings(new CoreGlobalSettings()) }, "globalSettings");
+        sutProvider.Create();
     }
 }
