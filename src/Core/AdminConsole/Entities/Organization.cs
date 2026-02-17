@@ -145,7 +145,8 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     public bool UsePhishingBlocker { get; set; }
 
     /// <summary>
-    /// If set to true, the organization can create My Items for organization ownership.
+    /// If set to true, My Items collections will be created automatically when the Organization Data Ownership
+    /// policy is enabled.
     /// </summary>
     public bool UseMyItems { get; set; }
 
