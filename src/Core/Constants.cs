@@ -167,6 +167,7 @@ public static class FeatureFlagKeys
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
     public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
+    public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
 
     /* Autofill Team */
     public const string SSHAgent = "ssh-agent";
@@ -189,6 +190,7 @@ public static class FeatureFlagKeys
     public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
     public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
+    public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
