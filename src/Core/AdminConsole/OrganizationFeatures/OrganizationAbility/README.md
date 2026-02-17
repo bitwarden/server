@@ -68,6 +68,29 @@ Using explicit ability flags instead of plan type checks provides several benefi
 
 6. **Semantic Code** — The code clearly expresses what capability is being checked, making it more maintainable.
 
+## Organization Abilities and Other Features
+
+Organization abilities work alongside other access control mechanisms. Understanding the differences helps you choose the right tool:
+
+|                   | **Organization Abilities** (this document)                                                         | **Feature Flags**                                                | **Enterprise Policies**                                                 |
+|-------------------|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------|-------------------------------------------------------------------------|
+| **Purpose**       | Control whether an organization has **access** to a feature                                        | Control feature **rollout** and act as a killswitch if necessary | Control **behavior** of features the organization already has access to |
+| **Set by**        | Subscription plan (automatically) or internal support teams (manual override via Bitwarden Portal) | Engineering teams                                                | Organization admins and owners                                          |
+| **Lifecycle**     | Permanent - part of the core product                                                               | Temporary - removed once feature is stable                       | Permanent - part of the core product                                    |
+| **Scope**         | Per organization                                                                                   | Global or targeted                                               | Per organization                                                        |
+| **Toggle method** | Bitwarden Portal (single) or data migration (bulk)                                                 | LaunchDarkly                                                     | In-product via Admin Console                                            |
+| **Examples**      | Can the org use SSO? Can they use SCIM? Can they use Events?                                       | Is the new API available? Is the redesigned UI enabled?          | Require 2FA for all users, enforce password complexity                  |
+
+### When to Use Which?
+
+**Use an organization ability** when the feature will be permanently gated behind a subscription tier or our support teams.
+
+**Use a feature flag** when you need to control the release of a new feature.
+
+**Use a policy** when you're adding configurable rules to a feature the organization can already access.
+
+**Use multiple together** when appropriate. For example, a new enterprise feature might use all three: a feature flag to control initial rollout, an organization ability to restrict it to Enterprise plans, and a policy to let admins configure enforcement rules.
+
 ## How It Works
 
 ### Ability Assignment at Signup/Upgrade
@@ -281,23 +304,17 @@ if (!orgAbility.UseMyFeature)
 // Proceed with feature logic...
 ```
 
-### 10. Feature Flags
-
-Organization abilities do **not** replace feature flags. They serve different purposes:
-
-- **Feature flags** — Short-lived flags that control feature release and can act as a killswitch for defective features.
-  Can be toggled immediately without a new deployment.
-- **Organization ability flags** — Permanent flags that control access to a feature based on plan type.
-  Require a database migration to toggle in bulk.
-
-You should still use a feature flag to control your feature release:
+As explained above, organization abilities work alongside feature flags — they don't replace them.
+For new features, you'll typically want both:
 
 ```csharp
+// Check feature flag first (controls rollout)
 if (!_featureService.IsEnabled(FeatureFlagKeys.MyFeature))
 {
     throw new BadRequestException("This feature is not available.");
 }
 
+// Then check organization ability (controls plan-based access)
 if (!orgAbility.UseMyFeature)
 {
     throw new BadRequestException("Your organization's plan does not support this feature.");
