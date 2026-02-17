@@ -1,4 +1,4 @@
-using Bit.Api.Vault.Models;
+﻿using Bit.Api.Vault.Models;
 using Bit.Core.Vault.Models.Data;
 using Xunit;
 
