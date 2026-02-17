@@ -10,8 +10,10 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Services;
@@ -60,6 +62,7 @@ public class OrganizationsController : Controller
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IEventService _eventService;
+    private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceValidator _automaticUserConfirmationOrganizationPolicyComplianceValidator;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -86,7 +89,8 @@ public class OrganizationsController : Controller
         IPricingClient pricingClient,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IOrganizationBillingService organizationBillingService,
-        IEventService eventService)
+        IEventService eventService,
+        IAutomaticUserConfirmationOrganizationPolicyComplianceValidator automaticUserConfirmationOrganizationPolicyComplianceValidator)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -113,6 +117,7 @@ public class OrganizationsController : Controller
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _organizationBillingService = organizationBillingService;
         _eventService = eventService;
+        _automaticUserConfirmationOrganizationPolicyComplianceValidator = automaticUserConfirmationOrganizationPolicyComplianceValidator;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -253,7 +258,8 @@ public class OrganizationsController : Controller
             BillingEmail = organization.BillingEmail,
             Status = organization.Status,
             PlanType = organization.PlanType,
-            Seats = organization.Seats
+            Seats = organization.Seats,
+            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation
         };
 
         if (model.PlanType.HasValue)
@@ -290,6 +296,13 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
+        if (await CheckOrganizationPolicyComplianceAsync(existingOrganizationData, organization) is { } error)
+        {
+            TempData["Error"] = error.Message;
+
+            return RedirectToAction("Edit", new { id });
+        }
+
         await HandlePotentialProviderSeatScalingAsync(
             existingOrganizationData,
             model);
@@ -323,6 +336,19 @@ public class OrganizationsController : Controller
         }
 
         return RedirectToAction("Edit", new { id });
+    }
+
+    private async Task<Error> CheckOrganizationPolicyComplianceAsync(Organization existingOrganizationData, Organization updatedOrganization)
+    {
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && updatedOrganization.UseAutomaticUserConfirmation)
+        {
+            var validationResult = await _automaticUserConfirmationOrganizationPolicyComplianceValidator.IsOrganizationCompliantAsync(
+                new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(existingOrganizationData.Id));
+
+            return validationResult.Match(error => error, _ => null);
+        }
+
+        return null;
     }
 
     [HttpPost]
