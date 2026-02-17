@@ -1,0 +1,6 @@
+{
+  "$schema": "../../schemas/organization.schema.json",
+  "name": "Dunder Mifflin",
+  "domain": "dundermifflin.com",
+  "seats": 70
+}
