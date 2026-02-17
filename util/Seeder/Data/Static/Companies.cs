@@ -127,14 +127,14 @@ internal static class Companies
         new("linkedin.com", "LinkedIn Learning", CompanyCategory.Education, CompanyType.Hybrid, GeographicRegion.NorthAmerica),
         new("instructure.com", "Canvas", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
         new("edx.org", "edX", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.NorthAmerica),
-        new("westlakestate.edu", "Westlake State University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("pacificridge.edu", "Pacific Ridge University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("northernplains.edu", "Northern Plains Community College", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("heartlandtech.edu", "Heartland Technical Institute", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("silvercreek.k12.us", "Silver Creek School District", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("cascadiacollege.edu", "Cascadia College", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("summitvalley.edu", "Summit Valley University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("copperfieldacademy.edu", "Copperfield Academy", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("utexas.edu", "University of Texas at Austin", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("berkeley.edu", "UC Berkeley", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("ndscs.edu", "North Dakota State College of Science", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("ctcd.edu", "Central Texas College", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("lausd.net", "Los Angeles Unified School District", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("cascadia.edu", "Cascadia College", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("asu.edu", "Arizona State University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("andover.edu", "Phillips Academy Andover", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
         // Retail
         new("target.com", "Target", CompanyCategory.Retail, CompanyType.Consumer, GeographicRegion.NorthAmerica),
         new("walmart.com", "Walmart", CompanyCategory.Retail, CompanyType.Consumer, GeographicRegion.NorthAmerica),
@@ -217,13 +217,13 @@ internal static class Companies
         new("irs.gov", "IRS", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
         new("ssa.gov", "Social Security", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
         new("login.gov", "Login.gov", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
-        new("digitalinfra.gov", "Department of Digital Infrastructure", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("publicsafety.gov", "Bureau of Public Safety", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("consumerprotect.gov", "Office of Consumer Protection", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("transportsafety.gov", "National Transportation Safety Board", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("civicrecords.gov", "Civic Records Administration", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("cascadia.state.gov", "State of Cascadia Portal", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
-        new("parkswildlife.gov", "National Parks & Wildlife Service", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.NorthAmerica),
+        new("gsa.gov", "General Services Administration", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
+        new("dhs.gov", "Department of Homeland Security", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
+        new("consumerfinance.gov", "Consumer Financial Protection Bureau", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
+        new("ntsb.gov", "National Transportation Safety Board", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
+        new("archives.gov", "National Archives", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
+        new("ca.gov", "State of California", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
+        new("nps.gov", "National Park Service", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.NorthAmerica),
         // ECommerce (additional)
         new("ebay.com", "eBay", CompanyCategory.ECommerce, CompanyType.Consumer, GeographicRegion.NorthAmerica),
         new("wish.com", "Wish", CompanyCategory.ECommerce, CompanyType.Consumer, GeographicRegion.NorthAmerica),
@@ -351,12 +351,12 @@ internal static class Companies
         new("futurelearn.com", "FutureLearn", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.Europe),
         new("duolingo.com", "Duolingo", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.Europe),
         new("babbel.com", "Babbel", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.Europe),
-        new("rnp.ac.uk", "Royal Northern Polytechnic", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("westberg.se", "Westberg University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("institut-lumiere.fr", "Institut Lumière", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("rheinberg.de", "Rheinberg Technical University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("acs.nl", "Amsterdam College of Sciences", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("torrealta.es", "Universidad Torre Alta", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
+        new("imperial.ac.uk", "Imperial College London", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
+        new("kth.se", "KTH Royal Institute of Technology", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
+        new("sorbonne-universite.fr", "Sorbonne University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
+        new("rwth-aachen.de", "RWTH Aachen University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
+        new("tudelft.nl", "TU Delft", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
+        new("ub.edu", "Universitat de Barcelona", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Europe),
         // Retail
         new("ikea.com", "IKEA", CompanyCategory.Retail, CompanyType.Consumer, GeographicRegion.Europe),
         new("zara.com", "Zara", CompanyCategory.Retail, CompanyType.Consumer, GeographicRegion.Europe),
@@ -429,12 +429,12 @@ internal static class Companies
         new("gov.uk", "GOV.UK", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
         new("service-public.fr", "Service-Public.fr", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
         new("elster.de", "ELSTER", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
-        new("digitalservices.europa.eu", "EU Digital Services Agency", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("mfa.gov.uk", "Ministry of Foreign Affairs UK", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("bundesamt-cyber.de", "Federal Office for Cybersecurity", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("agenzia-fiscale.it", "Agenzia delle Entrate Digitale", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("riksarkivet.se", "National Archives of Sweden", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Europe),
-        new("transport.gov.ie", "Department of Transport Ireland", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Europe)
+        new("ec.europa.eu", "European Commission", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
+        new("hmrc.gov.uk", "HM Revenue & Customs", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
+        new("bsi.bund.de", "Federal Office for Information Security", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
+        new("agenziaentrate.gov.it", "Agenzia delle Entrate", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
+        new("riksarkivet.se", "National Archives of Sweden", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe),
+        new("revenue.ie", "Revenue Ireland", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Europe)
     ];
 
     internal static readonly Company[] AsiaPacific =
@@ -519,10 +519,10 @@ internal static class Companies
         // Education
         new("byjus.com", "Byju's", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.AsiaPacific),
         new("unacademy.com", "Unacademy", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.AsiaPacific),
-        new("sakura.ac.jp", "Sakura National University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
-        new("meltechcollege.edu.au", "Melbourne Technical College", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
-        new("sitd.edu.sg", "Singapore Institute of Technology & Design", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
-        new("hgu.edu.in", "Hyderabad Global University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
+        new("u-tokyo.ac.jp", "University of Tokyo", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
+        new("rmit.edu.au", "RMIT University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
+        new("sutd.edu.sg", "Singapore University of Technology and Design", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
+        new("iith.ac.in", "IIT Hyderabad", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
         new("sdu.ac.kr", "Seoul Digital University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
         // Retail
         new("uniqlo.com", "Uniqlo", CompanyCategory.Retail, CompanyType.Consumer, GeographicRegion.AsiaPacific),
@@ -580,7 +580,7 @@ internal static class Companies
         new("smartnation.gov.sg", "Smart Nation Singapore", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.AsiaPacific),
         new("digilocker.gov.in", "DigiLocker India", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.AsiaPacific),
         new("ato.gov.au", "Australian Taxation Office", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.AsiaPacific),
-        new("minof-science.go.kr", "Ministry of Science & ICT Korea", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.AsiaPacific)
+        new("msit.go.kr", "Ministry of Science & ICT Korea", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.AsiaPacific)
     ];
 
     internal static readonly Company[] LatinAmerica =
@@ -651,9 +651,9 @@ internal static class Companies
         // Education
         new("platzi.com", "Platzi", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.LatinAmerica),
         new("domestika.org", "Domestika", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.LatinAmerica),
-        new("unovasp.edu.br", "Universidade Nova de São Paulo", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.LatinAmerica),
-        new("itpacifico.edu.mx", "Instituto Tecnológico del Pacífico", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.LatinAmerica),
-        new("uac.edu.ar", "Universidad Austral de Ciencias", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.LatinAmerica),
+        new("usp.br", "Universidade de São Paulo", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.LatinAmerica),
+        new("tec.mx", "Tecnológico de Monterrey", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.LatinAmerica),
+        new("uba.ar", "Universidad de Buenos Aires", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.LatinAmerica),
         // Energy
         new("petrobras.com.br", "Petrobras", CompanyCategory.Energy, CompanyType.Consumer, GeographicRegion.LatinAmerica),
         new("ecopetrol.com.co", "Ecopetrol", CompanyCategory.Energy, CompanyType.Consumer, GeographicRegion.LatinAmerica)
@@ -715,13 +715,13 @@ internal static class Companies
         // Government
         new("absher.sa", "Absher", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.MiddleEast),
         new("turkiye.gov.tr", "e-Devlet", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.MiddleEast),
-        new("smartgov.ae", "Smart Government UAE", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.MiddleEast),
-        new("moc.gov.sa", "Ministry of Commerce Saudi Arabia", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.MiddleEast),
-        new("hukomet.gov.qa", "Hukomet Qatar", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.MiddleEast),
+        new("uaepass.ae", "UAE Pass", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.MiddleEast),
+        new("moc.gov.sa", "Ministry of Commerce Saudi Arabia", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.MiddleEast),
+        new("hukoomi.gov.qa", "Hukoomi Qatar", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.MiddleEast),
         // Education
-        new("gulfinst.edu.ae", "Gulf Institute of Technology", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.MiddleEast),
-        new("rus.edu.sa", "Riyadh University of Science", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.MiddleEast),
-        new("bosphorus.edu.tr", "Bosphorus Technical University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.MiddleEast),
+        new("aud.edu", "American University in Dubai", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.MiddleEast),
+        new("ksu.edu.sa", "King Saud University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.MiddleEast),
+        new("metu.edu.tr", "Middle East Technical University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.MiddleEast),
         // Insurance
         new("tawuniya.com.sa", "Tawuniya", CompanyCategory.Insurance, CompanyType.Consumer, GeographicRegion.MiddleEast),
         // Retail
@@ -784,14 +784,14 @@ internal static class Companies
         new("ulesson.com", "uLesson", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.Africa),
         new("alxafrica.com", "ALX", CompanyCategory.Education, CompanyType.Consumer, GeographicRegion.Africa),
         new("cctu.edu.gh", "Cape Coast Technical University", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Africa),
-        new("jcc.edu.za", "Johannesburg College of Commerce", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Africa),
-        new("nit.ac.ke", "Nairobi Institute of Technology", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Africa),
+        new("uj.ac.za", "University of Johannesburg", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Africa),
+        new("uonbi.ac.ke", "University of Nairobi", CompanyCategory.Education, CompanyType.Enterprise, GeographicRegion.Africa),
         // Government
         new("sars.gov.za", "SARS eFiling", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Africa),
         new("nimc.gov.ng", "NIMC Nigeria", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Africa),
         new("ecitizen.go.ke", "eCitizen Kenya", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Africa),
         new("dha.gov.za", "Department of Home Affairs SA", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Africa),
-        new("digital.gov.rw", "Rwanda Digital Governance Board", CompanyCategory.Government, CompanyType.Enterprise, GeographicRegion.Africa),
+        new("irembo.gov.rw", "Irembo Rwanda", CompanyCategory.Government, CompanyType.Consumer, GeographicRegion.Africa),
         // Retail
         new("shoprite.co.za", "Shoprite", CompanyCategory.Retail, CompanyType.Consumer, GeographicRegion.Africa),
         new("woolworths.co.za", "Woolworths SA", CompanyCategory.Retail, CompanyType.Consumer, GeographicRegion.Africa),
