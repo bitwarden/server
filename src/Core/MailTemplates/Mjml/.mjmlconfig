@@ -7,6 +7,7 @@
     "emails/AdminConsole/components/mj-bw-inviter-info",
     "emails/AdminConsole/components/mj-bw-ac-hero",
     "emails/AdminConsole/components/mj-bw-ac-icon-row",
+    "emails/AdminConsole/components/mj-bw-ac-icon-row-without-bulletins",
     "emails/AdminConsole/components/mj-bw-ac-learn-more-footer"
   ]
 }
