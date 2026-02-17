@@ -281,9 +281,8 @@ Map your feature property from the claim to the organization when creating or up
 
 **Update tests:**
 
-- `test/Core.Test/Billing/Organizations/Commands/UpdateOrganizationLicenseCommandTests.cs`
-    - Add the new property to `UpdateLicenseAsync_WithClaimsPrincipal_ExtractsAllPropertiesFromClaims` test
-    - The comparison tests will automatically include the new property since it's added to both classes
+- `test/Core.Test/Billing/Organizations/Commands/UpdateOrganizationLicenseCommandTests.cs` - add the new property to
+  `UpdateLicenseAsync_WithClaimsPrincipal_ExtractsAllPropertiesFromClaims` test
 
 > **Tip:** Running tests in `UpdateOrganizationLicenseCommandTests.cs` will help identify any missing changes.
 > Test failures will guide you to all areas that need updates.
