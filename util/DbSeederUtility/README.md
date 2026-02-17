@@ -11,7 +11,7 @@ dotnet build
 dotnet run -- <command> [options]
 ```
 
-**Login Credentials:** All seeded users use password `asdfasdfasdf`. The owner email is `owner@<domain>`.
+**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). The owner email is `owner@<domain>`.
 
 ## Commands
 
@@ -29,6 +29,8 @@ dotnet run -- seed --preset dunder-mifflin-full --mangle
 
 # Large enterprise preset for performance testing
 dotnet run -- seed --preset large-enterprise
+
+dotnet run -- seed --preset dunder-mifflin-full --password "MyTestPassword1" --mangle
 ```
 
 ### `organization` - Users Only (No Vault Data)
@@ -65,4 +67,7 @@ dotnet run -- vault-organization -n ApacOrg -d apac.test -u 17 -c 600 -g 12 --re
 
 # With ID mangling for test isolation (prevents collisions with existing data)
 dotnet run -- vault-organization -n IsolatedOrg -d isolated.test -u 5 -c 25 -g 4 -o Spotify --mangle
+
+# With custom password for all accounts
+dotnet run -- vault-organization -n CustomPwOrg -d custom-password-02.test -u 10 -c 100 -g 3 --password "MyTestPassword1"
 ```

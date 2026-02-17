@@ -98,6 +98,6 @@ _seed = options.Seed ?? StableHash.ToInt32(options.Domain);
 
 ## Security Reminders
 
-- Test password: `asdfasdfasdf`
+- Default test password: `asdfasdfasdf` (overridable via `--password` CLI flag or `SeederSettings`)
 - Never commit database dumps with seeded data
 - Seeded keys are for testing only

@@ -113,7 +113,7 @@ public class Program
             var stopwatch = Stopwatch.StartNew();
 
             Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
-            var result = recipe.Seed(args.Preset!);
+            var result = recipe.Seed(args.Preset!, args.Password);
 
             stopwatch.Stop();
             PrintSeedResult(result, stopwatch.Elapsed);

@@ -35,73 +35,40 @@ Vault items - logins, cards, identities, secure notes.
 | `card`       | `card`          | Payment card details       |
 | `identity`   | `identity`      | Personal identity info     |
 | `secureNote` | —               | Uses `notes` field only    |
+| `sshKey`     | `sshKey`        | SSH key credentials        |
 
-**Example** (`fixtures/ciphers/banking-logins.json`):
-
-```json
-{
-  "$schema": "../../schemas/cipher.schema.json",
-  "items": [
-    {
-      "type": "login",
-      "name": "Chase Bank",
-      "login": {
-        "username": "myuser",
-        "password": "MyP@ssw0rd",
-        "uris": [{ "uri": "https://chase.com", "match": "domain" }]
-      }
-    }
-  ]
-}
-```
+**Schema**: `schemas/cipher.schema.json`
 
 ### Organizations
 
-Organization definitions with name, domain, and seat count.
+Organization identity definitions with name and domain. Plan type and seats are defined in presets, not org fixtures.
 
-```json
-{
-  "$schema": "../../schemas/organization.schema.json",
-  "name": "Acme Corp",
-  "domain": "acme.com",
-  "seats": 100
-}
-```
+**Required fields**: `name`, `domain`
+
+**Schema**: `schemas/organization.schema.json`
 
 ### Rosters
 
 Complete user/group/collection structures with permissions. User emails auto-generated as `firstName.lastName@domain`.
 
 **User roles**: `owner`, `admin`, `user`, `custom`
-
 **Collection permissions**: `readOnly`, `hidePasswords`, `manage`
-
-See `rosters/dunder-mifflin.json` for a complete 58-user example.
+**Schema**: `schemas/roster.schema.json`
+**Example**: See `fixtures/rosters/dunder-mifflin.json` for a complete 58-user example
 
 ### Presets
 
-Combine organization, roster, and ciphers into complete scenarios.
+Combine organization, roster, and ciphers into complete scenarios. Presets can reference fixtures, generate data programmatically, or mix both approaches.
 
-**From fixtures**:
+**Key features**:
 
-```json
-{
-  "$schema": "../../schemas/preset.schema.json",
-  "organization": { "fixture": "acme-corp" },
-  "roster": { "fixture": "acme-roster" },
-  "ciphers": { "fixture": "banking-logins" }
-}
-```
+- Reference existing fixtures by name
+- Generate users, groups, collections, and ciphers with count parameters
+- Add personal ciphers (user-owned, encrypted with user key, not in collections)
+- Mix fixture references and generated data
 
-**Mixed approach**:
-
-```json
-{
-  "organization": { "fixture": "acme-corp" },
-  "users": { "count": 50 },
-  "ciphers": { "count": 500 }
-}
-```
+**Schema**: `schemas/preset.schema.json`
+**Examples**: See `fixtures/presets/` for complete examples including fixture-based, generated, and hybrid approaches
 
 ## Validation
 
@@ -111,19 +78,6 @@ Build errors catch schema violations:
 
 ```bash
 dotnet build util/Seeder/Seeder.csproj
-```
-
-## Testing
-
-Add integration test in `test/SeederApi.IntegrationTest/SeedReaderTests.cs`:
-
-```csharp
-[Fact]
-public void Read_YourFixture_Success()
-{
-    var result = _reader.Read<SeedFile>("ciphers.your-fixture");
-    Assert.NotEmpty(result.Items);
-}
 ```
 
 ## Naming Conventions
@@ -137,13 +91,7 @@ public void Read_YourFixture_Success()
 
 ## Security
 
-- Test password: `asdfasdfasdf`
+- Test password: See `UserSeeder.DefaultPassword` constant
 - Use fictional names/addresses
 - Never commit real passwords or PII
 - Never seed production databases
-
-## Examples
-
-- **Small org**: `presets/dunder-mifflin-full.json` (58 users, realistic structure)
-- **Browser testing**: `ciphers/autofill-testing.json` (18 specialized items)
-- **Real websites**: `ciphers/public-site-logins.json` (90+ website examples)
