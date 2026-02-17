@@ -31,6 +31,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+    public const string BankAccountCipherMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
@@ -243,6 +244,7 @@ public static class FeatureFlagKeys
     public const string SendEmailOTP = "pm-19051-send-email-verification";
 
     /* Vault Team */
+    public const string VaultBankAccount = "vault-bank-account";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string PhishingDetection = "phishing-detection";
