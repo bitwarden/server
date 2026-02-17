@@ -1,4 +1,4 @@
-namespace Bit.Core.Vault.Models.Data;
+﻿namespace Bit.Core.Vault.Models.Data;
 
 public class CipherBankAccountData : CipherData
 {

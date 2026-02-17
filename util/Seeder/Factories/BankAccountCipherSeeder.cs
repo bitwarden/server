@@ -1,4 +1,4 @@
-using Bit.Core.Vault.Entities;
+﻿using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Models;
 
