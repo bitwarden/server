@@ -2,29 +2,28 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class UseMyItemsDataMigration : Migration
 {
     /// <inheritdoc />
-    public partial class UseMyItemsDataMigration : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(@"
+        migrationBuilder.Sql(@"
                 UPDATE Organization
                 SET UseMyItems = 1
                 WHERE UsePolicies = 1;
             ");
-        }
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(@"
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.Sql(@"
                 UPDATE Organization
                 SET UseMyItems = 0
                 WHERE UsePolicies = 1;
             ");
-        }
     }
 }

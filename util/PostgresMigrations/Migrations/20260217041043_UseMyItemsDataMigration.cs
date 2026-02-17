@@ -2,29 +2,28 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class UseMyItemsDataMigration : Migration
 {
     /// <inheritdoc />
-    public partial class UseMyItemsDataMigration : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(@"
+        migrationBuilder.Sql(@"
                 UPDATE ""Organization""
                 SET ""UseMyItems"" = true
                 WHERE ""UsePolicies"" = true;
             ");
-        }
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.Sql(@"
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.Sql(@"
                 UPDATE ""Organization""
                 SET ""UseMyItems"" = false
                 WHERE ""UsePolicies"" = true;
             ");
-        }
     }
 }
