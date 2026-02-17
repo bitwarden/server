@@ -1,7 +1,7 @@
 /*
     Script to finalize the addition of MasterPasswordSalt to User table by making it NOT NULL.
     This script should be run only after all existing rows have been backfilled with non-NULL values from
-    the transition script 2026-02-03_00_PopulateMasterPasswordSaltColumn.sql.
+    the transition script 2026-02-03_00_HydrateMasterPasswordSaltColumn.sql.
 */
 
 -- Guard: refuse to finalize if any NULLs remain
