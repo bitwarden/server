@@ -42,6 +42,7 @@ public class SyncController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
+    private readonly Version _bankAccountCipherMinimumVersion = new(Constants.BankAccountCipherMinimumVersion);
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -104,7 +105,7 @@ public class SyncController : Controller
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
         var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
-        var ciphers = FilterSSHKeys(allCiphers);
+        var ciphers = FilterUnsupportedCipherTypes(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -141,15 +142,22 @@ public class SyncController : Controller
         return response;
     }
 
-    private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
+    private ICollection<CipherDetails> FilterUnsupportedCipherTypes(ICollection<CipherDetails> ciphers)
     {
-        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion || _featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride))
+        var unsupportedTypes = new List<Core.Vault.Enums.CipherType>();
+
+        if (_currentContext.ClientVersion < _sshKeyCipherMinimumVersion && !_featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride))
         {
-            return ciphers;
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.SSHKey);
         }
-        else
+
+        if (_currentContext.ClientVersion < _bankAccountCipherMinimumVersion && !_featureService.IsEnabled(FeatureFlagKeys.VaultBankAccount))
         {
-            return ciphers.Where(c => c.Type != Core.Vault.Enums.CipherType.SSHKey).ToList();
+            unsupportedTypes.Add(Core.Vault.Enums.CipherType.BankAccount);
         }
+
+        return unsupportedTypes.Count == 0
+            ? ciphers
+            : ciphers.Where(c => !unsupportedTypes.Contains(c.Type)).ToList();
     }
 }
