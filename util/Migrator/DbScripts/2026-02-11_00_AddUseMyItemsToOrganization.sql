@@ -7,13 +7,7 @@ END
 GO
 
 -- Update Organization_Create stored procedure to include UseMyItems
-IF OBJECT_ID('[dbo].[Organization_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Organization_Create];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Organization_Create]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -222,13 +216,7 @@ END
 GO
 
 -- Update Organization_Update stored procedure to include UseMyItems
-IF OBJECT_ID('[dbo].[Organization_Update]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Organization_Update];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Organization_Update]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -370,13 +358,7 @@ END
 GO
 
 -- Update Organization_ReadAbilities stored procedure to include UseMyItems
-IF OBJECT_ID('[dbo].[Organization_ReadAbilities]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Organization_ReadAbilities];
-END
-GO
-
-CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -416,13 +398,7 @@ END
 GO
 
 -- Update OrganizationView to include UseMyItems
-IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
-BEGIN
-    DROP VIEW [dbo].[OrganizationView];
-END
-GO
-
-CREATE VIEW [dbo].[OrganizationView]
+CREATE OR ALTER VIEW [dbo].[OrganizationView]
 AS
 SELECT
     [Id],
@@ -494,13 +470,7 @@ FROM
 GO
 
 -- Update OrganizationUserOrganizationDetailsView to include UseMyItems
-IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetailsView]') IS NOT NULL
-BEGIN
-    DROP VIEW [dbo].[OrganizationUserOrganizationDetailsView];
-END
-GO
-
-CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],
@@ -578,13 +548,7 @@ LEFT JOIN
 GO
 
 -- Update ProviderUserProviderOrganizationDetailsView to include UseMyItems
-IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetailsView]') IS NOT NULL
-BEGIN
-    DROP VIEW [dbo].[ProviderUserProviderOrganizationDetailsView];
-END
-GO
-
-CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+CREATE OR ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -651,4 +615,7 @@ EXEC sp_refreshview '[dbo].[OrganizationCipherDetailsCollectionsView]';
 GO
 
 EXEC sp_refreshview '[dbo].[ProviderOrganizationOrganizationDetailsView]';
+GO
+
+EXEC sp_refreshview '[dbo].[UserPremiumAccessView]';
 GO
