@@ -1,6 +1,5 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Infrastructure.IntegrationTest.Services;
 using Xunit;
 
