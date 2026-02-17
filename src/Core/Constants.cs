@@ -167,6 +167,7 @@ public static class FeatureFlagKeys
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
     public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
+    public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
 
     /* Autofill Team */
     public const string SSHAgent = "ssh-agent";
