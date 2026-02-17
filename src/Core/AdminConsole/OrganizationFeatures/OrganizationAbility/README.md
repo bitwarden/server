@@ -191,9 +191,10 @@ ability flag:
 
 ```sql
 -- Example: Enable UseMyFeature for all Enterprise organizations
+-- Check src/Core/Billing/Enums/PlanType.cs for current values
 UPDATE [dbo].[Organization]
 SET UseMyFeature = 1
-WHERE PlanType IN (13, 14) -- EnterpriseMonthly = 13, EnterpriseAnnually = 14
+WHERE PlanType IN (4, 5, 10, 11, 14, 15, 19, 20) -- All Enterprise plan types (2019, 2020, 2023, current)
 ```
 
 **EF migration:**
