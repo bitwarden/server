@@ -102,7 +102,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     private async Task<bool> ShouldCreateDefaultCollectionAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
         !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
         && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.OrganizationUser!.UserId!.Value))
-            .RequiresDefaultCollectionOnConfirm(request.Organization!.Id);
+            .GetDefaultCollectionRequestOnConfirm(request.Organization!.Id).ShouldCreateDefaultCollection;
 
     private async Task PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {

@@ -268,18 +268,19 @@ public class RestoreOrganizationUserCommand(
             return;
         }
 
-        var restoredUsersById = restoredUsers
+        var restoredConfirmedUsers = restoredUsers
+            .Where(w => w.Status == OrganizationUserStatusType.Confirmed)
             .Where(w => w.UserId != null)
-            .ToDictionary(k => k.UserId.Value);
+            .Select(s => s.UserId.Value)
+            .ToList();
 
         var restoredUserPolicyRequirements = await
-            policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredUsersById.Keys);
+            policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredConfirmedUsers);
 
         var orgUserIdsToCreateDefaultCollectionsFor = restoredUserPolicyRequirements
-            .Where(w => w.Requirement.RequiresDefaultCollectionOnConfirm(organizationId))
-            .Select(s => restoredUsersById.GetValueOrDefault(s.UserId))
-            .Where(w => w?.Status == OrganizationUserStatusType.Confirmed)
-            .Select(s => s.Id)
+            .Select(s => s.Requirement.GetDefaultCollectionRequestOnConfirm(organizationId))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
             .ToList();
 
         if (orgUserIdsToCreateDefaultCollectionsFor.Count != 0)

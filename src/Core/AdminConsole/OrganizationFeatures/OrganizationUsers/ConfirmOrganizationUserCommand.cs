@@ -286,16 +286,17 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var confirmedUsersByUserId = confirmedOrganizationUsers.ToDictionary(k => k.UserId!.Value);
+        var confirmedUserIds = confirmedOrganizationUsers
+            .Select(s => s.UserId!.Value)
+            .ToList();
 
         var policiesForUsers = await _policyRequirementQuery
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(confirmedUsersByUserId.Keys);
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(confirmedUserIds);
 
         var eligibleOrganizationUserIds = policiesForUsers
-            .Where(x => x.Requirement.RequiresDefaultCollectionOnConfirm(organizationId))
-            .Select(s => confirmedUsersByUserId.GetValueOrDefault(s.UserId)?.Id)
-            .Where(w => w != null)
-            .Select(s => s.Value)
+            .Select(x => x.Requirement.GetDefaultCollectionRequestOnConfirm(organizationId))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
             .ToList();
 
         if (eligibleOrganizationUserIds.Count == 0)
