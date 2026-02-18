@@ -41,14 +41,13 @@ public class OrganizationBillingService(
 {
     public async Task Finalize(OrganizationSale sale)
     {
-        var (organization, customerSetup, subscriptionSetup) = sale;
+        var (organization, customerSetup, subscriptionSetup, owner) = sale;
 
         // Validate coupon and only apply if valid. If invalid, proceed without the discount.
         // Validation happens before purchase to ensure order of operations.
         string? validatedCoupon = null;
         if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon))
         {
-            var (_, _, _, owner) = sale;
             // If owner exists, do full validation including user eligibility
             // If owner is null, validate basic coupon properties only (system-set coupons)
             var isValid = owner != null
