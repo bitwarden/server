@@ -74,52 +74,6 @@ public class OrganizationBillingService(
         }
     }
 
-    public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
-    {
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return null;
-        }
-
-        if (globalSettings.SelfHosted)
-        {
-            return OrganizationMetadata.Default;
-        }
-
-        var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            return OrganizationMetadata.Default with
-            {
-                OrganizationOccupiedSeats = orgOccupiedSeats.Total
-            };
-        }
-
-        var customer = await subscriberService.GetCustomer(organization);
-
-        var subscription = await subscriberService.GetSubscription(organization, new SubscriptionGetOptions
-        {
-            Expand = ["discounts.coupon.applies_to"]
-        });
-
-        if (customer == null || subscription == null)
-        {
-            return OrganizationMetadata.Default with
-            {
-                OrganizationOccupiedSeats = orgOccupiedSeats.Total
-            };
-        }
-
-        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
-
-        return new OrganizationMetadata(
-            isOnSecretsManagerStandalone,
-            orgOccupiedSeats.Total);
-    }
-
     public async Task UpdatePaymentMethod(
         Organization organization,
         TokenizedPaymentSource tokenizedPaymentSource,
@@ -583,38 +537,6 @@ public class OrganizationBillingService(
         };
 
         return customer;
-    }
-
-    private async Task<bool> IsOnSecretsManagerStandalone(
-        Organization organization,
-        Customer? customer,
-        Subscription? subscription)
-    {
-        if (customer == null || subscription == null)
-        {
-            return false;
-        }
-
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
-
-        if (!plan.SupportsSecretsManager)
-        {
-            return false;
-        }
-
-        var coupon = subscription.Discounts?.FirstOrDefault(discount =>
-            discount.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone)?.Coupon;
-
-        if (coupon == null)
-        {
-            return false;
-        }
-
-        var subscriptionProductIds = subscription.Items.Data.Select(item => item.Plan.ProductId);
-
-        var couponAppliesTo = coupon.AppliesTo?.Products;
-
-        return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }
 
     private async Task UpdateMissingPaymentMethodBehaviourAsync(Organization organization)
