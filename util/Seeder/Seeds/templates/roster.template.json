@@ -1,0 +1,77 @@
+{
+  "$schema": "../schemas/roster.schema.json",
+  "users": [
+    {
+      "firstName": "Alice",
+      "lastName": "Admin",
+      "title": "Administrator",
+      "role": "admin",
+      "branch": "Headquarters",
+      "department": "IT"
+    },
+    {
+      "firstName": "Bob",
+      "lastName": "User",
+      "title": "Developer",
+      "role": "user",
+      "branch": "Headquarters",
+      "department": "Engineering"
+    },
+    {
+      "firstName": "Carol",
+      "lastName": "Manager",
+      "title": "Engineering Manager",
+      "role": "admin",
+      "branch": "Headquarters",
+      "department": "Engineering"
+    }
+  ],
+  "groups": [
+    {
+      "name": "Administrators",
+      "members": [
+        "alice.admin",
+        "carol.manager"
+      ]
+    },
+    {
+      "name": "Engineering Team",
+      "members": [
+        "bob.user",
+        "carol.manager"
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Company Shared",
+      "groups": [
+        {
+          "group": "Administrators",
+          "readOnly": false,
+          "hidePasswords": false,
+          "manage": true
+        }
+      ],
+      "users": [
+        {
+          "user": "alice.admin",
+          "readOnly": false,
+          "hidePasswords": false,
+          "manage": true
+        }
+      ]
+    },
+    {
+      "name": "Engineering/Development",
+      "groups": [
+        {
+          "group": "Engineering Team",
+          "readOnly": false,
+          "hidePasswords": false,
+          "manage": false
+        }
+      ]
+    }
+  ]
+}

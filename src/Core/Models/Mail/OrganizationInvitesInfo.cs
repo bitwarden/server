@@ -20,6 +20,7 @@ public class OrganizationInvitesInfo
     {
         OrganizationName = org.DisplayName();
         OrgSsoIdentifier = org.Identifier;
+        PlanType = org.PlanType;
 
         IsFreeOrg = org.PlanType == PlanType.Free;
         InitOrganization = initOrganization;
@@ -32,6 +33,7 @@ public class OrganizationInvitesInfo
     }
 
     public string OrganizationName { get; }
+    public PlanType PlanType { get; }
     public bool IsFreeOrg { get; }
     public bool InitOrganization { get; } = false;
     public bool OrgSsoEnabled { get; }
