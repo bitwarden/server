@@ -531,6 +531,8 @@ public class SubscriptionDiscountsControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<EditSubscriptionDiscountModel>(viewResult.Model);
         Assert.Null(model.AppliesToProducts);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("Failed to fetch", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
     }
 
     [Theory, BitAutoData]

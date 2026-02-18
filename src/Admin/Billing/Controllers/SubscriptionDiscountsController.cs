@@ -229,7 +229,8 @@ public class SubscriptionDiscountsController(
             }
             catch (StripeException ex)
             {
-                logger.LogError(ex, "Failed to fetch associated products from Stripe for coupon: {CouponId}", discount.StripeCouponId);
+                logger.LogError(ex, "Failed to fetch the coupon's associated products from Stripe. Coupon ID: {CouponId}", model.StripeCouponId);
+                ModelState.AddModelError(string.Empty, "Failed to fetch the coupon's associated products from Stripe. However, editing is still possible.");
             }
         }
 
