@@ -237,7 +237,6 @@ public static class FeatureFlagKeys
     /// on the desktop client.
     /// </summary>
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
-    public const string UseChromiumImporter = "pm-23982-chromium-importer";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
 
