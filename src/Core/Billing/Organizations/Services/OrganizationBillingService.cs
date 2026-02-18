@@ -9,7 +9,6 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
@@ -35,24 +34,31 @@ public class OrganizationBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ISubscriptionDiscountRepository subscriptionDiscountRepository,
+    ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
-        var (organization, customerSetup, subscriptionSetup) = sale;
+        var (organization, customerSetup, subscriptionSetup, owner) = sale;
 
         // Validate coupon and only apply if valid. If invalid, proceed without the discount.
-        // For system-set coupons, we perform basic validation (exists, date range, audience type)
-        // without user-specific eligibility checks.
+        // Validation includes user-specific eligibility checks to ensure the owner has never had premium
+        // and that this is for a Families subscription.
         string? validatedCoupon = null;
         if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon))
         {
-            var isValid = await ValidateCouponAsync(customerSetup.Coupon.Trim());
-
-            if (isValid)
+            // Only Families plans support user-provided coupons
+            if (subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families)
             {
-                validatedCoupon = customerSetup.Coupon.Trim();
+                var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                    owner,
+                    customerSetup.Coupon.Trim(),
+                    DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+                if (isValid)
+                {
+                    validatedCoupon = customerSetup.Coupon.Trim();
+                }
             }
         }
 
@@ -552,34 +558,6 @@ public class OrganizationBillingService(
             };
             await stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId, options);
         }
-    }
-
-    private async Task<bool> ValidateCouponAsync(string stripeCouponId)
-    {
-        // For system-set organization coupons, validate basic properties:
-        // - Coupon exists in database
-        // - Coupon is within valid date range
-        // - Coupon matches expected audience type
-        // Note: User eligibility is not checked for system-set coupons
-        var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(stripeCouponId);
-
-        if (discount == null)
-        {
-            return false;
-        }
-
-        var now = DateTime.UtcNow;
-        if (now < discount.StartDate || now > discount.EndDate)
-        {
-            return false;
-        }
-
-        if (discount.AudienceType != DiscountAudienceType.UserHasNoPreviousSubscriptions)
-        {
-            return false;
-        }
-
-        return true;
     }
 
     #endregion

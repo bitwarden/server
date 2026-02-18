@@ -40,6 +40,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IFeatureService _featureService;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IPricingClient _pricingClient;
+    private readonly IUserRepository _userRepository;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -55,7 +56,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IOrganizationService organizationService,
         IFeatureService featureService,
         IOrganizationBillingService organizationBillingService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IUserRepository userRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -71,6 +73,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _featureService = featureService;
         _organizationBillingService = organizationBillingService;
         _pricingClient = pricingClient;
+        _userRepository = userRepository;
     }
 
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
@@ -230,7 +233,23 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var sale = OrganizationSale.From(organization, upgrade);
+            // Retrieve an owner for the organization to use for billing validation
+            var organizationOwners = await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner);
+            var ownerOrganizationUser = organizationOwners.FirstOrDefault(ou => ou.UserId.HasValue);
+
+            if (ownerOrganizationUser?.UserId == null)
+            {
+                throw new BadRequestException("Organization must have at least one owner.");
+            }
+
+            var owner = await _userRepository.GetByIdAsync(ownerOrganizationUser.UserId.Value);
+
+            if (owner == null)
+            {
+                throw new BadRequestException("Organization owner not found.");
+            }
+
+            var sale = OrganizationSale.From(organization, upgrade, owner);
             await _organizationBillingService.Finalize(sale);
         }
         else
