@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
@@ -15,7 +14,6 @@ using static StripeConstants;
 
 public class HasPaymentMethodQueryTests
 {
-    private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly HasPaymentMethodQuery _query;
@@ -23,7 +21,6 @@ public class HasPaymentMethodQueryTests
     public HasPaymentMethodQueryTests()
     {
         _query = new HasPaymentMethodQuery(
-            _setupIntentCache,
             _stripeAdapter,
             _subscriberService);
     }
@@ -37,43 +34,10 @@ public class HasPaymentMethodQueryTests
         };
 
         _subscriberService.GetCustomer(organization).ReturnsNull();
-        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns((string)null);
 
         var hasPaymentMethod = await _query.Run(organization);
 
         Assert.False(hasPaymentMethod);
-    }
-
-    [Fact]
-    public async Task Run_NoCustomer_WithUnverifiedBankAccount_ReturnsTrue()
-    {
-        var organization = new Organization
-        {
-            Id = Guid.NewGuid()
-        };
-
-        _subscriberService.GetCustomer(organization).ReturnsNull();
-        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
-
-        _stripeAdapter
-            .GetSetupIntentAsync("seti_123",
-                Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
-            .Returns(new SetupIntent
-            {
-                Status = "requires_action",
-                NextAction = new SetupIntentNextAction
-                {
-                    VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
-                },
-                PaymentMethod = new PaymentMethod
-                {
-                    UsBankAccount = new PaymentMethodUsBankAccount()
-                }
-            });
-
-        var hasPaymentMethod = await _query.Run(organization);
-
-        Assert.True(hasPaymentMethod);
     }
 
     [Fact]
@@ -86,6 +50,7 @@ public class HasPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
         };
@@ -107,6 +72,7 @@ public class HasPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             InvoiceSettings = new CustomerInvoiceSettings
             {
                 DefaultPaymentMethodId = "pm_123"
@@ -131,6 +97,7 @@ public class HasPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             DefaultSourceId = "card_123",
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
@@ -153,28 +120,32 @@ public class HasPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
         };
 
         _subscriberService.GetCustomer(organization).Returns(customer);
-        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .GetSetupIntentAsync("seti_123",
-                Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
-            .Returns(new SetupIntent
-            {
-                Status = "requires_action",
-                NextAction = new SetupIntentNextAction
+            .ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
+                options.Customer == customer.Id &&
+                options.HasExpansions("data.payment_method")))
+            .Returns(
+            [
+                new SetupIntent
                 {
-                    VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
-                },
-                PaymentMethod = new PaymentMethod
-                {
-                    UsBankAccount = new PaymentMethodUsBankAccount()
+                    Status = "requires_action",
+                    NextAction = new SetupIntentNextAction
+                    {
+                        VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                    },
+                    PaymentMethod = new PaymentMethod
+                    {
+                        UsBankAccount = new PaymentMethodUsBankAccount()
+                    }
                 }
-            });
+            ]);
 
         var hasPaymentMethod = await _query.Run(organization);
 
@@ -191,6 +162,7 @@ public class HasPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>
             {
@@ -206,7 +178,7 @@ public class HasPaymentMethodQueryTests
     }
 
     [Fact]
-    public async Task Run_NoSetupIntentId_ReturnsFalse()
+    public async Task Run_NoSetupIntents_ReturnsFalse()
     {
         var organization = new Organization
         {
@@ -215,12 +187,18 @@ public class HasPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
         };
 
         _subscriberService.GetCustomer(organization).Returns(customer);
-        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns((string)null);
+
+        _stripeAdapter
+            .ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
+                options.Customer == customer.Id &&
+                options.HasExpansions("data.payment_method")))
+            .Returns(new List<SetupIntent>());
 
         var hasPaymentMethod = await _query.Run(organization);
 
@@ -237,24 +215,28 @@ public class HasPaymentMethodQueryTests
 
         var customer = new Customer
         {
+            Id = "cus_123",
             InvoiceSettings = new CustomerInvoiceSettings(),
             Metadata = new Dictionary<string, string>()
         };
 
         _subscriberService.GetCustomer(organization).Returns(customer);
-        _setupIntentCache.GetSetupIntentIdForSubscriber(organization.Id).Returns("seti_123");
 
         _stripeAdapter
-            .GetSetupIntentAsync("seti_123",
-                Arg.Is<SetupIntentGetOptions>(options => options.HasExpansions("payment_method")))
-            .Returns(new SetupIntent
-            {
-                PaymentMethod = new PaymentMethod
+            .ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
+                options.Customer == customer.Id &&
+                options.HasExpansions("data.payment_method")))
+            .Returns(
+            [
+                new SetupIntent
                 {
-                    Type = "card"
-                },
-                Status = "succeeded"
-            });
+                    PaymentMethod = new PaymentMethod
+                    {
+                        Type = "card"
+                    },
+                    Status = "succeeded"
+                }
+            ]);
 
         var hasPaymentMethod = await _query.Run(organization);
 

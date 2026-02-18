@@ -199,6 +199,9 @@ public class StripeAdapter : IStripeAdapter
     public Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null) =>
         _setupIntentService.GetAsync(id, options);
 
+    public Task<SetupIntent> UpdateSetupIntentAsync(string id, SetupIntentUpdateOptions options = null) =>
+        _setupIntentService.UpdateAsync(id, options);
+
     /*******************
      ** MISCELLANEOUS **
      *******************/
