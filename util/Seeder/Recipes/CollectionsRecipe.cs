@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using LinqToDB.Data;
 using LinqToDB.EntityFrameworkCore;
 
 namespace Bit.Seeder.Recipes;
@@ -65,7 +66,7 @@ public class CollectionsRecipe(DatabaseContext db)
 
         if (collectionUsers.Any())
         {
-            db.BulkCopy(collectionUsers);
+            db.BulkCopy(new BulkCopyOptions { TableName = nameof(Core.Entities.CollectionUser) }, collectionUsers);
         }
     }
 

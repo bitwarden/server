@@ -82,11 +82,9 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        /* This guard can be removed once feature flag is retired*/
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         var sendAuthResult =
@@ -137,11 +135,9 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        /* This guard can be removed once feature flag is retired*/
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
@@ -229,7 +225,6 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/")]
     public async Task<IActionResult> AccessUsingAuth()
     {
@@ -240,6 +235,18 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        {
+            throw new NotFoundException();
+        }
+
         var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
@@ -247,15 +254,24 @@ public class SendsController : Controller
             sendResponse.CreatorIdentifier = creator.Email;
         }
 
-        send.AccessCount++;
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        /*
+         * AccessCount is incremented differently for File and Text Send types:
+         * - Text Sends are incremented at every access
+         * - File Sends are incremented only when the file is downloaded
+         *
+         * Note that this endpoint is initially called for all Send types
+         */
+        if (send.Type == SendType.Text)
+        {
+            send.AccessCount++;
+            await _sendRepository.ReplaceAsync(send);
+            await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        }
 
         return new ObjectResult(sendResponse);
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/file/{fileId}")]
     public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
@@ -267,11 +283,19 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        var url = await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId);
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            throw new NotFoundException();
+        }
 
-        send.AccessCount++;
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        if (result.Equals(SendAccessResult.Denied))
+        {
+            throw new NotFoundException();
+        }
 
         return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }
