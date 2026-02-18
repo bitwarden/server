@@ -91,7 +91,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        return new CipherResponseModel(cipher, user, null, _globalSettings);
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(Guid.NewGuid());
+        return new CipherResponseModel(cipher, user, organizationAbility, _globalSettings);
     }
 
     [HttpGet("{id}/admin")]
