@@ -36,23 +36,19 @@ public class OrganizationBillingService(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     ISubscriptionDiscountRepository subscriptionDiscountRepository,
-    ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
-        var (organization, customerSetup, subscriptionSetup, owner) = sale;
+        var (organization, customerSetup, subscriptionSetup) = sale;
 
         // Validate coupon and only apply if valid. If invalid, proceed without the discount.
-        // Validation happens before purchase to ensure order of operations.
+        // For system-set coupons, we perform basic validation (exists, date range, audience type)
+        // without user-specific eligibility checks.
         string? validatedCoupon = null;
         if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon))
         {
-            // If owner exists, do full validation including user eligibility
-            // If owner is null, validate basic coupon properties only (system-set coupons)
-            var isValid = owner != null
-                ? await subscriptionDiscountService.ValidateDiscountForUserAsync(owner, customerSetup.Coupon.Trim(), DiscountAudienceType.UserHasNoPreviousSubscriptions)
-                : await ValidateSystemCouponAsync(customerSetup.Coupon.Trim());
+            var isValid = await ValidateCouponAsync(customerSetup.Coupon.Trim());
 
             if (isValid)
             {
@@ -558,7 +554,7 @@ public class OrganizationBillingService(
         }
     }
 
-    private async Task<bool> ValidateSystemCouponAsync(string stripeCouponId)
+    private async Task<bool> ValidateCouponAsync(string stripeCouponId)
     {
         // For system-set organization coupons, validate basic properties:
         // - Coupon exists in database

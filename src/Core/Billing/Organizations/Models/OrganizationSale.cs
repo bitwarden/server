@@ -3,7 +3,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Tax.Models;
-using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Organizations.Models;
@@ -15,19 +14,16 @@ public class OrganizationSale
     public void Deconstruct(
         out Organization organization,
         out CustomerSetup? customerSetup,
-        out SubscriptionSetup subscriptionSetup,
-        out User? owner)
+        out SubscriptionSetup subscriptionSetup)
     {
         organization = Organization;
         customerSetup = CustomerSetup;
         subscriptionSetup = SubscriptionSetup;
-        owner = Owner;
     }
 
     public required Organization Organization { get; init; }
     public CustomerSetup? CustomerSetup { get; init; }
     public required SubscriptionSetup SubscriptionSetup { get; init; }
-    public User? Owner { get; init; }
 
     public static OrganizationSale From(
         Organization organization,
@@ -44,8 +40,7 @@ public class OrganizationSale
         {
             Organization = organization,
             CustomerSetup = customerSetup,
-            SubscriptionSetup = subscriptionSetup,
-            Owner = signup.Owner
+            SubscriptionSetup = subscriptionSetup
         };
     }
 
