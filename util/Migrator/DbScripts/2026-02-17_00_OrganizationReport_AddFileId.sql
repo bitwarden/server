@@ -1,4 +1,16 @@
-CREATE PROCEDURE [dbo].[OrganizationReport_Create]
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport]')
+    AND name = 'FileId'
+)
+BEGIN
+    ALTER TABLE [dbo].[OrganizationReport]
+    ADD [FileId] VARCHAR(100) NULL;
+END
+GO
+
+-- Update OrganizationReport_Create to include FileId
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
    @Id UNIQUEIDENTIFIER OUTPUT,
    @OrganizationId UNIQUEIDENTIFIER,
    @ReportData NVARCHAR(MAX),
@@ -23,7 +35,6 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
 AS
 BEGIN
    SET NOCOUNT ON;
-
 
 INSERT INTO [dbo].[OrganizationReport](
     [Id],
@@ -72,3 +83,8 @@ VALUES (
     @FileId
     );
 END
+GO
+
+-- Refresh view metadata after table modification
+EXEC sp_refreshview N'[dbo].[OrganizationReportView]';
+GO
