@@ -263,22 +263,30 @@ public class RestoreOrganizationUserCommand(
     private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Guid organizationId, string defaultCollectionName,
         ICollection<OrganizationUser> restoredUsers)
     {
-        if (!string.IsNullOrWhiteSpace(defaultCollectionName))
+        if (string.IsNullOrWhiteSpace(defaultCollectionName))
         {
-            var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
-                    .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId))
-                .ToList();
+            return;
+        }
 
-            var usersToCreateDefaultCollectionsFor = restoredUsers.Where(x =>
-                organizationUsersDataOwnershipEnabled.Contains(x.Id)
-                && x.Status == OrganizationUserStatusType.Confirmed).ToList();
+        var restoredUsersById = restoredUsers
+            .Where(w => w.UserId != null)
+            .ToDictionary(k => k.UserId.Value);
 
-            if (usersToCreateDefaultCollectionsFor.Count != 0)
-            {
-                await collectionRepository.CreateDefaultCollectionsAsync(organizationId,
-                    usersToCreateDefaultCollectionsFor.Select(x => x.Id),
-                    defaultCollectionName);
-            }
+        var restoredUserPolicyRequirements = await
+            policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredUsersById.Keys);
+
+        var orgUserIdsToCreateDefaultCollectionsFor = restoredUserPolicyRequirements
+            .Where(w => w.Requirement.RequiresDefaultCollectionOnConfirm(organizationId))
+            .Select(s => restoredUsersById.GetValueOrDefault(s.UserId))
+            .Where(w => w?.Status == OrganizationUserStatusType.Confirmed)
+            .Select(s => s.Id)
+            .ToList();
+
+        if (orgUserIdsToCreateDefaultCollectionsFor.Count != 0)
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(organizationId,
+                orgUserIdsToCreateDefaultCollectionsFor,
+                defaultCollectionName);
         }
     }
 
