@@ -5,31 +5,35 @@ namespace Bit.Core.Test.KeyManagement.Models.Data;
 
 public class V2UpgradeTokenDataTests
 {
+    private static readonly string _mockEncryptedType2String =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+
     [Fact]
     public void ToJson_SerializesCorrectly()
     {
         var data = new V2UpgradeTokenData
         {
-            WrappedUserKey1 = "2.key1==|data1==|hmac1==",
-            WrappedUserKey2 = "2.key2==|data2==|hmac2=="
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
         };
 
         var json = data.ToJson();
 
-        var expected = """{"WrappedUserKey1":"2.key1==|data1==|hmac1==","WrappedUserKey2":"2.key2==|data2==|hmac2=="}""";
+        var expected = $"{{\"WrappedUserKey1\":\"{_mockEncryptedType7String}\",\"WrappedUserKey2\":\"{_mockEncryptedType2String}\"}}";
         Assert.Equal(expected, json);
     }
 
     [Fact]
     public void FromJson_ValidJson_DeserializesCorrectly()
     {
-        var json = """{"WrappedUserKey1":"2.key1==|data1==|hmac1==","WrappedUserKey2":"2.key2==|data2==|hmac2=="}""";
+        var json = $"{{\"WrappedUserKey1\":\"{_mockEncryptedType7String}\",\"WrappedUserKey2\":\"{_mockEncryptedType2String}\"}}";
 
         var result = V2UpgradeTokenData.FromJson(json);
 
         Assert.NotNull(result);
-        Assert.Equal("2.key1==|data1==|hmac1==", result.WrappedUserKey1);
-        Assert.Equal("2.key2==|data2==|hmac2==", result.WrappedUserKey2);
+        Assert.Equal(_mockEncryptedType7String, result.WrappedUserKey1);
+        Assert.Equal(_mockEncryptedType2String, result.WrappedUserKey2);
     }
 
     [Theory]

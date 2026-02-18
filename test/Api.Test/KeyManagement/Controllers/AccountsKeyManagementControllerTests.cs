@@ -36,6 +36,10 @@ namespace Bit.Api.Test.KeyManagement.Controllers;
 [JsonDocumentCustomize]
 public class AccountsKeyManagementControllerTests
 {
+    private static readonly string _mockEncryptedType2String =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+
     [Theory]
     [BitAutoData]
     public async Task RegenerateKeysAsync_FeatureFlagOff_Throws(
@@ -248,8 +252,8 @@ public class AccountsKeyManagementControllerTests
         data.AccountKeys.SignatureKeyPair = null;
         data.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
         {
-            WrappedUserKey1 = "2.key1==|data1==|hmac1==",
-            WrappedUserKey2 = "2.key2==|data2==|hmac2=="
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
         };
 
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
@@ -264,8 +268,8 @@ public class AccountsKeyManagementControllerTests
         await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
             .RotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<RotateUserAccountKeysData>(d =>
                 d.V2UpgradeToken != null &&
-                d.V2UpgradeToken.WrappedUserKey1 == "2.key1==|data1==|hmac1==" &&
-                d.V2UpgradeToken.WrappedUserKey2 == "2.key2==|data2==|hmac2=="));
+                d.V2UpgradeToken.WrappedUserKey1 == _mockEncryptedType7String &&
+                d.V2UpgradeToken.WrappedUserKey2 == _mockEncryptedType2String));
     }
 
     [Theory]

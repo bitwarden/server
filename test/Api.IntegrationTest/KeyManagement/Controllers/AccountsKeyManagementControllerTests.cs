@@ -20,6 +20,7 @@ using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Enums;
@@ -34,7 +35,10 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 {
     private static readonly string _mockEncryptedString =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private static readonly string _mockEncryptedType2String2 =
+        "2.06CDSJjTZaigYHUuswIq5A==|trxgZl2RCkYrrmCvGE9WNA==|w5p05eI5wsaYeSyWtsAPvBX63vj798kIMxBTfSB0BQg=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+    private static readonly string _mockEncryptedType7String2 = "7.Mi1iaXR3YXJkZW4tZGF0YQo=";
     private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
 
     private readonly HttpClient _client;
@@ -47,6 +51,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
+    private readonly IPushNotificationService _pushNotificationService;
     private string _ownerEmail = null!;
 
     public AccountsKeyManagementControllerTests(ApiApplicationFactory factory)
@@ -57,6 +62,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration, Arg.Any<bool>())
                 .Returns(true);
         });
+        _factory.SubstituteService<IPushNotificationService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
@@ -66,6 +72,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _userSignatureKeyPairRepository = _factory.GetService<IUserSignatureKeyPairRepository>();
+        _pushNotificationService = _factory.GetService<IPushNotificationService>();
     }
 
     public async Task InitializeAsync()
@@ -447,7 +454,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_V1Crypto_WithV2UpgradeToken_PersistsTokenToDatabase(
+    public async Task RotateUserAccountKeys_V1Crypto_WithV2UpgradeToken_PersistsToken_AndDoesNotLogout(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         var user = await SetupUserForKeyRotationAsync();
@@ -456,7 +463,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupRotateUserAccountKeys(request, isV2Crypto: false);
         request.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
         {
-            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey1 = _mockEncryptedType7String,
             WrappedUserKey2 = _mockEncryptedString
         };
 
@@ -466,13 +473,16 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
         Assert.NotNull(userNewState.V2UpgradeToken);
-        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
         Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+        Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_V2Crypto_WithV2UpgradeToken_PersistsTokenToDatabase(
+    public async Task RotateUserAccountKeys_V2Crypto_WithV2UpgradeToken_IgnoresToken_AndLogsOut(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         var user = await SetupUserForKeyRotationAsync(_mockEncryptedType7String, createSignatureKeyPair: true);
@@ -481,7 +491,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupRotateUserAccountKeys(request, isV2Crypto: true);
         request.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
         {
-            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey1 = _mockEncryptedType7String,
             WrappedUserKey2 = _mockEncryptedString
         };
 
@@ -490,14 +500,21 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
-        Assert.NotNull(userNewState.V2UpgradeToken);
-        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
-        Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+
+        // Token must NOT be stored (V2 users don't need upgrade token)
+        Assert.Null(userNewState.V2UpgradeToken);
+
+        // Security stamp must change (logout occurred)
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+
+        // Standard logout push sent without a reason (full logout, not KeyRotation)
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(userNewState.Id, false, null);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_WithoutV2UpgradeToken_DoesNotSetToken(
+    public async Task RotateUserAccountKeys_WithoutV2UpgradeToken_DoesNotSetToken_AndLogsOut(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         var user = await SetupUserForKeyRotationAsync();
@@ -511,11 +528,13 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
         Assert.Null(userNewState.V2UpgradeToken);
+        Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken(
+    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken_AndLogsOut(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         // Arrange
@@ -524,7 +543,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         // Add existing stale token to user BEFORE rotation
         var staleToken = new V2UpgradeTokenData
         {
-            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey1 = _mockEncryptedType7String,
             WrappedUserKey2 = _mockEncryptedString
         };
         user.V2UpgradeToken = staleToken.ToJson();
@@ -549,22 +568,22 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Verify logout behavior (SecurityStamp should be different)
         Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithNewToken_ReplacesToken(
+    public async Task RotateUserAccountKeys_WithExistingV2UpgradeToken_WithNewToken_ReplacesToken_AndDoesNotLogout(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         // Arrange
         var user = await SetupUserForKeyRotationAsync();
 
         // Add existing old token to user BEFORE rotation
-        // Use Type 2 encryption strings for the old token
         var oldToken = new V2UpgradeTokenData
         {
-            WrappedUserKey1 = "2.OLD1==|OLD1data==|OLD1hmac==",
-            WrappedUserKey2 = "2.OLD2==|OLD2data==|OLD2hmac=="
+            WrappedUserKey1 = _mockEncryptedType7String2,
+            WrappedUserKey2 = _mockEncryptedType2String2
         };
         user.V2UpgradeToken = oldToken.ToJson();
         await _userRepository.ReplaceAsync(user);
@@ -575,7 +594,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupRotateUserAccountKeys(request, isV2Crypto: false);
         request.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
         {
-            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey1 = _mockEncryptedType7String,
             WrappedUserKey2 = _mockEncryptedString
         };
 
@@ -589,20 +608,22 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.NotNull(userNewState.V2UpgradeToken);
 
         // Verify new token is present
-        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
+        Assert.Contains($"\"WrappedUserKey1\":\"{_mockEncryptedType7String}\"", userNewState.V2UpgradeToken);
         Assert.Contains($"\"WrappedUserKey2\":\"{_mockEncryptedString}\"", userNewState.V2UpgradeToken);
 
         // Verify old token is NOT present
-        Assert.DoesNotContain("OLD1", userNewState.V2UpgradeToken);
-        Assert.DoesNotContain("OLD2", userNewState.V2UpgradeToken);
+        Assert.DoesNotContain(oldToken.WrappedUserKey1, userNewState.V2UpgradeToken);
+        Assert.DoesNotContain(oldToken.WrappedUserKey2, userNewState.V2UpgradeToken);
 
         // Verify NO logout (SecurityStamp should be the same for key rotation with token)
         Assert.Equal(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1)
+            .PushLogOutAsync(userNewState.Id, false, PushNotificationLogOutReason.KeyRotation);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeys_V2Crypto_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken(
+    public async Task RotateUserAccountKeys_V2Crypto_WithExistingV2UpgradeToken_WithoutNewToken_ClearsStaleToken_AndLogsOut(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         // Arrange
@@ -611,7 +632,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         // Add existing stale token to V2 crypto user BEFORE rotation
         var staleToken = new V2UpgradeTokenData
         {
-            WrappedUserKey1 = _mockEncryptedString,
+            WrappedUserKey1 = _mockEncryptedType7String,
             WrappedUserKey2 = _mockEncryptedString
         };
         user.V2UpgradeToken = staleToken.ToJson();
@@ -636,6 +657,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Verify logout behavior (SecurityStamp should be different)
         Assert.NotEqual(user.SecurityStamp, userNewState.SecurityStamp);
+        await _pushNotificationService.Received(1).PushLogOutAsync(userNewState.Id, false, null);
     }
 
     [Fact]

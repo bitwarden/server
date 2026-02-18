@@ -91,14 +91,17 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
 
-        if (model.V2UpgradeToken == null)
+        // V2UpgradeToken is only valid for V1 users transitioning to V2.
+        // For V2 users the token is semantically invalid — discard it and perform a full logout.
+        var shouldPersistV2UpgradeToken = model.V2UpgradeToken != null && !IsV2EncryptionUserAsync(user);
+        if (shouldPersistV2UpgradeToken)
         {
-            user.V2UpgradeToken = null;
-            user.SecurityStamp = Guid.NewGuid().ToString();
+            user.V2UpgradeToken = model.V2UpgradeToken!.ToJson();
         }
         else
         {
-            user.V2UpgradeToken = model.V2UpgradeToken.ToJson();
+            user.V2UpgradeToken = null;
+            user.SecurityStamp = Guid.NewGuid().ToString();
         }
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
@@ -109,7 +112,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
 
-        if (model.V2UpgradeToken != null)
+        if (shouldPersistV2UpgradeToken)
         {
             await _pushService.PushLogOutAsync(user.Id,
                 reason: PushNotificationLogOutReason.KeyRotation);

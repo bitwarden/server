@@ -6,7 +6,7 @@ namespace Bit.Api.Test.KeyManagement.Models.Request;
 
 public class V2UpgradeTokenRequestModelTests
 {
-    private const string _validWrappedKey1 = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private const string _validWrappedKey1 = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private const string _validWrappedKey2 = "2.BPt52Ie9PQjDQYkzKLDjEB==|P7PIiu3V3iKHCTOHojnKnh==|jE44t9C79D9KiZZiTb5W2uBskwMs9fFbHrPW8CSp6Kl=";
 
     [Fact]
