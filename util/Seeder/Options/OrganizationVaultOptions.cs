@@ -38,7 +38,7 @@ public class OrganizationVaultOptions
     /// <summary>
     /// When true and Users >= 10, creates a realistic mix of user statuses:
     /// 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked.
-    /// When false or Users &lt; 10, all users are Confirmed.
+    /// When false or Users less than 10, all users are Confirmed.
     /// </summary>
     public bool RealisticStatusMix { get; init; } = false;
 
