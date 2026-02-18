@@ -445,42 +445,42 @@ The persistent cache is accessed via keyed service injection and is optimized fo
 The persistent `IDistributedCache` service is appropriate for workflow state that spans multiple requests and needs automatic TTL cleanup.
 
 ```csharp
-public class SetupIntentDistributedCache(
-    [FromKeyedServices("persistent")] IDistributedCache distributedCache) : ISetupIntentCache
+public class PaymentWorkflowCache(
+    [FromKeyedServices("persistent")] IDistributedCache distributedCache) : IPaymentWorkflowCache
 {
-    public async Task Set(Guid subscriberId, string setupIntentId)
+    public async Task SetPaymentSessionAsync(Guid userId, string sessionId)
     {
         // Bidirectional mapping for payment flow
-        var bySubscriberIdCacheKey = $"setup_intent_id_for_subscriber_id_{subscriberId}";
-        var bySetupIntentIdCacheKey = $"subscriber_id_for_setup_intent_id_{setupIntentId}";
+        var byUserIdCacheKey = $"payment_session_for_user_{userId}";
+        var bySessionIdCacheKey = $"user_for_payment_session_{sessionId}";
 
         // Note: No explicit TTL set here. Cosmos DB uses container-level TTL for automatic cleanup.
         // In cloud, Cosmos TTL handles expiration. In self-hosted, the cache backend manages TTL.
         await Task.WhenAll(
-            distributedCache.SetStringAsync(bySubscriberIdCacheKey, setupIntentId),
-            distributedCache.SetStringAsync(bySetupIntentIdCacheKey, subscriberId.ToString()));
+            distributedCache.SetStringAsync(byUserIdCacheKey, sessionId),
+            distributedCache.SetStringAsync(bySessionIdCacheKey, userId.ToString()));
     }
 
-    public async Task<string?> GetSetupIntentIdForSubscriber(Guid subscriberId)
+    public async Task<string?> GetPaymentSessionForUserAsync(Guid userId)
     {
-        var cacheKey = $"setup_intent_id_for_subscriber_id_{subscriberId}";
+        var cacheKey = $"payment_session_for_user_{userId}";
         return await distributedCache.GetStringAsync(cacheKey);
     }
 
-    public async Task<Guid?> GetSubscriberIdForSetupIntent(string setupIntentId)
+    public async Task<Guid?> GetUserForPaymentSessionAsync(string sessionId)
     {
-        var cacheKey = $"subscriber_id_for_setup_intent_id_{setupIntentId}";
+        var cacheKey = $"user_for_payment_session_{sessionId}";
         var value = await distributedCache.GetStringAsync(cacheKey);
-        if (string.IsNullOrEmpty(value) || !Guid.TryParse(value, out var subscriberId))
+        if (string.IsNullOrEmpty(value) || !Guid.TryParse(value, out var userId))
         {
             return null;
         }
-        return subscriberId;
+        return userId;
     }
 
-    public async Task RemoveSetupIntentForSubscriber(Guid subscriberId)
+    public async Task RemovePaymentSessionForUserAsync(Guid userId)
     {
-        var cacheKey = $"setup_intent_id_for_subscriber_id_{subscriberId}";
+        var cacheKey = $"payment_session_for_user_{userId}";
         await distributedCache.RemoveAsync(cacheKey);
     }
 }

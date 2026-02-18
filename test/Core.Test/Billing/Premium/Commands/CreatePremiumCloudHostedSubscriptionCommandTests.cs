@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -34,7 +33,6 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     private readonly IBraintreeGateway _braintreeGateway = Substitute.For<IBraintreeGateway>();
     private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
     private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
-    private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IUserService _userService = Substitute.For<IUserService>();
@@ -66,7 +64,6 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             _braintreeGateway,
             _braintreeService,
             _globalSettings,
-            _setupIntentCache,
             _stripeAdapter,
             _subscriberService,
             _userService,
