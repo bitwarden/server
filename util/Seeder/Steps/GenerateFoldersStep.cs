@@ -19,7 +19,7 @@ internal sealed class GenerateFoldersStep : IStep
         {
             var digest = userDigests[index];
             var range = distribution.Select(index, userDigests.Count);
-            var count = range.Min + (index % Math.Max(range.Max - range.Min + 1, 1));
+            var count = range.Min + (index % Math.Max(range.Max - range.Min, 1));
             var folderIds = new List<Guid>(count);
 
             for (var i = 0; i < count; i++)
