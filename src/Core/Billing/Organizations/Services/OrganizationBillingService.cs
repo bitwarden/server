@@ -53,7 +53,7 @@ public class OrganizationBillingService(
             var isValid = owner != null
                 ? await subscriptionDiscountService.ValidateDiscountForUserAsync(owner, customerSetup.Coupon.Trim(), DiscountAudienceType.UserHasNoPreviousSubscriptions)
                 : await ValidateSystemCouponAsync(customerSetup.Coupon.Trim());
-            
+
             if (isValid)
             {
                 validatedCoupon = customerSetup.Coupon.Trim();

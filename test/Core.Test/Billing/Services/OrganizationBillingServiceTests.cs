@@ -7,8 +7,6 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
