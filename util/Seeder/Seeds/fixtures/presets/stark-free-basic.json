@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "stark-industries",
+    "planType": "free",
+    "seats": 2
+  },
+  "users": {
+    "count": 1,
+    "realisticStatusMix": false
+  },
+  "collections": {
+    "count": 1
+  },
+  "folders": true,
+  "ciphers": {
+    "fixture": "autofill-testing"
+  },
+  "personalCiphers": {
+    "countPerUser": 15
+  }
+}

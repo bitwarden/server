@@ -8,6 +8,7 @@ using EfCollectionUser = Bit.Infrastructure.EntityFramework.Models.CollectionUse
 using EfGroup = Bit.Infrastructure.EntityFramework.Models.Group;
 using EfGroupUser = Bit.Infrastructure.EntityFramework.Models.GroupUser;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
+using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
 using EfOrganizationUser = Bit.Infrastructure.EntityFramework.Models.OrganizationUser;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
@@ -17,7 +18,7 @@ namespace Bit.Seeder.Pipeline;
 /// Flushes accumulated entities from <see cref="SeederContext"/> to the database via BulkCopy.
 /// </summary>
 /// <remarks>
-/// Entities are committed in foreign-key-safe order (Organizations → Users → OrgUsers → …).
+/// Entities are committed in foreign-key-safe order (Organizations → Users → OrgUsers → … → Folders → Ciphers).
 /// Most Core entities require AutoMapper conversion to their EF counterparts before insert;
 /// a few (Cipher, CollectionCipher) share the same type across layers and copy directly.
 /// Each list is cleared after insert so the context is ready for the next pipeline run.
@@ -47,6 +48,8 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
         MapCopyAndClear<Core.Entities.CollectionUser, EfCollectionUser>(context.CollectionUsers, nameof(Core.Entities.CollectionUser));
 
         MapCopyAndClear<Core.Entities.CollectionGroup, EfCollectionGroup>(context.CollectionGroups, nameof(Core.Entities.CollectionGroup));
+
+        MapCopyAndClear<Core.Vault.Entities.Folder, EfFolder>(context.Folders);
 
         CopyAndClear(context.Ciphers);
 

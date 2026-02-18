@@ -45,7 +45,7 @@ Need to create test data?
 - **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
 - **PresetExecutor**: Orchestrates preset loading and execution
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Ciphers
+**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
 
 See `Pipeline/` folder for implementation.
 

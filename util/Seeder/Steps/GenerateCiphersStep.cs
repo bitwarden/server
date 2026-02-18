@@ -4,7 +4,6 @@ using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
-using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Pipeline;
@@ -25,7 +24,8 @@ namespace Bit.Seeder.Steps;
 internal sealed class GenerateCiphersStep(
     int count,
     Distribution<CipherType>? typeDist = null,
-    Distribution<PasswordStrength>? pwDist = null) : IStep
+    Distribution<PasswordStrength>? pwDist = null,
+    bool assignFolders = false) : IStep
 {
     public void Execute(SeederContext context)
     {
@@ -43,6 +43,9 @@ internal sealed class GenerateCiphersStep(
         var passwordDistribution = pwDist ?? PasswordDistributions.Realistic;
         var companies = Companies.All;
 
+        var userDigests = assignFolders ? context.Registry.UserDigests : null;
+        var userFolderIds = assignFolders ? context.Registry.UserFolderIds : null;
+
         var ciphers = new List<Cipher>(count);
         var cipherIds = new List<Guid>(count);
         var collectionCiphers = new List<CollectionCipher>();
@@ -52,19 +55,25 @@ internal sealed class GenerateCiphersStep(
             var cipherType = typeDistribution.Select(i, count);
             var cipher = cipherType switch
             {
-                CipherType.Login => CreateLoginCipher(i, orgId, orgKey, companies, generator, passwordDistribution),
-                CipherType.Card => CreateCardCipher(i, orgId, orgKey, generator),
-                CipherType.Identity => CreateIdentityCipher(i, orgId, orgKey, generator),
-                CipherType.SecureNote => CreateSecureNoteCipher(i, orgId, orgKey, generator),
-                CipherType.SSHKey => CreateSshKeyCipher(i, orgId, orgKey),
+                CipherType.Login => CipherComposer.ComposeLogin(i, orgKey, companies, generator, passwordDistribution, organizationId: orgId),
+                CipherType.Card => CipherComposer.ComposeCard(i, orgKey, generator, organizationId: orgId),
+                CipherType.Identity => CipherComposer.ComposeIdentity(i, orgKey, generator, organizationId: orgId),
+                CipherType.SecureNote => CipherComposer.ComposeSecureNote(i, orgKey, generator, organizationId: orgId),
+                CipherType.SSHKey => CipherComposer.ComposeSshKey(i, orgKey, organizationId: orgId),
                 _ => throw new ArgumentException($"Unsupported cipher type: {cipherType}")
             };
+
+            if (userDigests is { Count: > 0 } && userFolderIds is not null)
+            {
+                var userDigest = userDigests[i % userDigests.Count];
+                CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
+            }
 
             ciphers.Add(cipher);
             cipherIds.Add(cipher.Id);
 
             // Collection assignment
-            if (collectionIds.Count <= 0)
+            if (collectionIds.Count == 0)
             {
                 continue;
             }
@@ -89,68 +98,5 @@ internal sealed class GenerateCiphersStep(
         context.Ciphers.AddRange(ciphers);
         context.Registry.CipherIds.AddRange(cipherIds);
         context.CollectionCiphers.AddRange(collectionCiphers);
-    }
-
-    private static Cipher CreateLoginCipher(
-        int index,
-        Guid organizationId,
-        string orgKey,
-        Company[] companies,
-        GeneratorContext generator,
-        Distribution<PasswordStrength> passwordDistribution)
-    {
-        var company = companies[index % companies.Length];
-        return LoginCipherSeeder.Create(
-            orgKey,
-            name: $"{company.Name} ({company.Category})",
-            organizationId: organizationId,
-            username: generator.Username.GenerateByIndex(index, totalHint: generator.CipherCount, domain: company.Domain),
-            password: Passwords.GetPassword(index, generator.CipherCount, passwordDistribution),
-            uri: $"https://{company.Domain}");
-    }
-
-    private static Cipher CreateCardCipher(int index, Guid organizationId, string orgKey, GeneratorContext generator)
-    {
-        var card = generator.Card.GenerateByIndex(index);
-        return CardCipherSeeder.Create(
-            orgKey,
-            name: $"{card.CardholderName}'s {card.Brand}",
-            card: card,
-            organizationId: organizationId);
-    }
-
-    private static Cipher CreateIdentityCipher(int index, Guid organizationId, string orgKey, GeneratorContext generator)
-    {
-        var identity = generator.Identity.GenerateByIndex(index);
-        var name = $"{identity.FirstName} {identity.LastName}";
-        if (!string.IsNullOrEmpty(identity.Company))
-        {
-            name += $" ({identity.Company})";
-        }
-        return IdentityCipherSeeder.Create(
-            orgKey,
-            name: name,
-            identity: identity,
-            organizationId: organizationId);
-    }
-
-    private static Cipher CreateSecureNoteCipher(int index, Guid organizationId, string orgKey, GeneratorContext generator)
-    {
-        var (name, notes) = generator.SecureNote.GenerateByIndex(index);
-        return SecureNoteCipherSeeder.Create(
-            orgKey,
-            name: name,
-            organizationId: organizationId,
-            notes: notes);
-    }
-
-    private static Cipher CreateSshKeyCipher(int index, Guid organizationId, string orgKey)
-    {
-        var sshKey = SshKeyDataGenerator.GenerateByIndex(index);
-        return SshKeyCipherSeeder.Create(
-            orgKey,
-            name: $"SSH Key {index + 1}",
-            sshKey: sshKey,
-            organizationId: organizationId);
     }
 }
