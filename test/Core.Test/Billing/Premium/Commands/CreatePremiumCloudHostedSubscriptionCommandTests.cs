@@ -812,4 +812,255 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _userService.Received(1).SaveUserAsync(user);
     }
 
+    [Theory, BitAutoData]
+    public async Task Run_UserWithCanceledSubscription_AllowsResubscribe(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = true; // User still has Premium flag set
+        user.GatewayCustomerId = "existing_customer_123";
+        user.GatewaySubscriptionId = "sub_canceled_123";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var existingCanceledSubscription = Substitute.For<StripeSubscription>();
+        existingCanceledSubscription.Id = "sub_canceled_123";
+        existingCanceledSubscription.Status = "canceled"; // Terminal status
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "existing_customer_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var newSubscription = Substitute.For<StripeSubscription>();
+        newSubscription.Id = "sub_new_123";
+        newSubscription.Status = "active";
+        newSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId).Returns(existingCanceledSubscription);
+        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(true);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0); // Should succeed, not return "Already a premium user"
+        Assert.True(user.Premium);
+        Assert.Equal(newSubscription.Id, user.GatewaySubscriptionId);
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.Received(1).SaveUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserWithIncompleteExpiredSubscription_AllowsResubscribe(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = true; // User still has Premium flag set
+        user.GatewayCustomerId = "existing_customer_123";
+        user.GatewaySubscriptionId = "sub_incomplete_expired_123";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var existingExpiredSubscription = Substitute.For<StripeSubscription>();
+        existingExpiredSubscription.Id = "sub_incomplete_expired_123";
+        existingExpiredSubscription.Status = "incomplete_expired"; // Terminal status
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "existing_customer_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var newSubscription = Substitute.For<StripeSubscription>();
+        newSubscription.Id = "sub_new_123";
+        newSubscription.Status = "active";
+        newSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId).Returns(existingExpiredSubscription);
+        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(true);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0); // Should succeed, not return "Already a premium user"
+        Assert.True(user.Premium);
+        Assert.Equal(newSubscription.Id, user.GatewaySubscriptionId);
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.Received(1).SaveUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_UserWithActiveSubscription_PremiumTrue_ReturnsBadRequest(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_active_123";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+
+        var existingActiveSubscription = Substitute.For<StripeSubscription>();
+        existingActiveSubscription.Id = "sub_active_123";
+        existingActiveSubscription.Status = "active"; // NOT a terminal status
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId).Returns(existingActiveSubscription);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal("Already a premium user.", badRequest.Response);
+        // Verify no subscription creation was attempted
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_SubscriptionFetchThrows_ProceedsWithCreation(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = "existing_customer_123";
+        user.GatewaySubscriptionId = "sub_nonexistent_123";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        // Simulate Stripe exception when fetching subscription (e.g., subscription doesn't exist)
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId)
+            .Returns<StripeSubscription>(_ => throw new Stripe.StripeException("Subscription not found"));
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "existing_customer_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var newSubscription = Substitute.For<StripeSubscription>();
+        newSubscription.Id = "sub_new_123";
+        newSubscription.Status = "active";
+        newSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
+
+        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(true);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert - Should proceed successfully despite the exception
+        Assert.True(result.IsT0);
+        Assert.True(user.Premium);
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.Received(1).SaveUserAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ResubscribeWithTerminalSubscription_UpdatesPaymentMethod(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewayCustomerId = "existing_customer_123";
+        user.GatewaySubscriptionId = "sub_canceled_123";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "new_card_token_456";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var existingCanceledSubscription = Substitute.For<StripeSubscription>();
+        existingCanceledSubscription.Id = "sub_canceled_123";
+        existingCanceledSubscription.Status = "canceled"; // Terminal status
+
+        var mockCustomer = Substitute.For<StripeCustomer>();
+        mockCustomer.Id = "existing_customer_123";
+        mockCustomer.Address = new Address { Country = "US", PostalCode = "12345" };
+        mockCustomer.Metadata = new Dictionary<string, string>();
+
+        var newSubscription = Substitute.For<StripeSubscription>();
+        newSubscription.Id = "sub_new_123";
+        newSubscription.Status = "active";
+        newSubscription.Items = new StripeList<SubscriptionItem>
+        {
+            Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(30)
+                }
+            ]
+        };
+
+        MaskedPaymentMethod mockMaskedPaymentMethod = new MaskedCard
+        {
+            Brand = "visa",
+            Last4 = "4567",
+            Expiration = "12/2026"
+        };
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId).Returns(existingCanceledSubscription);
+        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(true); // Has old payment method
+        _updatePaymentMethodCommand.Run(Arg.Any<User>(), Arg.Any<TokenizedPaymentMethod>(), Arg.Any<BillingAddress>())
+            .Returns(mockMaskedPaymentMethod);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+
+        // Act
+        var result = await _command.Run(user, paymentMethod, billingAddress, 0);
+
+        // Assert
+        Assert.True(result.IsT0);
+        // Verify payment method was updated because of terminal subscription
+        await _updatePaymentMethodCommand.Received(1).Run(user, paymentMethod, billingAddress);
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.Received(1).SaveUserAsync(user);
+    }
+
 }

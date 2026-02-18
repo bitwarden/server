@@ -1,0 +1,15 @@
+{{#>TitleContactUsTextLayout}}
+Bitwarden is a password manager used to simplify password sharing and protect your sensitive data. Once you accept this invitation, you can:
+
+- Securely store logins so you never forget your passwords.
+- Sign in to accounts quickly by filling passwords with one click.
+- Share logins easily with your friends, family, or coworkers.
+
+{{#if InviterEmail}}
+This invitation was sent by {{InviterEmail}} and expires {{ExpirationDate}}.
+{{else}}
+This invitation expires {{ExpirationDate}}.
+{{/if}}
+
+Accept invitation: {{Url}}
+{{/TitleContactUsTextLayout}}
