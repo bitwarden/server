@@ -5,10 +5,10 @@ using LinqToDB.EntityFrameworkCore;
 using EfCollection = Bit.Infrastructure.EntityFramework.Models.Collection;
 using EfCollectionGroup = Bit.Infrastructure.EntityFramework.Models.CollectionGroup;
 using EfCollectionUser = Bit.Infrastructure.EntityFramework.Models.CollectionUser;
+using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
 using EfGroup = Bit.Infrastructure.EntityFramework.Models.Group;
 using EfGroupUser = Bit.Infrastructure.EntityFramework.Models.GroupUser;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
-using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
 using EfOrganizationUser = Bit.Infrastructure.EntityFramework.Models.OrganizationUser;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
