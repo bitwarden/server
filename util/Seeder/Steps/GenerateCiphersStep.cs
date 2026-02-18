@@ -53,15 +53,7 @@ internal sealed class GenerateCiphersStep(
         for (var i = 0; i < count; i++)
         {
             var cipherType = typeDistribution.Select(i, count);
-            var cipher = cipherType switch
-            {
-                CipherType.Login => CipherComposer.ComposeLogin(i, orgKey, companies, generator, passwordDistribution, organizationId: orgId),
-                CipherType.Card => CipherComposer.ComposeCard(i, orgKey, generator, organizationId: orgId),
-                CipherType.Identity => CipherComposer.ComposeIdentity(i, orgKey, generator, organizationId: orgId),
-                CipherType.SecureNote => CipherComposer.ComposeSecureNote(i, orgKey, generator, organizationId: orgId),
-                CipherType.SSHKey => CipherComposer.ComposeSshKey(i, orgKey, organizationId: orgId),
-                _ => throw new ArgumentException($"Unsupported cipher type: {cipherType}")
-            };
+            var cipher = CipherComposer.Compose(i, cipherType, orgKey, companies, generator, passwordDistribution, organizationId: orgId);
 
             if (userDigests is { Count: > 0 } && userFolderIds is not null)
             {

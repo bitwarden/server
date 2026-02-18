@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
@@ -13,7 +14,28 @@ namespace Bit.Seeder.Factories;
 /// </summary>
 internal static class CipherComposer
 {
-    internal static Cipher ComposeLogin(
+    internal static Cipher Compose(
+        int index,
+        CipherType cipherType,
+        string encryptionKey,
+        Company[] companies,
+        GeneratorContext generator,
+        Distribution<PasswordStrength> passwordDistribution,
+        Guid? organizationId = null,
+        Guid? userId = null)
+    {
+        return cipherType switch
+        {
+            CipherType.Login => ComposeLogin(index, encryptionKey, companies, generator, passwordDistribution, organizationId, userId),
+            CipherType.Card => ComposeCard(index, encryptionKey, generator, organizationId, userId),
+            CipherType.Identity => ComposeIdentity(index, encryptionKey, generator, organizationId, userId),
+            CipherType.SecureNote => ComposeSecureNote(index, encryptionKey, generator, organizationId, userId),
+            CipherType.SSHKey => ComposeSshKey(index, encryptionKey, organizationId, userId),
+            _ => throw new ArgumentException($"Unsupported cipher type: {cipherType}")
+        };
+    }
+
+    private static Cipher ComposeLogin(
         int index,
         string encryptionKey,
         Company[] companies,
@@ -33,7 +55,7 @@ internal static class CipherComposer
             uri: $"https://{company.Domain}");
     }
 
-    internal static Cipher ComposeCard(
+    private static Cipher ComposeCard(
         int index,
         string encryptionKey,
         GeneratorContext generator,
@@ -49,7 +71,7 @@ internal static class CipherComposer
             userId: userId);
     }
 
-    internal static Cipher ComposeIdentity(
+    private static Cipher ComposeIdentity(
         int index,
         string encryptionKey,
         GeneratorContext generator,
@@ -70,7 +92,7 @@ internal static class CipherComposer
             userId: userId);
     }
 
-    internal static Cipher ComposeSecureNote(
+    private static Cipher ComposeSecureNote(
         int index,
         string encryptionKey,
         GeneratorContext generator,
@@ -86,7 +108,7 @@ internal static class CipherComposer
             notes: notes);
     }
 
-    internal static Cipher ComposeSshKey(
+    private static Cipher ComposeSshKey(
         int index,
         string encryptionKey,
         Guid? organizationId = null,

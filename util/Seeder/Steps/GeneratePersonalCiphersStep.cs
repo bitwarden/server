@@ -44,15 +44,7 @@ internal sealed class GeneratePersonalCiphersStep(
             for (var i = 0; i < countPerUser; i++)
             {
                 var cipherType = typeDistribution.Select(globalIndex, userDigests.Count * countPerUser);
-                var cipher = cipherType switch
-                {
-                    CipherType.Login => CipherComposer.ComposeLogin(globalIndex, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId),
-                    CipherType.Card => CipherComposer.ComposeCard(globalIndex, userDigest.SymmetricKey, generator, userId: userDigest.UserId),
-                    CipherType.Identity => CipherComposer.ComposeIdentity(globalIndex, userDigest.SymmetricKey, generator, userId: userDigest.UserId),
-                    CipherType.SecureNote => CipherComposer.ComposeSecureNote(globalIndex, userDigest.SymmetricKey, generator, userId: userDigest.UserId),
-                    CipherType.SSHKey => CipherComposer.ComposeSshKey(globalIndex, userDigest.SymmetricKey, userId: userDigest.UserId),
-                    _ => throw new ArgumentException($"Unsupported cipher type: {cipherType}")
-                };
+                var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId);
 
                 CipherComposer.AssignFolder(cipher, userDigest.UserId, i, context.Registry.UserFolderIds);
 
