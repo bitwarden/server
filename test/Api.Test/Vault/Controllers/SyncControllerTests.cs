@@ -410,7 +410,7 @@ public class SyncControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_BankAccountCiphers_ReturnedWhenClientVersionSupported(
+    public async Task Get_BankAccountCiphers_ReturnedWhenFlagEnabledAndClientVersionSupported(
         User user, SutProvider<SyncController> sutProvider)
     {
         user.EquivalentDomains = null;
@@ -436,6 +436,9 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.BankAccountCipherMinimumVersion));
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(true);
+
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(user).Returns(false);
         userService.HasPremiumFromOrganization(user).Returns(false);
@@ -447,7 +450,7 @@ public class SyncControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_BankAccountCiphers_FilteredWhenClientVersionTooOld(
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagDisabled(
         User user, SutProvider<SyncController> sutProvider)
     {
         user.EquivalentDomains = null;
@@ -470,8 +473,9 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
 
+        // New client version but flag disabled
         sutProvider.GetDependency<ICurrentContext>()
-            .ClientVersion.Returns(new Version("2025.1.0"));
+            .ClientVersion.Returns(new Version(Constants.BankAccountCipherMinimumVersion));
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(false);
@@ -488,7 +492,7 @@ public class SyncControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_BankAccountCiphers_ReturnedWhenFeatureFlagEnabled(
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagEnabledButClientVersionTooOld(
         User user, SutProvider<SyncController> sutProvider)
     {
         user.EquivalentDomains = null;
@@ -510,7 +514,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
 
-        // Old client version but feature flag enabled
+        // Flag enabled but old client version
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version("2025.1.0"));
 
@@ -523,7 +527,7 @@ public class SyncControllerTests
 
         var result = await sutProvider.Sut.Get();
 
-        Assert.Contains(result.Ciphers, c => c.Type == CipherType.BankAccount);
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
     }
 
     private async Task AssertMethodsCalledAsync(IUserService userService,

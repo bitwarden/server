@@ -151,7 +151,7 @@ public class SyncController : Controller
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.SSHKey);
         }
 
-        if (_currentContext.ClientVersion < _bankAccountCipherMinimumVersion && !_featureService.IsEnabled(FeatureFlagKeys.VaultBankAccount))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.VaultBankAccount) || _currentContext.ClientVersion < _bankAccountCipherMinimumVersion)
         {
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.BankAccount);
         }
