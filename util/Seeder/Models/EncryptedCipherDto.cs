@@ -37,7 +37,9 @@ public class EncryptedCipherDto
     [JsonPropertyName("sshKey")]
     public EncryptedSshKeyDto? SshKey { get; set; }
 
+    // TODO: Remove JsonIgnore condition when Rust SDK supports BankAccount cipher type
     [JsonPropertyName("bankAccount")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public EncryptedBankAccountDto? BankAccount { get; set; }
 
     [JsonPropertyName("fields")]
