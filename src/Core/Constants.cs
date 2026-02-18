@@ -31,7 +31,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
-    public const string BankAccountCipherMinimumVersion = "2026.2.0";
+    public const string BankAccountCipherMinimumVersion = "2026.3.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
