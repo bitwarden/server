@@ -8,7 +8,7 @@ namespace Bit.DbSeederUtility;
 /// </summary>
 public class SeedArgs : IArgumentModel
 {
-    [Option('p', "preset", Description = "Name of embedded preset to load (e.g., 'dunder-mifflin-full')")]
+    [Option("preset", Description = "Name of embedded preset to load")]
     public string? Preset { get; set; }
 
     [Option('l', "list", Description = "List all available presets and fixtures")]
@@ -16,6 +16,9 @@ public class SeedArgs : IArgumentModel
 
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; }
+
+    [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
+    public string? Password { get; set; }
 
     public void Validate()
     {
