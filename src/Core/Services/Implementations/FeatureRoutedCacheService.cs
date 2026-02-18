@@ -40,6 +40,14 @@ public class FeatureRoutedCacheService(
 
     public Task<IDictionary<Guid, OrganizationAbility>> FakeGetOrganizationAbilitiesAsync() => throw new NotImplementedException();
 
+    public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds)
+    {
+        var allOrganizationAbilities = await GetOrganizationAbilitiesAsync();
+        return allOrganizationAbilities
+            .Where(record => orgIds.Contains(record.Key))
+            .ToDictionary(record => record.Key, record => record.Value);
+    }
+
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache))
@@ -56,6 +64,23 @@ public class FeatureRoutedCacheService(
             return await vNextInMemoryApplicationCacheService.GetProviderAbilitiesAsync();
         }
         return await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
+    }
+
+    public async Task<ProviderAbility?> GetProviderAbilityAsync(Guid providerId)
+    {
+        (await GetProviderAbilitiesAsync())
+            .TryGetValue(providerId, out var providerAbility);
+
+        return providerAbility;
+    }
+
+
+    public async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync(IEnumerable<Guid> providerIds)
+    {
+        var allProviderAbilities = await GetProviderAbilitiesAsync();
+        return allProviderAbilities
+            .Where(record => providerIds.Contains(record.Key))
+            .ToDictionary(record => record.Key, record => record.Value);
     }
 
     public async Task UpsertOrganizationAbilityAsync(Organization organization)
