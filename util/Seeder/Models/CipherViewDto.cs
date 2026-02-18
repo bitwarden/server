@@ -43,7 +43,9 @@ public class CipherViewDto
     [JsonPropertyName("sshKey")]
     public SshKeyViewDto? SshKey { get; set; }
 
+    // TODO: Remove JsonIgnore condition when Rust SDK supports BankAccount cipher type
     [JsonPropertyName("bankAccount")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public BankAccountViewDto? BankAccount { get; set; }
 
     [JsonPropertyName("favorite")]
