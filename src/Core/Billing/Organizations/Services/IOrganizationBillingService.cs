@@ -25,13 +25,6 @@ public interface IOrganizationBillingService
     Task Finalize(OrganizationSale sale);
 
     /// <summary>
-    /// Retrieve metadata about the organization represented bsy the provided <paramref name="organizationId"/>.
-    /// </summary>
-    /// <param name="organizationId">The ID of the organization to retrieve metadata for.</param>
-    /// <returns>An <see cref="OrganizationMetadata"/> record.</returns>
-    Task<OrganizationMetadata?> GetMetadata(Guid organizationId);
-
-    /// <summary>
     /// Updates the subscription with new plan frequencies and changes the collection method to charge_automatically if a valid payment method exists.
     /// Validates that the customer has a payment method attached before switching to automatic charging.
     /// Handles both Password Manager and Secrets Manager subscription items separately to ensure billing interval compatibility.

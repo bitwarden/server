@@ -37,6 +37,9 @@ public class VaultOrganizationArgs : IArgumentModel
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; } = false;
 
+    [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
+    public string? Password { get; set; }
+
     public void Validate()
     {
         if (Users < 1)
@@ -74,7 +77,8 @@ public class VaultOrganizationArgs : IArgumentModel
         Groups = Groups,
         RealisticStatusMix = MixStatuses,
         StructureModel = ParseOrgStructure(Structure),
-        Region = ParseGeographicRegion(Region)
+        Region = ParseGeographicRegion(Region),
+        Password = Password
     };
 
     private static OrgStructureModel? ParseOrgStructure(string? structure)
