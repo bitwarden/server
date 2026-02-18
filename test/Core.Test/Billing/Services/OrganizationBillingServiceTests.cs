@@ -8,7 +8,6 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
@@ -37,7 +36,7 @@ public class OrganizationBillingServiceTests
             .Returns(MockPlans.Get(organization.PlanType));
 
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-        var organizationSeatCount = new OrganizationSeatCounts { Users = 1, Sponsored = 0 };
+        var organizationSeatCount = new Bit.Core.Models.Data.Organizations.OrganizationUsers.OrganizationSeatCounts { Users = 1, Sponsored = 0 };
         var customer = new Customer();
 
         subscriberService
@@ -78,7 +77,7 @@ public class OrganizationBillingServiceTests
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
+            .Returns(new Bit.Core.Models.Data.Organizations.OrganizationUsers.OrganizationSeatCounts { Users = 1, Sponsored = 0 });
 
         var metadata = await sutProvider.Sut.GetMetadata(organizationId);
 
@@ -104,7 +103,7 @@ public class OrganizationBillingServiceTests
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
+            .Returns(new Bit.Core.Models.Data.Organizations.OrganizationUsers.OrganizationSeatCounts { Users = 1, Sponsored = 0 });
 
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();
 
