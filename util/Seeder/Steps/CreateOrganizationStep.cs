@@ -1,11 +1,8 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
-using Bit.Seeder.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Steps;
 
@@ -58,12 +55,6 @@ internal sealed class CreateOrganizationStep : IStep
         }
 
         var seats = _seats ?? PlanFeatures.GenerateRealisticSeatCount(_planType, domain);
-
-        if (context.GetMangler() is NoOpManglerService)
-        {
-            CheckForDomainCollision(context, domain, name);
-        }
-
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var organization = OrganizationSeeder.Create(name, domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey, _planType);
 
@@ -74,22 +65,4 @@ internal sealed class CreateOrganizationStep : IStep
         context.Organizations.Add(organization);
     }
 
-    private static void CheckForDomainCollision(SeederContext context, string domain, string name)
-    {
-        var db = context.Services.GetRequiredService<DatabaseContext>();
-        var billingEmail = $"billing@{domain}";
-
-        var existing = db.Organizations
-            .Where(o => o.BillingEmail == billingEmail || o.Name == name)
-            .Select(o => new { o.Name, o.BillingEmail })
-            .FirstOrDefault();
-
-        if (existing is not null)
-        {
-            throw new InvalidOperationException(
-                $"An organization already exists with domain '{domain}' or name '{name}' " +
-                $"(found: '{existing.Name}', billing: '{existing.BillingEmail}'). " +
-                "Use a different domain/name, or delete the existing organization first.");
-        }
-    }
 }

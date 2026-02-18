@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
