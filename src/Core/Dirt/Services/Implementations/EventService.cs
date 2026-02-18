@@ -57,7 +57,7 @@ public class EventService : IEventService
             }
         };
 
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId);
         var orgEvents = orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
             .Select(o => new EventMessage(_currentContext)
@@ -69,7 +69,7 @@ public class EventService : IEventService
                 Date = DateTime.UtcNow
             });
 
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync([]);
         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
         var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
             .Select(p => new EventMessage(_currentContext)
@@ -126,7 +126,7 @@ public class EventService : IEventService
 
         if (cipher.OrganizationId.HasValue)
         {
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
             if (!CanUseEvents(orgAbilities, cipher.OrganizationId.Value))
             {
                 return null;
@@ -151,7 +151,7 @@ public class EventService : IEventService
 
     public async Task LogCollectionEventsAsync(IEnumerable<(Collection collection, EventType type, DateTime? date)> events)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
         foreach (var (collection, type, date) in events)
         {
@@ -182,7 +182,7 @@ public class EventService : IEventService
 
     public async Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
         foreach (var (group, type, systemUser, date) in events)
         {
@@ -216,7 +216,7 @@ public class EventService : IEventService
 
     public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         if (!CanUseEvents(orgAbilities, policy.OrganizationId))
         {
             return;
@@ -256,7 +256,7 @@ public class EventService : IEventService
 
     private async Task CreateLogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, EventSystemUser?, DateTime?)> events) where T : IOrganizationUser
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
         foreach (var (organizationUser, type, systemUser, date) in events)
         {
@@ -316,7 +316,7 @@ public class EventService : IEventService
 
     public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
     {
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync([]);
         var eventMessages = new List<IEvent>();
         foreach (var (providerUser, type, date) in events)
         {
@@ -346,7 +346,7 @@ public class EventService : IEventService
 
     public async Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
     {
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync([]);
         var eventMessages = new List<IEvent>();
         foreach (var (providerOrganization, type, date) in events)
         {
@@ -373,7 +373,7 @@ public class EventService : IEventService
     public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
             DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
         {
             return;
@@ -394,7 +394,7 @@ public class EventService : IEventService
         EventSystemUser systemUser,
         DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
         {
             return;
@@ -415,7 +415,7 @@ public class EventService : IEventService
 
     public async Task LogUserSecretsEventAsync(Guid userId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
         foreach (var secret in secrets)
@@ -441,7 +441,7 @@ public class EventService : IEventService
 
     public async Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
         foreach (var secret in secrets)
@@ -467,7 +467,7 @@ public class EventService : IEventService
 
     public async Task LogUserProjectsEventAsync(Guid userId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
         foreach (var project in projects)
@@ -493,7 +493,7 @@ public class EventService : IEventService
 
     public async Task LogServiceAccountProjectsEventAsync(Guid serviceAccountId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
         foreach (var project in projects)
@@ -520,7 +520,7 @@ public class EventService : IEventService
 
     public async Task LogServiceAccountPeopleEventAsync(Guid userId, UserServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
         var orgUser = await _organizationUserRepository.GetByIdAsync((Guid)policy.OrganizationUserId);
 
@@ -556,7 +556,7 @@ public class EventService : IEventService
 
     public async Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
         if (!CanUseEvents(orgAbilities, policy.Group.OrganizationId))
@@ -591,7 +591,7 @@ public class EventService : IEventService
 
     public async Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccounts, EventType type, IdentityClientType identityClientType, DateTime? date = null)
     {
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
         foreach (var serviceAccount in serviceAccounts)
@@ -676,5 +676,10 @@ public class EventService : IEventService
     {
         return providerAbilities != null && providerAbilities.TryGetValue(providerId, out var providerAbility) &&
                providerAbility.Enabled && providerAbility.UseEvents;
+    }
+
+    private bool CanUseProviderEvents(ProviderAbility providerAbility)
+    {
+        return providerAbility != null && providerAbility.Enabled && providerAbility.UseEvents;
     }
 }

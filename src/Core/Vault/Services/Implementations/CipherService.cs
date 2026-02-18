@@ -1150,7 +1150,7 @@ public class CipherService : ICipherService
         Guid userId) where T : CipherDetails
     {
         var user = await _userService.GetUserByIdAsync(userId);
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
 
         var filteredCiphers = ciphers
             .Where(c => cipherIdsSet.Contains(c.Id))
