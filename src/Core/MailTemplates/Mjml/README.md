@@ -70,7 +70,7 @@ After the email is developed from the [initial step](#developing-the-mail-templa
 
 1. Run `npm run build:hbs`
 2. Copy built `*.html.hbs` files from the build directory to a location the mail service can consume them.
-	* All files in the `Core/MailTemplates/Mjml/out` directory should be copied to the `src/Core/MailTemplates/Handlebars/MJML` directory. If a shared component is modified it is important to copy and overwrite all files in that directory to capture changes in the `*.html.hbs`.
+   - All files in the `Core/MailTemplates/Mjml/out` directory should be copied to the `src/Core/MailTemplates/Handlebars/MJML` directory. If a shared component is modified it is important to copy and overwrite all files in that directory to capture changes in the `*.html.hbs`.
 3. Run code that will send the email.
 
 The minified `html.hbs` artifacts are deliverables and must be placed into the correct `src/Core/MailTemplates/Handlebars/` directories in order to be used by `IMailService` implementations, see 2.1 above.

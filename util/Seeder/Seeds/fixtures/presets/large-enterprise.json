@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Globex Corp",
+    "domain": "globex.com",
+    "seats": 10000
+  },
+  "users": {
+    "count": 5000,
+    "realisticStatusMix": true
+  },
+  "groups": {
+    "count": 100
+  },
+  "collections": {
+    "count": 200
+  },
+  "ciphers": {
+    "count": 50000
+  }
+}

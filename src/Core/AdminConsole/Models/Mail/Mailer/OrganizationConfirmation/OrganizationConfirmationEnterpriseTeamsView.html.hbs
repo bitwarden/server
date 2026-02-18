@@ -30,14 +30,6 @@
     </style>
     <![endif]-->
     
-      <!--[if !mso]><!-->
-        <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet" type="text/css">
-        <style type="text/css">
-          @import url(https://fonts.googleapis.com/css?family=Roboto:300,400,500,700);
-        </style>
-      <!--<![endif]-->
-
-    
     
     <style type="text/css">
       @media only screen and (min-width:480px) {
@@ -62,14 +54,14 @@
     <style type="text/css">
 
       @media only screen and (max-width:480px) {
-        .mj-bw-hero-responsive-img {
+        .mj-bw-ac-hero-responsive-img {
           display: none !important;
         }
       }
     
 
       @media only screen and (max-width:480px) {
-        .mj-bw-learn-more-footer-responsive-img {
+        .mj-bw-ac-learn-more-footer-responsive-img {
           display: none !important;
         }
       }
@@ -82,13 +74,18 @@
   
 
       @media only screen and (max-width:480px) {
-        .mj-bw-icon-row-text {
-          padding-left: 5px !important;
+        .mj-bw-ac-icon-row-text {
+          padding-left: 15px !important;
+          padding-right: 15px !important;
           line-height: 20px;
         }
-        .mj-bw-icon-row {
-          padding: 10px 15px;
-          width: fit-content !important;
+        .mj-bw-ac-icon-row-icon {
+          display: none !important;
+          width: 0 !important;
+          max-width: 0 !important;
+        }
+        .mj-bw-ac-icon-row-text-column {
+          width: 100% !important;
         }
       }
     
@@ -102,12 +99,12 @@
     border-radius: 3px;
   }
     </style>
-    
+    <!-- Include shared head styles -->
   </head>
   <body style="word-spacing:normal;background-color:#e6e9ef;">
     
     
-      <div class="border-fix" style="background-color:#e6e9ef;" lang="und" dir="auto">
+      <div style="background-color:#e6e9ef;" lang="und" dir="auto">
         <!-- Blue Header Section -->
       
       <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="border-fix-outlook" role="presentation" style="width:660px;" width="660" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
@@ -164,7 +161,7 @@
               <tr>
                 <td align="left" style="font-size:0px;padding:10px 25px;padding-top:0;padding-bottom:0;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#ffffff;"><h1 style="font-weight: normal; font-size: 24px; line-height: 32px">
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#ffffff;"><h1 style="font-weight: 400; font-size: 24px; line-height: 32px">
               You can now share passwords with members of <b>{{OrganizationName}}!</b>
             </h1></div>
     
@@ -177,8 +174,8 @@
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate;line-height:100%;">
         <tbody>
           <tr>
-            <td align="center" bgcolor="#ffffff" role="presentation" style="border:none;border-radius:20px;cursor:auto;mso-padding-alt:10px 25px;background:#ffffff;" valign="middle">
-              <a href="{{WebVaultUrl}}" style="display:inline-block;background:#ffffff;color:#1A41AC;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:10px 25px;mso-padding-alt:0px;border-radius:20px;" target="_blank">
+            <td align="center" bgcolor="#ffffff" role="presentation" style="border:none;border-radius:20px;cursor:auto;mso-padding-alt:12px 24px;background:#ffffff;" valign="middle">
+              <a href="{{WebVaultUrl}}" style="display:inline-block;background:#ffffff;color:#1A41AC;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:12px 24px;mso-padding-alt:0px;border-radius:20px;" target="_blank">
                 <b>Log in</b>
               </a>
             </td>
@@ -202,14 +199,14 @@
         <tbody>
           
               <tr>
-                <td align="center" class="mj-bw-hero-responsive-img" style="font-size:0px;padding:0px;word-break:break-word;">
+                <td align="right" class="mj-bw-ac-hero-responsive-img" style="font-size:0px;padding:0px 20px 0px 0px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
           <tr>
             <td style="width:155px;">
               
-      <img alt src="https://assets.bitwarden.com/email/v1/spot-enterprise.png" style="border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:16px;" width="155" height="auto">
+      <img alt src="https://assets.bitwarden.com/email/v1/ac-spot-enterprise.png" style="border:0;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:16px;" width="155" height="auto">
     
             </td>
           </tr>
@@ -262,7 +259,7 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:5px 20px 10px 20px;text-align:center;">
+              <td style="direction:ltr;font-size:0px;padding:5px 20px 8px 20px;text-align:center;">
                 <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" width="660px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:620px;" width="620" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
     
       
@@ -271,7 +268,7 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:15px 10px 10px 10px;text-align:center;">
+              <td style="direction:ltr;font-size:0px;padding:10px 10px 16px 10px;text-align:center;">
                 <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:600px;" ><![endif]-->
             
       <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
@@ -280,7 +277,7 @@
         <tbody>
           
               <tr>
-                <td align="left" style="font-size:0px;padding:10px 15px;word-break:break-word;">
+                <td align="left" style="font-size:0px;padding:15px 15px 0px 15px;word-break:break-word;">
                   
       <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;">As a member of <b>{{ OrganizationName }}</b>:</div>
     
@@ -309,19 +306,19 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:10px 10px 10px 10px;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="mj-bw-icon-row-outlook" style="width:600px;" ><![endif]-->
+              <td style="direction:ltr;font-size:0px;padding:0px 10px 24px 10px;text-align:center;">
+                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="mj-bw-ac-icon-row-outlook" style="width:600px;" ><![endif]-->
             
-      <div class="mj-column-per-100 mj-outlook-group-fix mj-bw-icon-row" style="font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr;">
-        <!--[if mso | IE]><table border="0" cellpadding="0" cellspacing="0" role="presentation" ><tr><td style="vertical-align:top;width:90px;" ><![endif]-->
+      <div class="mj-column-per-100 mj-outlook-group-fix mj-bw-ac-icon-row" style="font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr;">
+        <!--[if mso | IE]><table border="0" cellpadding="0" cellspacing="0" role="presentation" ><tr><td style="vertical-align:middle;width:90px;" ><![endif]-->
                 
-      <div class="mj-column-per-15 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:15%;">
+      <div class="mj-column-per-15 mj-outlook-group-fix mj-bw-ac-icon-row-icon" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:15%;">
         
-      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:middle;" width="100%">
         <tbody>
           
               <tr>
-                <td align="center" style="font-size:0px;padding:0px;word-break:break-word;">
+                <td align="center" style="font-size:0px;padding:0px 10px 0px 5px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
@@ -343,17 +340,17 @@
     
       </div>
     
-              <!--[if mso | IE]></td><td style="vertical-align:top;width:510px;" ><![endif]-->
+              <!--[if mso | IE]></td><td style="vertical-align:middle;width:510px;" ><![endif]-->
                 
-      <div class="mj-column-per-85 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:85%;">
+      <div class="mj-column-per-85 mj-outlook-group-fix mj-bw-ac-icon-row-text-column" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:85%;">
         
-      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:middle;" width="100%">
         <tbody>
           
               <tr>
-                <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
+                <td align="left" class="mj-bw-ac-icon-row-text" style="font-size:0px;padding:0px 0px 0px 0px;word-break:break-word;">
                   
-      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">Your account is owned by {{OrganizationName}} and is subject to their security and management policies.</div>
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">Your account is owned by {{OrganizationName}} and is subject to their security and management policies.</div>
     
                 </td>
               </tr>
@@ -383,26 +380,26 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:10px 10px 10px 10px;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="mj-bw-icon-row-outlook" style="width:600px;" ><![endif]-->
+              <td style="direction:ltr;font-size:0px;padding:0px 10px 24px 10px;text-align:center;">
+                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="mj-bw-ac-icon-row-outlook" style="width:600px;" ><![endif]-->
             
-      <div class="mj-column-per-100 mj-outlook-group-fix mj-bw-icon-row" style="font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr;">
-        <!--[if mso | IE]><table border="0" cellpadding="0" cellspacing="0" role="presentation" ><tr><td style="vertical-align:top;width:90px;" ><![endif]-->
+      <div class="mj-column-per-100 mj-outlook-group-fix mj-bw-ac-icon-row" style="font-size:0;line-height:0;text-align:left;display:inline-block;width:100%;direction:ltr;">
+        <!--[if mso | IE]><table border="0" cellpadding="0" cellspacing="0" role="presentation" ><tr><td style="vertical-align:middle;width:90px;" ><![endif]-->
                 
-      <div class="mj-column-per-15 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:15%;">
+      <div class="mj-column-per-15 mj-outlook-group-fix mj-bw-ac-icon-row-icon" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:15%;">
         
-      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:middle;" width="100%">
         <tbody>
           
               <tr>
-                <td align="center" style="font-size:0px;padding:0px;word-break:break-word;">
+                <td align="center" style="font-size:0px;padding:0px 10px 0px 5px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>
           <tr>
             <td style="width:48px;">
               
-      <img alt="Group Users Icon" src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png" style="border:0;border-radius:8px;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:16px;" width="48" height="auto">
+      <img alt="Share Icon" src="https://assets.bitwarden.com/email/v1/icon-account-switching-new.png" style="border:0;border-radius:8px;display:block;outline:none;text-decoration:none;height:auto;width:100%;font-size:16px;" width="48" height="auto">
     
             </td>
           </tr>
@@ -417,29 +414,26 @@
     
       </div>
     
-              <!--[if mso | IE]></td><td style="vertical-align:top;width:510px;" ><![endif]-->
+              <!--[if mso | IE]></td><td style="vertical-align:middle;width:510px;" ><![endif]-->
                 
-      <div class="mj-column-per-85 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:85%;">
+      <div class="mj-column-per-85 mj-outlook-group-fix mj-bw-ac-icon-row-text-column" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:middle;width:85%;">
         
-      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:middle;" width="100%">
         <tbody>
           
               <tr>
-                <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
+                <td align="left" class="mj-bw-ac-icon-row-text" style="font-size:0px;padding:0px 0px 0px 0px;word-break:break-word;">
                   
-      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">You can easily access and share passwords with your team.</div>
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">You can easily access and share passwords with your team.</div>
     
                 </td>
               </tr>
             
               <tr>
-                <td align="left" class="mj-bw-icon-row-text" style="font-size:0px;padding:5px 10px 0px 10px;word-break:break-word;">
+                <td align="left" class="mj-bw-ac-icon-row-text" style="font-size:0px;padding:0px;word-break:break-word;">
                   
-      <div style="font-family:Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/help/sharing" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;"><a href="https://bitwarden.com/help/sharing" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">
                     Share passwords in Bitwarden
-                    <span style="text-decoration: none">
-                      <img src="https://assets.bitwarden.com/email/v1/bwi-external-link-16px.png" alt="External Link Icon" width="16px" style="vertical-align: middle;">
-                    </span>
               </a></div>
     
                 </td>
@@ -454,24 +448,6 @@
       </div>
     
           <!--[if mso | IE]></td></tr></table><![endif]-->
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        
-      </div>
-    
-      
-      <!--[if mso | IE]></td></tr></table></td></tr><tr><td class="" width="660px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:620px;" width="620" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
-    
-      
-      <div style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:620px;">
-        
-        <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
-          <tbody>
-            <tr>
-              <td style="direction:ltr;font-size:0px;padding:0 20px 20px 20px;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr></tr></table><![endif]-->
               </td>
             </tr>
           </tbody>
@@ -501,7 +477,7 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:5px 20px 10px 20px;text-align:center;">
+              <td style="direction:ltr;font-size:0px;padding:8px 20px 10px 20px;text-align:center;">
                 <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" width="660px" ><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:620px;" width="620" bgcolor="#F3F6F9" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
     
       
@@ -510,8 +486,8 @@
         <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#F3F6F9;background-color:#F3F6F9;width:100%;border-radius:0px 0px 4px 4px;">
           <tbody>
             <tr>
-              <td style="direction:ltr;font-size:0px;padding:20px 0;text-align:center;">
-                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:434px;" ><![endif]-->
+              <td style="direction:ltr;font-size:0px;padding:14px 10px 14px 10px;text-align:center;">
+                <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:420px;" ><![endif]-->
             
       <div class="mj-column-per-70 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
         
@@ -519,13 +495,15 @@
         <tbody>
           
               <tr>
-                <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                <td align="left" style="font-size:0px;padding:10px 15px 10px 15px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;"><p style="font-size: 18px; line-height: 28px; font-weight: 500; margin-top: 0px;">
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:1;text-align:left;color:#1B2029;"><p style="font-size: 18px; line-height: 28px; font-weight: 500; margin: 0 0 8px 0;">
               Learn more about Bitwarden
             </p>
-            Find user guides, product documentation, and videos on the
-            <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.</div>
+            <p style="font-size: 16px; line-height: 24px; margin: 0;">
+              Find user guides, product documentation, and videos on the
+              <a href="https://bitwarden.com/help/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;"> Bitwarden Help Center</a>.
+            </p></div>
     
                 </td>
               </tr>
@@ -535,15 +513,15 @@
     
       </div>
     
-          <!--[if mso | IE]></td><td class="" style="vertical-align:top;width:186px;" ><![endif]-->
+          <!--[if mso | IE]></td><td class="" style="vertical-align:bottom;width:180px;" ><![endif]-->
             
-      <div class="mj-column-per-30 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+      <div class="mj-column-per-30 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:bottom;width:100%;">
         
-      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+      <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:bottom;" width="100%">
         <tbody>
           
               <tr>
-                <td align="center" class="mj-bw-learn-more-footer-responsive-img" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                <td align="right" class="mj-bw-ac-learn-more-footer-responsive-img" style="font-size:0px;padding:0px 15px 0px 0px;word-break:break-word;">
                   
       <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;border-spacing:0px;">
         <tbody>

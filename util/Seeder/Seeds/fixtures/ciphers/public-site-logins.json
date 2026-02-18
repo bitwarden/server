@@ -1,0 +1,1035 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "LinkedIn Homepage",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeLinkedInHomepageLoginPassword",
+        "uris": [
+          { "uri": "https://www.linkedin.com/", "match": "exact" },
+          { "uri": "https://www.linkedin.com/?original_referer=", "match": "exact" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LinkedIn Login",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeLinkedInPassword",
+        "uris": [
+          { "uri": "https://www.linkedin.com/login", "match": "exact" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Samsung",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://account.samsung.com/membership/auth/sign-in" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Zillow",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeZillowPassword",
+        "uris": [
+          { "uri": "https://www.zillow.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Character.AI",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeCharacterAIPassword",
+        "uris": [
+          { "uri": "https://beta.character.ai/", "match": "host" },
+          { "uri": "https://character-ai.us.auth0.com", "match": "host" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Indeed",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeIndeedPassword",
+        "uris": [
+          { "uri": "https://secure.indeed.com/auth" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Home Depot",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeHomeDepotPassword",
+        "uris": [
+          { "uri": "https://www.homedepot.com/auth/view/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Daily Mail",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeDailyMailPassword",
+        "uris": [
+          { "uri": "https://www.dailymail.co.uk/registration/login.html" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Google",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeGooglePassword",
+        "uris": [
+          { "uri": "https://accounts.google.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Facebook",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeFacebookPassword",
+        "uris": [
+          { "uri": "https://www.facebook.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Reddit Login Page",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeRedditLoginPagePassword",
+        "uris": [
+          { "uri": "https://www.reddit.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Amazon",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeAmazonPassword",
+        "uris": [
+          { "uri": "https://www.amazon.com/gp/sign-in.html" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Twitter",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTwitterPassword",
+        "uris": [
+          { "uri": "https://twitter.com/login?lang=en" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Yahoo",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeYahooPassword",
+        "uris": [
+          { "uri": "https://login.yahoo.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Wikipedia",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeWikipediaPassword",
+        "uris": [
+          { "uri": "https://en.wikipedia.org/w/index.php?title=Special:UserLogin&returnto=Main+Page" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Instagram",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeInstagramPassword",
+        "uris": [
+          { "uri": "https://www.instagram.com/accounts/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Fandom",
+      "login": {
+        "username": "Bwplaywright",
+        "password": "fakeFandomPassword",
+        "uris": [
+          { "uri": "https://auth.fandom.com/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Weather.com",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeWeatherPassword",
+        "uris": [
+          { "uri": "https://weather.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Microsoft Live",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeLivePassword",
+        "uris": [
+          { "uri": "https://login.live.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Microsoft Online",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeMicrosoftOnlinePassword",
+        "uris": [
+          { "uri": "https://login.microsoftonline.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "TikTok",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTikTokPassword",
+        "uris": [
+          { "uri": "https://www.tiktok.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "TikTok Login Page",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTikTokPassword",
+        "uris": [
+          { "uri": "https://www.tiktok.com/login/phone-or-email/email" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Taboola",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTaboolaPassword",
+        "uris": [
+          { "uri": "https://authentication.taboola.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "CNN",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeCNNPassword",
+        "uris": [
+          { "uri": "https://www.cnn.com/account/log-in" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "eBay",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeEbayPassword",
+        "uris": [
+          { "uri": "https://signin.ebay.com/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Twitch",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTwitchPassword",
+        "uris": [
+          { "uri": "https://www.twitch.tv" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Walmart",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeWalmartPassword",
+        "uris": [
+          { "uri": "https://www.walmart.com/account/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Quora",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeQuoraPassword",
+        "uris": [
+          { "uri": "https://www.quora.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "NY Times",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeNYTimesPassword",
+        "uris": [
+          { "uri": "https://myaccount.nytimes.com/auth/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Fox News",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeFoxNewsPassword",
+        "uris": [
+          { "uri": "https://my.foxnews.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "USPS",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeUSPSPassword",
+        "uris": [
+          { "uri": "https://reg.usps.com/entreg/LoginAction_input" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "IMDB",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeIMDBPassword",
+        "uris": [
+          { "uri": "https://www.imdb.com/registration/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "PayPal",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakePaypalPassword",
+        "uris": [
+          { "uri": "https://www.sandbox.paypal.com/signin" }
+        ],
+        "totp": "ABCD EFGH IJKL MNOPpaypal-signin"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Zoom",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeZoomPassword",
+        "uris": [
+          { "uri": "https://zoom.us/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Discord",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeDiscordPassword",
+        "uris": [
+          { "uri": "https://discord.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Netflix",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeNetflixPassword",
+        "uris": [
+          { "uri": "https://www.netflix.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Etsy",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeEtsyPassword",
+        "uris": [
+          { "uri": "https://www.etsy.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Pinterest",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakePinterestPassword",
+        "uris": [
+          { "uri": "https://www.pinterest.com/", "match": "exact" },
+          { "uri": "https://www.pinterest.com/login/", "match": "exact" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "GitHub",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeGithubPassword",
+        "uris": [
+          { "uri": "https://github.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "NY Post",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeNYPostPassword",
+        "uris": [
+          { "uri": "https://nypost.com/account/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "AccuWeather",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeAccuweatherPassword",
+        "uris": [
+          { "uri": "https://wwwl.accuweather.com/premium_login.php" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "OpenAI",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeOpenAIPassword",
+        "uris": [
+          { "uri": "https://platform.openai.com/login?launch" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "UPS",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeUPSPassword",
+        "uris": [
+          { "uri": "https://www.ups.com/lasso/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Patreon",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakePatreonPassword",
+        "uris": [
+          { "uri": "https://www.patreon.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Imgur",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeImgurPassword",
+        "uris": [
+          { "uri": "https://imgur.com/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "IGN",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeIGNPassword",
+        "uris": [
+          { "uri": "https://ign.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "AWS",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://aws.amazon.com" },
+          { "uri": "https://signin.aws.amazon.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Roblox",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeRobloxPassword",
+        "uris": [
+          { "uri": "https://www.roblox.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Spotify",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeSpotifyPassword",
+        "uris": [
+          { "uri": "https://accounts.spotify.com/en/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Instructure Canvas",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeInstructurePassword",
+        "uris": [
+          { "uri": "https://www.instructure.com/canvas/login/free-for-teacher" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Badgr",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeBadgrPassword",
+        "uris": [
+          { "uri": "https://badgr.com/auth/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Portfolium",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakePortfoliumPassword",
+        "uris": [
+          { "uri": "https://portfolium.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Mastery Connect",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeMasteryPassword",
+        "uris": [
+          { "uri": "https://app.masteryconnect.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Elevate DS (Kimono Cloud)",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeElevateDSPassword",
+        "uris": [
+          { "uri": "https://identity.us2.kimonocloud.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LearnPlatform",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeLearnPlatformPassword",
+        "uris": [
+          { "uri": "https://app.learnplatform.com/users/sign_in" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Target",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTargetPassword",
+        "uris": [
+          { "uri": "https://www.target.com/account" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Craigslist",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeCraigsListPassword",
+        "uris": [
+          { "uri": "https://accounts.craigslist.org/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Capital One Widget",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeCapitalOneWidgetPassword",
+        "uris": [
+          { "uri": "https://www.capitalone.com", "match": "host" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Capital One",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeCapitalOnePassword",
+        "uris": [
+          { "uri": "https://verified.capitalone.com/auth/signin", "match": "host" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "FedEx",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeFedExPassword",
+        "uris": [
+          { "uri": "https://www.fedex.com/secure-login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Tumblr",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://www.tumblr.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Marca",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://seguro.marca.com/registro/v3/?view=login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Best Buy",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeBestBuyPassword",
+        "uris": [
+          { "uri": "https://www.bestbuy.com/identity/global/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Adobe",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://www.adobe.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Hulu",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeHuluPassword",
+        "uris": [
+          { "uri": "https://auth.hulu.com/web/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "BBC",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeBBCPassword",
+        "uris": [
+          { "uri": "https://account.bbc.com/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Steam Community",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeSteamCommunityPassword",
+        "uris": [
+          { "uri": "https://steamcommunity.com/login/home", "match": "exact" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Steam Store",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeSteamStorePassword",
+        "uris": [
+          { "uri": "https://store.steampowered.com/login", "match": "exact" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Lowes",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeLowesPassword",
+        "uris": [
+          { "uri": "https://www.lowes.com/u/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Xfinity",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://login.xfinity.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Bezzy PSA",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeBezzyPassword",
+        "uris": [
+          { "uri": "https://www.bezzypsa.com/signin/SIGNIN" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Yelp",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeYelpPassword",
+        "uris": [
+          { "uri": "https://www.yelp.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "WordPress",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://wordpress.com/log-in" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Nextdoor",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeNextdoorPassword",
+        "uris": [
+          { "uri": "https://nextdoor.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Linktree",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeLinktreePassword",
+        "uris": [
+          { "uri": "https://linktr.ee/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Quizlet",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeQuizletPassword",
+        "uris": [
+          { "uri": "https://quizlet.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Realtor.com",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeRealtorPassword",
+        "uris": [
+          { "uri": "https://realtor.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Canva",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://www.canva.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "AT&T",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeATTPassword",
+        "uris": [
+          { "uri": "https://www.att.com/acctmgmt/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Auth0",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeAuth0Password",
+        "uris": [
+          { "uri": "https://auth0.com/api/auth/login", "match": "host" },
+          { "uri": "https://auth0.auth0.com", "match": "host" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Washington Post",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://www.washingtonpost.com/subscribe/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "AOL",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://login.aol.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "T-Mobile",
+      "login": {
+        "username": "testuser@example.com",
+        "uris": [
+          { "uri": "https://www.t-mobile.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Okta",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeOktaSupportPassword",
+        "uris": [
+          { "uri": "https://login.okta.com/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Bethesda",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeBethesdaPassword",
+        "uris": [
+          { "uri": "https://bethesda.net" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Reddit Inline",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeRedditInlineLoginPassword",
+        "uris": [
+          { "uri": "https://www.reddit.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Max",
+      "login": {
+        "username": "maxcom_user",
+        "password": "maxcom_password",
+        "uris": [
+          { "uri": "https://auth.max.com/login" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Clear (Brazil)",
+      "login": {
+        "username": "12345678901111",
+        "password": "098765",
+        "uris": [
+          { "uri": "https://login.clear.com.br" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "GameSpot",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeGamespotPassword",
+        "uris": [
+          { "uri": "https://www.gamespot.com/login-signup" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Temu",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTemuPassword",
+        "uris": [
+          { "uri": "https://temu.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Temu Login Page",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeTemuLoginPagePassword",
+        "uris": [
+          { "uri": "https://www.temu.com/login.html" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Apple",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeApplePassword",
+        "uris": [
+          { "uri": "https://www.apple.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Marvel",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeMarvelPassword",
+        "uris": [
+          { "uri": "https://www.marvel.com/signin" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "ESPN",
+      "login": {
+        "username": "testuser@example.com",
+        "password": "fakeESPNPassword",
+        "uris": [
+          { "uri": "https://www.espn.com" },
+          { "uri": "https://cdn.registerdisney.go.com/v4/bundle/web/ESPN-ONESITE.WEB" }
+        ]
+      }
+    }
+  ]
+}
