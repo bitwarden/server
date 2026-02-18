@@ -27,6 +27,8 @@ public class StripeAdapter : IStripeAdapter
     private readonly TestClockService _testClockService;
     private readonly CustomerBalanceTransactionService _customerBalanceTransactionService;
     private readonly RegistrationService _taxRegistrationService;
+    private readonly CouponService _couponService;
+    private readonly ProductService _productService;
 
     public StripeAdapter()
     {
@@ -44,6 +46,8 @@ public class StripeAdapter : IStripeAdapter
         _testClockService = new TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
         _taxRegistrationService = new RegistrationService();
+        _couponService = new CouponService();
+        _productService = new ProductService();
     }
 
     /**************
@@ -212,4 +216,16 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Card> DeleteCardAsync(string customerId, string cardId, CardDeleteOptions options = null) =>
         _cardService.DeleteAsync(customerId, cardId, options);
+
+    /************
+     ** COUPON **
+     ************/
+    public Task<Coupon> GetCouponAsync(string couponId, CouponGetOptions options = null) =>
+        _couponService.GetAsync(couponId, options);
+
+    /*************
+     ** PRODUCT **
+     *************/
+    public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
+        (await _productService.ListAsync(options)).Data;
 }
