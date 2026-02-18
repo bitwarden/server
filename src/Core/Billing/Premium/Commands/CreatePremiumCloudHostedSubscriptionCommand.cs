@@ -80,7 +80,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Already a premium user.");
         }
 
-        if (subscriptionPurchase.AdditionalStorageGb.HasValue && subscriptionPurchase.AdditionalStorageGb < 0)
+        if (subscriptionPurchase.AdditionalStorageGb is < 0)
         {
             return new BadRequest("Additional storage must be greater than 0.");
         }
@@ -328,7 +328,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Customer customer,
         Pricing.Premium.Plan premiumPlan,
         int? storage,
-        string? coupon)
+        string? validatedCoupon)
     {
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
@@ -370,9 +370,9 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             OffSession = true
         };
 
-        if (!string.IsNullOrWhiteSpace(coupon))
+        if (!string.IsNullOrWhiteSpace(validatedCoupon))
         {
-            subscriptionCreateOptions.Discounts = [new SubscriptionDiscountOptions { Coupon = coupon.Trim() }];
+            subscriptionCreateOptions.Discounts = [new SubscriptionDiscountOptions { Coupon = validatedCoupon }];
         }
 
         var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);

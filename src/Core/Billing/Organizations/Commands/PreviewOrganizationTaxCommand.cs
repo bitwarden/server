@@ -127,20 +127,17 @@ public class PreviewOrganizationTaxCommand(
                     }
 
                     // Validate coupon and only apply if valid. If invalid, proceed without the discount.
-                    if (!string.IsNullOrWhiteSpace(purchase.Coupon))
+                    // Only Families plans support user-provided coupons
+                    if (!string.IsNullOrWhiteSpace(purchase.Coupon) && purchase.Tier == ProductTierType.Families)
                     {
-                        // Only Families plans support user-provided coupons
-                        if (purchase.Tier == ProductTierType.Families)
-                        {
-                            var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
-                                user,
-                                purchase.Coupon.Trim(),
-                                DiscountAudienceType.UserHasNoPreviousSubscriptions);
+                        var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                            user,
+                            purchase.Coupon.Trim(),
+                            DiscountAudienceType.UserHasNoPreviousSubscriptions);
 
-                            if (isValid)
-                            {
-                                options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
-                            }
+                        if (isValid)
+                        {
+                            options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
                         }
                     }
 
