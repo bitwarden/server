@@ -1,8 +1,10 @@
-﻿using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
@@ -18,7 +20,9 @@ public class PreviewPremiumTaxCommandTests
     private readonly ILogger<PreviewPremiumTaxCommand> _logger = Substitute.For<ILogger<PreviewPremiumTaxCommand>>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
     private readonly PreviewPremiumTaxCommand _command;
+    private readonly User _user;
 
     public PreviewPremiumTaxCommandTests()
     {
@@ -33,7 +37,9 @@ public class PreviewPremiumTaxCommandTests
         };
         _pricingClient.GetAvailablePremiumPlan().Returns(premiumPlan);
 
-        _command = new PreviewPremiumTaxCommand(_logger, _pricingClient, _stripeAdapter);
+        _user = new User { Id = Guid.NewGuid(), Email = "test@example.com" };
+
+        _command = new PreviewPremiumTaxCommand(_logger, _pricingClient, _stripeAdapter, _subscriptionDiscountService);
     }
 
     #region Helper Methods
@@ -81,7 +87,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -121,7 +127,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -163,7 +169,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -203,7 +209,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -245,7 +251,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -287,7 +293,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -327,7 +333,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -368,7 +374,7 @@ public class PreviewPremiumTaxCommandTests
             Coupon = null
         };
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -382,6 +388,11 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress();
         var preview = CreatePreview(coupon: "VALID_COUPON_CODE");
 
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+            _user,
+            "VALID_COUPON_CODE",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+
         var invoice = new Invoice
         {
             TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
@@ -390,7 +401,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -416,6 +427,11 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress(country: "CA", postalCode: "K1A 0A6");
         var preview = CreatePreview(additionalStorageGb: 5, coupon: "STORAGE_DISCOUNT");
 
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+            _user,
+            "STORAGE_DISCOUNT",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+
         var invoice = new Invoice
         {
             TotalTaxes = [new InvoiceTotalTax { Amount = 450 }],
@@ -424,7 +440,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -452,6 +468,11 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress(country: "GB", postalCode: "SW1A 1AA");
         var preview = CreatePreview(coupon: "  WHITESPACE_COUPON  ");
 
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+            _user,
+            "WHITESPACE_COUPON",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+
         var invoice = new Invoice
         {
             TotalTaxes = [new InvoiceTotalTax { Amount = 250 }],
@@ -460,7 +481,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -503,7 +524,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -544,7 +565,7 @@ public class PreviewPremiumTaxCommandTests
 
         _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var result = await _command.Run(preview, billingAddress);
+        var result = await _command.Run(_user, preview, billingAddress);
 
         Assert.True(result.IsT0);
         var (tax, total) = result.AsT0;
@@ -560,5 +581,113 @@ public class PreviewPremiumTaxCommandTests
             options.SubscriptionDetails.Items.Count == 1 &&
             options.SubscriptionDetails.Items[0].Price == Prices.PremiumAnnually &&
             options.SubscriptionDetails.Items[0].Quantity == 1));
+    }
+
+    [Fact]
+    public async Task Run_WithValidCoupon_ValidatesCouponAndAppliesDiscount()
+    {
+        var billingAddress = CreateBillingAddress();
+        var preview = CreatePreview(coupon: "VALID_DISCOUNT");
+
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+            _user,
+            "VALID_DISCOUNT",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 200 }],
+            Total = 2200
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(_user, preview, billingAddress);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(2.00m, tax);
+        Assert.Equal(22.00m, total);
+
+        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+            _user,
+            "VALID_DISCOUNT",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == "VALID_DISCOUNT"));
+    }
+
+    [Fact]
+    public async Task Run_WithInvalidCoupon_IgnoresCouponAndProceeds()
+    {
+        var billingAddress = CreateBillingAddress();
+        var preview = CreatePreview(coupon: "INVALID_COUPON");
+
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+            _user,
+            "INVALID_COUPON",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(_user, preview, billingAddress);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+            _user,
+            "INVALID_COUPON",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts == null || options.Discounts.Count == 0));
+    }
+
+    [Fact]
+    public async Task Run_WithCouponForUserWithPreviousSubscription_IgnoresCouponAndProceeds()
+    {
+        var billingAddress = CreateBillingAddress();
+        var preview = CreatePreview(coupon: "NEW_USER_ONLY");
+
+        // User has previous subscription, so validation fails
+        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+            _user,
+            "NEW_USER_ONLY",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(_user, preview, billingAddress);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(3.00m, tax);
+        Assert.Equal(33.00m, total);
+
+        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+            _user,
+            "NEW_USER_ONLY",
+            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts == null || options.Discounts.Count == 0));
     }
 }

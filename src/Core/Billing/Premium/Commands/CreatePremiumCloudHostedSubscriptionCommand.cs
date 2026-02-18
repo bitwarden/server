@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Caches;
+using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -80,17 +80,19 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Already a premium user.");
         }
 
-        if (subscriptionPurchase.AdditionalStorageGb < 0)
+        if (subscriptionPurchase.AdditionalStorageGb.HasValue && subscriptionPurchase.AdditionalStorageGb < 0)
         {
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
+        // Validate coupon and only apply if valid. If invalid, proceed without the discount.
+        string? validatedCoupon = null;
         if (!string.IsNullOrWhiteSpace(subscriptionPurchase.Coupon))
         {
             var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(user, subscriptionPurchase.Coupon.Trim(), DiscountAudienceType.UserHasNoPreviousSubscriptions);
-            if (!isValid)
+            if (isValid)
             {
-                return new BadRequest("The coupon code is invalid or you are not eligible for this discount.");
+                validatedCoupon = subscriptionPurchase.Coupon.Trim();
             }
         }
 
@@ -126,7 +128,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         customer = await ReconcileBillingLocationAsync(customer, subscriptionPurchase.BillingAddress);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, subscriptionPurchase.Coupon);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, validatedCoupon);
 
         subscriptionPurchase.PaymentMethod.Switch(
             tokenized =>
@@ -159,7 +161,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
-        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + subscriptionPurchase.AdditionalStorageGb);
+        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + subscriptionPurchase.AdditionalStorageGb.GetValueOrDefault(0));
         user.LicenseKey = CoreHelpers.SecureRandomString(20);
         user.RevisionDate = DateTime.UtcNow;
 

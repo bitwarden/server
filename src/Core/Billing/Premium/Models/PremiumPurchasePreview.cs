@@ -2,6 +2,6 @@
 
 public record PremiumPurchasePreview
 {
-    public short AdditionalStorageGb { get; init; }
+    public short? AdditionalStorageGb { get; init; }
     public string? Coupon { get; init; }
 }

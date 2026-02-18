@@ -8,6 +8,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Microsoft.Extensions.Logging;
 using OneOf;
@@ -21,6 +22,7 @@ using static StripeConstants;
 public interface IPreviewOrganizationTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress);
 
@@ -37,10 +39,12 @@ public interface IPreviewOrganizationTaxCommand
 public class PreviewOrganizationTaxCommand(
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter)
+    IStripeAdapter stripeAdapter,
+    ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
@@ -122,9 +126,22 @@ public class PreviewOrganizationTaxCommand(
                         }
                     }
 
+                    // Validate coupon and only apply if valid. If invalid, proceed without the discount.
                     if (!string.IsNullOrWhiteSpace(purchase.Coupon))
                     {
-                        options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
+                        // Only Families plans support user-provided coupons
+                        if (purchase.Tier == ProductTierType.Families)
+                        {
+                            var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                                user,
+                                purchase.Coupon.Trim(),
+                                DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+                            if (isValid)
+                            {
+                                options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
+                            }
+                        }
                     }
 
                     break;
