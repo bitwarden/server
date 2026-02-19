@@ -961,4 +961,46 @@ public class ConfirmOrganizationUserCommandTests
             .DidNotReceive()
             .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUsersAsync_UseMyItemsEnabled_CreatesDefaultCollections(
+        Organization organization, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser2,
+        User user1, User user2, string key1, string key2, string collectionName,
+        SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseMyItems = true;
+        orgUser1.OrganizationId = confirmingUser.OrganizationId = organization.Id;
+        orgUser2.OrganizationId = organization.Id;
+        orgUser1.UserId = user1.Id;
+        orgUser2.UserId = user2.Id;
+
+        var keys = new Dictionary<Guid, string>
+        {
+            { orgUser1.Id, key1 },
+            { orgUser2.Id, key2 }
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser1, orgUser2 });
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2 });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns([orgUser1.Id, orgUser2.Id]);
+
+        // Act
+        await sutProvider.Sut.ConfirmUsersAsync(organization.Id, keys, confirmingUser.Id, collectionName);
+
+        // Assert - Collection repository should be called with correct parameters
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 2 && ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)),
+                collectionName);
+    }
 }

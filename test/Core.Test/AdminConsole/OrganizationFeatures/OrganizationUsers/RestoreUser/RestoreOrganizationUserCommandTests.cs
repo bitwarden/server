@@ -1671,5 +1671,65 @@ public class RestoreOrganizationUserCommandTests
             .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
+    [Theory, BitAutoData]
+    public async Task RestoreUsersAsync_UseMyItemsEnabled_CreatesCollections(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
+        string collectionName,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        organization.UseMyItems = true;
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userService = Substitute.For<IUserService>();
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
+            .Returns(true);
+
+        // Both users will restore to Confirmed
+        orgUser1.Email = null;
+        orgUser1.OrganizationId = organization.Id;
+        orgUser2.Email = null;
+        orgUser2.OrganizationId = organization.Id;
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
+            .Returns([orgUser1, orgUser2]);
+
+        // Setup bulk policy query - both users have policy enabled
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns([orgUser1.Id, orgUser2.Id]);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
+            {
+                (orgUser1.UserId!.Value, true),
+                (orgUser2.UserId!.Value, true)
+            });
+
+        // Act
+        var result = await sutProvider.Sut.RestoreUsersAsync(
+            organization.Id,
+            [orgUser1.Id, orgUser2.Id],
+            owner.Id,
+            userService,
+            collectionName);
+
+        // Assert - Collections should be created for both confirmed users
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 2 && ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)),
+                collectionName);
+    }
+
     #endregion
 }
