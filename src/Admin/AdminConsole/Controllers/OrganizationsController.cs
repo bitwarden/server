@@ -320,7 +320,7 @@ public class OrganizationsController : Controller
                         (x.Type == OrganizationUserType.Admin
                          || x.Type == OrganizationUserType.Owner
                          || x.GetPermissions()?.ManageUsers == true)
-                        && string.IsNullOrWhiteSpace(x.Email))
+                        && !string.IsNullOrWhiteSpace(x.Email))
                     .Select(x => x.Email)
                     .ToList();
 
