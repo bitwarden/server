@@ -634,6 +634,27 @@ public class SubscriptionDiscountsControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Edit_Post_RepositoryThrowsException_ReturnsViewWithError(
+        SubscriptionDiscount discount,
+        EditSubscriptionDiscountModel model,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .ReplaceAsync(Arg.Any<SubscriptionDiscount>())
+            .Throws(new Exception("Database error"));
+
+        var result = await sutProvider.Sut.Edit(discount.Id, model);
+
+        Assert.IsType<ViewResult>(result);
+        Assert.False(sutProvider.Sut.ModelState.IsValid);
+        Assert.Contains("error occurred", sutProvider.Sut.ModelState[string.Empty]!.Errors[0].ErrorMessage);
+    }
+
+    [Theory, BitAutoData]
     public async Task Edit_Post_WhenNotFound_ReturnsNotFound(
         Guid id,
         EditSubscriptionDiscountModel model,
@@ -669,6 +690,29 @@ public class SubscriptionDiscountsControllerTests
         await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
             .Received(1)
             .DeleteAsync(discount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Delete_Post_RepositoryThrowsException_RedirectsToEditWithError(
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountsController> sutProvider)
+    {
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByIdAsync(discount.Id)
+            .Returns(discount);
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .DeleteAsync(discount)
+            .Throws(new Exception("Database error"));
+
+        var tempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+        sutProvider.Sut.TempData = tempData;
+
+        var result = await sutProvider.Sut.Delete(discount.Id);
+
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(nameof(SubscriptionDiscountsController.Edit), redirectResult.ActionName);
+        Assert.Contains("attempting to delete", sutProvider.Sut.TempData["Error"]!.ToString());
     }
 
     [Theory, BitAutoData]

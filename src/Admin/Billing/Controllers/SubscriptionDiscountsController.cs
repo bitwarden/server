@@ -19,6 +19,7 @@ public class SubscriptionDiscountsController(
     ILogger<SubscriptionDiscountsController> logger) : Controller
 {
     private const string SuccessKey = "Success";
+    private const string ErrorKey = "Error";
 
     [HttpGet]
     [RequirePermission(Permission.Tools_CreateEditTransaction)]
@@ -253,15 +254,24 @@ public class SubscriptionDiscountsController(
             return NotFound();
         }
 
-        discount.StartDate = model.StartDate;
-        discount.EndDate = model.EndDate;
-        discount.AudienceType = model.AudienceType;
-        discount.RevisionDate = DateTime.UtcNow;
+        try
+        {
+            discount.StartDate = model.StartDate;
+            discount.EndDate = model.EndDate;
+            discount.AudienceType = model.AudienceType;
+            discount.RevisionDate = DateTime.UtcNow;
 
-        await subscriptionDiscountRepository.ReplaceAsync(discount);
+            await subscriptionDiscountRepository.ReplaceAsync(discount);
 
-        PersistSuccessMessage($"Discount '{discount.StripeCouponId}' updated successfully.");
-        return RedirectToAction(nameof(Index));
+            PersistSuccessMessage($"Discount '{discount.StripeCouponId}' updated successfully.");
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating subscription discount. Coupon ID: {CouponId}", discount.StripeCouponId);
+            ModelState.AddModelError(string.Empty, "An error occurred while updating the discount.");
+            return View(model);
+        }
     }
 
     [HttpPost("{id}/delete")]
@@ -275,11 +285,21 @@ public class SubscriptionDiscountsController(
             return NotFound();
         }
 
-        await subscriptionDiscountRepository.DeleteAsync(discount);
+        try
+        {
+            await subscriptionDiscountRepository.DeleteAsync(discount);
 
-        PersistSuccessMessage($"Discount '{discount.StripeCouponId}' deleted successfully.");
-        return RedirectToAction(nameof(Index));
+            PersistSuccessMessage($"Discount '{discount.StripeCouponId}' deleted successfully.");
+            return RedirectToAction(nameof(Index));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting subscription discount. Coupon ID: {CouponId}", discount.StripeCouponId);
+            PersistErrorMessage("An error occurred while attempting to delete the discount.");
+            return RedirectToAction(nameof(Edit), new { id });
+        }
     }
 
     private void PersistSuccessMessage(string message) => TempData[SuccessKey] = message;
+    private void PersistErrorMessage(string message) => TempData[ErrorKey] = message;
 }
