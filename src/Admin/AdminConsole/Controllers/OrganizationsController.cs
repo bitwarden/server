@@ -312,15 +312,26 @@ public class OrganizationsController : Controller
 
         if (!existingOrganizationData.UseAutomaticUserConfirmation && organization.UseAutomaticUserConfirmation)
         {
-            var emailsToNotify =
-                (await _organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id))
-                .Where(x => x.Type == OrganizationUserType.Admin || x.Type == OrganizationUserType.Owner ||
-                            x.GetPermissions()?.ManageUsers == true)
-                .Select(x => x.Email)
-                .ToList();
+            try
+            {
+                var emailsToNotify =
+                    (await _organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id))
+                    .Where(x =>
+                        (x.Type == OrganizationUserType.Admin
+                         || x.Type == OrganizationUserType.Owner
+                         || x.GetPermissions()?.ManageUsers == true)
+                        && string.IsNullOrWhiteSpace(x.Email))
+                    .Select(x => x.Email)
+                    .ToList();
 
-            await _organizationAutoConfirmEnabledNotificationCommand.SendEmailAsync(
-                new OrganizationAutoConfirmEnabledNotificationRequest(organization, emailsToNotify));
+                await _organizationAutoConfirmEnabledNotificationCommand.SendEmailAsync(
+                    new OrganizationAutoConfirmEnabledNotificationRequest(organization, emailsToNotify));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send email notification to admins when organization auto-confirm was enabled.");
+                TempData["Warning"] = "Organization updated successfully, but email notification to admins failed.";
+            }
         }
 
         // Sync name/email changes to Stripe
