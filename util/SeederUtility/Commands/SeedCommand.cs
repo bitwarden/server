@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Seeder.Recipes;
@@ -21,7 +20,6 @@ public class SeedCommand
         {
             args.Validate();
 
-            // Handle list mode - no database needed
             if (args.List)
             {
                 var available = OrganizationFromPresetRecipe.ListAvailable();
@@ -29,7 +27,6 @@ public class SeedCommand
                 return;
             }
 
-            // Create service provider - same pattern as other commands
             var services = new ServiceCollection();
             ServiceCollectionExtension.ConfigureServices(services, enableMangling: args.Mangle);
             var serviceProvider = services.BuildServiceProvider();
@@ -42,16 +39,12 @@ public class SeedCommand
             var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
             var manglerService = scopedServices.GetRequiredService<IManglerService>();
 
-            // Create recipe - CLI is "dumb", recipe handles complexity
             var recipe = new OrganizationFromPresetRecipe(db, mapper, passwordHasher, manglerService);
-
-            var stopwatch = Stopwatch.StartNew();
 
             Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
             var result = recipe.Seed(args.Preset!, args.Password);
 
-            stopwatch.Stop();
-            PrintSeedResult(result, stopwatch.Elapsed);
+            PrintSeedResult(result);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
@@ -90,7 +83,7 @@ public class SeedCommand
         Console.WriteLine("Use: SeederUtility seed --preset <name>");
     }
 
-    private static void PrintSeedResult(SeedResult result, TimeSpan elapsed)
+    private static void PrintSeedResult(SeedResult result)
     {
         Console.WriteLine($"✓ Created organization (ID: {result.OrganizationId})");
 
@@ -118,7 +111,5 @@ public class SeedCommand
         {
             Console.WriteLine($"✓ Created {result.CiphersCount} ciphers");
         }
-
-        Console.WriteLine($"Done in {elapsed.TotalSeconds:F1}s");
     }
 }

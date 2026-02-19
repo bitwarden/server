@@ -5,6 +5,10 @@ using CommandDotNet;
 
 namespace Bit.SeederUtility.Commands;
 
+/// <summary>
+/// CLI argument model for the vault-organization command.
+/// Maps to <see cref="OrganizationVaultOptions"/> for the Seeder library.
+/// </summary>
 public class VaultOrganizationArgs : IArgumentModel
 {
     [Option('n', "name", Description = "Name of organization")]

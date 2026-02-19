@@ -23,12 +23,10 @@ public class OrganizationCommand
         string domain
     )
     {
-        // Create service provider with necessary services
         var services = new ServiceCollection();
         ServiceCollectionExtension.ConfigureServices(services);
         var serviceProvider = services.BuildServiceProvider();
 
-        // Get a scoped DB context
         using var scope = serviceProvider.CreateScope();
         var scopedServices = scope.ServiceProvider;
         var db = scopedServices.GetRequiredService<DatabaseContext>();
