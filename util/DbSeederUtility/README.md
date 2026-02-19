@@ -69,5 +69,11 @@ dotnet run -- vault-organization -n ApacOrg -d apac.test -u 17 -c 600 -g 12 --re
 dotnet run -- vault-organization -n IsolatedOrg -d isolated.test -u 5 -c 25 -g 4 -o Spotify --mangle
 
 # With custom password for all accounts
-dotnet run -- vault-organization -n CustomPwOrg -d custom-password-02.test -u 10 -c 100 -g 3 --password "MyTestPassword1"
+dotnet run -- vault-organization -n CustomPwOrg -d custom-password-05.test -u 10 -c 100 -g 3 --password "MyTestPassword1" --plan-type teams-annually
+
+# Free plan org (limited to 2 seats, 2 collections)
+dotnet run -- vault-organization -n FreeOrg -d free.test -u 1 -c 10 -g 1 --plan-type free
+
+# Teams plan org
+dotnet run -- vault-organization -n TeamsOrg -d teams.test -u 20 -c 200 -g 5 --plan-type teams-annually
 ```

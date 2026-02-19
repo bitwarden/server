@@ -117,6 +117,26 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogOrganizationEvent_WithEventSystemUser_LogsRequiredInfo(Organization organization, EventType eventType,
+        EventSystemUser eventSystemUser, DateTime date, Guid providerId, SutProvider<EventService> sutProvider)
+    {
+        organization.Enabled = true;
+        organization.UseEvents = true;
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+
+        await sutProvider.Sut.LogOrganizationEventAsync(organization, eventType, eventSystemUser, date);
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+            e.OrganizationId == organization.Id &&
+            e.Type == eventType &&
+            e.SystemUser == eventSystemUser &&
+            e.DeviceType == DeviceType.Server &&
+            e.Date == date &&
+            e.ProviderId == providerId));
+    }
+
+    [Theory, BitAutoData]
     public async Task LogOrganizationUserEvent_LogsRequiredInfo(OrganizationUser orgUser, EventType eventType, DateTime date,
         Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
     {
