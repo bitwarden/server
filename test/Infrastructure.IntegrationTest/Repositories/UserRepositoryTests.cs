@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
@@ -525,6 +526,75 @@ public class UserRepositoryTests
         Assert.Equal(AuthConstants.ARGON2_PARALLELISM.Default, updatedUser.KdfParallelism);
         Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
         Assert.Equal(DateTime.UtcNow, updatedUser.AccountRevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateUserKeyAndEncryptedDataV2Async_UpdatesAllUserFields(IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+
+        var newSecurityStamp = Guid.NewGuid().ToString();
+        user.Key = "new-user-key";
+        user.PrivateKey = "new-private-key";
+        user.SecurityStamp = newSecurityStamp;
+        user.Kdf = KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+        user.Email = $"updated+{Guid.NewGuid()}@example.com";
+        user.MasterPassword = "new-master-password-hash";
+        user.MasterPasswordHint = "new-hint";
+        user.LastKeyRotationDate = DateTime.UtcNow;
+        user.RevisionDate = DateTime.UtcNow;
+        user.AccountRevisionDate = DateTime.UtcNow;
+        user.SignedPublicKey = "new-signed-public-key";
+        user.SecurityState = "new-security-state";
+        user.SecurityVersion = 2;
+        user.V2UpgradeToken = null;
+
+        // Act
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, []);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("new-user-key", updatedUser.Key);
+        Assert.Equal("new-private-key", updatedUser.PrivateKey);
+        Assert.Equal(newSecurityStamp, updatedUser.SecurityStamp);
+        Assert.Equal(KdfType.Argon2id, updatedUser.Kdf);
+        Assert.Equal(3, updatedUser.KdfIterations);
+        Assert.Equal(64, updatedUser.KdfMemory);
+        Assert.Equal(4, updatedUser.KdfParallelism);
+        Assert.Equal(user.Email, updatedUser.Email);
+        Assert.Equal("new-master-password-hash", updatedUser.MasterPassword);
+        Assert.Equal("new-hint", updatedUser.MasterPasswordHint);
+        Assert.Equal("new-signed-public-key", updatedUser.SignedPublicKey);
+        Assert.Equal("new-security-state", updatedUser.SecurityState);
+        Assert.Equal(2, updatedUser.SecurityVersion);
+        Assert.Null(updatedUser.V2UpgradeToken);
+        Assert.Equal(DateTime.UtcNow, updatedUser.RevisionDate, TimeSpan.FromMinutes(1));
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateUserKeyAndEncryptedDataV2Async_InvokesUpdateDataActions(IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        user.RevisionDate = DateTime.UtcNow;
+
+        var actionWasInvoked = false;
+        UpdateEncryptedDataForKeyRotation action = (_, _) =>
+        {
+            actionWasInvoked = true;
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, [action]);
+
+        // Assert
+        Assert.True(actionWasInvoked);
     }
 
     private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
