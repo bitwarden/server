@@ -5,7 +5,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -228,7 +230,15 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         IPolicyRepository policyRepository,
         ICollectionRepository collectionRepository)
     {
-        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, [factory]);
+        var applicationCacheService = Substitute.For<IApplicationCacheService>();
+        // Default to UseMyItems = true for existing tests
+        applicationCacheService.GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(callInfo => new OrganizationAbility
+            {
+                Id = callInfo.Arg<Guid>(),
+                UseMyItems = true
+            });
+        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, applicationCacheService, [factory]);
         return sut;
     }
 

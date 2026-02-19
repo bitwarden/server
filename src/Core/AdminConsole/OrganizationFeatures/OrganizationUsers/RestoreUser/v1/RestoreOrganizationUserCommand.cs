@@ -106,6 +106,7 @@ public class RestoreOrganizationUserCommand(
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
         if (organizationUser.UserId.HasValue
+           && organization.UseMyItems
            && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled
            && status == OrganizationUserStatusType.Confirmed
            && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
@@ -265,6 +266,12 @@ public class RestoreOrganizationUserCommand(
     {
         if (!string.IsNullOrWhiteSpace(defaultCollectionName))
         {
+            var organization = await organizationRepository.GetByIdAsync(organizationId);
+            if (!organization.UseMyItems)
+            {
+                return;
+            }
+
             var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
                     .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId))
                 .ToList();
