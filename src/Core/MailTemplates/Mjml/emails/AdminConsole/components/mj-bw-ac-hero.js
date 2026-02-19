@@ -18,19 +18,20 @@ class MjBwAcHero extends BodyComponent {
 
   static defaultAttributes = {};
 
-  componentHeadStyle = breakpoint => {
+  componentHeadStyle = (breakpoint) => {
     return `
       @media only screen and (max-width:${breakpoint}) {
         .mj-bw-ac-hero-responsive-img {
           display: none !important;
         }
       }
-    `
-  }
+    `;
+  };
 
   render() {
-    const buttonElement = this.getAttribute("button-text") && this.getAttribute("button-url") ?
-      `<mj-button
+    const buttonElement =
+      this.getAttribute("button-text") && this.getAttribute("button-url")
+        ? `<mj-button
             href="${this.getAttribute("button-url")}"
             background-color="#fff"
             color="#1A41AC"
@@ -40,13 +41,15 @@ class MjBwAcHero extends BodyComponent {
           >
             ${this.getAttribute("button-text")}
             </mj-button
-          >` : "";
-    const subTitleElement = this.getAttribute("sub-title") ?
-      `<mj-text color="#fff" padding-top="0" padding-bottom="0">
+          >`
+        : "";
+    const subTitleElement = this.getAttribute("sub-title")
+      ? `<mj-text color="#fff" padding-top="0" padding-bottom="0">
             <h2 style="font-weight: normal; font-size: 16px; line-height: 0px">
               ${this.getAttribute("sub-title")}
             </h2>
-          </mj-text>` : "";
+          </mj-text>`
+      : "";
 
     return this.renderMJML(
       `
