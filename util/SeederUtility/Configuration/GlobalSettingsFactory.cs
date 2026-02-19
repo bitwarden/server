@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 
-namespace Bit.DbSeederUtility;
+namespace Bit.SeederUtility.Configuration;
 
 public static class GlobalSettingsFactory
 {

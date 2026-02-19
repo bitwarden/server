@@ -131,7 +131,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.IntegrationTest", "tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Seeder", "util\Seeder\Seeder.csproj", "{9A612EBA-1C0E-42B8-982B-62F0EE81000A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbSeederUtility", "util\DbSeederUtility\DbSeederUtility.csproj", "{17A89266-260A-4A03-81AE-C0468C6EE06E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeederUtility", "util\SeederUtility\SeederUtility.csproj", "{17A89266-260A-4A03-81AE-C0468C6EE06E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RustSdk", "util\RustSdk\RustSdk.csproj", "{D1513D90-E4F5-44A9-9121-5E46E3E4A3F7}"
 EndProject

@@ -1,11 +1,7 @@
 ﻿using CommandDotNet;
 
-namespace Bit.DbSeederUtility;
+namespace Bit.SeederUtility.Commands;
 
-/// <summary>
-/// CLI argument model for the seed command.
-/// Supports loading presets from embedded resources.
-/// </summary>
 public class SeedArgs : IArgumentModel
 {
     [Option("preset", Description = "Name of embedded preset to load")]

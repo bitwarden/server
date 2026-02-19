@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.DbSeederUtility;
+namespace Bit.SeederUtility.Configuration;
 
 public static class ServiceCollectionExtension
 {
