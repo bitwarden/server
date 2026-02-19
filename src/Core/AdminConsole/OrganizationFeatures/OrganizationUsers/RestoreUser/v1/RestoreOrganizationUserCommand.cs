@@ -274,6 +274,11 @@ public class RestoreOrganizationUserCommand(
             .Select(s => s.UserId.Value)
             .ToList();
 
+        if (restoredConfirmedUsers.Count == 0)
+        {
+            return;
+        }
+
         var restoredUserPolicyRequirements = await
             policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredConfirmedUsers);
 
