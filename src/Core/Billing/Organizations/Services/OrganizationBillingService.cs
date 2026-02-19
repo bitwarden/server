@@ -40,8 +40,9 @@ public class OrganizationBillingService(
         // Validate coupon and only apply if valid. If invalid, proceed without the discount.
         // Validation includes user-specific eligibility checks to ensure the owner has never had premium
         // and that this is for a Families subscription.
+        // Only validate discount if owner is provided (i.e., the user performing the upgrade is an owner).
         string? validatedCoupon = null;
-        if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon))
+        if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon) && owner != null)
         {
             // Only Families plans support user-provided coupons
             if (subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families)

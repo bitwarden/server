@@ -14,6 +14,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -76,7 +77,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _userRepository = userRepository;
     }
 
-    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
+    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade, Guid? userId = null)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -233,20 +234,16 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            // Retrieve an owner for the organization to use for billing validation
-            var organizationOwners = await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner);
-            var ownerOrganizationUser = organizationOwners.FirstOrDefault(ou => ou.UserId.HasValue);
-
-            if (ownerOrganizationUser?.UserId == null)
+            // Check if the user performing the upgrade is an owner of the organization
+            // This is used for discount validation - discounts only apply if the owner is upgrading
+            User owner = null;
+            if (userId.HasValue)
             {
-                throw new BadRequestException("Organization must have at least one owner.");
-            }
-
-            var owner = await _userRepository.GetByIdAsync(ownerOrganizationUser.UserId.Value);
-
-            if (owner == null)
-            {
-                throw new BadRequestException("Organization owner not found.");
+                var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId.Value);
+                if (organizationUser != null && organizationUser.Type == OrganizationUserType.Owner)
+                {
+                    owner = await _userRepository.GetByIdAsync(organizationUser.UserId.Value);
+                }
             }
 
             var sale = OrganizationSale.From(organization, upgrade, owner);

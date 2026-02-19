@@ -16,7 +16,7 @@ public class OrganizationSale
         out Organization organization,
         out CustomerSetup? customerSetup,
         out SubscriptionSetup subscriptionSetup,
-        out User owner)
+        out User? owner)
     {
         organization = Organization;
         customerSetup = CustomerSetup;
@@ -27,7 +27,7 @@ public class OrganizationSale
     public required Organization Organization { get; init; }
     public CustomerSetup? CustomerSetup { get; init; }
     public required SubscriptionSetup SubscriptionSetup { get; init; }
-    public required User Owner { get; init; }
+    public User? Owner { get; init; }
 
     public static OrganizationSale From(
         Organization organization,
@@ -52,7 +52,7 @@ public class OrganizationSale
     public static OrganizationSale From(
         Organization organization,
         OrganizationUpgrade upgrade,
-        User owner) => new()
+        User? owner) => new()
         {
             Organization = organization,
             SubscriptionSetup = GetSubscriptionSetup(upgrade),

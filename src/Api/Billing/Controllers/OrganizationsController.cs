@@ -118,13 +118,13 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade());
+        var userId = userService.GetProperUserId(User);
 
-        if (model.UseSecretsManager && success)
+        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade(), userId);
+
+        if (model.UseSecretsManager && success && userId.HasValue)
         {
-            var userId = userService.GetProperUserId(User).Value;
-
-            await TryGrantOwnerAccessToSecretsManagerAsync(id, userId);
+            await TryGrantOwnerAccessToSecretsManagerAsync(id, userId.Value);
         }
 
         return new PaymentResponseModel { Success = success, PaymentIntentClientSecret = paymentIntentClientSecret };
