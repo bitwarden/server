@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Commands;
@@ -52,7 +51,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     IBraintreeGateway braintreeGateway,
     IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     IUserService userService,
@@ -72,7 +70,13 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         BillingAddress billingAddress,
         short additionalStorageGb) => HandleAsync<None>(async () =>
     {
-        if (user.Premium)
+        // A "terminal" subscription is one that has ended and cannot be renewed/reactivated.
+        // These are: 'canceled' (user canceled) and 'incomplete_expired' (payment failed and time expired).
+        // We allow users with terminal subscriptions to create a new subscription even if user.Premium is still true,
+        // enabling the resubscribe workflow without requiring Premium status to be cleared first.
+        var hasTerminalSubscription = await HasTerminalSubscriptionAsync(user);
+
+        if (user.Premium && !hasTerminalSubscription)
         {
             return new BadRequest("Already a premium user.");
         }
@@ -98,8 +102,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
          * purchased account credit but chose to use a tokenizable payment method to pay for the subscription. In this case,
          * we need to add the payment method to their customer first. If the incoming payment method is account credit,
          * we can just go straight to fetching the customer since there's no payment method to apply.
+         *
+         * Additionally, if this is a resubscribe scenario with a tokenized payment method, we should update the payment method
+         * to ensure the new payment method is used instead of the old one.
          */
-        else if (paymentMethod.IsTokenized && !await hasPaymentMethodQuery.Run(user))
+        else if (paymentMethod.IsTokenized && (!await hasPaymentMethodQuery.Run(user) || hasTerminalSubscription))
         {
             await updatePaymentMethodCommand.Run(user, paymentMethod.AsTokenized, billingAddress);
             customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
@@ -122,7 +129,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                     case { Type: TokenizablePaymentMethodType.PayPal }
                         when subscription.Status == SubscriptionStatus.Incomplete:
                     case { Type: not TokenizablePaymentMethodType.PayPal }
-                        when subscription.Status == SubscriptionStatus.Active:
+                        when subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Incomplete:
                         {
                             user.Premium = true;
                             user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
@@ -209,21 +216,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         var tokenizedPaymentMethod = paymentMethod.AsTokenized;
         switch (tokenizedPaymentMethod.Type)
         {
-            case TokenizablePaymentMethodType.BankAccount:
-                {
-                    var setupIntent =
-                        (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = tokenizedPaymentMethod.Token }))
-                        .FirstOrDefault();
-
-                    if (setupIntent == null)
-                    {
-                        _logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
-                        throw new BillingException();
-                    }
-
-                    await setupIntentCache.Set(user.Id, setupIntent.Id);
-                    break;
-                }
             case TokenizablePaymentMethodType.Card:
                 {
                     customerCreateOptions.PaymentMethod = tokenizedPaymentMethod.Token;
@@ -258,11 +250,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (tokenizedPaymentMethod.Type)
             {
-                case TokenizablePaymentMethodType.BankAccount:
-                    {
-                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
-                        break;
-                    }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
                     {
                         await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
@@ -368,5 +355,29 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         await braintreeService.PayInvoice(new UserId(userId), invoice);
 
         return subscription;
+    }
+
+    private async Task<bool> HasTerminalSubscriptionAsync(User user)
+    {
+        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
+        {
+            return false;
+        }
+
+        try
+        {
+            var existingSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+            return existingSubscription.Status is
+                SubscriptionStatus.Canceled or
+                SubscriptionStatus.IncompleteExpired;
+        }
+        catch (Exception ex)
+        {
+            // Subscription doesn't exist in Stripe or can't be fetched (e.g., network issues, invalid ID)
+            // Log the issue but proceed with subscription creation to avoid blocking legitimate resubscribe attempts
+            _logger.LogWarning(ex, "Unable to fetch existing subscription {SubscriptionId} for user {UserId}. Proceeding with subscription creation",
+                user.GatewaySubscriptionId, user.Id);
+            return false;
+        }
     }
 }

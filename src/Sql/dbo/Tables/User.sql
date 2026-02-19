@@ -63,3 +63,12 @@ GO
 CREATE NONCLUSTERED INDEX [IX_User_Id_EmailDomain]
     ON [dbo].[User]([Id] ASC, [Email] ASC);
 
+GO
+CREATE NONCLUSTERED INDEX [IX_User_GatewayCustomerId]
+    ON [dbo].[User]([GatewayCustomerId])
+    WHERE [GatewayCustomerId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_User_GatewaySubscriptionId]
+    ON [dbo].[User]([GatewaySubscriptionId])
+    WHERE [GatewaySubscriptionId] IS NOT NULL;

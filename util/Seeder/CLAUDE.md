@@ -24,11 +24,30 @@ dotnet test test/SeederApi.IntegrationTest/ --filter "FullyQualifiedName~TestMet
 ```
 Need to create test data?
 ├─ ONE entity with encryption? → Factory
-├─ MANY entities as cohesive operation? → Recipe
-├─ Complete test scenario with ID mangling for SeederApi? → Scene
+├─ MANY entities as cohesive operation? → Recipe or Pipeline
+├─ Flexible preset-based seeding? → Pipeline (RecipeBuilder + Steps)
+├─ Complete test scenario with ID mangling? → Scene
 ├─ READ existing seeded data? → Query
 └─ Data transformation SDK ↔ Server? → Model
 ```
+
+## Pipeline Architecture
+
+**Modern pattern for composable fixture-based and generated seeding.**
+
+**Flow**: Preset JSON → PresetLoader → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
+
+**Key actors**:
+
+- **RecipeBuilder**: Fluent API with dependency validation
+- **IStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.)
+- **SeederContext**: Shared mutable state bag (NOT thread-safe)
+- **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
+- **PresetExecutor**: Orchestrates preset loading and execution
+
+**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+
+See `Pipeline/` folder for implementation.
 
 ## The Recipe Contract
 
@@ -79,6 +98,6 @@ _seed = options.Seed ?? StableHash.ToInt32(options.Domain);
 
 ## Security Reminders
 
-- Test password: `asdfasdfasdf`
+- Default test password: `asdfasdfasdf` (overridable via `--password` CLI flag or `SeederSettings`)
 - Never commit database dumps with seeded data
 - Seeded keys are for testing only

@@ -1,4 +1,5 @@
 ﻿using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using CommandDotNet;
 
@@ -37,6 +38,12 @@ public class VaultOrganizationArgs : IArgumentModel
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; } = false;
 
+    [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
+    public string? Password { get; set; }
+
+    [Option("plan-type", Description = "Billing plan type: free, teams-monthly, teams-annually, enterprise-monthly, enterprise-annually, teams-starter, families-annually. Defaults to enterprise-annually.")]
+    public string PlanType { get; set; } = "enterprise-annually";
+
     public void Validate()
     {
         if (Users < 1)
@@ -63,6 +70,8 @@ public class VaultOrganizationArgs : IArgumentModel
         {
             ParseGeographicRegion(Region);
         }
+
+        PlanFeatures.Parse(PlanType);
     }
 
     public OrganizationVaultOptions ToOptions() => new()
@@ -74,7 +83,9 @@ public class VaultOrganizationArgs : IArgumentModel
         Groups = Groups,
         RealisticStatusMix = MixStatuses,
         StructureModel = ParseOrgStructure(Structure),
-        Region = ParseGeographicRegion(Region)
+        Region = ParseGeographicRegion(Region),
+        Password = Password,
+        PlanType = PlanFeatures.Parse(PlanType)
     };
 
     private static OrgStructureModel? ParseOrgStructure(string? structure)

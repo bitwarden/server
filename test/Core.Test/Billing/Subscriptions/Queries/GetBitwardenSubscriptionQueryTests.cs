@@ -32,6 +32,30 @@ public class GetBitwardenSubscriptionQueryTests
     }
 
     [Fact]
+    public async Task Run_UserWithoutGatewaySubscriptionId_ReturnsNull()
+    {
+        var user = CreateUser();
+        user.GatewaySubscriptionId = null;
+
+        var result = await _query.Run(user);
+
+        Assert.Null(result);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
+    public async Task Run_UserWithEmptyGatewaySubscriptionId_ReturnsNull()
+    {
+        var user = CreateUser();
+        user.GatewaySubscriptionId = string.Empty;
+
+        var result = await _query.Run(user);
+
+        Assert.Null(result);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
     public async Task Run_IncompleteStatus_ReturnsBitwardenSubscriptionWithSuspension()
     {
         var user = CreateUser();
