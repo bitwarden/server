@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
 
-namespace Bit.DbSeederUtility;
+namespace Bit.SeederUtility.Configuration;
 
 public static class GlobalSettingsFactory
 {
@@ -20,7 +20,7 @@ public static class GlobalSettingsFactory
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
-            .AddUserSecrets("bitwarden-Api") // Load user secrets from the API project
+            .AddUserSecrets("bitwarden-Api")
             .AddEnvironmentVariables();
 
         var configuration = configBuilder.Build();

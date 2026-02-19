@@ -4,7 +4,7 @@
 
 **For detailed pattern descriptions (Factories, Recipes, Models, Scenes, Queries, Data), read `README.md`.**
 
-**For detailed usages of the Seeder library, read `util/DbSeederUtility/README.md` and `util/SeederApi/README.md`**
+**For detailed usages of the Seeder library, read `util/SeederUtility/README.md` and `util/SeederApi/README.md`**
 
 ## Commands
 

@@ -3,7 +3,7 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using CommandDotNet;
 
-namespace Bit.DbSeederUtility;
+namespace Bit.SeederUtility.Commands;
 
 /// <summary>
 /// CLI argument model for the vault-organization command.
