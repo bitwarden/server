@@ -109,7 +109,7 @@ public static class PlanFeatures
         var (min, max, avg) = planType switch
         {
             PlanType.Free => (1, 2, 2),
-            PlanType.FamiliesAnnually => (5, 6, 6),
+            PlanType.FamiliesAnnually => (6, 6, 6),
             PlanType.TeamsMonthly => (1, 300, 15),
             PlanType.TeamsAnnually => (1, 100, 7),
             PlanType.TeamsStarter => (10, 10, 10),
