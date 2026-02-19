@@ -1417,7 +1417,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, userId);
         });
     }
 
