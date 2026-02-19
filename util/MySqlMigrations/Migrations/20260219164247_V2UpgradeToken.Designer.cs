@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260219161935_V2UpgradeToken")]
+    [Migration("20260219164247_V2UpgradeToken")]
     partial class V2UpgradeToken
     {
         /// <inheritdoc />

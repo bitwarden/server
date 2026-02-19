@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260219161943_V2UpgradeToken")]
+    [Migration("20260219164301_V2UpgradeToken")]
     partial class V2UpgradeToken
     {
         /// <inheritdoc />

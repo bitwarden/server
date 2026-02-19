@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260219161950_V2UpgradeToken")]
+    [Migration("20260219164255_V2UpgradeToken")]
     partial class V2UpgradeToken
     {
         /// <inheritdoc />

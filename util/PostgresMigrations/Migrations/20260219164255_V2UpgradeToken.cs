@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class V2UpgradeToken : Migration
@@ -10,12 +10,18 @@ public partial class V2UpgradeToken : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-
+        migrationBuilder.AddColumn<string>(
+            name: "V2UpgradeToken",
+            table: "User",
+            type: "text",
+            nullable: true);
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-
+        migrationBuilder.DropColumn(
+            name: "V2UpgradeToken",
+            table: "User");
     }
 }
