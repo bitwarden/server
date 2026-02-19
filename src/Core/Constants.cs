@@ -142,7 +142,7 @@ public static class FeatureFlagKeys
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
     public const string PM23845_VNextApplicationCache = "pm-24957-refactor-memory-application-cache";
     public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
-    public const string PremiumAccessQuery = "pm-29495-refactor-premium-interface";
+    public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
 
@@ -191,6 +191,7 @@ public static class FeatureFlagKeys
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
     public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
     public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
+    public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -258,6 +259,7 @@ public static class FeatureFlagKeys
     public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
     public const string PM32180_PremiumUpsellAccountAge = "pm-32180-premium-upsell-account-age";
     public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
+    public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
 
     /* Innovation Team */

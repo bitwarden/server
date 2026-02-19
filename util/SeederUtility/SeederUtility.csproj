@@ -5,8 +5,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Bit.DbSeederUtility</RootNamespace>
-    <AssemblyName>DbSeeder</AssemblyName>
+    <RootNamespace>Bit.SeederUtility</RootNamespace>
+    <AssemblyName>SeederUtility</AssemblyName>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <UserSecretsId>2294c6ba-7cd0-4293-a797-3882e41c61cb</UserSecretsId>
   </PropertyGroup>

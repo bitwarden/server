@@ -84,6 +84,10 @@ public enum EventType : int
     Organization_CollectionManagement_AllowAdminAccessToAllCollectionItemsDisabled = 1617,
     Organization_ItemOrganization_Accepted = 1618,
     Organization_ItemOrganization_Declined = 1619,
+    Organization_AutoConfirmEnabled_Admin = 1620,
+    Organization_AutoConfirmDisabled_Admin = 1621,
+    Organization_AutoConfirmEnabled_Portal = 1622,
+    Organization_AutoConfirmDisabled_Portal = 1623,
 
     Policy_Updated = 1700,
 

@@ -61,6 +61,7 @@ public class OrganizationsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IEventService _eventService;
     private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceValidator _automaticUserConfirmationOrganizationPolicyComplianceValidator;
 
     public OrganizationsController(
@@ -88,6 +89,7 @@ public class OrganizationsController : Controller
         IPricingClient pricingClient,
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IOrganizationBillingService organizationBillingService,
+        IEventService eventService,
         IAutomaticUserConfirmationOrganizationPolicyComplianceValidator automaticUserConfirmationOrganizationPolicyComplianceValidator)
     {
         _organizationRepository = organizationRepository;
@@ -114,6 +116,7 @@ public class OrganizationsController : Controller
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _organizationBillingService = organizationBillingService;
+        _eventService = eventService;
         _automaticUserConfirmationOrganizationPolicyComplianceValidator = automaticUserConfirmationOrganizationPolicyComplianceValidator;
     }
 
@@ -283,6 +286,8 @@ public class OrganizationsController : Controller
             }
         }
 
+        var previousUseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
+
         UpdateOrganization(organization, model);
         var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
@@ -303,6 +308,14 @@ public class OrganizationsController : Controller
             model);
 
         await _organizationRepository.ReplaceAsync(organization);
+
+        if (previousUseAutomaticUserConfirmation != organization.UseAutomaticUserConfirmation)
+        {
+            var eventType = organization.UseAutomaticUserConfirmation
+                ? EventType.Organization_AutoConfirmEnabled_Portal
+                : EventType.Organization_AutoConfirmDisabled_Portal;
+            await _eventService.LogOrganizationEventAsync(organization, eventType, EventSystemUser.BitwardenPortal);
+        }
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
