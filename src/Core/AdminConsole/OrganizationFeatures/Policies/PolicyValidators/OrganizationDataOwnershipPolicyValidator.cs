@@ -1,4 +1,4 @@
-﻿
+
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -6,12 +6,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 public class OrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
+    IApplicationCacheService applicationCacheService,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect, IOnPolicyPostUpdateEvent
 {
@@ -52,6 +54,12 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
     {
+        var orgAbility = await applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
+        if (orgAbility == null || !orgAbility.UseMyItems)
+        {
+            return;
+        }
+
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
         var userOrgIds = requirements
