@@ -54,6 +54,7 @@ public class OrganizationWithVaultRecipe(
     public Guid Seed(OrganizationVaultOptions options)
     {
         _ctx = GeneratorContext.FromOptions(options);
+        var password = options.Password ?? UserSeeder.DefaultPassword;
 
         var seats = Math.Max(options.Users + 1, _minimumOrgSeats);
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
@@ -63,7 +64,11 @@ public class OrganizationWithVaultRecipe(
             options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner user via factory
-        var ownerUser = UserSeeder.Create($"owner@{options.Domain}", passwordHasher, manglerService);
+        var ownerEmail = $"owner@{options.Domain}";
+        var mangledOwnerEmail = manglerService.Mangle(ownerEmail);
+        var ownerKeys = RustSdkService.GenerateUserKeys(mangledOwnerEmail, password);
+        var ownerUser = UserSeeder.Create(mangledOwnerEmail, passwordHasher, manglerService, keys: ownerKeys, password: password);
+
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -77,8 +82,8 @@ public class OrganizationWithVaultRecipe(
         {
             var email = $"user{i}@{options.Domain}";
             var mangledEmail = manglerService.Mangle(email);
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, UserSeeder.DefaultPassword);
-            var memberUser = UserSeeder.Create(mangledEmail, passwordHasher, manglerService, keys: userKeys);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password);
+            var memberUser = UserSeeder.Create(mangledEmail, passwordHasher, manglerService, keys: userKeys, password: password);
             memberUsersWithKeys.Add(new UserWithKey(memberUser, userKeys.Key));
 
             var status = useRealisticMix

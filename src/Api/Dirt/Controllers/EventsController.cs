@@ -212,7 +212,7 @@ public class EventsController : Controller
         }
 
         var serviceAccount = await GetServiceAccount(id, orgId);
-        var org = _currentContext.GetOrganization(orgId);
+        var org = _currentContext.GetOrganization(serviceAccount.OrganizationId);
 
         if (org == null || !await _currentContext.AccessEventLogs(org.Id))
         {

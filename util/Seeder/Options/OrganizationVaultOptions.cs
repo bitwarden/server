@@ -83,4 +83,9 @@ public class OrganizationVaultOptions
     /// Seed for deterministic data generation. When null, derived from Domain hash.
     /// </summary>
     public int? Seed { get; init; }
+
+    /// <summary>
+    /// Password for all seeded accounts. Defaults to "asdfasdfasdf" if not specified.
+    /// </summary>
+    public string? Password { get; init; }
 }

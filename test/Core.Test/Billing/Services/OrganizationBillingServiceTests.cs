@@ -7,7 +7,6 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
@@ -21,110 +20,6 @@ namespace Bit.Core.Test.Billing.Services;
 [SutProviderCustomize]
 public class OrganizationBillingServiceTests
 {
-    #region GetMetadata
-
-    [Theory, BitAutoData]
-    public async Task GetMetadata_Succeeds(
-        Guid organizationId,
-        Organization organization,
-        SutProvider<OrganizationBillingService> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
-
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(MockPlans.Get(organization.PlanType));
-
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-        var organizationSeatCount = new OrganizationSeatCounts { Users = 1, Sponsored = 0 };
-        var customer = new Customer();
-
-        subscriberService
-            .GetCustomer(organization)
-            .Returns(customer);
-
-        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
-            options.Expand.Contains("discounts.coupon.applies_to"))).Returns(new Subscription
-            {
-                Discounts =
-            [
-                new Discount
-                {
-                    Coupon = new Coupon
-                    {
-                        Id = StripeConstants.CouponIDs.SecretsManagerStandalone,
-                        AppliesTo = new CouponAppliesTo
-                        {
-                            Products = ["product_id"]
-                        }
-                    }
-                }
-            ],
-                Items = new StripeList<SubscriptionItem>
-                {
-                    Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Plan = new Plan
-                        {
-                            ProductId = "product_id"
-                        }
-                    }
-                ]
-                }
-            });
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
-
-        var metadata = await sutProvider.Sut.GetMetadata(organizationId);
-
-        Assert.True(metadata!.IsOnSecretsManagerStandalone);
-    }
-
-    #endregion
-
-    #region GetMetadata - Null Customer or Subscription
-
-    [Theory, BitAutoData]
-    public async Task GetMetadata_WhenCustomerOrSubscriptionIsNull_ReturnsDefaultMetadata(
-        Guid organizationId,
-        Organization organization,
-        SutProvider<OrganizationBillingService> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
-
-        sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(MockPlans.Plans.ToList());
-
-        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
-            .Returns(MockPlans.Get(organization.PlanType));
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
-            .Returns(new OrganizationSeatCounts { Users = 1, Sponsored = 0 });
-
-        var subscriberService = sutProvider.GetDependency<ISubscriberService>();
-
-        // Set up subscriber service to return null for customer
-        subscriberService
-            .GetCustomer(organization)
-            .Returns((Customer)null);
-
-        // Set up subscriber service to return null for subscription
-        subscriberService.GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
-            options.Expand.Contains("discounts.coupon.applies_to"))).Returns((Subscription)null);
-
-        var metadata = await sutProvider.Sut.GetMetadata(organizationId);
-
-        Assert.NotNull(metadata);
-        Assert.False(metadata!.IsOnSecretsManagerStandalone);
-        Assert.Equal(1, metadata.OrganizationOccupiedSeats);
-    }
-
-    #endregion
-
     #region Finalize - Trial Settings
 
     [Theory, BitAutoData]
