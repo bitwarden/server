@@ -379,4 +379,47 @@ public class OrganizationDataOwnershipPolicyValidatorTests
             .DidNotReceiveWithAnyArgs()
             .CreateDefaultCollectionsBulkAsync(default, default, default);
     }
+
+    [Theory]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
+    public async Task ExecuteSideEffectsAsync_UseMyItemsDisabled_DoesNotCreateCollections(
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [OrganizationPolicyDetails(PolicyType.OrganizationDataOwnership)] IEnumerable<OrganizationPolicyDetails> orgPolicyDetails,
+        OrganizationDataOwnershipPolicyRequirementFactory factory)
+    {
+        // Arrange
+        var orgPolicyDetailsList = orgPolicyDetails.ToList();
+        foreach (var policyDetail in orgPolicyDetailsList)
+        {
+            policyDetail.OrganizationId = policyUpdate.OrganizationId;
+        }
+
+        var policyRepository = ArrangePolicyRepository(orgPolicyDetailsList);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+
+        // Create a custom application cache service with UseMyItems = false
+        var applicationCacheService = Substitute.For<IApplicationCacheService>();
+        applicationCacheService.GetOrganizationAbilityAsync(Arg.Any<Guid>())
+            .Returns(callInfo => new OrganizationAbility
+            {
+                Id = callInfo.Arg<Guid>(),
+                UseMyItems = false
+            });
+
+        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, applicationCacheService, [factory]);
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act
+        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+
+        // Assert - Should NOT create collections when UseMyItems is disabled
+        await collectionRepository
+            .DidNotReceive()
+            .CreateDefaultCollectionsBulkAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<string>());
+    }
 }
