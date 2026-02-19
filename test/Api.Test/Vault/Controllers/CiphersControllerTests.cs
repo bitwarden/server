@@ -59,6 +59,24 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PutPartialShouldThrowNotFoundExceptionWhenCipherDoesNotExist(User user, Guid folderId, SutProvider<CiphersController> sutProvider)
+    {
+        var isFavorite = true;
+        var cipherId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceive()
+            .UpdatePartialAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
     public async Task PutCollections_vNextShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, User user,
         SutProvider<CiphersController> sutProvider)
     {
