@@ -313,13 +313,17 @@ public class OrganizationsController : Controller
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
-        if (!existingOrganizationData.UseAutomaticUserConfirmation && organization.UseAutomaticUserConfirmation)
+        if (existingOrganizationData.UseAutomaticUserConfirmation != organization.UseAutomaticUserConfirmation)
         {
             var eventType = organization.UseAutomaticUserConfirmation
                 ? EventType.Organization_AutoConfirmEnabled_Portal
                 : EventType.Organization_AutoConfirmDisabled_Portal;
-            await _eventService.LogOrganizationEventAsync(organization, eventType, EventSystemUser.BitwardenPortal);
 
+            await _eventService.LogOrganizationEventAsync(organization, eventType, EventSystemUser.BitwardenPortal);
+        }
+
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && organization.UseAutomaticUserConfirmation)
+        {
             try
             {
                 var emailsToNotify =
