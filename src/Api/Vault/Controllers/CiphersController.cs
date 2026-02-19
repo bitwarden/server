@@ -1389,6 +1389,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        await _cipherService.ValidateCipherEditForAttachmentAsync(cipher, userId, false, attachment.Size);
+
         return new AttachmentUploadDataResponseModel
         {
             Url = await _attachmentStorageService.GetAttachmentUploadUrlAsync(cipher, attachment),
