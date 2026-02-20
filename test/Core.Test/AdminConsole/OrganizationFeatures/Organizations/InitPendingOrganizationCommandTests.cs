@@ -1,7 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -148,6 +153,73 @@ public class InitPendingOrganizationCommandTests
 
         Assert.Equal("Organization already has a Private Key.", exception.Message);
 
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganization_WithPolicyRequirementsEnabled_WithSingleOrgPolicy_ThrowsBadRequest(
+        User user, Guid orgId, Guid orgUserId, string publicKey,
+        string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        // User has SingleOrg policy from another org
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement(
+            [
+                new PolicyDetails
+                {
+                    OrganizationId = Guid.NewGuid(),
+                    OrganizationUserId = Guid.NewGuid(),
+                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                    OrganizationUserType = OrganizationUserType.User,
+                    PolicyType = PolicyType.SingleOrg
+                }
+            ]));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
+
+        Assert.Contains("Cannot create organization because single organization policy is enabled for another organization.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitPendingOrganization_WithPolicyRequirementsEnabled_WithoutSingleOrgPolicy_Succeeds(
+        User user, Guid orgId, Guid orgUserId, string publicKey,
+        string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+    {
+        var token = CreateToken(orgUser, orgUserId, sutProvider);
+
+        org.PrivateKey = null;
+        org.PublicKey = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
+            .Returns(true);
+
+        // No SingleOrg policy
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        // Act
+        await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationRepository>().Received().GetByIdAsync(orgId);
+        await sutProvider.GetDependency<IOrganizationService>().Received().UpdateAsync(org);
     }
 
     public string CreateToken(OrganizationUser orgUser, Guid orgUserId, SutProvider<InitPendingOrganizationCommand> sutProvider)

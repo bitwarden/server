@@ -293,55 +293,83 @@ public class RestoreOrganizationUserCommand(
 
         var userId = orgUser.UserId.Value;
 
-        // Enforce Single Organization Policy of organization user is being restored to
         var allOrgUsers = await organizationUserRepository.GetManyByUserAsync(userId);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var singleOrgPoliciesApplyingToRevokedUsers = await policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
-        var singleOrgPolicyApplies =
-            singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
-
-        var singleOrgCompliant = true;
-        var belongsToOtherOrgCompliant = true;
-        var twoFactorCompliant = true;
-
-        if (hasOtherOrgs && singleOrgPolicyApplies)
-        {
-            singleOrgCompliant = false;
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            belongsToOtherOrgCompliant = false;
-        }
-
-        // Enforce 2FA Policy of organization user is trying to join
-        if (!userHasTwoFactorEnabled)
-        {
-            twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
-        }
-
         var user = await userRepository.GetByIdAsync(userId);
 
-        if (!singleOrgCompliant && !twoFactorCompliant)
+        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            throw new BadRequestException(user.Email +
-                                          " is not compliant with the single organization and two-step login policy");
+            var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(userId);
+            var singleOrgError = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
+
+            var twoFactorCompliant = true;
+            if (!userHasTwoFactorEnabled)
+            {
+                twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
+            }
+
+            if (singleOrgError is not null && !twoFactorCompliant)
+            {
+                throw new BadRequestException(user.Email +
+                                              " is not compliant with the single organization and two-step login policy");
+            }
+            else if (singleOrgError is not null)
+            {
+                throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
+            }
+            else if (!twoFactorCompliant)
+            {
+                throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+            }
         }
-        else if (!singleOrgCompliant)
+        else
         {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
-        }
-        else if (!belongsToOtherOrgCompliant)
-        {
-            throw new BadRequestException(user.Email +
-                                          " belongs to an organization that doesn't allow them to join multiple organizations");
-        }
-        else if (!twoFactorCompliant)
-        {
-            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+            // Enforce Single Organization Policy of organization user is being restored to
+            var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
+            var singleOrgPoliciesApplyingToRevokedUsers = await policyService.GetPoliciesApplicableToUserAsync(userId,
+                PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
+            var singleOrgPolicyApplies =
+                singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
+
+            var singleOrgCompliant = true;
+            var belongsToOtherOrgCompliant = true;
+            var twoFactorCompliant = true;
+
+            if (hasOtherOrgs && singleOrgPolicyApplies)
+            {
+                singleOrgCompliant = false;
+            }
+
+            // Enforce Single Organization Policy of other organizations user is a member of
+            var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
+            if (anySingleOrgPolicies)
+            {
+                belongsToOtherOrgCompliant = false;
+            }
+
+            // Enforce 2FA Policy of organization user is trying to join
+            if (!userHasTwoFactorEnabled)
+            {
+                twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
+            }
+
+            if (!singleOrgCompliant && !twoFactorCompliant)
+            {
+                throw new BadRequestException(user.Email +
+                                              " is not compliant with the single organization and two-step login policy");
+            }
+            else if (!singleOrgCompliant)
+            {
+                throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
+            }
+            else if (!belongsToOtherOrgCompliant)
+            {
+                throw new BadRequestException(user.Email +
+                                              " belongs to an organization that doesn't allow them to join multiple organizations");
+            }
+            else if (!twoFactorCompliant)
+            {
+                throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+            }
         }
 
         if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))

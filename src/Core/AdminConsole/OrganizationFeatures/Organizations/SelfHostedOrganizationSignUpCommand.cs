@@ -122,6 +122,18 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
             }
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
+            var error = singleOrgRequirement.CanCreateOrganization();
+            if (error is not null)
+            {
+                throw new BadRequestException(error.Message);
+            }
+
+            return;
+        }
+
         var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {

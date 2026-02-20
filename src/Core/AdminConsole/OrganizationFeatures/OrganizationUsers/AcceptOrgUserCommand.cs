@@ -201,23 +201,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             await ValidateAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
         }
 
-        // Enforce Single Organization Policy of organization user is trying to join
-        var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
-
-        if (allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId)
-            && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-        {
-            throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
-        }
+        await ValidateSingleOrganizationPolicyAsync(orgUser, allOrgUsers, user);
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
         await ValidateTwoFactorAuthenticationPolicyAsync(user, orgUser.OrganizationId);
@@ -243,6 +227,39 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         return orgUser;
+    }
+
+    private async Task ValidateSingleOrganizationPolicyAsync(OrganizationUser orgUser, ICollection<OrganizationUser> allOrgUsers, User user)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+            var error = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
+            if (error is not null)
+            {
+                throw new BadRequestException(error.Message);
+            }
+        }
+        else
+        {
+            // Enforce Single Organization Policy of organization user is trying to join
+            var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
+                PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
+
+            if (allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId)
+                && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+            {
+                throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
+            }
+
+            // Enforce Single Organization Policy of other organizations user is a member of
+            var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
+                PolicyType.SingleOrg);
+            if (anySingleOrgPolicies)
+            {
+                throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
+            }
+        }
     }
 
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
