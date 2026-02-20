@@ -2,7 +2,6 @@
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Services;
@@ -25,8 +24,6 @@ public class OrganizationReportsV2Controller : Controller
     private readonly IUpdateOrganizationReportDataFileStorageCommand _updateDataCommand;
     private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
     private readonly IGetOrganizationReportDataFileStorageQuery _getDataQuery;
-    private readonly IGetOrganizationReportApplicationDataV2Query _getApplicationDataQuery;
-    private readonly IUpdateOrganizationReportApplicationDataV2Command _updateApplicationDataCommand;
     private readonly IUpdateOrganizationReportCommand _updateOrganizationReportCommand;
 
     public OrganizationReportsV2Controller(
@@ -37,8 +34,6 @@ public class OrganizationReportsV2Controller : Controller
         IUpdateOrganizationReportDataFileStorageCommand updateDataCommand,
         IGetOrganizationReportQuery getOrganizationReportQuery,
         IGetOrganizationReportDataFileStorageQuery getDataQuery,
-        IGetOrganizationReportApplicationDataV2Query getApplicationDataQuery,
-        IUpdateOrganizationReportApplicationDataV2Command updateApplicationDataCommand,
         IUpdateOrganizationReportCommand updateOrganizationReportCommand)
     {
         _currentContext = currentContext;
@@ -48,8 +43,6 @@ public class OrganizationReportsV2Controller : Controller
         _updateDataCommand = updateDataCommand;
         _getOrganizationReportQuery = getOrganizationReportQuery;
         _getDataQuery = getDataQuery;
-        _getApplicationDataQuery = getApplicationDataQuery;
-        _updateApplicationDataCommand = updateApplicationDataCommand;
         _updateOrganizationReportCommand = updateOrganizationReportCommand;
     }
 
@@ -176,55 +169,6 @@ public class OrganizationReportsV2Controller : Controller
         {
             await _storageService.UploadReportDataAsync(report, reportFileId, stream);
         });
-    }
-
-    #endregion
-
-    #region Whole Report Endpoints
-
-
-
-
-
-    #endregion
-
-    #region ApplicationData Field Endpoints
-
-    [HttpGet("{organizationId}/data/application/{reportId}")]
-    public async Task<OrganizationReportApplicationDataResponse> GetOrganizationReportApplicationDataV2Async(
-        Guid organizationId, Guid reportId)
-    {
-        if (organizationId == Guid.Empty) throw new BadRequestException("OrganizationId is required.");
-
-        if (reportId == Guid.Empty) throw new BadRequestException("ReportId is required.");
-
-        await AuthorizeAsync(organizationId);
-
-        var applicationData = await _getApplicationDataQuery
-            .GetApplicationDataAsync(organizationId, reportId);
-
-        if (applicationData == null) throw new NotFoundException("Organization report application data not found.");
-
-        return applicationData;
-    }
-
-    [HttpPatch("{organizationId}/data/application/{reportId}")]
-    public async Task<OrganizationReportResponseModel> UpdateOrganizationReportApplicationDataV2Async(
-        Guid organizationId, Guid reportId,
-        [FromBody] UpdateOrganizationReportApplicationDataRequest request)
-    {
-        if (request.OrganizationId != organizationId) throw new BadRequestException("Organization ID in the request body must match the route parameter");
-
-        if (request.Id != reportId) throw new BadRequestException("Report ID in the request body must match the route parameter");
-
-        if (string.IsNullOrWhiteSpace(request.ApplicationData)) throw new BadRequestException("Application Data is required");
-
-        await AuthorizeAsync(organizationId);
-
-        var updatedReport = await _updateApplicationDataCommand
-            .UpdateApplicationDataAsync(request);
-
-        return new OrganizationReportResponseModel(updatedReport);
     }
 
     #endregion
