@@ -14,8 +14,16 @@
       "lastName": "User",
       "title": "Developer",
       "role": "user",
+      "status": "confirmed",
       "branch": "Headquarters",
       "department": "Engineering"
+    },
+    {
+      "firstName": "Dave",
+      "lastName": "Invited",
+      "role": "user",
+      "status": "invited",
+      "email": "dave.custom-email@external.com"
     },
     {
       "firstName": "Carol",
@@ -36,6 +44,7 @@
     },
     {
       "name": "Engineering Team",
+      "externalId": "eng-team-001",
       "members": [
         "bob.user",
         "carol.manager"
@@ -64,6 +73,7 @@
     },
     {
       "name": "Engineering/Development",
+      "externalId": "eng-dev-collection",
       "groups": [
         {
           "group": "Engineering Team",

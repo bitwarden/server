@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "qa-sso-org",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "sso-basic"
+  },
+  "ciphers": {
+    "fixture": "sso-vault"
+  },
+  "policies": {
+    "enable": ["requireSso"]
+  },
+  "sso": {
+    "identifier": "qa-sso-org",
+    "encryptionType": "masterPassword",
+    "provider": "oidc"
+  }
+}

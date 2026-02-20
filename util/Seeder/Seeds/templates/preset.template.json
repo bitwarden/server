@@ -3,12 +3,17 @@
   "organization": {
     "name": "Acme Corporation",
     "domain": "acme.example.com",
-    "seats": 50
+    "seats": 50,
+    "planType": "enterprise-annually"
   },
   "roster": {
     "fixture": "my-roster-fixture"
   },
   "ciphers": {
     "fixture": "my-cipher-fixture"
+  },
+  "policies": {
+    "enableAll": true,
+    "except": ["requireSso"]
   }
 }

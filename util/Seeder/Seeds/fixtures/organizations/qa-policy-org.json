@@ -1,0 +1,5 @@
+{
+  "$schema": "../../schemas/organization.schema.json",
+  "name": "Policy Testing Org",
+  "domain": "qa-policy.test"
+}
