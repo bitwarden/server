@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_UpdateMany]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateMany]
     @jsonData NVARCHAR(MAX)
 AS
 BEGIN
@@ -83,3 +83,4 @@ BEGIN
 
     EXEC [dbo].[User_BumpManyAccountRevisionDates] @UserIds
 END
+GO
