@@ -6,6 +6,7 @@ using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
@@ -65,7 +66,7 @@ public class MemberAccessReportQuery(
                 UserName = g.Key.UserName,
                 Email = g.Key.Email,
                 TwoFactorEnabled = orgUsersTwoFactorEnabled.FirstOrDefault(x => x.userId == g.Key.UserGuid).twoFactorIsEnabled,
-                AccountRecoveryEnabled = !string.IsNullOrWhiteSpace(g.Key.ResetPasswordKey) && orgAbility.UseResetPassword,
+                AccountRecoveryEnabled = OrganizationUser.IsValidResetPasswordKey(g.Key.ResetPasswordKey) && orgAbility.UseResetPassword,
                 UsesKeyConnector = g.Key.UsesKeyConnector,
                 GroupId = g.Key.GroupId,
                 GroupName = g.Key.GroupName,

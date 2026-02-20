@@ -581,7 +581,8 @@ public class UserService : UserManager<User>, IUserService
         // Org User must be confirmed and have a ResetPasswordKey
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
-            orgUser.OrganizationId != orgId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
+            orgUser.OrganizationId != orgId ||
+            !orgUser.IsEnrolledInAccountRecovery() ||
             !orgUser.UserId.HasValue)
         {
             throw new BadRequestException("Organization User not valid");

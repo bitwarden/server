@@ -40,7 +40,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         if (organizationUser == null ||
             organizationUser.Status != OrganizationUserStatusType.Confirmed ||
             organizationUser.OrganizationId != orgId ||
-            string.IsNullOrEmpty(organizationUser.ResetPasswordKey) ||
+            !organizationUser.IsEnrolledInAccountRecovery() ||
             !organizationUser.UserId.HasValue)
         {
             throw new BadRequestException("Organization User not valid");
