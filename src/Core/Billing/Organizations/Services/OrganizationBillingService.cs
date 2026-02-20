@@ -30,17 +30,40 @@ public class OrganizationBillingService(
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
+    ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
-        var (organization, customerSetup, subscriptionSetup) = sale;
+        var (organization, customerSetup, subscriptionSetup, owner) = sale;
+
+        // Validate coupon and only apply if valid. If invalid, proceed without the discount.
+        // Validation includes user-specific eligibility checks to ensure the owner has never had premium
+        // and that this is for a Families subscription.
+        // Only validate discount if owner is provided (i.e., the user performing the upgrade is an owner).
+        string? validatedCoupon = null;
+        if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon) && owner != null)
+        {
+            // Only Families plans support user-provided coupons
+            if (subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families)
+            {
+                var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                    owner,
+                    customerSetup.Coupon.Trim(),
+                    DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+                if (isValid)
+                {
+                    validatedCoupon = customerSetup.Coupon.Trim();
+                }
+            }
+        }
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
             : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
-        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, customerSetup?.Coupon);
+        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, validatedCoupon);
 
         if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
@@ -409,7 +432,7 @@ public class OrganizationBillingService(
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = !string.IsNullOrEmpty(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon }] : null,
+            Discounts = !string.IsNullOrWhiteSpace(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon.Trim() }] : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {

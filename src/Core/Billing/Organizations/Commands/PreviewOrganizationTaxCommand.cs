@@ -8,6 +8,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Microsoft.Extensions.Logging;
 using OneOf;
@@ -21,6 +22,7 @@ using static StripeConstants;
 public interface IPreviewOrganizationTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress);
 
@@ -37,10 +39,12 @@ public interface IPreviewOrganizationTaxCommand
 public class PreviewOrganizationTaxCommand(
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter)
+    IStripeAdapter stripeAdapter,
+    ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
@@ -75,6 +79,8 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
+                    // System coupon takes precedence for standalone Secrets Manager purchases.
+                    // Any user-provided coupons are ignored in this scenario.
                     options.Discounts =
                     [
                         new InvoiceDiscountOptions
@@ -117,6 +123,21 @@ public class PreviewOrganizationTaxCommand(
                                 Price = plan.SecretsManager.StripeServiceAccountPlanId,
                                 Quantity = purchase.SecretsManager.AdditionalServiceAccounts
                             });
+                        }
+                    }
+
+                    // Validate coupon and only apply if valid. If invalid, proceed without the discount.
+                    // Only Families plans support user-provided coupons
+                    if (!string.IsNullOrWhiteSpace(purchase.Coupon) && purchase.Tier == ProductTierType.Families)
+                    {
+                        var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                            user,
+                            purchase.Coupon.Trim(),
+                            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+                        if (isValid)
+                        {
+                            options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
                         }
                     }
 

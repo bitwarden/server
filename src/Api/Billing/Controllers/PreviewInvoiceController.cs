@@ -18,11 +18,13 @@ public class PreviewInvoiceController(
     IPreviewPremiumUpgradeProrationCommand previewPremiumUpgradeProrationCommand) : BaseBillingController
 {
     [HttpPost("organizations/subscriptions/purchase")]
+    [InjectUser]
     public async Task<IResult> PreviewOrganizationSubscriptionPurchaseTaxAsync(
+        [BindNever] User user,
         [FromBody] PreviewOrganizationSubscriptionPurchaseTaxRequest request)
     {
         var (purchase, billingAddress) = request.ToDomain();
-        var result = await previewOrganizationTaxCommand.Run(purchase, billingAddress);
+        var result = await previewOrganizationTaxCommand.Run(user, purchase, billingAddress);
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 
@@ -49,11 +51,13 @@ public class PreviewInvoiceController(
     }
 
     [HttpPost("premium/subscriptions/purchase")]
+    [InjectUser]
     public async Task<IResult> PreviewPremiumSubscriptionPurchaseTaxAsync(
+        [BindNever] User user,
         [FromBody] PreviewPremiumSubscriptionPurchaseTaxRequest request)
     {
-        var (purchase, billingAddress) = request.ToDomain();
-        var result = await previewPremiumTaxCommand.Run(purchase, billingAddress);
+        var (preview, billingAddress) = request.ToDomain();
+        var result = await previewPremiumTaxCommand.Run(user, preview, billingAddress);
         return Handle(result.Map(pair => new { pair.Tax, pair.Total }));
     }
 

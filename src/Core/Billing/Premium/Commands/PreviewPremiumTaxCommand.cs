@@ -1,7 +1,10 @@
 ﻿using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -10,17 +13,20 @@ namespace Bit.Core.Billing.Premium.Commands;
 public interface IPreviewPremiumTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
-        int additionalStorage,
+        User user,
+        PremiumPurchasePreview preview,
         BillingAddress billingAddress);
 }
 
 public class PreviewPremiumTaxCommand(
     ILogger<PreviewPremiumTaxCommand> logger,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter) : BaseBillingCommand<PreviewPremiumTaxCommand>(logger), IPreviewPremiumTaxCommand
+    IStripeAdapter stripeAdapter,
+    ISubscriptionDiscountService subscriptionDiscountService) : BaseBillingCommand<PreviewPremiumTaxCommand>(logger), IPreviewPremiumTaxCommand
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
-        int additionalStorage,
+        User user,
+        PremiumPurchasePreview preview,
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
         {
@@ -47,13 +53,27 @@ public class PreviewPremiumTaxCommand(
                 }
             };
 
-            if (additionalStorage > 0)
+            if (preview.AdditionalStorageGb > 0)
             {
                 options.SubscriptionDetails.Items.Add(new InvoiceSubscriptionDetailsItemOptions
                 {
                     Price = premiumPlan.Storage.StripePriceId,
-                    Quantity = additionalStorage
+                    Quantity = preview.AdditionalStorageGb
                 });
+            }
+
+            // Validate coupon and only apply if valid. If invalid, proceed without the discount.
+            if (!string.IsNullOrWhiteSpace(preview.Coupon))
+            {
+                var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                    user,
+                    preview.Coupon.Trim(),
+                    DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+                if (isValid)
+                {
+                    options.Discounts = [new InvoiceDiscountOptions { Coupon = preview.Coupon.Trim() }];
+                }
             }
 
             var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);

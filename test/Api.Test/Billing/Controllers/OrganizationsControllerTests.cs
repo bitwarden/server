@@ -118,7 +118,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>(), Arg.Any<Guid?>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         var response = await _sut.PostUpgrade(organizationId, model);
@@ -141,7 +141,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>(), Arg.Any<Guid?>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
@@ -169,7 +169,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>(), Arg.Any<Guid?>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
