@@ -68,9 +68,14 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
         return noCollectionNeeded;
     }
 
-    public bool RequiresDefaultCollectionOnConfirm(Guid organizationId)
+    public DefaultCollectionRequest GetDefaultCollectionRequestOnConfirm(Guid organizationId)
     {
-        return _policyDetails.Any(p => p.OrganizationId == organizationId);
+        var matchingOrgUserId =
+            _policyDetails.FirstOrDefault(p => p.OrganizationId == organizationId)?.OrganizationUserId;
+
+        return new DefaultCollectionRequest(
+            OrganizationUserId: matchingOrgUserId.GetValueOrDefault(Guid.Empty),
+            ShouldCreateDefaultCollection: matchingOrgUserId.HasValue);
     }
 
     /// <summary>

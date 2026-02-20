@@ -485,8 +485,9 @@ public class ConfirmOrganizationUserCommandTests
             PolicyType = PolicyType.OrganizationDataOwnership
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([(orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]))]);
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
@@ -534,8 +535,9 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([(orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []))]);
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
