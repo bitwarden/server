@@ -46,6 +46,7 @@ public static class OrganizationLicenseConstants
     public const string UseAutomaticUserConfirmation = nameof(UseAutomaticUserConfirmation);
     public const string UseDisableSmAdsForUsers = nameof(UseDisableSmAdsForUsers);
     public const string UsePhishingBlocker = nameof(UsePhishingBlocker);
+    public const string UseMyItems = nameof(UseMyItems);
 }
 
 public static class UserLicenseConstants

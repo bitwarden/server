@@ -62,8 +62,8 @@
 
         console.log(plan);
 
+        // General features
         document.getElementById('@(nameof(Model.SelfHost))').checked = plan.hasSelfHost;
-
         document.getElementById('@(nameof(Model.Use2fa))').checked = plan.has2fa;
         document.getElementById('@(nameof(Model.UseApi))').checked = plan.hasApi;
         document.getElementById('@(nameof(Model.UseGroups))').checked = plan.hasGroups;
@@ -77,8 +77,10 @@
         document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = plan.hasCustomPermissions;
         // use key connector is intentionally omitted
 
+        // Password Manager features
         document.getElementById('@(nameof(Model.UseTotp))').checked = plan.hasTotp;
         document.getElementById('@(nameof(Model.UsersGetPremium))').checked = plan.usersGetPremium;
+        document.getElementById('@(nameof(Model.UseMyItems))').checked = plan.hasPolicies; // TODO: use the plan property when added (PM-32366)
 
         document.getElementById('@(nameof(Model.MaxStorageGb))').value =
             document.getElementById('@(nameof(Model.MaxStorageGb))').value ||

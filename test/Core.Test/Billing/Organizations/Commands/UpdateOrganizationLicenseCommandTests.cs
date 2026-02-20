@@ -92,8 +92,7 @@ public class UpdateOrganizationLicenseCommandTests
                         "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
                         "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
                         "ExpirationWithoutGracePeriod", "Token", "LimitCollectionCreationDeletion",
-                        "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems",
-                        "UseOrganizationDomains", "UseAdminSponsoredFamilies", "UseAutomaticUserConfirmation", "UsePhishingBlocker", "UseDisableSmAdsForUsers") &&
+                        "LimitCollectionCreation", "LimitCollectionDeletion", "AllowAdminAccessToAllCollectionItems") &&
                          // Same property but different name, use explicit mapping
                          org.ExpirationDate == license.Expires));
         }
@@ -169,7 +168,8 @@ public class UpdateOrganizationLicenseCommandTests
             new(OrganizationLicenseConstants.ExpirationWithoutGracePeriod, DateTime.Now.AddMonths(12).ToString("O")),
             new(OrganizationLicenseConstants.Trial, "false"),
             new(OrganizationLicenseConstants.LimitCollectionCreationDeletion, "true"),
-            new(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems, "true")
+            new(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems, "true"),
+            new(OrganizationLicenseConstants.UseMyItems, "true")
         };
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
@@ -236,7 +236,8 @@ public class UpdateOrganizationLicenseCommandTests
                     org.UseAdminSponsoredFamilies == true &&
                     org.UseAutomaticUserConfirmation == true &&
                     org.UseDisableSmAdsForUsers == true &&
-                    org.UsePhishingBlocker == true));
+                    org.UsePhishingBlocker == true &&
+                    org.UseMyItems));
         }
         finally
         {

@@ -247,6 +247,12 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = ModelState.GetErrorMessage();
+            return RedirectToAction("Edit", new { id });
+        }
+
         var organization = await _organizationRepository.GetByIdAsync(id);
 
         if (organization == null)
@@ -564,6 +570,7 @@ public class OrganizationsController : Controller
             organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
             organization.UseDisableSmAdsForUsers = model.UseDisableSmAdsForUsers;
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
+            organization.UseMyItems = model.UseMyItems;
 
             //secrets
             organization.SmSeats = model.SmSeats;

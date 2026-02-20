@@ -259,6 +259,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseApi = newPlan.HasApi;
         organization.SelfHost = newPlan.HasSelfHost;
         organization.UsePolicies = newPlan.HasPolicies;
+        organization.UseMyItems = newPlan.HasPolicies; // TODO: use the plan property when added (PM-32366)
         organization.MaxStorageGb = (short)(newPlan.PasswordManager.BaseStorageGb + upgrade.AdditionalStorageGb);
         organization.UseSso = newPlan.HasSso;
         organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;

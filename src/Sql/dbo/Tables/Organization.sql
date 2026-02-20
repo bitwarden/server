@@ -63,6 +63,7 @@ CREATE TABLE [dbo].[Organization] (
     [MaxStorageGbIncreased]         SMALLINT         NULL,
     [UsePhishingBlocker]            BIT              NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] DEFAULT (0),
     [UseDisableSmAdsForUsers]       BIT              NOT NULL CONSTRAINT [DF_Organization_UseDisableSmAdsForUsers] DEFAULT (0),
+    [UseMyItems]                    BIT              NOT NULL CONSTRAINT [DF_Organization_UseMyItems] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
