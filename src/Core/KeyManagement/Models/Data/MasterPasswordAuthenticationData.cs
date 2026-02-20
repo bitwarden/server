@@ -21,4 +21,21 @@ public class MasterPasswordAuthenticationData
             throw new BadRequestException("Invalid master password salt.");
         }
     }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is not MasterPasswordAuthenticationData other)
+        {
+            return false;
+        }
+
+        return Kdf.Equals(other.Kdf) &&
+               MasterPasswordAuthenticationHash == other.MasterPasswordAuthenticationHash &&
+               Salt == other.Salt;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Kdf, MasterPasswordAuthenticationHash, Salt);
+    }
 }

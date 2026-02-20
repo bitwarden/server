@@ -583,6 +583,28 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         await transaction.CommitAsync();
     }
 
+    public UpdateUserData SetMasterPasswordUnlockUserData(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData)
+    {
+        return async (_, _) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            var userEntity = await dbContext.Users.FindAsync(userId) ?? throw new ArgumentException("User not found", nameof(userId));
+            var timestamp = DateTime.UtcNow;
+
+            userEntity.Kdf = masterPasswordUnlockData.Kdf.KdfType;
+            userEntity.KdfIterations = masterPasswordUnlockData.Kdf.Iterations;
+            userEntity.KdfMemory = masterPasswordUnlockData.Kdf.Memory;
+            userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
+            userEntity.Key = masterPasswordUnlockData.MasterKeyWrappedUserKey;
+            userEntity.RevisionDate = timestamp;
+            userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
     private static void MigrateDefaultUserCollectionsToShared(DatabaseContext dbContext, IEnumerable<Guid> userIds)
     {
         var defaultCollections = (from c in dbContext.Collections

@@ -94,6 +94,8 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="updateUserDataActions">Actions to update user data.</param>
     /// <returns>On success</returns>
     Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions);
+
+    UpdateUserData SetMasterPasswordUnlockUserData(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData);
 }
 
 public delegate Task UpdateUserData(Microsoft.Data.SqlClient.SqlConnection? connection = null,

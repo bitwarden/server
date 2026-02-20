@@ -515,6 +515,30 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public UpdateUserData SetMasterPasswordUnlockUserData(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData)
+    {
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_SetMasterPasswordUnlockUserData]",
+                new
+                {
+                    Id = userId,
+                    Kdf = masterPasswordUnlockData.Kdf.KdfType,
+                    KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
+                    KdfMemory = masterPasswordUnlockData.Kdf.Memory,
+                    KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
+                    Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp,
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)

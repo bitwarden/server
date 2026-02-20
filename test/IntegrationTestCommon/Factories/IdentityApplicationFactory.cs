@@ -261,6 +261,53 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             };
         }
 
+        if (requestModel.AccountKeys != null)
+        {
+            var keys = requestModel.AccountKeys;
+            var encKeyPair = keys.PublicKeyEncryptionKeyPair;
+            var sigKeyPair = keys.SignatureKeyPair;
+            var securityState = keys.SecurityState;
+
+            // enforce V2 encryption rules for AccountKeys structure
+            // all v2 parameters must be provided, or none
+            if (encKeyPair == null || sigKeyPair == null || securityState == null)
+            {
+                encKeyPair = null;
+                sigKeyPair = null;
+                securityState = null;
+            }
+
+            if (encKeyPair != null)
+            {
+                encKeyPair = new PublicKeyEncryptionKeyPairRequestModel
+                {
+                    WrappedPrivateKey = DefaultEncryptedString,
+                    PublicKey = keys.PublicKeyEncryptionKeyPair.PublicKey,
+                    SignedPublicKey = keys.PublicKeyEncryptionKeyPair.SignedPublicKey,
+                };
+            }
+
+            if (sigKeyPair != null)
+            {
+                sigKeyPair = new SignatureKeyPairRequestModel
+                {
+                    SignatureAlgorithm = "ed25519",
+                    WrappedSigningKey = DefaultEncryptedString,
+                    VerifyingKey = keys.SignatureKeyPair.VerifyingKey,
+                };
+            }
+
+            // Force valid signature algorithm and encrypted strings to avoid model validation failure.
+            requestModel.AccountKeys = new AccountKeysRequestModel
+            {
+                UserKeyEncryptedAccountPrivateKey = DefaultEncryptedString,
+                AccountPublicKey = keys.AccountPublicKey,
+                PublicKeyEncryptionKeyPair = encKeyPair,
+                SignatureKeyPair = sigKeyPair,
+                SecurityState = securityState,
+            };
+        }
+
         var sendVerificationEmailReqModel = new RegisterSendVerificationEmailRequestModel
         {
             Email = requestModel.Email,
