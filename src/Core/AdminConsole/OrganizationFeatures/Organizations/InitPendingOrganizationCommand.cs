@@ -244,7 +244,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     {
         orgUser.Status = OrganizationUserStatusType.Confirmed;
         orgUser.UserId = request.User.Id;
-        orgUser.Key = request.UserKey;
+        orgUser.Key = request.EncryptedOrganizationSymmetricKey;
         orgUser.Email = null;
     }
 

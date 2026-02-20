@@ -39,7 +39,7 @@ public record InitPendingOrganizationRequest
     public required string EmailToken { get; init; }
 
     /// <summary>
-    /// The user's key encrypted with the organization's key.
+    /// The Organization symmetric key encrypted with the User's public key.
     /// </summary>
-    public required string UserKey { get; init; }
+    public required string EncryptedOrganizationSymmetricKey { get; init; }
 }

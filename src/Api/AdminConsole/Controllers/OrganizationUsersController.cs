@@ -321,7 +321,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
                 CollectionName = model.CollectionName,
                 EmailToken = model.Token,
-                UserKey = model.Key
+                EncryptedOrganizationSymmetricKey = model.Key
             };
 
             var result = await _initPendingOrganizationCommand.InitPendingOrganizationVNextAsync(request);
