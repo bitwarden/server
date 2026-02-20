@@ -18,7 +18,8 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
    @PasswordCount INT = NULL,
    @PasswordAtRiskCount INT = NULL,
    @CriticalPasswordCount INT = NULL,
-   @CriticalPasswordAtRiskCount INT = NULL
+   @CriticalPasswordAtRiskCount INT = NULL,
+   @FileId VARCHAR(100) = NULL
 AS
 BEGIN
    SET NOCOUNT ON;
@@ -44,7 +45,8 @@ INSERT INTO [dbo].[OrganizationReport](
     [PasswordCount],
     [PasswordAtRiskCount],
     [CriticalPasswordCount],
-    [CriticalPasswordAtRiskCount]
+    [CriticalPasswordAtRiskCount],
+    [FileId]
 )
 VALUES (
     @Id,
@@ -66,6 +68,7 @@ VALUES (
     @PasswordCount,
     @PasswordAtRiskCount,
     @CriticalPasswordCount,
-    @CriticalPasswordAtRiskCount
+    @CriticalPasswordAtRiskCount,
+    @FileId
     );
 END
