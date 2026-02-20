@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -33,7 +34,9 @@ public class Provider : ITableObject<Guid>, ISubscriber
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
     public GatewayType? Gateway { get; set; }
+    [MaxLength(50)]
     public string? GatewayCustomerId { get; set; }
+    [MaxLength(50)]
     public string? GatewaySubscriptionId { get; set; }
     public string? DiscountId { get; set; }
 

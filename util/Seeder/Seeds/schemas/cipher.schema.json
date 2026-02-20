@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cipher.schema.json",
+  "title": "Bitwarden Cipher Seed File",
+  "description": "Defines vault items (logins, cards, identities) for the Bitwarden Seeder.",
+  "type": "object",
+  "required": ["items"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "required": ["type", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["login", "card", "identity", "secureNote"]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        },
+        "login": {
+          "$ref": "#/$defs/login"
+        },
+        "card": {
+          "$ref": "#/$defs/card"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "login" } } },
+          "then": { "required": ["login"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "card" } } },
+          "then": { "required": ["card"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "identity" } } },
+          "then": { "required": ["identity"] }
+        }
+      ]
+    },
+    "login": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "totp": { "type": "string" },
+        "uris": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/loginUri"
+          }
+        }
+      }
+    },
+    "loginUri": {
+      "type": "object",
+      "required": ["uri"],
+      "additionalProperties": false,
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "match": {
+          "type": "string",
+          "enum": ["domain", "host", "startsWith", "exact", "regex", "never"],
+          "default": "domain"
+        }
+      }
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cardholderName": { "type": "string" },
+        "brand": { "type": "string" },
+        "number": { "type": "string" },
+        "expMonth": { "type": "string" },
+        "expYear": { "type": "string" },
+        "code": { "type": "string" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "firstName": { "type": "string" },
+        "middleName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "address1": { "type": "string" },
+        "address2": { "type": "string" },
+        "address3": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "postalCode": { "type": "string" },
+        "country": { "type": "string" },
+        "company": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "ssn": { "type": "string" },
+        "username": { "type": "string" },
+        "passportNumber": { "type": "string" },
+        "licenseNumber": { "type": "string" }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "value": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["text", "hidden", "boolean", "linked"],
+          "default": "text"
+        }
+      }
+    }
+  }
+}

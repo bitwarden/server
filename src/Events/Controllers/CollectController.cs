@@ -131,6 +131,8 @@ public class CollectController : Controller
                     break;
 
                 case EventType.Organization_ClientExportedVault:
+                case EventType.Organization_AutoConfirmEnabled_Admin:
+                case EventType.Organization_AutoConfirmDisabled_Admin:
                     if (!eventModel.OrganizationId.HasValue)
                     {
                         continue;

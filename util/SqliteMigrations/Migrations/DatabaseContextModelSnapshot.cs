@@ -271,6 +271,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
+
                     b.HasIndex("Id", "Enabled")
                         .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
@@ -354,9 +358,11 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("GatewayCustomerId")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("GatewaySubscriptionId")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -375,6 +381,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -904,6 +914,69 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsUnique();
 
                     b.ToTable("ProviderPlan", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.SubscriptionDiscount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("AmountOff")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AudienceType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DurationInMonths")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("PercentOff")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeCouponId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeProductIds")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StripeCouponId")
+                        .IsUnique();
+
+                    b.HasIndex("StartDate", "EndDate")
+                        .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("SubscriptionDiscount", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationApplication", b =>
@@ -1678,10 +1751,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Disabled")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("EmailHashes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Emails")
                         .HasMaxLength(4000)
                         .HasColumnType("TEXT");
@@ -1980,6 +2049,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);

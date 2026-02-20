@@ -1,23 +1,15 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Seeder.Factories;
 
-/// <summary>
-/// Creates organization domain entities for seeding.
-/// </summary>
-public static class OrganizationDomainSeeder
+internal static class OrganizationDomainSeeder
 {
-    /// <summary>
-    /// Creates a verified organization domain entity.
-    /// </summary>
-    /// <param name="organizationId">The organization ID.</param>
-    /// <param name="domainName">The domain name (e.g., "example.com").</param>
-    /// <returns>A new verified OrganizationDomain entity (not persisted).</returns>
-    public static OrganizationDomain CreateVerifiedDomain(Guid organizationId, string domainName)
+    internal static OrganizationDomain Create(Guid organizationId, string domainName)
     {
         var domain = new OrganizationDomain
         {
-            Id = Guid.NewGuid(),
+            Id = CoreHelpers.GenerateComb(),
             OrganizationId = organizationId,
             DomainName = domainName,
             Txt = Guid.NewGuid().ToString("N"),

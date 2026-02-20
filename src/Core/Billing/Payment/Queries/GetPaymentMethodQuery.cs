@@ -1,11 +1,9 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Braintree;
-using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Bit.Core.Billing.Payment.Queries;
@@ -16,9 +14,7 @@ public interface IGetPaymentMethodQuery
 }
 
 public class GetPaymentMethodQuery(
-    IBraintreeGateway braintreeGateway,
-    ILogger<GetPaymentMethodQuery> logger,
-    ISetupIntentCache setupIntentCache,
+    IBraintreeService braintreeService,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IGetPaymentMethodQuery
 {
@@ -32,35 +28,26 @@ public class GetPaymentMethodQuery(
             return null;
         }
 
-        // First check for PayPal
-        if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
+        // First check for a PayPal account
+        var braintreeCustomer = await braintreeService.GetCustomer(customer);
+
+        if (braintreeCustomer is { DefaultPaymentMethod: PayPalAccount payPalAccount })
         {
-            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
-            if (braintreeCustomer.DefaultPaymentMethod is PayPalAccount payPalAccount)
-            {
-                return new MaskedPayPalAccount { Email = payPalAccount.Email };
-            }
-
-            logger.LogWarning("Subscriber ({SubscriberID}) has a linked Braintree customer ({BraintreeCustomerId}) with no PayPal account.", subscriber.Id, braintreeCustomerId);
-
-            return null;
+            return new MaskedPayPalAccount { Email = payPalAccount.Email };
         }
 
         // Then check for a bank account pending verification
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
-
-        if (!string.IsNullOrEmpty(setupIntentId))
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
         {
-            var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
-            {
-                Expand = ["payment_method"]
-            });
+            Customer = customer.Id,
+            Expand = ["data.payment_method"]
+        });
 
-            if (setupIntent.IsUnverifiedBankAccount())
-            {
-                return MaskedPaymentMethod.From(setupIntent);
-            }
+        var unverifiedBankAccount = setupIntents?.FirstOrDefault(si => si.IsUnverifiedBankAccount());
+
+        if (unverifiedBankAccount != null)
+        {
+            return MaskedPaymentMethod.From(unverifiedBankAccount);
         }
 
         // Then check the default payment method

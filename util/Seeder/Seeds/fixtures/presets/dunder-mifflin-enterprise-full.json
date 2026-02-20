@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "dunder-mifflin",
+    "planType": "enterprise-annually",
+    "seats": 70
+  },
+  "roster": {
+    "fixture": "dunder-mifflin"
+  },
+  "ciphers": {
+    "fixture": "autofill-testing"
+  }
+}

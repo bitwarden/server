@@ -1,9 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.Billing.Extensions;
 using Braintree;
@@ -22,8 +22,8 @@ using static StripeConstants;
 public class UpdatePaymentMethodCommandTests
 {
     private readonly IBraintreeGateway _braintreeGateway = Substitute.For<IBraintreeGateway>();
+    private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
     private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
-    private readonly ISetupIntentCache _setupIntentCache = Substitute.For<ISetupIntentCache>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly UpdatePaymentMethodCommand _command;
@@ -32,9 +32,9 @@ public class UpdatePaymentMethodCommandTests
     {
         _command = new UpdatePaymentMethodCommand(
             _braintreeGateway,
+            _braintreeService,
             _globalSettings,
             Substitute.For<ILogger<UpdatePaymentMethodCommand>>(),
-            _setupIntentCache,
             _stripeAdapter,
             _subscriberService);
     }
@@ -99,7 +99,8 @@ public class UpdatePaymentMethodCommandTests
         Assert.Equal("9999", maskedBankAccount.Last4);
         Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
-        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+        await _stripeAdapter.Received(1).UpdateSetupIntentAsync(setupIntent.Id,
+            Arg.Is<SetupIntentUpdateOptions>(options => options.Customer == customer.Id));
     }
 
     [Fact]
@@ -163,7 +164,8 @@ public class UpdatePaymentMethodCommandTests
 
         await _subscriberService.Received(1).CreateStripeCustomer(organization);
 
-        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+        await _stripeAdapter.Received(1).UpdateSetupIntentAsync(setupIntent.Id,
+            Arg.Is<SetupIntentUpdateOptions>(options => options.Customer == customer.Id));
     }
 
     [Fact]
@@ -230,7 +232,8 @@ public class UpdatePaymentMethodCommandTests
         Assert.Equal("9999", maskedBankAccount.Last4);
         Assert.Equal("https://example.com", maskedBankAccount.HostedVerificationUrl);
 
-        await _setupIntentCache.Received(1).Set(organization.Id, setupIntent.Id);
+        await _stripeAdapter.Received(1).UpdateSetupIntentAsync(setupIntent.Id,
+            Arg.Is<SetupIntentUpdateOptions>(options => options.Customer == customer.Id));
         await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id, Arg.Is<CustomerUpdateOptions>(options =>
             options.Metadata[MetadataKeys.BraintreeCustomerId] == string.Empty &&
             options.Metadata[MetadataKeys.RetiredBraintreeCustomerId] == "braintree_customer_id"));
@@ -375,7 +378,6 @@ public class UpdatePaymentMethodCommandTests
 
         _subscriberService.GetCustomer(organization).Returns(customer);
 
-        var customerGateway = Substitute.For<ICustomerGateway>();
         var braintreeCustomer = Substitute.For<Braintree.Customer>();
         braintreeCustomer.Id.Returns("braintree_customer_id");
         var existing = Substitute.For<PayPalAccount>();
@@ -383,7 +385,10 @@ public class UpdatePaymentMethodCommandTests
         existing.IsDefault.Returns(true);
         existing.Token.Returns("EXISTING");
         braintreeCustomer.PaymentMethods.Returns([existing]);
-        customerGateway.FindAsync("braintree_customer_id").Returns(braintreeCustomer);
+
+        _braintreeService.GetCustomer(customer).Returns(braintreeCustomer);
+
+        var customerGateway = Substitute.For<ICustomerGateway>();
         _braintreeGateway.Customer.Returns(customerGateway);
 
         var paymentMethodGateway = Substitute.For<IPaymentMethodGateway>();
@@ -470,5 +475,76 @@ public class UpdatePaymentMethodCommandTests
         await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
             Arg.Is<CustomerUpdateOptions>(options =>
                 options.Metadata[MetadataKeys.BraintreeCustomerId] == "braintree_customer_id"));
+    }
+
+    [Fact]
+    public async Task Run_PayPal_MissingBraintreeCustomer_CreatesNewBraintreeCustomer_ReturnsMaskedPayPalAccount()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_123"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345"
+            },
+            Id = "cus_123",
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.BraintreeCustomerId] = "missing_braintree_customer_id"
+            }
+        };
+
+        _subscriberService.GetCustomer(organization).Returns(customer);
+
+        // BraintreeService.GetCustomer returns null when the Braintree customer doesn't exist
+        _braintreeService.GetCustomer(customer).Returns((Braintree.Customer?)null);
+
+        _globalSettings.BaseServiceUri.Returns(new GlobalSettings.BaseServiceUriSettings(new GlobalSettings())
+        {
+            CloudRegion = "US"
+        });
+
+        var customerGateway = Substitute.For<ICustomerGateway>();
+        var braintreeCustomer = Substitute.For<Braintree.Customer>();
+        braintreeCustomer.Id.Returns("new_braintree_customer_id");
+        var payPalAccount = Substitute.For<PayPalAccount>();
+        payPalAccount.Email.Returns("user@gmail.com");
+        payPalAccount.IsDefault.Returns(true);
+        payPalAccount.Token.Returns("NONCE");
+        braintreeCustomer.PaymentMethods.Returns([payPalAccount]);
+        var createResult = Substitute.For<Result<Braintree.Customer>>();
+        createResult.Target.Returns(braintreeCustomer);
+        customerGateway.CreateAsync(Arg.Is<CustomerRequest>(options =>
+            options.Id.StartsWith(organization.BraintreeCustomerIdPrefix() + organization.Id.ToString("N").ToLower()) &&
+            options.CustomFields[organization.BraintreeIdField()] == organization.Id.ToString() &&
+            options.CustomFields[organization.BraintreeCloudRegionField()] == "US" &&
+            options.Email == organization.BillingEmailAddress() &&
+            options.PaymentMethodNonce == "TOKEN")).Returns(createResult);
+        _braintreeGateway.Customer.Returns(customerGateway);
+
+        var result = await _command.Run(organization,
+            new TokenizedPaymentMethod { Type = TokenizablePaymentMethodType.PayPal, Token = "TOKEN" },
+            new BillingAddress { Country = "US", PostalCode = "12345" });
+
+        Assert.True(result.IsT0);
+        var maskedPaymentMethod = result.AsT0;
+        Assert.True(maskedPaymentMethod.IsT2);
+        var maskedPayPalAccount = maskedPaymentMethod.AsT2;
+        Assert.Equal("user@gmail.com", maskedPayPalAccount.Email);
+
+        // Verify a new Braintree customer was created (not FindAsync called)
+        await customerGateway.DidNotReceive().FindAsync(Arg.Any<string>());
+        await customerGateway.Received(1).CreateAsync(Arg.Any<CustomerRequest>());
+
+        // Verify Stripe metadata was updated with the new Braintree customer ID
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
+            Arg.Is<CustomerUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.BraintreeCustomerId] == "new_braintree_customer_id"));
     }
 }

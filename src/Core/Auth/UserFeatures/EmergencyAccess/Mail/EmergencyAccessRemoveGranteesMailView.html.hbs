@@ -233,13 +233,15 @@
               <tr>
                 <td align="left" style="font-size:0px;padding:10px 15px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;">The following emergency contacts have been removed from your account:
-                        <ul>
-                            {{#each RemovedGranteeNames}}
-                            <li>{{this}}</li>
-                            {{/each}}
-                        </ul>
-                        Learn more about <a href="{{EmergencyAccessHelpPageUrl}}">emergency access</a>.</div>
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;">The following emergency contacts have been removed from your
+            account:
+            <ul>
+              {{#each RemovedGranteeEmails}}
+              <li>{{ this }}</li>
+              {{/each}}
+            </ul>
+            Learn more about
+            <a href="{{EmergencyAccessHelpPageUrl}}">emergency access</a>.</div>
     
                 </td>
               </tr>
@@ -462,14 +464,15 @@
                 <td align="center" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
       <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:12px;line-height:16px;text-align:center;color:#5A6D91;"><p style="margin-bottom: 5px; margin-top: 5px">
-        © 2025 Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102, Santa
-        Barbara, CA, USA
+        © {{ CurrentYear }} Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102,
+        Santa Barbara, CA, USA
       </p>
       <p style="margin-top: 5px">
         Always confirm you are on a trusted Bitwarden domain before logging
         in:<br>
-        <a href="https://bitwarden.com/" style="text-decoration:none;color:#175ddc; font-weight:400">bitwarden.com</a> |
-        <a href="https://bitwarden.com/help/emails-from-bitwarden/" style="text-decoration:none; color:#175ddc; font-weight:400">Learn why we include this</a>
+        <a href="https://bitwarden.com/" style="text-decoration: none; color: #175ddc; font-weight: 400">bitwarden.com</a>
+        |
+        <a href="https://bitwarden.com/help/emails-from-bitwarden/" style="text-decoration: none; color: #175ddc; font-weight: 400">Learn why we include this</a>
       </p></div>
     
                 </td>

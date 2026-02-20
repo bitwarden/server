@@ -39,6 +39,11 @@ public static class StripeConstants
         }
     }
 
+    public static class CouponExpandablePropertyNames
+    {
+        public const string AppliesTo = "applies_to";
+    }
+
     public static class ErrorCodes
     {
         public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
@@ -70,10 +75,6 @@ public static class StripeConstants
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
         public const string PayPalTransactionId = "btPayPalTransactionId";
-        public const string PreviousAdditionalStorage = "previous_additional_storage";
-        public const string PreviousPeriodEndDate = "previous_period_end_date";
-        public const string PreviousPremiumPriceId = "previous_premium_price_id";
-        public const string PreviousPremiumUserId = "previous_premium_user_id";
         public const string ProviderId = "providerId";
         public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";

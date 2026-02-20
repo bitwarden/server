@@ -107,7 +107,7 @@ public class CollectionsControllerTests
 
         await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithPermissionsAsync(organization.Id, userId, true);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, userId, true);
     }
 
     [Theory, BitAutoData]
@@ -143,12 +143,12 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdWithPermissionsAsync(organization.Id, userId, true)
+            .GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, userId, true)
             .Returns(collections);
 
         var response = await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdWithPermissionsAsync(organization.Id, userId, true);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, userId, true);
         Assert.Single(response.Data);
         Assert.All(response.Data, c => Assert.Equal(organization.Id, c.OrganizationId));
         Assert.All(response.Data, c => Assert.Equal(managedCollection.Id, c.Id));
