@@ -5,9 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -26,11 +24,17 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership, true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy previousPolicyState,
+        Organization organization,
         SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
+        organization.Id = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
@@ -48,11 +52,17 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership)] Policy previousPolicyState,
+        Organization organization,
         SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
     {
         // Arrange
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
+        organization.Id = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
@@ -197,12 +207,18 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
+        Organization organization,
         SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
         policyUpdate.Enabled = true;
+        organization.Id = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
         var policyRequest = new SavePolicyModel(policyUpdate, metadata);
 
@@ -228,17 +244,18 @@ public class OrganizationDataOwnershipPolicyValidatorTests
     private static OrganizationDataOwnershipPolicyValidator ArrangeSut(
         OrganizationDataOwnershipPolicyRequirementFactory factory,
         IPolicyRepository policyRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        bool useMyItems = true)
     {
-        var applicationCacheService = Substitute.For<IApplicationCacheService>();
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
         // Default to UseMyItems = true for existing tests
-        applicationCacheService.GetOrganizationAbilityAsync(Arg.Any<Guid>())
-            .Returns(callInfo => new OrganizationAbility
+        organizationRepository.GetByIdAsync(Arg.Any<Guid>())
+            .Returns(callInfo => new Organization
             {
                 Id = callInfo.Arg<Guid>(),
-                UseMyItems = true
+                UseMyItems = useMyItems
             });
-        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, applicationCacheService, [factory]);
+        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, organizationRepository, [factory]);
         return sut;
     }
 
@@ -247,11 +264,17 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership, true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy previousPolicyState,
+        Organization organization,
         SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
+        organization.Id = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
@@ -269,11 +292,17 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership)] Policy previousPolicyState,
+        Organization organization,
         SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
     {
         // Arrange
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
+        organization.Id = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
@@ -362,12 +391,18 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
+        Organization organization,
         SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
         policyUpdate.Enabled = true;
+        organization.Id = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
         var policyRequest = new SavePolicyModel(policyUpdate, metadata);
 
@@ -378,6 +413,37 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateDefaultCollectionsBulkAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(ShouldUpsertDefaultCollectionsTestCases))]
+    public async Task ExecuteSideEffectsAsync_OrganizationNotFound_ThrowsInvalidOperationException(
+        Policy postUpdatedPolicy,
+        Policy? previousPolicyState,
+        [PolicyUpdate(PolicyType.OrganizationDataOwnership)] PolicyUpdate policyUpdate,
+        [OrganizationPolicyDetails(PolicyType.OrganizationDataOwnership)] IEnumerable<OrganizationPolicyDetails> orgPolicyDetails,
+        OrganizationDataOwnershipPolicyRequirementFactory factory)
+    {
+        // Arrange
+        var orgPolicyDetailsList = orgPolicyDetails.ToList();
+        foreach (var policyDetail in orgPolicyDetailsList)
+        {
+            policyDetail.OrganizationId = policyUpdate.OrganizationId;
+        }
+
+        var policyRepository = ArrangePolicyRepository(orgPolicyDetailsList);
+        var collectionRepository = Substitute.For<ICollectionRepository>();
+        var organizationRepository = Substitute.For<IOrganizationRepository>();
+
+        // Return null to simulate organization not found
+        organizationRepository.GetByIdAsync(Arg.Any<Guid>()).Returns((Organization?)null);
+
+        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, organizationRepository, [factory]);
+        var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState));
     }
 
     [Theory]
@@ -399,16 +465,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRepository = ArrangePolicyRepository(orgPolicyDetailsList);
         var collectionRepository = Substitute.For<ICollectionRepository>();
 
-        // Create a custom application cache service with UseMyItems = false
-        var applicationCacheService = Substitute.For<IApplicationCacheService>();
-        applicationCacheService.GetOrganizationAbilityAsync(Arg.Any<Guid>())
-            .Returns(callInfo => new OrganizationAbility
-            {
-                Id = callInfo.Arg<Guid>(),
-                UseMyItems = false
-            });
-
-        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, applicationCacheService, [factory]);
+        var sut = ArrangeSut(factory, policyRepository, collectionRepository, useMyItems: false);
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act

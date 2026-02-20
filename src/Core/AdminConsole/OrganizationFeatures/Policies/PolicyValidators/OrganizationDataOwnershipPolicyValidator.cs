@@ -6,14 +6,13 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 public class OrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationRepository organizationRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect, IOnPolicyPostUpdateEvent
 {
@@ -54,8 +53,16 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
     {
-        var orgAbility = await applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
-        if (orgAbility == null || !orgAbility.UseMyItems)
+        // FIXME: we should use the organizationAbility cache here, but it is currently flaky
+        // and it's not obvious how to handle a cache failure.
+        // Revisit once https://bitwarden.atlassian.net/browse/PM-32104 is done
+        var organization = await organizationRepository.GetByIdAsync(policyUpdate.OrganizationId);
+        if (organization == null)
+        {
+            throw new InvalidOperationException($"Organization with ID {policyUpdate.OrganizationId} not found.");
+        }
+
+        if (!organization.UseMyItems)
         {
             return;
         }
