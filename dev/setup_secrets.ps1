@@ -28,7 +28,7 @@ $projects = @{
     Scim             = "../bitwarden_license/src/Scim"
     IntegrationTests = "../test/Infrastructure.IntegrationTest"
     SeederApi        = "../util/SeederApi"
-    SeederUtility    = "../util/DbSeederUtility"
+    SeederUtility    = "../util/SeederUtility"
     AppHost = "../AppHost"
 }
 
