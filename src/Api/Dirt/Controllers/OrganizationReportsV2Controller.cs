@@ -25,9 +25,6 @@ public class OrganizationReportsV2Controller : Controller
     private readonly IUpdateOrganizationReportDataFileStorageCommand _updateDataCommand;
     private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
     private readonly IGetOrganizationReportDataFileStorageQuery _getDataQuery;
-    private readonly IGetOrganizationReportSummaryDataByDateRangeV2Query _getSummaryByDateRangeQuery;
-    private readonly IGetOrganizationReportSummaryDataV2Query _getSummaryDataQuery;
-    private readonly IUpdateOrganizationReportSummaryV2Command _updateSummaryCommand;
     private readonly IGetOrganizationReportApplicationDataV2Query _getApplicationDataQuery;
     private readonly IUpdateOrganizationReportApplicationDataV2Command _updateApplicationDataCommand;
     private readonly IUpdateOrganizationReportCommand _updateOrganizationReportCommand;
@@ -40,9 +37,6 @@ public class OrganizationReportsV2Controller : Controller
         IUpdateOrganizationReportDataFileStorageCommand updateDataCommand,
         IGetOrganizationReportQuery getOrganizationReportQuery,
         IGetOrganizationReportDataFileStorageQuery getDataQuery,
-        IGetOrganizationReportSummaryDataByDateRangeV2Query getSummaryByDateRangeQuery,
-        IGetOrganizationReportSummaryDataV2Query getSummaryDataQuery,
-        IUpdateOrganizationReportSummaryV2Command updateSummaryCommand,
         IGetOrganizationReportApplicationDataV2Query getApplicationDataQuery,
         IUpdateOrganizationReportApplicationDataV2Command updateApplicationDataCommand,
         IUpdateOrganizationReportCommand updateOrganizationReportCommand)
@@ -54,9 +48,6 @@ public class OrganizationReportsV2Controller : Controller
         _updateDataCommand = updateDataCommand;
         _getOrganizationReportQuery = getOrganizationReportQuery;
         _getDataQuery = getDataQuery;
-        _getSummaryByDateRangeQuery = getSummaryByDateRangeQuery;
-        _getSummaryDataQuery = getSummaryDataQuery;
-        _updateSummaryCommand = updateSummaryCommand;
         _getApplicationDataQuery = getApplicationDataQuery;
         _updateApplicationDataCommand = updateApplicationDataCommand;
         _updateOrganizationReportCommand = updateOrganizationReportCommand;
@@ -232,65 +223,6 @@ public class OrganizationReportsV2Controller : Controller
 
         var updatedReport = await _updateApplicationDataCommand
             .UpdateApplicationDataAsync(request);
-
-        return new OrganizationReportResponseModel(updatedReport);
-    }
-
-    #endregion
-
-    #region SummaryData Field Endpoints
-
-    [HttpGet("{organizationId}/data/summary")]
-    public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetOrganizationReportSummaryDataByDateRangeV2Async(
-        Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
-    {
-        if (organizationId == Guid.Empty) throw new BadRequestException("OrganizationId is required.");
-
-        if (startDate == default) throw new BadRequestException("Start date is required.");
-
-        if (endDate == default) throw new BadRequestException("End date is required.");
-
-        if (startDate > endDate) throw new BadRequestException("Start date must be before or equal to end date.");
-
-        await AuthorizeAsync(organizationId);
-
-        return await _getSummaryByDateRangeQuery
-            .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
-    }
-
-    [HttpGet("{organizationId}/data/summary/{reportId}")]
-    public async Task<OrganizationReportSummaryDataResponse> GetOrganizationReportSummaryV2Async(
-        Guid organizationId, Guid reportId)
-    {
-        if (organizationId == Guid.Empty) throw new BadRequestException("OrganizationId is required.");
-
-        if (reportId == Guid.Empty) throw new BadRequestException("ReportId is required.");
-
-        await AuthorizeAsync(organizationId);
-
-        var summaryData = await _getSummaryDataQuery
-            .GetSummaryDataAsync(organizationId, reportId);
-
-        if (summaryData == null) throw new NotFoundException("Organization report summary data not found.");
-
-        return summaryData;
-    }
-
-    [HttpPatch("{organizationId}/data/summary/{reportId}")]
-    public async Task<OrganizationReportResponseModel> UpdateOrganizationReportSummaryV2Async(
-        Guid organizationId, Guid reportId,
-        [FromBody] UpdateOrganizationReportSummaryRequest request)
-    {
-        if (request.OrganizationId != organizationId) throw new BadRequestException("Organization ID in the request body must match the route parameter");
-
-        if (request.ReportId != reportId) throw new BadRequestException("Report ID in the request body must match the route parameter");
-
-        if (string.IsNullOrWhiteSpace(request.SummaryData)) throw new BadRequestException("Summary Data is required");
-
-        await AuthorizeAsync(organizationId);
-
-        var updatedReport = await _updateSummaryCommand
-            .UpdateSummaryAsync(request);
 
         return new OrganizationReportResponseModel(updatedReport);
     }
