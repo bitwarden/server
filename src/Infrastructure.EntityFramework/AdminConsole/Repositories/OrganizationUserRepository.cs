@@ -407,7 +407,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from ou in dbContext.OrganizationUsers
-                        where userIds.Contains(ou.Id)
+                        where ou.UserId.HasValue && userIds.Contains(ou.UserId.Value)
                         select ou;
             return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
         }
