@@ -3,12 +3,14 @@ using System.Text.Json;
 using AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -22,6 +24,7 @@ using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -403,6 +406,128 @@ public class SyncControllerTests
         Assert.Equal(kdfParallelism, result.UserDecryption.MasterPasswordUnlock.Kdf.Parallelism);
         Assert.Equal(user.Key, result.UserDecryption.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
         Assert.Equal(user.Email.ToLower(), result.UserDecryption.MasterPasswordUnlock.Salt);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_ReturnedWhenFlagEnabledAndClientVersionSupported(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.BankAccountCipherMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.BankAccount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagDisabled(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var loginCipher = new CipherDetails { Type = CipherType.Login, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher, loginCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // New client version but flag disabled
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version(Constants.BankAccountCipherMinimumVersion));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(false);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
+        Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_BankAccountCiphers_FilteredWhenFlagEnabledButClientVersionTooOld(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+
+        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
+        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var bankAccountCipher = new CipherDetails { Type = CipherType.BankAccount, Data = "{}", UserId = user.Id };
+        var ciphers = new List<CipherDetails> { bankAccountCipher };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+
+        // Flag enabled but old client version
+        sutProvider.GetDependency<ICurrentContext>()
+            .ClientVersion.Returns(new Version("2025.1.0"));
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(true);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user).Returns(false);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.BankAccount);
     }
 
     private async Task AssertMethodsCalledAsync(IUserService userService,

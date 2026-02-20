@@ -54,6 +54,11 @@ public class CipherMiniResponseModel : ResponseModel
                 cipherData = sshKeyData;
                 SSHKey = new CipherSSHKeyModel(sshKeyData);
                 break;
+            case CipherType.BankAccount:
+                var bankAccountData = JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data);
+                cipherData = bankAccountData;
+                BankAccount = new CipherBankAccountModel(bankAccountData);
+                break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
@@ -97,6 +102,9 @@ public class CipherMiniResponseModel : ResponseModel
 
     [Obsolete("Use Data instead.")]
     public CipherSSHKeyModel SSHKey { get; set; }
+
+    [Obsolete("Use Data instead.")]
+    public CipherBankAccountModel BankAccount { get; set; }
 
     [Obsolete("Use Data instead.")]
     public IEnumerable<CipherFieldModel> Fields { get; set; }
