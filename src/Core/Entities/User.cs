@@ -106,6 +106,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
+    /// <summary>
+    /// V2 upgrade token stored as JSON containing two wrapped user keys.
+    /// Allows clients to unlock vault after V1 to V2 key rotation without logout.
+    /// </summary>
+    public string? V2UpgradeToken { get; set; }
     // PM-28827 Uncomment below line.
     // public string? MasterPasswordSalt { get; set; }
 
