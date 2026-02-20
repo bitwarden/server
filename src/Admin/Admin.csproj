@@ -10,6 +10,7 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin-SelfHost' " />
   <ItemGroup>
+    <ProjectReference Include="..\..\ServiceDefaults\ServiceDefaults.csproj" Condition="'$(Configuration)' == 'Debug'" />
     <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
     <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />

@@ -21,6 +21,7 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Api' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Api-SelfHost' " />
   <ItemGroup>
+    <ProjectReference Include="..\..\ServiceDefaults\ServiceDefaults.csproj" Condition="'$(Configuration)' == 'Debug'" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>

@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36705.20 d17.14
@@ -146,6 +146,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sso.IntegrationTest", "bitwarden_license\test\Sso.IntegrationTest\Sso.IntegrationTest.csproj", "{FFB09376-595B-6F93-36F0-70CAE90AFECB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.IntegrationTest", "test\Server.IntegrationTest\Server.IntegrationTest.csproj", "{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppHost", "AppHost\AppHost.csproj", "{0EEFA4FC-4EEC-4E3F-8ED7-28FD33201701}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceDefaults", "ServiceDefaults\ServiceDefaults.csproj", "{CDC04BCD-A115-456A-8F76-20CB522C5814}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -379,6 +383,14 @@ Global
 		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E75E1F10-BC6F-4EB1-BA75-D897C45AEA0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EEFA4FC-4EEC-4E3F-8ED7-28FD33201701}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EEFA4FC-4EEC-4E3F-8ED7-28FD33201701}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EEFA4FC-4EEC-4E3F-8ED7-28FD33201701}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EEFA4FC-4EEC-4E3F-8ED7-28FD33201701}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDC04BCD-A115-456A-8F76-20CB522C5814}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDC04BCD-A115-456A-8F76-20CB522C5814}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDC04BCD-A115-456A-8F76-20CB522C5814}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDC04BCD-A115-456A-8F76-20CB522C5814}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

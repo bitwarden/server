@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\ServiceDefaults\ServiceDefaults.csproj" Condition="'$(Configuration)' == 'Debug'" />
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>
