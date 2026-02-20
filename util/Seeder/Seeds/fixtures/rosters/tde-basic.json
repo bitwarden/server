@@ -1,25 +1,16 @@
 {
   "$schema": "../../schemas/roster.schema.json",
   "users": [
-    {
-      "firstName": "Tde",
-      "lastName": "Owner",
-      "role": "owner"
-    },
-    {
-      "firstName": "Tde",
-      "lastName": "Admin",
-      "role": "admin"
-    },
-    {
-      "firstName": "Tde",
-      "lastName": "User",
-      "role": "user"
-    }
+    { "firstName": "Tde", "lastName": "Owner", "role": "owner" },
+    { "firstName": "Tde", "lastName": "Mp-Non-Trusted", "role": "user" },
+    { "firstName": "Tde", "lastName": "No-Mp-Non-Trusted", "role": "user" }
   ],
   "collections": [
     {
-      "name": "Default collection"
+      "name": "Default collection",
+      "users": [
+        { "user": "tde.no-mp-non-trusted", "manage": true }
+      ]
     }
   ]
 }
