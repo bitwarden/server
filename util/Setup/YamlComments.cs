@@ -21,6 +21,16 @@ public class CommentGatheringTypeInspector : TypeInspectorSkeleton
         _innerTypeDescriptor = innerTypeDescriptor ?? throw new ArgumentNullException(nameof(innerTypeDescriptor));
     }
 
+    public override string GetEnumName(Type enumType, string name)
+    {
+        return _innerTypeDescriptor.GetEnumName(enumType, name);
+    }
+
+    public override string GetEnumValue(object enumValue)
+    {
+        return _innerTypeDescriptor.GetEnumValue(enumValue);
+    }
+
     public override IEnumerable<IPropertyDescriptor> GetProperties(Type type, object container)
     {
         return _innerTypeDescriptor.GetProperties(type, container).Select(d => new CommentsPropertyDescriptor(d));
@@ -33,13 +43,19 @@ public class CommentGatheringTypeInspector : TypeInspectorSkeleton
         public CommentsPropertyDescriptor(IPropertyDescriptor baseDescriptor)
         {
             _baseDescriptor = baseDescriptor;
-            Name = baseDescriptor.Name;
         }
 
-        public string Name { get; set; }
-        public int Order { get; set; }
+        public string Name => _baseDescriptor.Name;
+        public int Order
+        {
+            get => _baseDescriptor.Order;
+            set => _baseDescriptor.Order = value;
+        }
         public Type Type => _baseDescriptor.Type;
         public bool CanWrite => _baseDescriptor.CanWrite;
+        public bool AllowNulls => _baseDescriptor.AllowNulls;
+        public bool Required => _baseDescriptor.Required;
+        public Type ConverterType => _baseDescriptor.ConverterType;
 
         public Type TypeOverride
         {
@@ -95,7 +111,7 @@ public class CommentsObjectGraphVisitor : ChainedObjectGraphVisitor
     public CommentsObjectGraphVisitor(IObjectGraphVisitor<IEmitter> nextVisitor)
         : base(nextVisitor) { }
 
-    public override bool EnterMapping(IPropertyDescriptor key, IObjectDescriptor value, IEmitter context)
+    public override bool EnterMapping(IPropertyDescriptor key, IObjectDescriptor value, IEmitter context, ObjectSerializer serializer)
     {
         if (value is CommentsObjectDescriptor commentsDescriptor && commentsDescriptor.Comment != null)
         {
@@ -105,6 +121,6 @@ public class CommentsObjectGraphVisitor : ChainedObjectGraphVisitor
                 context.Emit(new Comment(comment, false));
             }
         }
-        return base.EnterMapping(key, value, context);
+        return base.EnterMapping(key, value, context, serializer);
     }
 }
