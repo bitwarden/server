@@ -218,7 +218,7 @@ public class SubscriptionDiscountsController(
 
         var model = new EditSubscriptionDiscountModel(discount);
 
-        if (model.StripeProductIds != null && model.StripeProductIds.Count != 0)
+        if (model.StripeProductIds is { Count: > 0 })
         {
             try
             {

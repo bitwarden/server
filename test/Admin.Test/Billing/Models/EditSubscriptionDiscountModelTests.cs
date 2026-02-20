@@ -142,26 +142,4 @@ public class EditSubscriptionDiscountModelTests
 
         Assert.False(model.RestrictToNewUsersOnly);
     }
-
-    [Fact]
-    public void DiscountDisplay_WhenPercentOff_FormatsCorrectly()
-    {
-        var model = new EditSubscriptionDiscountModel
-        {
-            PercentOff = 25m
-        };
-
-        Assert.Equal("25% off", model.DiscountDisplay);
-    }
-
-    [Fact]
-    public void DiscountDisplay_WhenAmountOff_FormatsCorrectly()
-    {
-        var model = new EditSubscriptionDiscountModel
-        {
-            AmountOff = 1000L
-        };
-
-        Assert.Equal("$10 off", model.DiscountDisplay);
-    }
 }

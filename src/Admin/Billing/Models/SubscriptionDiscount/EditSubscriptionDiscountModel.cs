@@ -33,10 +33,6 @@ public class EditSubscriptionDiscountModel : IValidatableObject
         ? DiscountAudienceType.UserHasNoPreviousSubscriptions
         : DiscountAudienceType.AllUsers;
 
-    public string DiscountDisplay => PercentOff.HasValue
-        ? $"{PercentOff.Value:G29}% off"
-        : $"${AmountOff / 100m} off";
-
     public EditSubscriptionDiscountModel() { }
 
     public EditSubscriptionDiscountModel(SubscriptionDiscount discount)
