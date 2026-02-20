@@ -178,6 +178,7 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
 
     /* Billing Team */
