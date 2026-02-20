@@ -1,0 +1,77 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "Alice", "lastName": "Admin", "role": "admin" },
+    { "firstName": "Bob", "lastName": "User", "role": "user" },
+    { "firstName": "Carol", "lastName": "Custom", "role": "custom" }
+  ],
+  "collections": [
+    {
+      "name": "View-Items-Collection",
+      "externalId": "view",
+      "users": [
+        { "user": "bob.user", "readOnly": true },
+        { "user": "carol.custom", "readOnly": true }
+      ]
+    },
+    {
+      "name": "View-Items-Hidden-Passwords-Collection",
+      "externalId": "viewhidden",
+      "users": [
+        { "user": "bob.user", "readOnly": true, "hidePasswords": true },
+        { "user": "carol.custom", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Edit-Items-Collection",
+      "externalId": "edit",
+      "users": [
+        { "user": "bob.user" },
+        { "user": "carol.custom" }
+      ]
+    },
+    {
+      "name": "Edit-Items-Hidden-Passwords-Collection",
+      "externalId": "edithidden",
+      "users": [
+        { "user": "bob.user", "hidePasswords": true },
+        { "user": "carol.custom", "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Manage-Collection",
+      "externalId": "manage",
+      "users": [
+        { "user": "bob.user", "manage": true },
+        { "user": "carol.custom", "manage": true }
+      ]
+    },
+    {
+      "name": "Collection-21891",
+      "externalId": "manage"
+    },
+    {
+      "name": "Collection-19712"
+    },
+    {
+      "name": "Collection-19713"
+    },
+    {
+      "name": "Collection-19714"
+    },
+    {
+      "name": "Collection-19716-1"
+    },
+    {
+      "name": "Collection-19716-2"
+    },
+    {
+      "name": "Collection-842048-not-assigned",
+      "externalId": "Collection-842048-not-assigned"
+    },
+    {
+      "name": "Collection-842048-assigned",
+      "externalId": "Collection-842048-assigned"
+    }
+  ]
+}

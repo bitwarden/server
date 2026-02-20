@@ -1,0 +1,25 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    {
+      "firstName": "Tde",
+      "lastName": "Owner",
+      "role": "owner"
+    },
+    {
+      "firstName": "Tde",
+      "lastName": "Admin",
+      "role": "admin"
+    },
+    {
+      "firstName": "Tde",
+      "lastName": "User",
+      "role": "user"
+    }
+  ],
+  "collections": [
+    {
+      "name": "Default collection"
+    }
+  ]
+}

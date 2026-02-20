@@ -1,0 +1,179 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "Cipher-997761-2",
+      "login": {
+        "username": "test",
+        "password": "123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1793363",
+      "login": {
+        "username": "test",
+        "password": "123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1867254-1",
+      "reprompt": 1,
+      "login": {
+        "username": "1867254 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-997761-1",
+      "login": {
+        "username": "test",
+        "password": "123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-19620",
+      "login": {
+        "username": "19620 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1793362",
+      "login": {
+        "username": "test",
+        "password": "123"
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "test item"
+    },
+    {
+      "type": "login",
+      "name": "Cipher-317432",
+      "login": {
+        "username": "test",
+        "password": "123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1867254-2",
+      "login": {
+        "username": "1867254 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-842054",
+      "login": {
+        "username": "User-842054",
+        "password": "Password-842054"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1892038",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1892039",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1892047-No-Access",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1892047-View",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1892047-Manage",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-2532597",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1793366",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-3925830",
+      "login": {}
+    },
+    {
+      "type": "login",
+      "name": "Cipher-3925831",
+      "login": {}
+    },
+    {
+      "type": "card",
+      "name": "Cipher-ClientEventLog-Card",
+      "card": {
+        "cardholderName": "QA Testing",
+        "brand": "Visa",
+        "number": "4242424242424242",
+        "expMonth": "1",
+        "expYear": "2111",
+        "code": "123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-ClientEventLog-Login",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-5172094",
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-3392572",
+      "login": {
+        "username": "Cipher-3392572",
+        "password": "abc",
+        "uris": [
+          { "uri": "https://coinbase.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-3171087",
+      "login": {
+        "username": "Cipher-3171087",
+        "password": "abc",
+        "uris": [
+          { "uri": "webtests.dev" }
+        ]
+      }
+    }
+  ]
+}

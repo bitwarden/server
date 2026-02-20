@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "qa-tde-org",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "tde-basic"
+  },
+  "ciphers": {
+    "fixture": "tde-vault"
+  },
+  "policies": {
+    "enable": ["requireSso"]
+  },
+  "sso": {
+    "identifier": "qa-tde-org",
+    "encryptionType": "trustedDevices",
+    "provider": "oidc"
+  }
+}

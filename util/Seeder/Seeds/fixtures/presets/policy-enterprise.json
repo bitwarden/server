@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "qa-policy-org",
+    "planType": "enterprise-annually"
+  },
+  "roster": {
+    "fixture": "policy-org"
+  },
+  "policies": {
+    "enableAll": true,
+    "except": ["requireSso", "require2fa"]
+  }
+}

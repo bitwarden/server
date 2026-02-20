@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "qa-collection-permissions",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "collection-permissions"
+  },
+  "ciphers": {
+    "fixture": "collection-permissions"
+  }
+}
