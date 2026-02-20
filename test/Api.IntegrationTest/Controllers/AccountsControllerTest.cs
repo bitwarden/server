@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.Entities;
@@ -12,6 +11,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
@@ -378,7 +378,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("KDF settings are invalid", content);
+        Assert.Contains("The model state is invalid", content);
     }
 
     [Fact]

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
 
-    <Version>2026.1.1</Version>
+    <Version>2026.2.0</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -13,6 +13,10 @@
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <BitIncludeAuthentication>false</BitIncludeAuthentication>
+    <BitIncludeFeatures>false</BitIncludeFeatures>
+  </PropertyGroup>
 
   <PropertyGroup>
 

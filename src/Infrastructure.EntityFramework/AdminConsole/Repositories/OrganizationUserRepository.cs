@@ -352,7 +352,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
 #nullable enable
-    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithSharedCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -361,7 +361,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = from ou in dbContext.OrganizationUsers
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
                         join c in dbContext.Collections on cu.CollectionId equals c.Id
-                        where ou.Id == id && c.Type != CollectionType.DefaultUserCollection
+                        where ou.Id == id && c.Type == CollectionType.SharedCollection
                         select cu;
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
@@ -440,7 +440,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeSharedCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -450,7 +450,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                                where ou.OrganizationId == organizationId
                                select ou).ToListAsync();
 
-            if (!includeCollections && !includeGroups)
+            if (!includeSharedCollections && !includeGroups)
             {
                 return users;
             }
@@ -469,12 +469,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     .GroupBy(g => g.OrganizationUserId).ToList();
             }
 
-            if (includeCollections)
+            if (includeSharedCollections)
             {
                 collections = (await (from cu in dbContext.CollectionUsers
                                       join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
                                       join c in dbContext.Collections on cu.CollectionId equals c.Id
-                                      where c.Type != CollectionType.DefaultUserCollection
+                                      where c.Type == CollectionType.SharedCollection
                                       select cu).ToListAsync())
                     .GroupBy(c => c.OrganizationUserId).ToList();
             }
@@ -508,7 +508,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(
-        Guid organizationId, bool includeGroups, bool includeCollections)
+        Guid organizationId, bool includeGroups, bool includeSharedCollections)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -543,7 +543,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             ? ou.GroupUsers.Select(gu => gu.GroupId).ToList()
                             : new List<Guid>(),
 
-                        Collections = includeCollections
+                        Collections = includeSharedCollections
                             ? ou.CollectionUsers
                                 .Where(cu => cu.Collection.Type == CollectionType.SharedCollection)
                                 .Select(cu => new CollectionAccessSelection

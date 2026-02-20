@@ -74,11 +74,6 @@ public class ImportCiphersController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
-        if (model.Ciphers.Any(c => c.ArchivedDate.HasValue))
-        {
-            throw new BadRequestException("You cannot import archived items into an organization.");
-        }
-
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
 

@@ -32,16 +32,16 @@ public class CipherViewDto
     public LoginViewDto? Login { get; set; }
 
     [JsonPropertyName("identity")]
-    public object? Identity { get; set; }
+    public IdentityViewDto? Identity { get; set; }
 
     [JsonPropertyName("card")]
-    public object? Card { get; set; }
+    public CardViewDto? Card { get; set; }
 
     [JsonPropertyName("secureNote")]
-    public object? SecureNote { get; set; }
+    public SecureNoteViewDto? SecureNote { get; set; }
 
     [JsonPropertyName("sshKey")]
-    public object? SshKey { get; set; }
+    public SshKeyViewDto? SshKey { get; set; }
 
     [JsonPropertyName("favorite")]
     public bool Favorite { get; set; }
@@ -150,4 +150,113 @@ public static class RepromptTypes
 {
     public const int None = 0;
     public const int Password = 1;
+}
+
+/// <summary>
+/// Card cipher data for SDK encryption. Uses record for composition via `with` expressions.
+/// </summary>
+public record CardViewDto
+{
+    [JsonPropertyName("cardholderName")]
+    public string? CardholderName { get; init; }
+
+    [JsonPropertyName("brand")]
+    public string? Brand { get; init; }
+
+    [JsonPropertyName("number")]
+    public string? Number { get; init; }
+
+    [JsonPropertyName("expMonth")]
+    public string? ExpMonth { get; init; }
+
+    [JsonPropertyName("expYear")]
+    public string? ExpYear { get; init; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; init; }
+}
+
+/// <summary>
+/// Identity cipher data for SDK encryption. Uses record for composition via `with` expressions.
+/// </summary>
+public record IdentityViewDto
+{
+    [JsonPropertyName("title")]
+    public string? Title { get; init; }
+
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; init; }
+
+    [JsonPropertyName("middleName")]
+    public string? MiddleName { get; init; }
+
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; init; }
+
+    [JsonPropertyName("address1")]
+    public string? Address1 { get; init; }
+
+    [JsonPropertyName("address2")]
+    public string? Address2 { get; init; }
+
+    [JsonPropertyName("address3")]
+    public string? Address3 { get; init; }
+
+    [JsonPropertyName("city")]
+    public string? City { get; init; }
+
+    [JsonPropertyName("state")]
+    public string? State { get; init; }
+
+    [JsonPropertyName("postalCode")]
+    public string? PostalCode { get; init; }
+
+    [JsonPropertyName("country")]
+    public string? Country { get; init; }
+
+    [JsonPropertyName("company")]
+    public string? Company { get; init; }
+
+    [JsonPropertyName("email")]
+    public string? Email { get; init; }
+
+    [JsonPropertyName("phone")]
+    public string? Phone { get; init; }
+
+    [JsonPropertyName("ssn")]
+    public string? SSN { get; init; }
+
+    [JsonPropertyName("username")]
+    public string? Username { get; init; }
+
+    [JsonPropertyName("passportNumber")]
+    public string? PassportNumber { get; init; }
+
+    [JsonPropertyName("licenseNumber")]
+    public string? LicenseNumber { get; init; }
+}
+
+/// <summary>
+/// SecureNote cipher data for SDK encryption. Minimal structure - content is in cipher.Notes.
+/// </summary>
+public record SecureNoteViewDto
+{
+    [JsonPropertyName("type")]
+    public int Type { get; init; } = 0; // Generic = 0
+}
+
+/// <summary>
+/// SSH Key cipher data for SDK encryption. Uses record for composition via `with` expressions.
+/// </summary>
+public record SshKeyViewDto
+{
+    [JsonPropertyName("privateKey")]
+    public string? PrivateKey { get; init; }
+
+    [JsonPropertyName("publicKey")]
+    public string? PublicKey { get; init; }
+
+    /// <summary>SDK expects "fingerprint" field name.</summary>
+    [JsonPropertyName("fingerprint")]
+    public string? Fingerprint { get; init; }
 }

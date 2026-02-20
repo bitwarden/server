@@ -14,6 +14,7 @@ namespace Bit.Core.Billing.Subscriptions.Queries;
 
 using static StripeConstants;
 using static Utilities;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 
 public interface IGetBitwardenSubscriptionQuery
 {
@@ -30,7 +31,7 @@ public interface IGetBitwardenSubscriptionQuery
     /// Currently only supports <see cref="User"/> subscribers. Future versions will support all
     /// <see cref="ISubscriber"/> types (User and Organization).
     /// </remarks>
-    Task<BitwardenSubscription> Run(User user);
+    Task<BitwardenSubscription?> Run(User user);
 }
 
 public class GetBitwardenSubscriptionQuery(
@@ -38,8 +39,13 @@ public class GetBitwardenSubscriptionQuery(
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetBitwardenSubscriptionQuery
 {
-    public async Task<BitwardenSubscription> Run(User user)
+    public async Task<BitwardenSubscription?> Run(User user)
     {
+        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
+        {
+            return null;
+        }
+
         var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
         {
             Expand =
@@ -107,11 +113,28 @@ public class GetBitwardenSubscriptionQuery(
 
         var (cartLevelDiscount, productLevelDiscounts) = GetStripeDiscounts(subscription);
 
+        var availablePlan = plans.First(plan => plan.Available);
+        var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
+
+        decimal seatCost;
+        decimal estimatedTax;
+
+        if (onCurrentPricing)
+        {
+            seatCost = GetCost(passwordManagerSeatsItem);
+            estimatedTax = await EstimatePremiumTaxAsync(subscription);
+        }
+        else
+        {
+            seatCost = availablePlan.Seat.Price;
+            estimatedTax = await EstimatePremiumTaxAsync(subscription, plans, availablePlan);
+        }
+
         var passwordManagerSeats = new CartItem
         {
             TranslationKey = "premiumMembership",
             Quantity = passwordManagerSeatsItem.Quantity,
-            Cost = GetCost(passwordManagerSeatsItem),
+            Cost = seatCost,
             Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem))
         };
 
@@ -124,8 +147,6 @@ public class GetBitwardenSubscriptionQuery(
                 Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(additionalStorageItem))
             }
             : null;
-
-        var estimatedTax = await EstimateTaxAsync(subscription);
 
         return new Cart
         {
@@ -142,15 +163,45 @@ public class GetBitwardenSubscriptionQuery(
 
     #region Utilities
 
-    private async Task<decimal> EstimateTaxAsync(Subscription subscription)
+    private async Task<decimal> EstimatePremiumTaxAsync(
+        Subscription subscription,
+        List<PremiumPlan>? plans = null,
+        PremiumPlan? availablePlan = null)
     {
         try
         {
-            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(new InvoiceCreatePreviewOptions
+            var options = new InvoiceCreatePreviewOptions
             {
-                Customer = subscription.Customer.Id,
-                Subscription = subscription.Id
-            });
+                Customer = subscription.Customer.Id
+            };
+
+            if (plans != null && availablePlan != null)
+            {
+                options.AutomaticTax = new InvoiceAutomaticTaxOptions
+                {
+                    Enabled = subscription.AutomaticTax?.Enabled ?? false
+                };
+
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    Items = subscription.Items.Select(item =>
+                    {
+                        var isSeatItem = plans.Any(plan => plan.Seat.StripePriceId == item.Price.Id);
+
+                        return new InvoiceSubscriptionDetailsItemOptions
+                        {
+                            Price = isSeatItem ? availablePlan.Seat.StripePriceId : item.Price.Id,
+                            Quantity = item.Quantity
+                        };
+                    }).ToList()
+                };
+            }
+            else
+            {
+                options.Subscription = subscription.Id;
+            }
+
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
 
             return GetCost(invoice.TotalTaxes);
         }

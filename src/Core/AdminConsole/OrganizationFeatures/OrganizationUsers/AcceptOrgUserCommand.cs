@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -36,6 +37,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
+    private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -49,7 +51,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery,
-        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator)
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+        IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand)
     {
         // TODO: remove data protector when old token validation removed
         _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
@@ -64,6 +67,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
         _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
+        _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -231,6 +235,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         {
             var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
             await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
         }
 
         return orgUser;

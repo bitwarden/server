@@ -47,7 +47,45 @@ public interface INonAnonymousSendCommand
     /// <returns><see langword="true" /> when the file is confirmed, otherwise <see langword="false" /></returns>
     /// <remarks>
     /// When a file size cannot be confirmed, we assume we're working with a rogue client. The send is deleted out of
-    ///  an abundance of caution.
+    /// an abundance of caution.
     /// </remarks>
     Task<bool> ConfirmFileSize(Send send);
+
+    /// <summary>
+    /// If a File type Send can be downloaded, retrieves the download URL.
+    /// </summary>
+    /// <param name="send">The <see cref="Send" /> this command acts upon</param>
+    /// <param name="fileId">The fileId to be downloaded</param>
+    /// <returns>
+    /// A tuple wrapping the download URL string and <see cref="SendAccessResult" /> indicating whether access was granted
+    /// </returns>
+    /// <remarks>
+    /// This method is intended for authenticated endpoints where authentication has already been validated.
+    /// Returns <see cref="SendAccessResult.Denied" /> when the Send is disabled, MaxAccessCount has been reached,
+    /// expiration date has passed, or deletion date has been reached.
+    /// </remarks>
+    Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId);
+
+    /// <summary>
+    /// Determines whether a <see cref="Send" /> can be accessed based on its current state.
+    /// </summary>
+    /// <param name="send">The <see cref="Send" /> to evaluate for access</param>
+    /// <returns><see langword="true" /> if the Send can be accessed, otherwise <see langword="false" /></returns>
+    /// <remarks>
+    /// This method checks if the Send is disabled, if MaxAccessCount has been reached,
+    /// if the expiration date has passed, or if the deletion date has been reached.
+    /// </remarks>
+    static bool SendCanBeAccessed(Send send)
+    {
+        var now = DateTime.UtcNow;
+        if (send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
+            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now ||
+            send.Disabled ||
+            send.DeletionDate < now)
+        {
+            return false;
+        }
+
+        return true;
+    }
 }

@@ -13,6 +13,37 @@ Foundation layer for all cipher generation—data and patterns that future ciphe
 
 ---
 
+## Generators
+
+Seeded, deterministic data generation for cipher content. Orchestrated by `GeneratorContext` which lazy-initializes on first access.
+
+| Generator | Output | Method |
+|-----------|--------|--------|
+| `CipherUsernameGenerator` | Emails, handles | `GenerateByIndex(index, totalHint, domain)` |
+| `CardDataGenerator` | Card numbers, names | `GenerateByIndex(index)` |
+| `IdentityDataGenerator` | Full identity profiles | `GenerateByIndex(index)` |
+| `FolderNameGenerator` | Folder names | `GetFolderName(index)` |
+| `SecureNoteDataGenerator` | Note title + content | `GenerateByIndex(index)` |
+| `SshKeyDataGenerator` | RSA key pairs | `GenerateByIndex(index)` |
+
+**Adding a generator:** See `GeneratorContext.cs` remarks for the 3-step pattern.
+
+---
+
+## Distributions
+
+Percentage-based deterministic selection via `Distribution<T>.Select(index, total)`.
+
+| Distribution | Values | Usage |
+|--------------|--------|-------|
+| `PasswordDistributions.Realistic` | 25% VeryWeak → 5% VeryStrong | Password strength mix |
+| `UsernameDistributions.Realistic` | 45% corporate, 30% personal, etc. | Username category mix |
+| `CipherTypeDistributions.Realistic` | 70% Login, 15% Card, etc. | Cipher type mix |
+| `UserStatusDistributions.Realistic` | 85% Confirmed, 5% each other | Org user status mix |
+| `FolderCountDistributions.Realistic` | 35% zero, 35% 1-3, etc. | Folders per user |
+
+---
+
 ## Current Capabilities
 
 ### Login Ciphers
@@ -37,9 +68,10 @@ Foundation layer for all cipher generation—data and patterns that future ciphe
 | Cipher Type | Data Needed                                          | Status      |
 | ----------- | ---------------------------------------------------- | ----------- |
 | Login       | Companies, Names, Passwords, Patterns                | ✅ Complete |
-| Card        | Card networks, bank names, realistic numbers         | ⬜ Planned  |
-| Identity    | Full identity profiles (name, address, SSN patterns) | ⬜ Planned  |
-| SecureNote  | Note templates, categories, content generators       | ⬜ Planned  |
+| Card        | Card networks, bank names, realistic numbers         | ✅ Complete |
+| Identity    | Full identity profiles (name, address, SSN patterns) | ✅ Complete |
+| SecureNote  | Note templates, categories, content generators       | ✅ Complete |
+| SSH Key     | RSA key pairs, fingerprints                          | ✅ Complete |
 
 ### Phase 2: Spec-Driven Generation
 

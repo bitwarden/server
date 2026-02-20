@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -766,6 +767,50 @@ public class AcceptOrgUserCommandTests
 
 
     }
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUser_WithAutoConfirmFeatureFlagEnabled_SendsPushNotification(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
+
+        await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+
+        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
+            .Received(1)
+            .PushAsync(user.Id, orgUser.OrganizationId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUser_WithAutoConfirmFeatureFlagDisabled_DoesNotSendPushNotification(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+
+        await sutProvider.GetDependency<IPushAutoConfirmNotificationCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
 
     private void SetupCommonAcceptOrgUserByTokenMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, OrganizationUser orgUser)
     {

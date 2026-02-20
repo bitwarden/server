@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Services;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
@@ -12,7 +13,11 @@ using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Seeder.Recipes;
 
-public class OrganizationWithUsersRecipe(DatabaseContext db, IMapper mapper, IPasswordHasher<User> passwordHasher)
+public class OrganizationWithUsersRecipe(
+    DatabaseContext db,
+    IMapper mapper,
+    IPasswordHasher<User> passwordHasher,
+    IManglerService manglerService)
 {
     public Guid Seed(string name, string domain, int users, OrganizationUserStatusType usersStatus = OrganizationUserStatusType.Confirmed)
     {
@@ -20,11 +25,11 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, IMapper mapper, IPa
 
         // Generate organization keys
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
-        var organization = OrganizationSeeder.CreateEnterprise(
+        var organization = OrganizationSeeder.Create(
             name, domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner with SDK-generated keys
-        var ownerUser = UserSeeder.CreateUserWithSdkKeys($"owner@{domain}", passwordHasher);
+        var ownerUser = UserSeeder.Create($"owner@{domain}", passwordHasher, manglerService);
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -33,7 +38,7 @@ public class OrganizationWithUsersRecipe(DatabaseContext db, IMapper mapper, IPa
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.CreateUserWithSdkKeys($"user{i}@{domain}", passwordHasher);
+            var additionalUser = UserSeeder.Create($"user{i}@{domain}", passwordHasher, manglerService);
             additionalUsers.Add(additionalUser);
 
             // Generate org key for confirmed/revoked users

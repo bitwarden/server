@@ -106,8 +106,7 @@ public class RestoreOrganizationUserCommand(
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
         if (organizationUser.UserId.HasValue
-           && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId
-               .Value)).State == OrganizationDataOwnershipState.Enabled
+           && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled
            && status == OrganizationUserStatusType.Confirmed
            && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
            && !string.IsNullOrWhiteSpace(defaultCollectionName))
@@ -199,9 +198,6 @@ public class RestoreOrganizationUserCommand(
         var orgUsersAndOrgs = await GetRelatedOrganizationUsersAndOrganizationsAsync(filteredUsers);
 
         var result = new List<Tuple<OrganizationUser, string>>();
-        var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId))
-            .ToList();
 
         foreach (var organizationUser in filteredUsers)
         {
@@ -238,19 +234,10 @@ public class RestoreOrganizationUserCommand(
                 var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
                 await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
+                organizationUser.Status = status;
 
                 if (organizationUser.UserId.HasValue)
                 {
-                    if (organizationUsersDataOwnershipEnabled.Contains(organizationUser.Id)
-                        && status == OrganizationUserStatusType.Confirmed
-                        && !string.IsNullOrWhiteSpace(defaultCollectionName)
-                        && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore))
-                    {
-                        await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
-                            [organizationUser.Id],
-                            defaultCollectionName);
-                    }
-
                     await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
 
@@ -264,7 +251,35 @@ public class RestoreOrganizationUserCommand(
             }
         }
 
+        if (featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore))
+        {
+            await CreateDefaultCollectionsForConfirmedUsersAsync(organizationId, defaultCollectionName,
+                result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
+        }
+
         return result;
+    }
+
+    private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Guid organizationId, string defaultCollectionName,
+        ICollection<OrganizationUser> restoredUsers)
+    {
+        if (!string.IsNullOrWhiteSpace(defaultCollectionName))
+        {
+            var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
+                    .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId))
+                .ToList();
+
+            var usersToCreateDefaultCollectionsFor = restoredUsers.Where(x =>
+                organizationUsersDataOwnershipEnabled.Contains(x.Id)
+                && x.Status == OrganizationUserStatusType.Confirmed).ToList();
+
+            if (usersToCreateDefaultCollectionsFor.Count != 0)
+            {
+                await collectionRepository.CreateDefaultCollectionsAsync(organizationId,
+                    usersToCreateDefaultCollectionsFor.Select(x => x.Id),
+                    defaultCollectionName);
+            }
+        }
     }
 
     private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, bool userHasTwoFactorEnabled)

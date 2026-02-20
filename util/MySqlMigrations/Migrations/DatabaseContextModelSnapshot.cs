@@ -276,6 +276,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
+
                     b.HasIndex("Id", "Enabled")
                         .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
@@ -359,10 +363,12 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint unsigned");
 
                     b.Property<string>("GatewayCustomerId")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("GatewaySubscriptionId")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("Name")
                         .HasColumnType("longtext");
@@ -380,6 +386,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -915,6 +925,69 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsUnique();
 
                     b.ToTable("ProviderPlan", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.SubscriptionDiscount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<long?>("AmountOff")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("AudienceType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<int?>("DurationInMonths")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<decimal?>("PercentOff")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("StripeCouponId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("StripeProductIds")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StripeCouponId")
+                        .IsUnique();
+
+                    b.HasIndex("StartDate", "EndDate")
+                        .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("SubscriptionDiscount", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationApplication", b =>
@@ -1689,10 +1762,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Disabled")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("EmailHashes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
-
                     b.Property<string>("Emails")
                         .HasMaxLength(4000)
                         .HasColumnType("varchar(4000)");
@@ -1991,6 +2060,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);
