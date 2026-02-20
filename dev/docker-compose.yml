@@ -145,6 +145,7 @@ services:
     command: redis-server --appendonly yes
     profiles:
       - redis
+      - cloud
 
 volumes:
   mssql_dev_data:
