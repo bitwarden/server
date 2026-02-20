@@ -325,5 +325,9 @@ FROM
     [dbo].[User]
 GO
 
-EXECUTE sp_refreshview 'dbo.UserView'
+EXECUTE sp_refreshview N'[dbo].[EmergencyAccessDetailsView]';
+EXECUTE sp_refreshview N'[dbo].[OrganizationUserUserDetailsView]';
+EXECUTE sp_refreshview N'[dbo].[ProviderUserUserDetailsView]';
+EXECUTE sp_refreshview N'[dbo].[UserEmailDomainView]';
+EXECUTE sp_refreshview N'[dbo].[UserPremiumAccessView]';
 GO
