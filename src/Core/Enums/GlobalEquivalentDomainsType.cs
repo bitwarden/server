@@ -48,7 +48,7 @@ public enum GlobalEquivalentDomainsType : byte
     Mercado = 43,
     Zendesk = 44,
     Autodesk = 45,
-    RailNation = 46,
+    RailNation = 46, // deprecated
     Wpcu = 47,
     Mathletics = 48,
     Discountbank = 49,
@@ -93,4 +93,5 @@ public enum GlobalEquivalentDomainsType : byte
     TakeawayEU = 88,
     Atlassian = 89,
     Pinterest = 90,
+    Twitter = 91
 }
