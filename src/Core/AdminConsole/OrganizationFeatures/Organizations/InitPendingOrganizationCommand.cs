@@ -235,8 +235,8 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     {
         org.Enabled = true;
         org.Status = OrganizationStatusType.Created;
-        org.PublicKey = request.PublicKey;
-        org.PrivateKey = request.PrivateKey;
+        org.PublicKey = request.OrganizationKeys.PublicKey;
+        org.PrivateKey = request.OrganizationKeys.WrappedPrivateKey;
         org.RevisionDate = DateTime.UtcNow;
     }
 

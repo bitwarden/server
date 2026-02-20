@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
@@ -23,14 +24,9 @@ public record InitPendingOrganizationRequest
     public required Guid OrganizationUserId { get; init; }
 
     /// <summary>
-    /// The organization's public key.
+    /// The organization's encryption key pair (public key and wrapped private key).
     /// </summary>
-    public required string PublicKey { get; init; }
-
-    /// <summary>
-    /// The organization's encrypted private key.
-    /// </summary>
-    public required string PrivateKey { get; init; }
+    public required PublicKeyEncryptionKeyPairData OrganizationKeys { get; init; }
 
     /// <summary>
     /// The name of the default collection to create. Optional - if null or empty, no collection is created.

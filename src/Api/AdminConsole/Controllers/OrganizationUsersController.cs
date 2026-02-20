@@ -318,8 +318,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 User = user,
                 OrganizationId = orgId,
                 OrganizationUserId = organizationUserId,
-                PublicKey = model.Keys.PublicKey,
-                PrivateKey = model.Keys.EncryptedPrivateKey,
+                OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
                 CollectionName = model.CollectionName,
                 EmailToken = model.Token,
                 UserKey = model.Key
