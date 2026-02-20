@@ -43,6 +43,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IInitPendingOrganizationValidator _validator;
+    private readonly TimeProvider _timeProvider;
 
     public InitPendingOrganizationCommand(
             IOrganizationService organizationService,
@@ -62,7 +63,8 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             IPushNotificationService pushNotificationService,
             IPushRegistrationService pushRegistrationService,
             IDeviceRepository deviceRepository,
-            IInitPendingOrganizationValidator validator
+            IInitPendingOrganizationValidator validator,
+            TimeProvider timeProvider
             )
     {
         _organizationService = organizationService;
@@ -83,6 +85,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _pushRegistrationService = pushRegistrationService;
         _deviceRepository = deviceRepository;
         _validator = validator;
+        _timeProvider = timeProvider;
     }
 
     public async Task InitPendingOrganizationAsync(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken)
@@ -231,13 +234,13 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         return new None();
     }
 
-    private static void PrepareOrganizationForInitialization(Organization org, InitPendingOrganizationRequest request)
+    private void PrepareOrganizationForInitialization(Organization org, InitPendingOrganizationRequest request)
     {
         org.Enabled = true;
         org.Status = OrganizationStatusType.Created;
         org.PublicKey = request.OrganizationKeys.PublicKey;
         org.PrivateKey = request.OrganizationKeys.WrappedPrivateKey;
-        org.RevisionDate = DateTime.UtcNow;
+        org.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
     }
 
     private static void PrepareOrganizationUserForConfirmation(OrganizationUser orgUser, InitPendingOrganizationRequest request)
@@ -276,8 +279,8 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             Id = CoreHelpers.GenerateComb(),
             Name = request.CollectionName!,
             OrganizationId = request.OrganizationId,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
+            CreationDate = _timeProvider.GetUtcNow().UtcDateTime,
+            RevisionDate = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         var collectionUsers = new[]
