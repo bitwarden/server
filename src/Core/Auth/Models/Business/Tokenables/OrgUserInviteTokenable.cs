@@ -63,7 +63,6 @@ public class OrgUserInviteTokenable : ExpiringTokenable
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier && OrgUserId != default && !string.IsNullOrWhiteSpace(OrgUserEmail);
 
-
     public static bool ValidateOrgUserInviteStringToken(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         string orgUserInviteToken, OrganizationUser orgUser)

@@ -85,16 +85,27 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
 
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, emailToken, orgUser);
-
-        var tokenValid = newTokenValid ||
-                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
-                             _globalSettings);
-
-        if (!tokenValid)
+        var tokenValidationError = _orgUserInviteTokenDataFactory.TryUnprotect(emailToken, out var decryptedToken) switch
         {
-            throw new BadRequestException("Invalid token.");
+            // Used by clients to show better error message on token expiration, adjust both as-needed
+            true when decryptedToken.IsExpired => "Expired token.",
+            true when !(decryptedToken.Valid && decryptedToken.TokenIsValid(orgUser)) => "Invalid token.",
+            false => "Invalid token.",
+            _ => null
+        };
+
+        if (tokenValidationError != null)
+        {
+            tokenValidationError = CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email,
+                orgUser.Id,
+                _globalSettings)
+                ? null
+                : tokenValidationError;
+        }
+
+        if (tokenValidationError != null)
+        {
+            throw new BadRequestException(tokenValidationError);
         }
 
         var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
