@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class _20260217_00_OrganizationReport_AddFileIdsql : Migration
+public partial class _20260220_00_OrganizationReport_AddFileIdsql : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -13,9 +13,8 @@ public partial class _20260217_00_OrganizationReport_AddFileIdsql : Migration
         migrationBuilder.AddColumn<string>(
             name: "FileId",
             table: "OrganizationReport",
-            type: "longtext",
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            type: "text",
+            nullable: true);
     }
 
     /// <inheritdoc />
