@@ -1,10 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -29,19 +29,12 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
     {
         // Arrange
-        organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseMyItems = false;
         orgUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequest
-        {
-            OrganizationUserId = orgUser.Id,
-            OrganizationId = organization.Id,
-            Key = key,
-            DefaultUserCollectionName = collectionName,
-            PerformedBy = null
-        };
+        SetupRepositoryMocks(sutProvider, organization, orgUser);
 
+        // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUserId = orgUser.Id,
@@ -52,17 +45,11 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationUser = orgUser,
             Organization = organization
         };
+        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUsersValidator>()
+            .ValidateAsync(Arg.Any<AutomaticallyConfirmOrganizationUserValidationRequest>())
+            .Returns(Valid(validationRequest));
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(orgUser.Id)
-            .Returns(orgUser);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Any<Bit.Core.AdminConsole.Models.Data.OrganizationUsers.AcceptedOrganizationUserToConfirm>())
-            .Returns(true);
-
+        // Mock enabled policy requirement
         var policyDetails = new PolicyDetails
         {
             OrganizationId = organization.Id,
@@ -76,9 +63,14 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
 
-        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUsersValidator>()
-            .ValidateAsync(Arg.Any<AutomaticallyConfirmOrganizationUserValidationRequest>())
-            .Returns(Valid(validationRequest));
+        var request = new AutomaticallyConfirmOrganizationUserRequest
+        {
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
+            Key = key,
+            DefaultUserCollectionName = collectionName,
+            PerformedBy = null
+        };
 
         // Act
         await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
@@ -98,19 +90,12 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
     {
         // Arrange
-        organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseMyItems = true;
         orgUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequest
-        {
-            OrganizationUserId = orgUser.Id,
-            OrganizationId = organization.Id,
-            Key = key,
-            DefaultUserCollectionName = collectionName,
-            PerformedBy = null
-        };
+        SetupRepositoryMocks(sutProvider, organization, orgUser);
 
+        // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUserId = orgUser.Id,
@@ -121,17 +106,11 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationUser = orgUser,
             Organization = organization
         };
+        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUsersValidator>()
+            .ValidateAsync(Arg.Any<AutomaticallyConfirmOrganizationUserValidationRequest>())
+            .Returns(Valid(validationRequest));
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(orgUser.Id)
-            .Returns(orgUser);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Any<Bit.Core.AdminConsole.Models.Data.OrganizationUsers.AcceptedOrganizationUserToConfirm>())
-            .Returns(true);
-
+        // Mock enabled policy requirement
         var policyDetails = new PolicyDetails
         {
             OrganizationId = organization.Id,
@@ -145,9 +124,14 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
 
-        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUsersValidator>()
-            .ValidateAsync(Arg.Any<AutomaticallyConfirmOrganizationUserValidationRequest>())
-            .Returns(Valid(validationRequest));
+        var request = new AutomaticallyConfirmOrganizationUserRequest
+        {
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
+            Key = key,
+            DefaultUserCollectionName = collectionName,
+            PerformedBy = null
+        };
 
         // Act
         await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
@@ -170,19 +154,12 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
     {
         // Arrange
-        organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseMyItems = true;
         orgUser.OrganizationId = organization.Id;
 
-        var request = new AutomaticallyConfirmOrganizationUserRequest
-        {
-            OrganizationUserId = orgUser.Id,
-            OrganizationId = organization.Id,
-            Key = key,
-            DefaultUserCollectionName = collectionName,
-            PerformedBy = null
-        };
+        SetupRepositoryMocks(sutProvider, organization, orgUser);
 
+        // Mock positive validation result
         var validationRequest = new AutomaticallyConfirmOrganizationUserValidationRequest
         {
             OrganizationUserId = orgUser.Id,
@@ -193,25 +170,23 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationUser = orgUser,
             Organization = organization
         };
+        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUsersValidator>()
+            .ValidateAsync(Arg.Any<AutomaticallyConfirmOrganizationUserValidationRequest>())
+            .Returns(Valid(validationRequest));
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(orgUser.Id)
-            .Returns(orgUser);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .ConfirmOrganizationUserAsync(Arg.Any<Bit.Core.AdminConsole.Models.Data.OrganizationUsers.AcceptedOrganizationUserToConfirm>())
-            .Returns(true);
-
-        // Policy is disabled
+        // Mock disabled policy requirement
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
             .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
 
-        sutProvider.GetDependency<IAutomaticallyConfirmOrganizationUsersValidator>()
-            .ValidateAsync(Arg.Any<AutomaticallyConfirmOrganizationUserValidationRequest>())
-            .Returns(Valid(validationRequest));
+        var request = new AutomaticallyConfirmOrganizationUserRequest
+        {
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = organization.Id,
+            Key = key,
+            DefaultUserCollectionName = collectionName,
+            PerformedBy = null
+        };
 
         // Act
         await sutProvider.Sut.AutomaticallyConfirmOrganizationUserAsync(request);
@@ -220,5 +195,23 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
             .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    private static void SetupRepositoryMocks(
+        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider,
+        Organization organization,
+        OrganizationUser organizationUser)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .ConfirmOrganizationUserAsync(Arg.Any<AcceptedOrganizationUserToConfirm>())
+            .Returns(true);
     }
 }
