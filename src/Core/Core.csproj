@@ -54,7 +54,7 @@
     <PackageReference Include="OneOf" Version="3.0.271" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
-    <PackageReference Include="Duende.IdentityServer" Version="7.2.4" />
+    <PackageReference Include="Duende.IdentityServer" Version="7.4.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="AspNetCoreRateLimit" Version="5.0.0" />
     <PackageReference Include="Braintree" Version="5.36.0" />
