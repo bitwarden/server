@@ -13,13 +13,13 @@ CREATE TABLE [dbo].[OrganizationReport] (
     [CriticalApplicationAtRiskCount]    INT              NULL,
     [MemberCount]                       INT              NULL,
     [MemberAtRiskCount]                 INT              NULL,
-    [CriticalMemberCount]               INT              NULL,
+    [CriticalMemberCount]              INT              NULL,
     [CriticalMemberAtRiskCount]         INT              NULL,
     [PasswordCount]                     INT              NULL,
     [PasswordAtRiskCount]               INT              NULL,
     [CriticalPasswordCount]             INT              NULL,
     [CriticalPasswordAtRiskCount]       INT              NULL,
-    [FileId]                            VARCHAR(100)     NULL,
+    [FileId]                            VARCHAR(100)     NOT NULL,
     CONSTRAINT [PK_OrganizationReport] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationReport_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );
@@ -34,4 +34,3 @@ GO
 CREATE NONCLUSTERED INDEX [IX_OrganizationReport_OrganizationId_RevisionDate]
    ON [dbo].[OrganizationReport]([OrganizationId] ASC, [RevisionDate] DESC);
 GO
-
