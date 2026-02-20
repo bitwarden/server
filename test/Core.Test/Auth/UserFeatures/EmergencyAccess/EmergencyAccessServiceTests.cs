@@ -389,7 +389,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task DeleteAsync_EmergencyAccessGrantorIdNotEqual_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        User invitingUser,
+        User randomUser,
         Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         emergencyAccess.GrantorId = Guid.NewGuid();
@@ -398,7 +398,7 @@ public class EmergencyAccessServiceTests
                 .Returns(emergencyAccess);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, invitingUser.Id));
+            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, randomUser.Id));
 
         Assert.Contains("Emergency Access not valid.", exception.Message);
     }
@@ -406,7 +406,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task DeleteAsync_EmergencyAccessGranteeIdNotEqual_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        User invitingUser,
+        User randomUser,
         Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         emergencyAccess.GranteeId = Guid.NewGuid();
@@ -415,28 +415,49 @@ public class EmergencyAccessServiceTests
                 .Returns(emergencyAccess);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, invitingUser.Id));
+            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, randomUser.Id));
 
         Assert.Contains("Emergency Access not valid.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_EmergencyAccessIsDeleted_Success(
-    SutProvider<EmergencyAccessService> sutProvider,
-    User user,
-    Core.Auth.Entities.EmergencyAccess emergencyAccess)
+    public async Task DeleteAsync_GrantorDeletes_Success(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User grantor,
+        User grantee,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
-        emergencyAccess.GranteeId = user.Id;
-        emergencyAccess.GrantorId = user.Id;
+        emergencyAccess.GrantorId = grantor.Id;
+        emergencyAccess.GranteeId = grantee.Id;
         sutProvider.GetDependency<IEmergencyAccessRepository>()
-                .GetByIdAsync(Arg.Any<Guid>())
-                .Returns(emergencyAccess);
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
 
-        await sutProvider.Sut.DeleteAsync(emergencyAccess.Id, user.Id);
+        await sutProvider.Sut.DeleteAsync(emergencyAccess.Id, grantor.Id);
 
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
-                .Received(1)
-                .DeleteAsync(emergencyAccess);
+            .Received(1)
+            .DeleteAsync(emergencyAccess);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_GranteeDeletes_Success(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User grantor,
+        User grantee,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess)
+    {
+        emergencyAccess.GrantorId = grantor.Id;
+        emergencyAccess.GranteeId = grantee.Id;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        await sutProvider.Sut.DeleteAsync(emergencyAccess.Id, grantee.Id);
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .DeleteAsync(emergencyAccess);
     }
 
     [Theory, BitAutoData]
