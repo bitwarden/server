@@ -217,7 +217,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             return validationError;
         }
 
-        validationError = await _validator.ValidateBusinessRulesAsync(request.User, org, orgUser);
+        validationError = await _validator.ValidateFreeOrganizationLimitAsync(request.User, org, orgUser);
         if (validationError != null)
         {
             return validationError;

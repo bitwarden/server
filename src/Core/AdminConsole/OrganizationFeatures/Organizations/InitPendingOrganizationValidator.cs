@@ -43,9 +43,9 @@ public interface IInitPendingOrganizationValidator
     Task<Error?> ValidatePoliciesAsync(User user, Guid organizationId);
 
     /// <summary>
-    /// Validates business rules for the user joining the organization (e.g., free org admin limits).
+    /// Validates that a user does not exceed the free organization admin/owner limit.
     /// </summary>
-    Task<Error?> ValidateBusinessRulesAsync(User user, Organization org, OrganizationUser orgUser);
+    Task<Error?> ValidateFreeOrganizationLimitAsync(User user, Organization org, OrganizationUser orgUser);
 }
 
 public class InitPendingOrganizationValidator : IInitPendingOrganizationValidator
@@ -147,7 +147,7 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
         return null;
     }
 
-    public async Task<Error?> ValidateBusinessRulesAsync(User user, Organization org, OrganizationUser orgUser)
+    public async Task<Error?> ValidateFreeOrganizationLimitAsync(User user, Organization org, OrganizationUser orgUser)
     {
         if (org.PlanType == PlanType.Free &&
             (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin))

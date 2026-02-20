@@ -587,7 +587,7 @@ public class InitPendingOrganizationCommandTests
             .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
         sutProvider.GetDependency<IInitPendingOrganizationValidator>()
-            .ValidateBusinessRulesAsync(user, org, orgUser)
+            .ValidateFreeOrganizationLimitAsync(user, org, orgUser)
             .Returns(new FreeOrgAdminLimitError());
 
         // Act
@@ -613,7 +613,7 @@ public class InitPendingOrganizationCommandTests
             .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
         sutProvider.GetDependency<IInitPendingOrganizationValidator>()
-            .ValidateBusinessRulesAsync(user, org, orgUser)
+            .ValidateFreeOrganizationLimitAsync(user, org, orgUser)
             .Returns((Bit.Core.AdminConsole.Utilities.v2.Error)null);
 
         // Setup repositories to return update delegates

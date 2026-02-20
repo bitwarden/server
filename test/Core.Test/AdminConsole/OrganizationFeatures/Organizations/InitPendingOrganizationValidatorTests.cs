@@ -320,7 +320,7 @@ public class InitPendingOrganizationValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateBusinessRulesAsync_PaidOrg_ReturnsNull(
+    public async Task ValidateFreeOrganizationLimitAsync_PaidOrg_ReturnsNull(
         User user,
         Organization org,
         OrganizationUser orgUser,
@@ -331,14 +331,14 @@ public class InitPendingOrganizationValidatorTests
         orgUser.Type = OrganizationUserType.Owner;
 
         // Act
-        var result = await sutProvider.Sut.ValidateBusinessRulesAsync(user, org, orgUser);
+        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
 
         // Assert
         Assert.Null(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateBusinessRulesAsync_FreeOrgNonAdmin_ReturnsNull(
+    public async Task ValidateFreeOrganizationLimitAsync_FreeOrgNonAdmin_ReturnsNull(
         User user,
         Organization org,
         OrganizationUser orgUser,
@@ -349,14 +349,14 @@ public class InitPendingOrganizationValidatorTests
         orgUser.Type = OrganizationUserType.User;
 
         // Act
-        var result = await sutProvider.Sut.ValidateBusinessRulesAsync(user, org, orgUser);
+        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
 
         // Assert
         Assert.Null(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateBusinessRulesAsync_FreeOrgAdminNoExisting_ReturnsNull(
+    public async Task ValidateFreeOrganizationLimitAsync_FreeOrgAdminNoExisting_ReturnsNull(
         User user,
         Organization org,
         OrganizationUser orgUser,
@@ -371,14 +371,14 @@ public class InitPendingOrganizationValidatorTests
             .Returns(0);
 
         // Act
-        var result = await sutProvider.Sut.ValidateBusinessRulesAsync(user, org, orgUser);
+        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
 
         // Assert
         Assert.Null(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateBusinessRulesAsync_FreeOrgAdminLimitExceeded_ReturnsError(
+    public async Task ValidateFreeOrganizationLimitAsync_FreeOrgAdminLimitExceeded_ReturnsError(
         User user,
         Organization org,
         OrganizationUser orgUser,
@@ -393,7 +393,7 @@ public class InitPendingOrganizationValidatorTests
             .Returns(1);
 
         // Act
-        var result = await sutProvider.Sut.ValidateBusinessRulesAsync(user, org, orgUser);
+        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
 
         // Assert
         Assert.NotNull(result);
