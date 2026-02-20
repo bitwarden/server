@@ -1,0 +1,44 @@
+###############################################
+#                 Build stage                 #
+###############################################
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+# Determine proper runtime value for .NET
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+        RID=linux-x64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+        RID=linux-arm64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+        RID=linux-arm ; \
+    fi \
+    && echo $RID > /tmp/rid.txt
+
+# Copy required project files
+WORKDIR /source
+COPY . ./
+
+# Restore project dependencies and tools
+WORKDIR /source/util/SeederApi
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
+# Build
+RUN . /tmp/rid.txt && dotnet publish \
+    -c release \
+    --no-restore \
+    --self-contained \
+    /p:PublishSingleFile=true \
+    -r $RID \
+    -o out
+
+
+###############################################
+#                  Runtime stage                  #
+###############################################
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-jammy-chiseled
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 5000
+LABEL com.bitwarden.product="bitwarden"
+ENTRYPOINT ["dotnet", "SeederApi.dll"]
