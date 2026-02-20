@@ -25,14 +25,19 @@ public static class ReportingServiceCollectionExtensions
         services.AddScoped<IUpdateOrganizationReportApplicationDataCommand, UpdateOrganizationReportApplicationDataCommand>();
 
         // v2 file storage commands
-        services.AddScoped<ICreateOrganizationReportFileStorageCommand, CreateOrganizationReportFileStorageCommand>();
+        services.AddScoped<ICreateOrganizationReportStorageCommand, CreateOrganizationReportStorageCommand>();
         services.AddScoped<IUpdateOrganizationReportDataFileStorageCommand, UpdateOrganizationReportDataFileStorageCommand>();
-        services.AddScoped<IUpdateOrganizationReportSummaryFileStorageCommand, UpdateOrganizationReportSummaryFileStorageCommand>();
-        services.AddScoped<IUpdateOrganizationReportApplicationDataFileStorageCommand, UpdateOrganizationReportApplicationDataFileStorageCommand>();
 
         // v2 file storage queries
         services.AddScoped<IGetOrganizationReportDataFileStorageQuery, GetOrganizationReportDataFileStorageQuery>();
-        services.AddScoped<IGetOrganizationReportSummaryDataFileStorageQuery, GetOrganizationReportSummaryDataFileStorageQuery>();
-        services.AddScoped<IGetOrganizationReportApplicationDataFileStorageQuery, GetOrganizationReportApplicationDataFileStorageQuery>();
+
+        // v2 application data
+        services.AddScoped<IGetOrganizationReportApplicationDataV2Query, GetOrganizationReportApplicationDataV2Query>();
+        services.AddScoped<IUpdateOrganizationReportApplicationDataV2Command, UpdateOrganizationReportApplicationDataV2Command>();
+
+        // v2 summary data
+        services.AddScoped<IGetOrganizationReportSummaryDataByDateRangeV2Query, GetOrganizationReportSummaryDataByDateRangeV2Query>();
+        services.AddScoped<IGetOrganizationReportSummaryDataV2Query, GetOrganizationReportSummaryDataV2Query>();
+        services.AddScoped<IUpdateOrganizationReportSummaryV2Command, UpdateOrganizationReportSummaryV2Command>();
     }
 }

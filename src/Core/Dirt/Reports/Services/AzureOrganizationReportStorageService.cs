@@ -31,44 +31,10 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
             DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
     }
 
-    public async Task<string> GetSummaryDataUploadUrlAsync(OrganizationReport report, string reportFileId)
-    {
-        await InitAsync();
-        var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "summary-data.json"));
-        return blobClient.GenerateSasUri(
-            BlobSasPermissions.Create | BlobSasPermissions.Write,
-            DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
-    }
-
-    public async Task<string> GetApplicationDataUploadUrlAsync(OrganizationReport report, string reportFileId)
-    {
-        await InitAsync();
-        var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "application-data.json"));
-        return blobClient.GenerateSasUri(
-            BlobSasPermissions.Create | BlobSasPermissions.Write,
-            DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
-    }
-
     public async Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, string reportFileId)
     {
         await InitAsync();
         var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "report-data.json"));
-        return blobClient.GenerateSasUri(BlobSasPermissions.Read,
-            DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
-    }
-
-    public async Task<string> GetSummaryDataDownloadUrlAsync(OrganizationReport report, string reportFileId)
-    {
-        await InitAsync();
-        var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "summary-data.json"));
-        return blobClient.GenerateSasUri(BlobSasPermissions.Read,
-            DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
-    }
-
-    public async Task<string> GetApplicationDataDownloadUrlAsync(OrganizationReport report, string reportFileId)
-    {
-        await InitAsync();
-        var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "application-data.json"));
         return blobClient.GenerateSasUri(BlobSasPermissions.Read,
             DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
     }
@@ -78,31 +44,6 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
         await InitAsync();
         var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "report-data.json"));
         await blobClient.UploadAsync(stream, overwrite: true);
-    }
-
-    public async Task UploadSummaryDataAsync(OrganizationReport report, string reportFileId, Stream stream)
-    {
-        await InitAsync();
-        var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "summary-data.json"));
-        await blobClient.UploadAsync(stream, overwrite: true);
-    }
-
-    public async Task UploadApplicationDataAsync(OrganizationReport report, string reportFileId, Stream stream)
-    {
-        await InitAsync();
-        var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, "application-data.json"));
-        await blobClient.UploadAsync(stream, overwrite: true);
-    }
-
-    public async Task DeleteReportFilesAsync(OrganizationReport report, string reportFileId)
-    {
-        await InitAsync();
-        var dataTypes = new[] { "report-data.json", "summary-data.json", "application-data.json" };
-        foreach (var dataType in dataTypes)
-        {
-            var blobClient = _containerClient!.GetBlobClient(BlobPath(report, reportFileId, dataType));
-            await blobClient.DeleteIfExistsAsync();
-        }
     }
 
     private static string BlobPath(OrganizationReport report, string reportFileId, string fileName)

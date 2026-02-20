@@ -20,38 +20,14 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
     public Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, string reportFileId)
         => Task.FromResult($"/reports/v2/organizations/{report.OrganizationId}/{report.Id}/file/report-data");
 
-    public Task<string> GetSummaryDataUploadUrlAsync(OrganizationReport report, string reportFileId)
-        => Task.FromResult($"/reports/v2/organizations/{report.OrganizationId}/{report.Id}/file/summary-data");
-
-    public Task<string> GetApplicationDataUploadUrlAsync(OrganizationReport report, string reportFileId)
-        => Task.FromResult($"/reports/v2/organizations/{report.OrganizationId}/{report.Id}/file/application-data");
-
     public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, string reportFileId)
     {
         InitDir();
         return Task.FromResult($"{_baseUrl}/{RelativePath(report, reportFileId, "report-data.json")}");
     }
 
-    public Task<string> GetSummaryDataDownloadUrlAsync(OrganizationReport report, string reportFileId)
-    {
-        InitDir();
-        return Task.FromResult($"{_baseUrl}/{RelativePath(report, reportFileId, "summary-data.json")}");
-    }
-
-    public Task<string> GetApplicationDataDownloadUrlAsync(OrganizationReport report, string reportFileId)
-    {
-        InitDir();
-        return Task.FromResult($"{_baseUrl}/{RelativePath(report, reportFileId, "application-data.json")}");
-    }
-
     public async Task UploadReportDataAsync(OrganizationReport report, string reportFileId, Stream stream)
         => await WriteFileAsync(report, reportFileId, "report-data.json", stream);
-
-    public async Task UploadSummaryDataAsync(OrganizationReport report, string reportFileId, Stream stream)
-        => await WriteFileAsync(report, reportFileId, "summary-data.json", stream);
-
-    public async Task UploadApplicationDataAsync(OrganizationReport report, string reportFileId, Stream stream)
-        => await WriteFileAsync(report, reportFileId, "application-data.json", stream);
 
     public Task DeleteReportFilesAsync(OrganizationReport report, string reportFileId)
     {

@@ -11,7 +11,5 @@ public class AddOrganizationReportRequest
 
     public string? ApplicationData { get; set; }
 
-    public string? FileId { get; set; }
-
-    public OrganizationReportMetricsRequest? Metrics { get; set; }
+    public OrganizationReportMetrics? ReportMetrics { get; set; }
 }

@@ -35,7 +35,7 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
             throw new BadRequestException(errorMessage);
         }
 
-        var requestMetrics = request.Metrics ?? new OrganizationReportMetricsRequest();
+        var requestMetrics = request.ReportMetrics ?? new OrganizationReportMetrics();
 
         var organizationReport = new OrganizationReport
         {

@@ -1,5 +1,4 @@
-﻿using Bit.Api.Dirt.Authorization;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
+﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -18,7 +17,6 @@ public static class AuthorizationHandlerCollectionExtensions
             ServiceDescriptor.Scoped<IAuthorizationHandler, GroupAuthorizationHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, OrganizationRequirementHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, RecoverAccountAuthorizationHandler>(),
-            ServiceDescriptor.Scoped<IAuthorizationHandler, UseRiskInsightsHandler>(),
         ]);
     }
 }

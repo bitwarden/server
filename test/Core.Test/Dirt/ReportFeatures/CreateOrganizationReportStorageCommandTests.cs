@@ -1,4 +1,4 @@
-﻿using AutoFixture;
+using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Reports.ReportFeatures;
@@ -14,18 +14,17 @@ using Xunit;
 namespace Bit.Core.Test.Dirt.ReportFeatures;
 
 [SutProviderCustomize]
-public class CreateOrganizationReportFileStorageCommandTests
+public class CreateOrganizationReportStorageCommandTests
 {
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_Success_ReturnsReportAndGeneratesFileId(
-        SutProvider<CreateOrganizationReportFileStorageCommand> sutProvider)
+        SutProvider<CreateOrganizationReportStorageCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();
         var request = fixture.Build<AddOrganizationReportRequest>()
             .With(r => r.ContentEncryptionKey, "test-encryption-key")
-            .With(r => r.FileId, "encrypted-file-id-from-client")
             .Create();
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -37,38 +36,34 @@ public class CreateOrganizationReportFileStorageCommandTests
             .Returns(c => c.Arg<OrganizationReport>());
 
         // Act
-        var (report, reportFileId) = await sutProvider.Sut.CreateAsync(request);
+        var report = await sutProvider.Sut.CreateAsync(request);
 
         // Assert
         Assert.NotNull(report);
-        Assert.NotNull(reportFileId);
-        Assert.NotEmpty(reportFileId);
-        Assert.Equal(32, reportFileId.Length); // SecureRandomString(32)
-        Assert.Matches("^[a-z0-9]+$", reportFileId); // Only lowercase alphanumeric
+        Assert.NotNull(report.FileId);
+        Assert.NotEmpty(report.FileId);
+        Assert.Equal(32, report.FileId.Length); // SecureRandomString(32)
+        Assert.Matches("^[a-z0-9]+$", report.FileId); // Only lowercase alphanumeric
 
-        // Data fields should be empty for file storage
         Assert.Empty(report.ReportData);
-        Assert.Null(report.SummaryData);
-        Assert.Null(report.ApplicationData);
-
-        // Encrypted FileId from client should be stored
-        Assert.Equal("encrypted-file-id-from-client", report.FileId);
+        Assert.Equal(request.SummaryData, report.SummaryData);
+        Assert.Equal(request.ApplicationData, report.ApplicationData);
 
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .Received(1)
             .CreateAsync(Arg.Is<OrganizationReport>(r =>
                 r.OrganizationId == request.OrganizationId &&
                 r.ReportData == string.Empty &&
-                r.SummaryData == null &&
-                r.ApplicationData == null &&
-                r.FileId == "encrypted-file-id-from-client" &&
+                r.SummaryData == request.SummaryData &&
+                r.ApplicationData == request.ApplicationData &&
+                r.FileId != null && r.FileId.Length == 32 &&
                 r.ContentEncryptionKey == "test-encryption-key"));
     }
 
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_InvalidOrganization_ThrowsBadRequestException(
-        SutProvider<CreateOrganizationReportFileStorageCommand> sutProvider)
+        SutProvider<CreateOrganizationReportStorageCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();
@@ -89,7 +84,7 @@ public class CreateOrganizationReportFileStorageCommandTests
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_MissingContentEncryptionKey_ThrowsBadRequestException(
-        SutProvider<CreateOrganizationReportFileStorageCommand> sutProvider)
+        SutProvider<CreateOrganizationReportStorageCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();
@@ -110,18 +105,18 @@ public class CreateOrganizationReportFileStorageCommandTests
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_WithMetrics_StoresMetricsCorrectly(
-        SutProvider<CreateOrganizationReportFileStorageCommand> sutProvider)
+        SutProvider<CreateOrganizationReportStorageCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();
-        var metrics = fixture.Build<OrganizationReportMetricsRequest>()
+        var metrics = fixture.Build<OrganizationReportMetrics>()
             .With(m => m.ApplicationCount, 100)
             .With(m => m.MemberCount, 50)
             .Create();
 
         var request = fixture.Build<AddOrganizationReportRequest>()
             .With(r => r.ContentEncryptionKey, "test-key")
-            .With(r => r.Metrics, metrics)
+            .With(r => r.ReportMetrics, metrics)
             .Create();
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -133,7 +128,7 @@ public class CreateOrganizationReportFileStorageCommandTests
             .Returns(c => c.Arg<OrganizationReport>());
 
         // Act
-        var (report, _) = await sutProvider.Sut.CreateAsync(request);
+        var report = await sutProvider.Sut.CreateAsync(request);
 
         // Assert
         Assert.Equal(100, report.ApplicationCount);

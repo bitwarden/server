@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 
-public class OrganizationReportMetricsRequest
+public class OrganizationReportMetrics
 {
     [JsonPropertyName("totalApplicationCount")]
     public int? ApplicationCount { get; set; } = null;
