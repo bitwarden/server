@@ -1275,16 +1275,13 @@ public class BaseRequestValidatorTests
     }
 
     [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task ValidateAsync_ClientVersionValidator_IsInvoked_ForFeatureFlagStates(
-        bool featureFlagValue,
+    [BitAutoData]
+    public async Task ValidateAsync_ClientVersionValidator_IsInvoked(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RedirectOnSsoRequired).Returns(featureFlagValue);
         var context = CreateContext(tokenRequest, requestContext, grantResult);
         _sut.isValid = true; // ensure initial context validation passes
 
