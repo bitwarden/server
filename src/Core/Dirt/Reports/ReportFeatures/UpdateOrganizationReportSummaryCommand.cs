@@ -54,7 +54,7 @@ public class UpdateOrganizationReportSummaryCommand : IUpdateOrganizationReportS
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
-            await _organizationReportRepo.UpdateMetricsAsync(request.ReportId, OrganizationReportMetricsData.From(request.OrganizationId, request.Metrics));
+            await _organizationReportRepo.UpdateMetricsAsync(request.ReportId, OrganizationReportMetricsData.From(request.OrganizationId, request.ReportMetrics));
             var updatedReport = await _organizationReportRepo.UpdateSummaryDataAsync(request.OrganizationId, request.ReportId, request.SummaryData ?? string.Empty);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report summary {reportId} for organization {organizationId}",

@@ -28,6 +28,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -363,6 +364,19 @@ public static class ServiceCollectionExtensions
         else
         {
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
+        }
+
+        if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.ConnectionString))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, AzureOrganizationReportStorageService>();
+        }
+        else if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.BaseDirectory))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, LocalOrganizationReportStorageService>();
+        }
+        else
+        {
+            services.AddSingleton<IOrganizationReportStorageService, NoopOrganizationReportStorageService>();
         }
     }
 
