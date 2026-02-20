@@ -18,8 +18,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Update]
     @PasswordCount INT = NULL,
     @PasswordAtRiskCount INT = NULL,
     @CriticalPasswordCount INT = NULL,
-    @CriticalPasswordAtRiskCount INT = NULL,
-    @FileId VARCHAR(100) = NULL
+    @CriticalPasswordAtRiskCount INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -43,7 +42,6 @@ BEGIN
         [PasswordCount] = @PasswordCount,
         [PasswordAtRiskCount] = @PasswordAtRiskCount,
         [CriticalPasswordCount] = @CriticalPasswordCount,
-        [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount,
-        [FileId] = @FileId
+        [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount
     WHERE [Id] = @Id;
 END;

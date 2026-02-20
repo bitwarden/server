@@ -1132,9 +1132,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int?>("CriticalPasswordCount")
                         .HasColumnType("integer");
 
-                    b.Property<string>("FileId")
-                        .HasColumnType("text");
-
                     b.Property<int?>("MemberAtRiskCount")
                         .HasColumnType("integer");
 
