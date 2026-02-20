@@ -7,6 +7,7 @@ using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
@@ -39,6 +40,7 @@ public class SendsControllerTests : IDisposable
     private readonly ILogger<SendsController> _logger;
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public SendsControllerTests()
     {
@@ -52,6 +54,7 @@ public class SendsControllerTests : IDisposable
         _logger = Substitute.For<ILogger<SendsController>>();
         _featureService = Substitute.For<IFeatureService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
+        _hasPremiumAccessQuery = Substitute.For<IHasPremiumAccessQuery>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -63,7 +66,8 @@ public class SendsControllerTests : IDisposable
             _sendFileStorageService,
             _logger,
             _featureService,
-            _pushNotificationService
+            _pushNotificationService,
+            _hasPremiumAccessQuery
         );
     }
 
@@ -212,6 +216,7 @@ public class SendsControllerTests : IDisposable
     public async Task Post_WithEmails_InfersAuthTypeEmail(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
         var request = new SendRequestModel
         {
             Type = SendType.Text,
@@ -257,6 +262,68 @@ public class SendsControllerTests : IDisposable
             s.UserId == userId &&
             s.Type == SendType.Text));
         _userService.Received(1).GetProperUserId(Arg.Any<ClaimsPrincipal>());
+    }
+
+    [Theory, AutoData]
+    public async Task Post_WithEmails_WhenNotPremium_ThrowsBadRequestException(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
+        var request = new SendRequestModel
+        {
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
+
+        Assert.Equal("Email verified Sends require a premium membership", exception.Message);
+        await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostFile_WithEmails_WhenNotPremium_ThrowsBadRequestException(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
+        var request = new SendRequestModel
+        {
+            Type = SendType.File,
+            Key = "key",
+            File = new SendFileModel { FileName = "test.txt" },
+            FileLength = 1024L,
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostFile(request));
+
+        Assert.Equal("Email verified Sends require a premium membership", exception.Message);
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .SaveFileSendAsync(Arg.Any<Send>(), Arg.Any<SendFileData>(), Arg.Any<long>());
+    }
+
+    [Theory, AutoData]
+    public async Task Put_WithEmails_WhenNotPremium_ThrowsBadRequestException(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
+        var request = new SendRequestModel
+        {
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Put(sendId.ToString(), request));
+
+        Assert.Equal("Email verified Sends require a premium membership", exception.Message);
+        await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
     }
 
     [Theory]
@@ -518,6 +585,7 @@ public class SendsControllerTests : IDisposable
     public async Task PostFile_WithEmails_InfersAuthTypeEmail(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
         _nonAnonymousSendCommand.SaveFileSendAsync(Arg.Any<Send>(), Arg.Any<SendFileData>(), Arg.Any<long>())
             .Returns("https://example.com/upload")
             .AndDoes(callInfo =>
@@ -593,6 +661,7 @@ public class SendsControllerTests : IDisposable
     public async Task Put_ChangingFromPasswordToEmails_UpdatesAuthTypeToEmail(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
         var existingSend = new Send
         {
             Id = sendId,
