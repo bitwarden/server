@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Models;
+﻿using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -33,7 +34,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → Owner → Generator → Roster → Users → Groups → Collections → Ciphers
+    /// Resolution order: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
@@ -45,7 +46,7 @@ internal static class PresetLoader
 
         if (org.Fixture is not null)
         {
-            builder.UseOrganization(org.Fixture);
+            builder.UseOrganization(org.Fixture, org.PlanType, org.Seats);
 
             // If using a fixture and domain not explicitly provided, read it from the fixture
             if (domain is null)
@@ -56,14 +57,15 @@ internal static class PresetLoader
         }
         else if (org.Name is not null && org.Domain is not null)
         {
-            builder.CreateOrganization(org.Name, org.Domain, org.Seats);
+            var planType = PlanFeatures.Parse(org.PlanType);
+            builder.CreateOrganization(org.Name, org.Domain, org.Seats, planType);
             domain = org.Domain;
         }
 
         builder.AddOwner();
 
-        // Generator requires a domain and is only needed for generated ciphers
-        if (domain is not null && preset.Ciphers?.Count > 0)
+        // Generator requires a domain and is needed for generated ciphers, personal ciphers, or folders
+        if (domain is not null && (preset.Ciphers?.Count > 0 || preset.PersonalCiphers?.CountPerUser > 0 || preset.Folders == true))
         {
             builder.WithGenerator(domain);
         }
@@ -88,13 +90,23 @@ internal static class PresetLoader
             builder.AddCollections(preset.Collections.Count);
         }
 
+        if (preset.Folders == true)
+        {
+            builder.AddFolders();
+        }
+
         if (preset.Ciphers?.Fixture is not null)
         {
             builder.UseCiphers(preset.Ciphers.Fixture);
         }
         else if (preset.Ciphers is not null && preset.Ciphers.Count > 0)
         {
-            builder.AddCiphers(preset.Ciphers.Count);
+            builder.AddCiphers(preset.Ciphers.Count, assignFolders: preset.Ciphers.AssignFolders);
+        }
+
+        if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
+        {
+            builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser);
         }
 
         builder.Validate();
