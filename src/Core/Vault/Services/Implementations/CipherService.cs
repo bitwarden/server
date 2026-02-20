@@ -188,8 +188,10 @@ public class CipherService : ICipherService
         }
     }
 
-    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
+    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, Guid savingUserId, bool orgAdmin = false)
     {
+        await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, attachment.Size);
+
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
@@ -909,7 +911,7 @@ public class CipherService : ICipherService
         return new DeleteAttachmentResponseData(cipher);
     }
 
-    private async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
+    public async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
         long requestLength)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
