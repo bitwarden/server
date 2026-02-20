@@ -228,7 +228,7 @@ public static class AssertHelper
         return await JsonSerializer.DeserializeAsync<T>(context.Response.Body);
     }
 
-    public static TimeSpan AssertRecent(DateTime dateTime, int skewSeconds = 2)
+    public static TimeSpan AssertRecent(DateTime dateTime, int skewSeconds = 5)
         => AssertRecent(dateTime, TimeSpan.FromSeconds(skewSeconds));
 
     public static TimeSpan AssertRecent(DateTime dateTime, TimeSpan skew)

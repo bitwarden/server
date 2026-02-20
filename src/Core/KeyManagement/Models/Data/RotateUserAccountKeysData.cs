@@ -20,6 +20,7 @@ public class RotateUserAccountKeysData
     public required IReadOnlyList<OrganizationUser> OrganizationUsers { get; set; }
     public required IEnumerable<WebAuthnLoginRotateKeyData> WebAuthnKeys { get; set; }
     public required IEnumerable<Device> DeviceKeys { get; set; }
+    public V2UpgradeTokenData? V2UpgradeToken { get; set; }
 
     // User vault data encrypted by the userkey
     public required IEnumerable<Cipher> Ciphers { get; set; }

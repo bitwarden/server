@@ -210,6 +210,7 @@ public static class FeatureFlagKeys
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
     public const string UnlockViaSdk = "unlock-via-sdk";
+    public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
