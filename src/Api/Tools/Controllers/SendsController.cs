@@ -7,6 +7,7 @@ using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.SendAccess;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
@@ -36,6 +37,7 @@ public class SendsController : Controller
     private readonly ILogger<SendsController> _logger;
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -47,7 +49,9 @@ public class SendsController : Controller
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
         IFeatureService featureService,
-        IPushNotificationService pushNotificationService)
+        IPushNotificationService pushNotificationService,
+        IHasPremiumAccessQuery hasPremiumAccessQuery
+    )
     {
         _sendRepository = sendRepository;
         _userService = userService;
@@ -59,6 +63,7 @@ public class SendsController : Controller
         _logger = logger;
         _featureService = featureService;
         _pushNotificationService = pushNotificationService;
+        _hasPremiumAccessQuery = hasPremiumAccessQuery;
     }
 
     #region Anonymous endpoints
@@ -82,11 +87,9 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        /* This guard can be removed once feature flag is retired*/
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         var sendAuthResult =
@@ -137,11 +140,9 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        /* This guard can be removed once feature flag is retired*/
-        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
-        if (sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        if (send.AuthType == AuthType.Email && send.Emails is not null)
         {
-            return new UnauthorizedResult();
+            throw new NotFoundException();
         }
 
         var (url, result) = await _anonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId,
@@ -229,7 +230,6 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/")]
     public async Task<IActionResult> AccessUsingAuth()
     {
@@ -238,6 +238,13 @@ public class SendsController : Controller
         if (send == null)
         {
             throw new BadRequestException("Could not locate send");
+        }
+
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            throw new NotFoundException();
         }
 
         if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
@@ -270,7 +277,6 @@ public class SendsController : Controller
     }
 
     [Authorize(Policy = Policies.Send)]
-    // [RequireFeature(FeatureFlagKeys.SendEmailOTP)]  /* Uncomment once client fallback re-try logic is added */
     [HttpPost("access/file/{fileId}")]
     public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
     {
@@ -280,6 +286,13 @@ public class SendsController : Controller
         if (send == null)
         {
             throw new BadRequestException("Could not locate send");
+        }
+
+        /* This guard can be removed once feature flag is retired*/
+        var sendEmailOtpEnabled = _featureService.IsEnabled(FeatureFlagKeys.SendEmailOTP);
+        if (!sendEmailOtpEnabled && send.AuthType == AuthType.Email && send.Emails is not null)
+        {
+            throw new NotFoundException();
         }
 
         var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
@@ -298,6 +311,13 @@ public class SendsController : Controller
     {
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+
+        if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
+        {
+            throw new BadRequestException("Email verified Sends require a premium membership");
+        }
+
         var send = model.ToSend(userId, _sendAuthorizationService);
         await _nonAnonymousSendCommand.SaveSendAsync(send);
         return new SendResponseModel(send);
@@ -324,6 +344,13 @@ public class SendsController : Controller
 
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+
+        if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
+        {
+            throw new BadRequestException("Email verified Sends require a premium membership");
+        }
+
         var (send, data) = model.ToSend(userId, model.File.FileName, _sendAuthorizationService);
         var uploadUrl = await _nonAnonymousSendCommand.SaveFileSendAsync(send, data, model.FileLength.Value);
         return new SendFileUploadDataResponseModel
@@ -389,6 +416,13 @@ public class SendsController : Controller
     {
         model.ValidateEdit();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+
+        if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
+        {
+            throw new BadRequestException("Email verified Sends require a premium membership");
+        }
+
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
         if (send == null || send.UserId != userId)
         {

@@ -13,6 +13,7 @@ using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
+using LinqToDB.Data;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
@@ -53,16 +54,21 @@ public class OrganizationWithVaultRecipe(
     public Guid Seed(OrganizationVaultOptions options)
     {
         _ctx = GeneratorContext.FromOptions(options);
+        var password = options.Password ?? UserSeeder.DefaultPassword;
 
         var seats = Math.Max(options.Users + 1, _minimumOrgSeats);
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         // Create organization via factory
         var organization = OrganizationSeeder.Create(
-            options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
+            options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey, options.PlanType);
 
         // Create owner user via factory
-        var ownerUser = UserSeeder.Create($"owner@{options.Domain}", passwordHasher, manglerService);
+        var ownerEmail = $"owner@{options.Domain}";
+        var mangledOwnerEmail = manglerService.Mangle(ownerEmail);
+        var ownerKeys = RustSdkService.GenerateUserKeys(mangledOwnerEmail, password);
+        var ownerUser = UserSeeder.Create(mangledOwnerEmail, passwordHasher, manglerService, keys: ownerKeys, password: password);
+
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -76,8 +82,8 @@ public class OrganizationWithVaultRecipe(
         {
             var email = $"user{i}@{options.Domain}";
             var mangledEmail = manglerService.Mangle(email);
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, UserSeeder.DefaultPassword);
-            var memberUser = UserSeeder.Create(mangledEmail, passwordHasher, manglerService, keys: userKeys);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password);
+            var memberUser = UserSeeder.Create(mangledEmail, passwordHasher, manglerService, keys: userKeys, password: password);
             memberUsersWithKeys.Add(new UserWithKey(memberUser, userKeys.Key));
 
             var status = useRealisticMix
@@ -158,7 +164,7 @@ public class OrganizationWithVaultRecipe(
                             manage: j == 0));
                 })
                 .ToList();
-            db.BulkCopy(collectionUsers);
+            db.BulkCopy(new BulkCopyOptions { TableName = nameof(CollectionUser) }, collectionUsers);
         }
 
         return collections.Select(c => c.Id).ToList();

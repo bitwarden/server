@@ -121,6 +121,7 @@ public class AccountsKeyManagementController : Controller
             OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
             WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
             DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
+            V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
 
             Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),

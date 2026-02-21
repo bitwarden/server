@@ -45,6 +45,7 @@
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
     @SignedPublicKey VARCHAR(MAX) = NULL,
+    @V2UpgradeToken VARCHAR(MAX) = NULL,
     @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
@@ -105,6 +106,7 @@ BEGIN
         [SecurityVersion] = @SecurityVersion,
         [SignedPublicKey] = @SignedPublicKey,
         [MaxStorageGbIncreased] = @MaxStorageGb,
+        [V2UpgradeToken] = @V2UpgradeToken,
         [MasterPasswordSalt] = @MasterPasswordSalt
     WHERE
         [Id] = @Id

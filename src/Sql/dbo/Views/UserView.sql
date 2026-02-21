@@ -47,6 +47,7 @@ SELECT
     [SecurityState],
     [SecurityVersion],
     [SignedPublicKey],
+    [V2UpgradeToken],
     [MasterPasswordSalt]
 FROM
     [dbo].[User]

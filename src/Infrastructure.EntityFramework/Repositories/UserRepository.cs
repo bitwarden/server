@@ -18,6 +18,28 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
 
+    public async Task<Core.Entities.User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await GetDbSet(dbContext)
+                .FirstOrDefaultAsync(e => e.GatewayCustomerId == gatewayCustomerId);
+            return Mapper.Map<Core.Entities.User>(entity);
+        }
+    }
+
+    public async Task<Core.Entities.User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await GetDbSet(dbContext)
+                .FirstOrDefaultAsync(e => e.GatewaySubscriptionId == gatewaySubscriptionId);
+            return Mapper.Map<Core.Entities.User>(entity);
+        }
+    }
+
     public async Task<Core.Entities.User?> GetByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -230,6 +252,12 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
         userEntity.AccountRevisionDate = user.AccountRevisionDate;
         userEntity.RevisionDate = user.RevisionDate;
+
+        userEntity.SignedPublicKey = user.SignedPublicKey;
+        userEntity.SecurityState = user.SecurityState;
+        userEntity.SecurityVersion = user.SecurityVersion;
+
+        userEntity.V2UpgradeToken = user.V2UpgradeToken;
 
         await dbContext.SaveChangesAsync();
 

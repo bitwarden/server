@@ -42,10 +42,11 @@
     [LastKeyRotationDate]              DATETIME2 (7)    NULL,
     [LastEmailChangeDate]              DATETIME2 (7)    NULL,
     [VerifyDevices]                    BIT              DEFAULT ((1)) NOT NULL,
-    [SecurityState]                    VARCHAR (MAX)   NULL,
+    [SecurityState]                    VARCHAR (MAX)    NULL,
     [SecurityVersion]                  INT              NULL,
-    [SignedPublicKey]                  VARCHAR (MAX)   NULL,
+    [SignedPublicKey]                  VARCHAR (MAX)    NULL,
     [MaxStorageGbIncreased]            SMALLINT         NULL,
+    [V2UpgradeToken]                   VARCHAR(MAX)     NULL,
     [MasterPasswordSalt]               NVARCHAR (256)   NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
@@ -63,3 +64,12 @@ GO
 CREATE NONCLUSTERED INDEX [IX_User_Id_EmailDomain]
     ON [dbo].[User]([Id] ASC, [Email] ASC);
 
+GO
+CREATE NONCLUSTERED INDEX [IX_User_GatewayCustomerId]
+    ON [dbo].[User]([GatewayCustomerId])
+    WHERE [GatewayCustomerId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_User_GatewaySubscriptionId]
+    ON [dbo].[User]([GatewaySubscriptionId])
+    WHERE [GatewaySubscriptionId] IS NOT NULL;
