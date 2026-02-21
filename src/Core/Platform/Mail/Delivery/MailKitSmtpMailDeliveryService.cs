@@ -5,6 +5,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MimeKit;
 
 namespace Bit.Core.Platform.Mail.Delivery;
@@ -13,12 +14,14 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<MailKitSmtpMailDeliveryService> _logger;
+    private readonly SmtpMailOptions _smtpMailOptions;
     private readonly string _replyDomain;
     private readonly string _replyEmail;
 
     public MailKitSmtpMailDeliveryService(
         GlobalSettings globalSettings,
-        ILogger<MailKitSmtpMailDeliveryService> logger)
+        ILogger<MailKitSmtpMailDeliveryService> logger,
+        IOptions<SmtpMailOptions> mailOptions)
     {
         if (globalSettings.Mail.Smtp?.Host == null)
         {
@@ -39,6 +42,7 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 
         _globalSettings = globalSettings;
         _logger = logger;
+        _smtpMailOptions = mailOptions.Value;
     }
 
     public async Task SendEmailAsync(Models.Mail.MailMessage message)
@@ -106,12 +110,17 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
                 );
             }
 
-            if (CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
-                CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password))
+            var credentials = await _smtpMailOptions.RetrieveCredentials(cancellationToken);
+
+            if (credentials != null)
             {
+                if (!client.AuthenticationMechanisms.Contains(credentials.MechanismName))
+                {
+                    // TODO: Warn
+                }
+
                 await client.AuthenticateAsync(
-                    _globalSettings.Mail.Smtp.Username,
-                    _globalSettings.Mail.Smtp.Password,
+                    credentials,
                     cancellationToken
                 );
             }
