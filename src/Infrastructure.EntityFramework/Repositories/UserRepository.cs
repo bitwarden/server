@@ -10,8 +10,6 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
@@ -563,6 +561,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
+            //TODO- PM-30355: Update MasterPasswordSalt to the MasterPasswordUnlockData.Salt instead of matching Email.
+            userEntity.MasterPasswordSalt = userEntity.Email.ToLowerInvariant().Trim();
 
             await dbContext.SaveChangesAsync();
         };

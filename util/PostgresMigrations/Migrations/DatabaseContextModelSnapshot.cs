@@ -2003,6 +2003,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasColumnType("text");
+
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 

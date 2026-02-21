@@ -8,7 +8,8 @@ CREATE PROCEDURE [dbo].[User_UpdateMasterPassword]
     @KdfMemory INT = NULL,
     @KdfParallelism INT = NULL,
     @RevisionDate DATETIME2(7),
-    @AccountRevisionDate DATETIME2(7)
+    @AccountRevisionDate DATETIME2(7),
+    @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,7 +25,8 @@ BEGIN
         [KdfMemory] = @KdfMemory,
         [KdfParallelism] = @KdfParallelism,
         [RevisionDate] = @RevisionDate,
-        [AccountRevisionDate] = @AccountRevisionDate
+        [AccountRevisionDate] = @AccountRevisionDate,
+        [MasterPasswordSalt] = LOWER(LTRIM(RTRIM([User].[Email])))
     WHERE
         [Id] = @Id
 END

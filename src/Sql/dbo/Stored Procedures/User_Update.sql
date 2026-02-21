@@ -45,10 +45,17 @@
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
     @SignedPublicKey VARCHAR(MAX) = NULL,
-    @V2UpgradeToken VARCHAR(MAX) = NULL
+    @V2UpgradeToken VARCHAR(MAX) = NULL,
+    @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
+
+    /*
+     If the user doesn't have a master password, we can allow the MasterPasswordSalt to be null.
+     We will set it to the email until we are ready to separate the two.
+    */
+    SET @MasterPasswordSalt = CASE WHEN @MasterPassword IS NULL THEN NULL ELSE LOWER(LTRIM(RTRIM(@Email))) END
 
     UPDATE
         [dbo].[User]
@@ -99,7 +106,8 @@ BEGIN
         [SecurityVersion] = @SecurityVersion,
         [SignedPublicKey] = @SignedPublicKey,
         [MaxStorageGbIncreased] = @MaxStorageGb,
-        [V2UpgradeToken] = @V2UpgradeToken
+        [V2UpgradeToken] = @V2UpgradeToken,
+        [MasterPasswordSalt] = @MasterPasswordSalt
     WHERE
         [Id] = @Id
 END
