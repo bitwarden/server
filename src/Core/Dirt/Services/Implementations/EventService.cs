@@ -69,7 +69,7 @@ public class EventService : IEventService
                 Date = DateTime.UtcNow
             });
 
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync([]);
         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
         var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
             .Select(p => new EventMessage(_currentContext)
@@ -335,7 +335,7 @@ public class EventService : IEventService
 
     public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
     {
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync([]);
         var eventMessages = new List<IEvent>();
         foreach (var (providerUser, type, date) in events)
         {
@@ -365,7 +365,7 @@ public class EventService : IEventService
 
     public async Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
     {
-        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync([]);
         var eventMessages = new List<IEvent>();
         foreach (var (providerOrganization, type, date) in events)
         {
