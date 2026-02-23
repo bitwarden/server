@@ -43,6 +43,8 @@ public class RecipeBuilder
 
     internal bool HasCipherFolderAssignment { get; set; }
 
+    internal bool HasRosterOwner { get; set; }
+
     internal bool HasPersonalCiphers { get; set; }
 
     /// <summary>

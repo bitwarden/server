@@ -62,17 +62,20 @@ internal static class PresetLoader
             domain = org.Domain;
         }
 
-        builder.AddOwner();
+        if (preset.Roster?.Fixture is not null)
+        {
+            builder.UseRoster(preset.Roster.Fixture, reader);
+        }
+
+        if (!builder.HasRosterOwner)
+        {
+            builder.AddOwner();
+        }
 
         // Generator requires a domain and is needed for generated ciphers, personal ciphers, or folders
         if (domain is not null && (preset.Ciphers?.Count > 0 || preset.PersonalCiphers?.CountPerUser > 0 || preset.Folders == true))
         {
             builder.WithGenerator(domain);
-        }
-
-        if (preset.Roster?.Fixture is not null)
-        {
-            builder.UseRoster(preset.Roster.Fixture);
         }
 
         if (preset.Users is not null)

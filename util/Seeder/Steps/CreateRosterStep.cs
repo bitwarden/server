@@ -45,6 +45,13 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
             var orgUser = org.CreateOrganizationUserWithKey(
                 user, orgUserType, OrganizationUserStatusType.Confirmed, userOrgKey);
 
+            // Promote the first owner-role user to pipeline owner
+            if (orgUserType == OrganizationUserType.Owner && context.Owner is null)
+            {
+                context.Owner = user;
+                context.OwnerOrgUser = orgUser;
+            }
+
             userLookup[emailPrefix] = orgUser.Id;
 
             context.Users.Add(user);
