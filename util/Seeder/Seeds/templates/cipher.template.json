@@ -1,0 +1,50 @@
+{
+  "$schema": "../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "Example Login",
+      "login": {
+        "username": "user@example.com",
+        "password": "ChangeMe123!",
+        "uris": [
+          {
+            "uri": "https://example.com/login",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "card",
+      "name": "Example Card",
+      "card": {
+        "cardholderName": "Jane Doe",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "12",
+        "expYear": "2030",
+        "code": "123"
+      }
+    },
+    {
+      "type": "identity",
+      "name": "Example Identity",
+      "identity": {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "email": "jane.doe@example.com",
+        "address1": "123 Main St",
+        "city": "Anytown",
+        "state": "CA",
+        "postalCode": "90210",
+        "country": "US"
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Example Secure Note",
+      "notes": "This is a secure note with sensitive information."
+    }
+  ]
+}

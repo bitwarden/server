@@ -9,7 +9,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Services;
@@ -25,9 +24,6 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, RegisterFinishData registerFinishData);
     Task SendMasterPasswordHintAsync(string email);
-    Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
-    Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
-    Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task InitiateEmailChangeAsync(User user, string newEmail);
@@ -46,12 +42,8 @@ public interface IUserService
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
-    Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-        PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
-        TaxInfo taxInfo);
     Task UpdateLicenseAsync(User user, UserLicense license);
     Task<string> AdjustStorageAsync(User user, short storageAdjustmentGb);
-    Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo);
     Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
     Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);

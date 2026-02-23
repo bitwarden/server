@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "roster.schema.json",
+  "title": "Bitwarden Roster Seed File",
+  "description": "Defines an organization's people structure: users, groups, and collections with permissions.",
+  "type": "object",
+  "required": ["users"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "users": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Organization members. Email prefix is derived as firstName.lastName@domain.",
+      "items": { "$ref": "#/$defs/user" }
+    },
+    "groups": {
+      "type": "array",
+      "description": "Groups within the organization.",
+      "items": { "$ref": "#/$defs/group" }
+    },
+    "collections": {
+      "type": "array",
+      "description": "Collections with group and user permission assignments. Use '/' for visual hierarchy.",
+      "items": { "$ref": "#/$defs/collection" }
+    }
+  },
+  "$defs": {
+    "user": {
+      "type": "object",
+      "required": ["firstName", "lastName"],
+      "additionalProperties": false,
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "description": "Job title."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner", "admin", "user", "custom"],
+          "default": "user",
+          "description": "Organization role."
+        },
+        "branch": {
+          "type": "string",
+          "description": "Branch office for grouping."
+        },
+        "department": {
+          "type": "string",
+          "description": "Department for grouping."
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "required": ["name", "members"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Group display name (not encrypted)."
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Email prefixes (firstName.lastName) of group members."
+        }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Collection name. Use '/' for visual hierarchy (e.g., 'Departments/Sales')."
+        },
+        "groups": {
+          "type": "array",
+          "description": "Group permission assignments.",
+          "items": { "$ref": "#/$defs/collectionGroup" }
+        },
+        "users": {
+          "type": "array",
+          "description": "Direct user permission assignments.",
+          "items": { "$ref": "#/$defs/collectionUser" }
+        }
+      }
+    },
+    "collectionGroup": {
+      "type": "object",
+      "required": ["group"],
+      "additionalProperties": false,
+      "properties": {
+        "group": {
+          "type": "string",
+          "description": "Group name to assign."
+        },
+        "readOnly": {
+          "type": "boolean",
+          "default": false
+        },
+        "hidePasswords": {
+          "type": "boolean",
+          "default": false
+        },
+        "manage": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "collectionUser": {
+      "type": "object",
+      "required": ["user"],
+      "additionalProperties": false,
+      "properties": {
+        "user": {
+          "type": "string",
+          "description": "Email prefix (firstName.lastName) of the user."
+        },
+        "readOnly": {
+          "type": "boolean",
+          "default": false
+        },
+        "hidePasswords": {
+          "type": "boolean",
+          "default": false
+        },
+        "manage": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}
