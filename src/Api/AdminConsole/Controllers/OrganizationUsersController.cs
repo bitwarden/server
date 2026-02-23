@@ -227,7 +227,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (organizationUser is null || organizationUser.UserId is null)
+        if (organizationUser is null || organizationUser.OrganizationId != orgId || organizationUser.UserId is null)
         {
             throw new NotFoundException();
         }
