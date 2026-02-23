@@ -12,17 +12,13 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -35,7 +31,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Fido2NetLib;
-using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -70,7 +65,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
     private readonly IFeatureService _featureService;
-    private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
@@ -107,7 +101,6 @@ public class UserService : UserManager<User>, IUserService
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
         IFeatureService featureService,
-        IPremiumUserBillingService premiumUserBillingService,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
@@ -148,7 +141,6 @@ public class UserService : UserManager<User>, IUserService
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _featureService = featureService;
-        _premiumUserBillingService = premiumUserBillingService;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
@@ -344,148 +336,6 @@ public class UserService : UserManager<User>, IUserService
         }
 
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
-    }
-
-    /// <summary>
-    /// Initiates WebAuthn 2FA credential registration and generates a challenge for adding a new security key.
-    /// </summary>
-    /// <param name="user">The current user.</param>
-    /// <returns></returns>
-    /// <exception cref="BadRequestException">Maximum allowed number of credentials already registered.</exception>
-    public async Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-        }
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider == null)
-        {
-            provider = new TwoFactorProvider
-            {
-                Enabled = false
-            };
-        }
-        if (provider.MetaData == null)
-        {
-            provider.MetaData = new Dictionary<string, object>();
-        }
-
-        // Boundary validation to provide a better UX. There is also second-level enforcement at persistence time.
-        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
-            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Count only saved credentials ("Key{id}") toward the limit.
-        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
-            maximumAllowedCredentialCount)
-        {
-            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
-        }
-
-        var fidoUser = new Fido2User
-        {
-            DisplayName = user.Name,
-            Name = user.Email,
-            Id = user.Id.ToByteArray(),
-        };
-
-        var excludeCredentials = provider.MetaData
-            .Where(k => k.Key.StartsWith("Key"))
-            .Select(k => new TwoFactorProvider.WebAuthnData((dynamic)k.Value).Descriptor)
-            .ToList();
-
-        var authenticatorSelection = new AuthenticatorSelection
-        {
-            AuthenticatorAttachment = null,
-            RequireResidentKey = false,
-            UserVerification = UserVerificationRequirement.Discouraged
-        };
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection, AttestationConveyancePreference.None);
-
-        provider.MetaData["pending"] = options.ToJson();
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, false);
-
-        return options;
-    }
-
-    public async Task<bool> CompleteWebAuthRegistrationAsync(User user, int id, string name, AuthenticatorAttestationRawResponse attestationResponse)
-    {
-        var keyId = $"Key{id}";
-
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
-        {
-            return false;
-        }
-
-        // Persistence-time validation for comprehensive enforcement. There is also boundary validation for best-possible UX.
-        var maximumAllowedCredentialCount = await _hasPremiumAccessQuery.HasPremiumAccessAsync(user.Id)
-            ? _globalSettings.WebAuthn.PremiumMaximumAllowedCredentials
-            : _globalSettings.WebAuthn.NonPremiumMaximumAllowedCredentials;
-        // Count only saved credentials ("Key{id}") toward the limit.
-        if (provider.MetaData.Count(k => k.Key.StartsWith("Key")) >=
-            maximumAllowedCredentialCount)
-        {
-            throw new BadRequestException("Maximum allowed WebAuthn credential count exceeded.");
-        }
-
-        var options = CredentialCreateOptions.FromJson((string)pendingValue);
-
-        // Callback to ensure credential ID is unique. Always return true since we don't care if another
-        // account uses the same 2FA key.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
-
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-
-        provider.MetaData.Remove("pending");
-        provider.MetaData[keyId] = new TwoFactorProvider.WebAuthnData
-        {
-            Name = name,
-            Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
-            PublicKey = success.Result.PublicKey,
-            UserHandle = success.Result.User.Id,
-            SignatureCounter = success.Result.Counter,
-            CredType = success.Result.CredType,
-            RegDate = DateTime.Now,
-            AaGuid = success.Result.Aaguid
-        };
-
-        var providers = user.GetTwoFactorProviders();
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-
-        return true;
-    }
-
-    public async Task<bool> DeleteWebAuthnKeyAsync(User user, int id)
-    {
-        var providers = user.GetTwoFactorProviders();
-        if (providers == null)
-        {
-            return false;
-        }
-
-        var keyName = $"Key{id}";
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (!provider?.MetaData?.ContainsKey(keyName) ?? true)
-        {
-            return false;
-        }
-
-        if (provider.MetaData.Count < 2)
-        {
-            return false;
-        }
-
-        provider.MetaData.Remove(keyName);
-        providers[TwoFactorProviderType.WebAuthn] = provider;
-        user.SetTwoFactorProviders(providers);
-        await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
-        return true;
     }
 
     public async Task SendEmailVerificationAsync(User user)
@@ -886,78 +736,6 @@ public class UserService : UserManager<User>, IUserService
         return true;
     }
 
-    public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
-        PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,
-        TaxInfo taxInfo)
-    {
-        if (user.Premium)
-        {
-            throw new BadRequestException("Already a premium user.");
-        }
-
-        if (additionalStorageGb < 0)
-        {
-            throw new BadRequestException("You can't subtract storage!");
-        }
-
-        string paymentIntentClientSecret = null;
-        IStripePaymentService paymentService = null;
-        if (_globalSettings.SelfHosted)
-        {
-            if (license == null || !_licenseService.VerifyLicense(license))
-            {
-                throw new BadRequestException("Invalid license.");
-            }
-
-            var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
-
-            if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
-            {
-                throw new BadRequestException(exceptionMessage);
-            }
-
-            var dir = $"{_globalSettings.LicenseDirectory}/user";
-            Directory.CreateDirectory(dir);
-            using var fs = File.OpenWrite(Path.Combine(dir, $"{user.Id}.json"));
-            await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
-        }
-        else
-        {
-            var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
-            await _premiumUserBillingService.Finalize(sale);
-        }
-
-        user.Premium = true;
-        user.RevisionDate = DateTime.UtcNow;
-
-        if (_globalSettings.SelfHosted)
-        {
-            user.MaxStorageGb = Constants.SelfHostedMaxStorageGb;
-            user.LicenseKey = license.LicenseKey;
-            user.PremiumExpirationDate = license.Expires;
-        }
-        else
-        {
-            user.LicenseKey = CoreHelpers.SecureRandomString(20);
-        }
-
-        try
-        {
-            await SaveUserAsync(user);
-            await _pushService.PushSyncVaultAsync(user.Id);
-        }
-        catch when (!_globalSettings.SelfHosted)
-        {
-            await paymentService.CancelAndRecoverChargesAsync(user);
-            throw;
-        }
-
-
-
-        return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
-            paymentIntentClientSecret);
-    }
-
     public async Task UpdateLicenseAsync(User user, UserLicense license)
     {
         if (!_globalSettings.SelfHosted)
@@ -1025,20 +803,6 @@ public class UserService : UserManager<User>, IUserService
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId, baseStorageGb);
         await SaveUserAsync(user);
         return secret;
-    }
-
-    public async Task ReplacePaymentMethodAsync(User user, string paymentToken, PaymentMethodType paymentMethodType, TaxInfo taxInfo)
-    {
-        if (paymentToken.StartsWith("btok_"))
-        {
-            throw new BadRequestException("Invalid token.");
-        }
-
-        var tokenizedPaymentSource = new TokenizedPaymentSource(paymentMethodType, paymentToken);
-        var taxInformation = TaxInformation.From(taxInfo);
-
-        await _premiumUserBillingService.UpdatePaymentMethod(user, tokenizedPaymentSource, taxInformation);
-        await SaveUserAsync(user);
     }
 
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
@@ -1158,12 +922,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        return user.Premium || await HasPremiumFromOrganization(user);
+        return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<bool> HasPremiumFromOrganization(User user)
@@ -1174,25 +933,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        // orgUsers in the Invited status are not associated with a userId yet, so this will get
-        // orgUsers in Accepted and Confirmed states only
-        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
-
-        if (!orgUsers.Any())
-        {
-            return false;
-        }
-
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        return orgUsers.Any(ou =>
-            orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
-            orgAbility.UsersGetPremium &&
-            orgAbility.Enabled);
+        return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)

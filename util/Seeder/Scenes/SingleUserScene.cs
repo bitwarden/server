@@ -43,8 +43,8 @@ public class SingleUserScene(
             request.Email,
             passwordHasher,
             manglerService,
-            request.EmailVerified,
-            request.Premium,
+            emailVerified: request.EmailVerified,
+            premium: request.Premium,
             password: request.Password);
 
         await userRepository.CreateAsync(user);

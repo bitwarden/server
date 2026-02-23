@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "Policy", "lastName": "Owner", "role": "owner" },
+    { "firstName": "Policy", "lastName": "Admin", "role": "admin" },
+    { "firstName": "Policy", "lastName": "Custom", "role": "custom" },
+    { "firstName": "Policy", "lastName": "User", "role": "user" }
+  ]
+}

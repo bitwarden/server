@@ -315,14 +315,14 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ProviderSubscription_WithIncompleteExpiredStatus_DoesNotDisableProvider()
+    public async Task HandleAsync_IncompleteToIncompleteExpiredTransition_DisablesProviderAndSetsCancellation()
     {
         // Arrange
         var providerId = Guid.NewGuid();
         var subscriptionId = "sub_123";
         var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
 
-        // Previous status that doesn't trigger enable/disable logic
+        // Previous status was Incomplete - this is the valid transition for IncompleteExpired
         var previousSubscription = new Subscription
         {
             Id = subscriptionId,
@@ -341,7 +341,7 @@ public class SubscriptionUpdatedHandlerTests
                 ]
             },
             Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
-            LatestInvoice = new Invoice { BillingReason = "renewal" }
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCreate }
         };
 
         var provider = new Provider { Id = providerId, Name = "Test Provider", Enabled = true };
@@ -364,10 +364,142 @@ public class SubscriptionUpdatedHandlerTests
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert - IncompleteExpired status is not handled by the new logic
-        Assert.True(provider.Enabled);
-        await _providerService.DidNotReceive().UpdateAsync(Arg.Any<Provider>());
-        await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        // Assert - Incomplete to IncompleteExpired should trigger disable and cancellation
+        Assert.False(provider.Enabled);
+        await _providerService.Received(1).UpdateAsync(provider);
+        await _stripeFacade.Received(1).UpdateSubscription(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.ProrationBehavior == ProrationBehavior.None &&
+                options.CancellationDetails != null &&
+                options.CancellationDetails.Comment != null));
+    }
+
+    [Fact]
+    public async Task HandleAsync_IncompleteToIncompleteExpiredUserSubscription_DisablesPremiumAndSetsCancellation()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Incomplete
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.IncompleteExpired,
+            Metadata = new Dictionary<string, string> { { "userId", userId.ToString() } },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }
+                ]
+            },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCreate }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _userService.Received(1).DisablePremiumAsync(userId, currentPeriodEnd);
+        await _stripeFacade.Received(1).UpdateSubscription(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.ProrationBehavior == ProrationBehavior.None &&
+                options.CancellationDetails != null &&
+                options.CancellationDetails.Comment != null));
+    }
+
+    [Fact]
+    public async Task HandleAsync_IncompleteToIncompleteExpiredOrganizationSubscription_DisablesOrganizationAndSetsCancellation()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var currentPeriodEnd = DateTime.UtcNow.AddDays(30);
+
+        var previousSubscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Incomplete
+        };
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.IncompleteExpired,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = currentPeriodEnd,
+                        Plan = new Plan { Id = "2023-enterprise-org-seat-annually" }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCreate }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.EnterpriseAnnually2023 };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var plan = new Enterprise2023Plan(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _organizationDisableCommand.Received(1).DisableAsync(organizationId, currentPeriodEnd);
+        await _pushNotificationAdapter.Received(1).NotifyEnabledChangedAsync(organization);
+        await _stripeFacade.Received(1).UpdateSubscription(
+            subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAt.HasValue &&
+                options.CancelAt.Value <= DateTime.UtcNow.AddDays(7).AddMinutes(1) &&
+                options.ProrationBehavior == ProrationBehavior.None &&
+                options.CancellationDetails != null &&
+                options.CancellationDetails.Comment != null));
     }
 
     [Fact]
@@ -470,6 +602,9 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
         // Act
         await _sut.HandleAsync(parsedEvent);
 
@@ -484,6 +619,10 @@ public class SubscriptionUpdatedHandlerTests
                 options.ProrationBehavior == ProrationBehavior.None &&
                 options.CancellationDetails != null &&
                 options.CancellationDetails.Comment != null));
+        await _stripeFacade.DidNotReceive()
+            .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+        await _stripeFacade.DidNotReceive()
+            .ListInvoices(Arg.Any<InvoiceListOptions>());
     }
 
     [Fact]
@@ -527,6 +666,9 @@ public class SubscriptionUpdatedHandlerTests
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
         // Act
         await _sut.HandleAsync(parsedEvent);
 
@@ -534,6 +676,10 @@ public class SubscriptionUpdatedHandlerTests
         await _userService.DidNotReceive().DisablePremiumAsync(Arg.Any<Guid>(), Arg.Any<DateTime?>());
         await _userService.Received(1).UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
         await _stripeFacade.DidNotReceive().UpdateSubscription(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeFacade.DidNotReceive()
+            .CancelSubscription(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+        await _stripeFacade.DidNotReceive()
+            .ListInvoices(Arg.Any<InvoiceListOptions>());
     }
 
     [Fact]

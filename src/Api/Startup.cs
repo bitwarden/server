@@ -303,7 +303,8 @@ public class Startup
                 {
                     swaggerDoc.Servers =
                     [
-                        new() {
+                        new()
+                        {
                             Url = globalSettings.BaseServiceUri.Api,
                         }
                     ];

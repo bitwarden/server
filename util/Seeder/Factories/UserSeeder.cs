@@ -15,6 +15,7 @@ internal static class UserSeeder
         string email,
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService,
+        string? name = null,
         bool emailVerified = true,
         bool premium = false,
         UserKeys? keys = null,
@@ -28,6 +29,7 @@ internal static class UserSeeder
         var user = new User
         {
             Id = CoreHelpers.GenerateComb(),
+            Name = name ?? mangledEmail.Split('@')[0],
             Email = mangledEmail,
             EmailVerified = emailVerified,
             MasterPassword = null,

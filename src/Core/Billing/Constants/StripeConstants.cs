@@ -39,6 +39,11 @@ public static class StripeConstants
         }
     }
 
+    public static class CouponExpandablePropertyNames
+    {
+        public const string AppliesTo = "applies_to";
+    }
+
     public static class ErrorCodes
     {
         public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
