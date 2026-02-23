@@ -1,5 +1,7 @@
 ﻿using Bit.Seeder;
+using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
+using Bit.Seeder.Services;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -13,7 +15,7 @@ public class RecipeBuilderValidationTests
         var builder = services.AddRecipe("test");
 
         builder.AddUsers(10);
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.UseRoster("test"));
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.UseRoster("test", _stubReader));
         Assert.Contains("Cannot call UseRoster() after AddUsers()", ex.Message);
     }
 
@@ -23,7 +25,7 @@ public class RecipeBuilderValidationTests
         var services = new ServiceCollection();
         var builder = services.AddRecipe("test");
 
-        builder.UseRoster("test");
+        builder.UseRoster("test", _stubReader);
         var ex = Assert.Throws<InvalidOperationException>(() => builder.AddUsers(10));
         Assert.Contains("Cannot call AddUsers() after UseRoster()", ex.Message);
     }
@@ -86,7 +88,7 @@ public class RecipeBuilderValidationTests
         var services = new ServiceCollection();
         var builder = services.AddRecipe("test");
 
-        builder.UseRoster("test");
+        builder.UseRoster("test", _stubReader);
         builder.AddCollections(5);
     }
 
@@ -153,5 +155,19 @@ public class RecipeBuilderValidationTests
         {
             Assert.Equal(i, orderedSteps[i].Order);
         }
+    }
+
+    private static readonly ISeedReader _stubReader = new StubSeedReader();
+
+    /// <summary>
+    /// Stub reader for builder validation tests that don't need real fixture data.
+    /// Returns a roster with no owner so UseRoster() sets HasRosterUsers without HasRosterOwner.
+    /// </summary>
+    private sealed class StubSeedReader : ISeedReader
+    {
+        public T Read<T>(string seedName) =>
+            (T)(object)new SeedRoster { Users = [new SeedRosterUser { FirstName = "Test", LastName = "User" }] };
+
+        public IReadOnlyList<string> ListAvailable() => [];
     }
 }
