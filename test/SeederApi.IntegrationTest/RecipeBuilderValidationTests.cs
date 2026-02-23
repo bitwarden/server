@@ -115,6 +115,18 @@ public class RecipeBuilderValidationTests
     }
 
     [Fact]
+    public void Validate_WithRosterOwner_Succeeds()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.UseOrganization("test");
+        builder.UseRoster("test", _stubReaderWithOwner);
+
+        builder.Validate(); // should not throw — roster provides the owner
+    }
+
+    [Fact]
     public void Validate_AddCiphersWithoutGenerator_ThrowsInvalidOperationException()
     {
         var services = new ServiceCollection();
@@ -157,16 +169,24 @@ public class RecipeBuilderValidationTests
         }
     }
 
-    private static readonly ISeedReader _stubReader = new StubSeedReader();
+    private static readonly ISeedReader _stubReader = new StubSeedReader(hasOwner: false);
+    private static readonly ISeedReader _stubReaderWithOwner = new StubSeedReader(hasOwner: true);
 
     /// <summary>
     /// Stub reader for builder validation tests that don't need real fixture data.
-    /// Returns a roster with no owner so UseRoster() sets HasRosterUsers without HasRosterOwner.
     /// </summary>
-    private sealed class StubSeedReader : ISeedReader
+    private sealed class StubSeedReader(bool hasOwner) : ISeedReader
     {
         public T Read<T>(string seedName) =>
-            (T)(object)new SeedRoster { Users = [new SeedRosterUser { FirstName = "Test", LastName = "User" }] };
+            (T)(object)new SeedRoster
+            {
+                Users = [new SeedRosterUser
+                {
+                    FirstName = "Test",
+                    LastName = "User",
+                    Role = hasOwner ? "owner" : "user"
+                }]
+            };
 
         public IReadOnlyList<string> ListAvailable() => [];
     }

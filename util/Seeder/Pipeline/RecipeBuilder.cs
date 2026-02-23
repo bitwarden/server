@@ -9,7 +9,7 @@ namespace Bit.Seeder.Pipeline;
 /// <remarks>
 /// Wraps <see cref="IServiceCollection"/> and a recipe name, tracking step count for
 /// deterministic ordering and validation flags for dependency rules.
-/// <strong>Phase Order:</strong> Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+/// <strong>Phase Order:</strong> Org → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
 /// </remarks>
 public class RecipeBuilder
 {
