@@ -51,6 +51,16 @@
           "default": "user",
           "description": "Organization role."
         },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "invited", "accepted", "revoked"],
+          "default": "confirmed",
+          "description": "Organization membership status."
+        },
+        "email": {
+          "type": "string",
+          "description": "Override derived email (firstName.lastName@domain). Use for non-standard email patterns."
+        },
         "branch": {
           "type": "string",
           "description": "Branch office for grouping."
@@ -71,6 +81,10 @@
           "minLength": 1,
           "description": "Group display name (not encrypted)."
         },
+        "externalId": {
+          "type": "string",
+          "description": "External identifier for directory sync / API test compatibility."
+        },
         "members": {
           "type": "array",
           "items": {
@@ -89,6 +103,10 @@
           "type": "string",
           "minLength": 1,
           "description": "Collection name. Use '/' for visual hierarchy (e.g., 'Departments/Sales')."
+        },
+        "externalId": {
+          "type": "string",
+          "description": "External identifier for directory sync / API test compatibility."
         },
         "groups": {
           "type": "array",
