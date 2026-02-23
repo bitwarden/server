@@ -54,6 +54,7 @@ AS
         [SecurityState],
         [SecurityVersion],
         [SignedPublicKey],
+        [V2UpgradeToken],
         [MasterPasswordSalt]
     FROM
         [dbo].[User]
@@ -114,6 +115,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
     @SignedPublicKey VARCHAR(MAX) = NULL,
+    @V2UpgradeToken VARCHAR(MAX) = NULL,
     @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
@@ -174,6 +176,7 @@ BEGIN
         [SecurityVersion],
         [SignedPublicKey],
         [MaxStorageGbIncreased],
+        [V2UpgradeToken],
         [MasterPasswordSalt]
         )
     VALUES
@@ -225,6 +228,7 @@ BEGIN
             @SecurityVersion,
             @SignedPublicKey,
             @MaxStorageGb,
+            @V2UpgradeToken,
             @MasterPasswordSalt
     )
 END
@@ -277,6 +281,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
     @SignedPublicKey VARCHAR(MAX) = NULL,
+    @V2UpgradeToken VARCHAR(MAX) = NULL,
     @MasterPasswordSalt NVARCHAR(256) = NULL
 AS
 BEGIN
@@ -337,6 +342,7 @@ BEGIN
         [SecurityVersion] = @SecurityVersion,
         [SignedPublicKey] = @SignedPublicKey,
         [MaxStorageGbIncreased] = @MaxStorageGb,
+        [V2UpgradeToken] = @V2UpgradeToken,
         [MasterPasswordSalt] = @MasterPasswordSalt
     WHERE
         [Id] = @Id

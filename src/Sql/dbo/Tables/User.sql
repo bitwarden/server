@@ -73,3 +73,6 @@ GO
 CREATE NONCLUSTERED INDEX [IX_User_GatewaySubscriptionId]
     ON [dbo].[User]([GatewaySubscriptionId])
     WHERE [GatewaySubscriptionId] IS NOT NULL;
+
+ALTER TABLE [dbo].[User] ADD CONSTRAINT [CK_User_MasterPasswordAndSalt_Required]
+    CHECK (([dbo].[User].[MasterPassword] IS NULL AND [dbo].[User].[MasterPasswordSalt] IS NULL) OR ([dbo].[User].[MasterPassword] IS NOT NULL AND [dbo].[User].[MasterPasswordSalt] IS NOT NULL));

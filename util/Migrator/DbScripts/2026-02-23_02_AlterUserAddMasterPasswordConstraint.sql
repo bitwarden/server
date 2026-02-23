@@ -1,10 +1,11 @@
 /*
-    Script to finalize the addition of MasterPasswordSalt to User table by making it NOT NULL.
+    Script to finalize the addition of MasterPasswordSalt to User table by creating a constraint to ensure
+    MasterPassword and MasterPasswordSalt are always in sync (both NULL or both NOT NULL).
     This script should be run only after all existing rows have been backfilled with non-NULL values from
     the transition script 2026-02-03_00_HydrateMasterPasswordSaltColumn.sql.
 */
 
--- Guard: refuse to finalize if any NULLs remain
+-- Guard: refuse to finalize if MasterPassword and MasterPasswordSalt are out of sync
 IF EXISTS (SELECT 1
 FROM [dbo].[User]
 WHERE

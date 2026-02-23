@@ -37,7 +37,7 @@ BEGIN
             -- smaller batch size to reduce IO/blocking
             FROM [dbo].[User] WITH (INDEX([IX_User_MasterPasswordSalt]))
             WHERE [MasterPasswordSalt] IS NULL
-                AND [MasterPassword] IS NOT NULL -- Only backfill users who have a MasterPassword, as those without can have NULL salt
+                AND [MasterPassword] IS NOT NULL -- Only backfill users who have a MasterPassword, user's without MasterPassword will continue to have a NULL salt
             ORDER BY [Id]
         )
     UPDATE u
@@ -47,8 +47,8 @@ BEGIN
 
     IF @@ROWCOUNT = 0 BREAK;
 
-    -- Throttle between batches (adjust as needed)
-    WAITFOR DELAY '00:00:01';
+    -- Throttle between batches
+    WAITFOR DELAY '00:00:00.1';
 END
 GO
 
