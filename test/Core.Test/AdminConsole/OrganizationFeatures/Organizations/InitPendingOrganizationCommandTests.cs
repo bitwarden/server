@@ -157,8 +157,6 @@ public class InitPendingOrganizationCommandTests
         return protectedToken;
     }
 
-    #region InitPendingOrganizationVNextAsync Tests
-
     [Theory, BitAutoData]
     public async Task InitPendingOrganizationVNextAsync_NullOrgUser_ReturnsError(
         InitPendingOrganizationRequest request,
@@ -313,5 +311,4 @@ public class InitPendingOrganizationCommandTests
             .Returns(new List<Device>());
     }
 
-    #endregion
 }
