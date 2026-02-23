@@ -1,10 +1,11 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 /// <summary>
-/// Request model for initializing a pending organization with upfront validation.
+/// Request model for initializing a pending organization.
 /// </summary>
 public record InitPendingOrganizationRequest
 {
@@ -42,4 +43,21 @@ public record InitPendingOrganizationRequest
     /// The Organization symmetric key encrypted with the User's public key.
     /// </summary>
     public required string EncryptedOrganizationSymmetricKey { get; init; }
+}
+
+/// <summary>
+/// Enriched validation request that includes fetched entities so the validator doesn't
+/// need to perform its own data access.
+/// </summary>
+public record InitPendingOrganizationValidationRequest : InitPendingOrganizationRequest
+{
+    /// <summary>
+    /// The organization entity fetched from the database.
+    /// </summary>
+    public required Organization Organization { get; init; }
+
+    /// <summary>
+    /// The organization user entity fetched from the database.
+    /// </summary>
+    public required OrganizationUser OrganizationUser { get; init; }
 }

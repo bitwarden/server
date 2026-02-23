@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -35,7 +34,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
@@ -56,7 +54,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             IOrganizationUserRepository organizationUserRepository,
             IFeatureService featureService,
             IPolicyRequirementQuery policyRequirementQuery,
-            ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
             IEventService eventService,
             IMailService mailService,
             IUserRepository userRepository,
@@ -77,7 +74,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _organizationUserRepository = organizationUserRepository;
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
-        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _eventService = eventService;
         _mailService = mailService;
         _userRepository = userRepository;
@@ -98,7 +94,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             throw new BadRequestException("User invalid.");
         }
 
-        var tokenValid = _validator.ValidateInviteToken(orgUser, user, emailToken);
+        var tokenValid = ValidateInviteToken(orgUser, user, emailToken);
 
         if (!tokenValid)
         {
@@ -174,53 +170,45 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         }
     }
 
+    private bool ValidateInviteToken(OrganizationUser orgUser, User user, string emailToken)
+    {
+        var tokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+            _orgUserInviteTokenDataFactory, emailToken, orgUser);
+
+        return tokenValid;
+    }
+
     public async Task<CommandResult> InitPendingOrganizationVNextAsync(InitPendingOrganizationRequest request)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(request.OrganizationUserId);
-        if (orgUser == null)
+        if (orgUser is null)
         {
             return new OrganizationUserNotFoundError();
         }
 
-        if (!_validator.ValidateInviteToken(orgUser, request.User, request.EmailToken))
-        {
-            return new InvalidTokenError();
-        }
-
-        var validationError = _validator.ValidateUserEmail(orgUser, request.User);
-        if (validationError != null)
-        {
-            return validationError;
-        }
-
         var org = await _organizationRepository.GetByIdAsync(request.OrganizationId);
-        if (org == null)
+        if (org is null)
         {
             return new OrganizationNotFoundError();
         }
 
-        validationError = _validator.ValidateOrganizationMatch(orgUser, request.OrganizationId);
-        if (validationError != null)
+        var validationRequest = new InitPendingOrganizationValidationRequest
         {
-            return validationError;
-        }
+            User = request.User,
+            OrganizationId = request.OrganizationId,
+            OrganizationUserId = request.OrganizationUserId,
+            OrganizationKeys = request.OrganizationKeys,
+            CollectionName = request.CollectionName,
+            EmailToken = request.EmailToken,
+            EncryptedOrganizationSymmetricKey = request.EncryptedOrganizationSymmetricKey,
+            Organization = org,
+            OrganizationUser = orgUser,
+        };
 
-        validationError = _validator.ValidateOrganizationState(org);
-        if (validationError != null)
+        var validationResult = await _validator.ValidateAsync(validationRequest);
+        if (validationResult.IsError)
         {
-            return validationError;
-        }
-
-        validationError = await _validator.ValidatePoliciesAsync(request.User, request.OrganizationId);
-        if (validationError != null)
-        {
-            return validationError;
-        }
-
-        validationError = await _validator.ValidateFreeOrganizationLimitAsync(request.User, org, orgUser);
-        if (validationError != null)
-        {
-            return validationError;
+            return validationResult.AsError;
         }
 
         PrepareOrganizationForInitialization(org, request);
@@ -229,7 +217,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         var updateActions = BuildDatabaseUpdateActions(org, orgUser, request);
         await _organizationRepository.ExecuteOrganizationInitializationUpdatesAsync(updateActions);
 
-        await SendNotificationsAsync(org, orgUser, request.User, request.OrganizationId);
+        await SendNotificationsAsync(org, orgUser, request.User);
 
         return new None();
     }
@@ -297,7 +285,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         return _collectionRepository.BuildCreateDefaultCollectionAction(collection, collectionUsers);
     }
 
-    private async Task SendNotificationsAsync(Organization org, OrganizationUser orgUser, User user, Guid organizationId)
+    private async Task SendNotificationsAsync(Organization org, OrganizationUser orgUser, User user)
     {
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await _mailService.SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
@@ -307,6 +295,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         var deviceIds = devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
-        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, organizationId.ToString());
+        await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(deviceIds, org.Id.ToString());
     }
 }

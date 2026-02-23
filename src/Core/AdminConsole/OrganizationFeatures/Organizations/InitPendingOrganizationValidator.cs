@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -11,6 +13,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 using Error = Bit.Core.AdminConsole.Utilities.v2.Error;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -18,34 +21,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 public interface IInitPendingOrganizationValidator
 {
     /// <summary>
-    /// Validates the invite token for an organization user.
+    /// Validates all preconditions for initializing a pending organization.
     /// </summary>
-    bool ValidateInviteToken(OrganizationUser orgUser, User user, string emailToken);
-
-    /// <summary>
-    /// Validates that the user's email matches the organization user's email.
-    /// </summary>
-    Error? ValidateUserEmail(OrganizationUser orgUser, User user);
-
-    /// <summary>
-    /// Validates that the organization is in the correct state for initialization.
-    /// </summary>
-    Error? ValidateOrganizationState(Organization org);
-
-    /// <summary>
-    /// Validates that the organization user's organization ID matches the expected organization ID.
-    /// </summary>
-    Error? ValidateOrganizationMatch(OrganizationUser orgUser, Guid organizationId);
-
-    /// <summary>
-    /// Validates policy requirements for the user joining the organization.
-    /// </summary>
-    Task<Error?> ValidatePoliciesAsync(User user, Guid organizationId);
-
-    /// <summary>
-    /// Validates that a user does not exceed the free organization admin/owner limit.
-    /// </summary>
-    Task<Error?> ValidateFreeOrganizationLimitAsync(User user, Organization org, OrganizationUser orgUser);
+    Task<ValidationResult<InitPendingOrganizationValidationRequest>> ValidateAsync(
+        InitPendingOrganizationValidationRequest request);
 }
 
 public class InitPendingOrganizationValidator : IInitPendingOrganizationValidator
@@ -73,13 +52,55 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public bool ValidateInviteToken(OrganizationUser orgUser, User user, string emailToken)
+    public async Task<ValidationResult<InitPendingOrganizationValidationRequest>> ValidateAsync(
+        InitPendingOrganizationValidationRequest request)
+    {
+        if (!ValidateInviteToken(request.OrganizationUser, request.User, request.EmailToken))
+        {
+            return Invalid(request, new InvalidTokenError());
+        }
+
+        var emailError = ValidateUserEmail(request.OrganizationUser, request.User);
+        if (emailError != null)
+        {
+            return Invalid(request, emailError);
+        }
+
+        var matchError = ValidateOrganizationMatch(request.OrganizationUser, request.OrganizationId);
+        if (matchError != null)
+        {
+            return Invalid(request, matchError);
+        }
+
+        var stateError = ValidateOrganizationState(request.Organization);
+        if (stateError != null)
+        {
+            return Invalid(request, stateError);
+        }
+
+        var policyError = await ValidatePoliciesAsync(request.User, request.OrganizationId);
+        if (policyError != null)
+        {
+            return Invalid(request, policyError);
+        }
+
+        var limitError = await ValidateFreeOrganizationLimitAsync(
+            request.User, request.Organization, request.OrganizationUser);
+        if (limitError != null)
+        {
+            return Invalid(request, limitError);
+        }
+
+        return Valid(request);
+    }
+
+    private bool ValidateInviteToken(OrganizationUser orgUser, User user, string emailToken)
     {
         return OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, emailToken, orgUser);
     }
 
-    public Error? ValidateUserEmail(OrganizationUser orgUser, User user)
+    private static Error? ValidateUserEmail(OrganizationUser orgUser, User user)
     {
         if (string.IsNullOrWhiteSpace(orgUser.Email) ||
             !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
@@ -90,7 +111,7 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
         return null;
     }
 
-    public Error? ValidateOrganizationState(Organization org)
+    private static Error? ValidateOrganizationState(Organization org)
     {
         if (org.Enabled)
         {
@@ -110,7 +131,7 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
         return null;
     }
 
-    public Error? ValidateOrganizationMatch(OrganizationUser orgUser, Guid organizationId)
+    private static Error? ValidateOrganizationMatch(OrganizationUser orgUser, Guid organizationId)
     {
         if (orgUser.OrganizationId != organizationId)
         {
@@ -120,7 +141,7 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
         return null;
     }
 
-    public async Task<Error?> ValidatePoliciesAsync(User user, Guid organizationId)
+    private async Task<Error?> ValidatePoliciesAsync(User user, Guid organizationId)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
@@ -147,7 +168,7 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
         return null;
     }
 
-    public async Task<Error?> ValidateFreeOrganizationLimitAsync(User user, Organization org, OrganizationUser orgUser)
+    private async Task<Error?> ValidateFreeOrganizationLimitAsync(User user, Organization org, OrganizationUser orgUser)
     {
         if (org.PlanType == PlanType.Free &&
             (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin))

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -28,241 +29,167 @@ public class InitPendingOrganizationValidatorTests
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
     [Theory, BitAutoData]
-    public void ValidateInviteToken_ValidToken_ReturnsTrue(
+    public async Task ValidateAsync_InvalidToken_ReturnsInvalidTokenError(
         User user,
         OrganizationUser orgUser,
+        InitPendingOrganizationValidationRequest request,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
+        SetupTokenFactory(sutProvider);
         orgUser.Email = user.Email;
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
+        var validationRequest = request with
         {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-        });
+            User = user,
+            OrganizationUser = orgUser,
+            EmailToken = "invalid-token"
+        };
 
-        var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
-        var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
 
-        // Act
-        var result = sutProvider.Sut.ValidateInviteToken(orgUser, user, protectedToken);
-
-        // Assert
-        Assert.True(result);
+        Assert.True(result.IsError);
+        Assert.IsType<InvalidTokenError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public void ValidateInviteToken_InvalidToken_ReturnsFalse(
+    public async Task ValidateAsync_EmailMismatch_ReturnsEmailMismatchError(
         User user,
         OrganizationUser orgUser,
+        Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
+        orgUser.Email = "orguser@example.com";
+        var token = CreateValidToken(orgUser, sutProvider);
 
-        // Act
-        var result = sutProvider.Sut.ValidateInviteToken(orgUser, user, "invalid-token");
+        user.Email = "differentuser@example.com";
 
-        // Assert
-        Assert.False(result);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
+
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<EmailMismatchError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public void ValidateUserEmail_MatchingEmail_ReturnsNull(
+    public async Task ValidateAsync_NullOrgUserEmail_ReturnsInvalidTokenError(
         User user,
         OrganizationUser orgUser,
+        Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
         orgUser.Email = user.Email;
-
-        // Act
-        var result = sutProvider.Sut.ValidateUserEmail(orgUser, user);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public void ValidateUserEmail_MismatchedEmail_ReturnsError(
-        User user,
-        OrganizationUser orgUser,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
-        orgUser.Email = "different@example.com";
-        user.Email = "user@example.com";
-
-        // Act
-        var result = sutProvider.Sut.ValidateUserEmail(orgUser, user);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<EmailMismatchError>(result);
-    }
-
-    [Theory, BitAutoData]
-    public void ValidateUserEmail_NullOrgUserEmail_ReturnsError(
-        User user,
-        OrganizationUser orgUser,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
+        var token = CreateValidToken(orgUser, sutProvider);
         orgUser.Email = null;
 
-        // Act
-        var result = sutProvider.Sut.ValidateUserEmail(orgUser, user);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<EmailMismatchError>(result);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<InvalidTokenError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public void ValidateOrganizationState_ValidState_ReturnsNull(
+    public async Task ValidateAsync_OrganizationMismatch_ReturnsOrganizationMismatchError(
+        User user,
+        OrganizationUser orgUser,
         Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
-        org.Enabled = false;
-        org.Status = OrganizationStatusType.Pending;
-        org.PublicKey = null;
-        org.PrivateKey = null;
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        orgUser.OrganizationId = Guid.NewGuid();
+        SetValidOrganizationState(org);
 
-        // Act
-        var result = sutProvider.Sut.ValidateOrganizationState(org);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
 
-        // Assert
-        Assert.Null(result);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationMismatchError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public void ValidateOrganizationState_OrgEnabled_ReturnsError(
+    public async Task ValidateAsync_OrgEnabled_ReturnsOrganizationAlreadyEnabledError(
+        User user,
+        OrganizationUser orgUser,
         Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
         org.Enabled = true;
         org.Status = OrganizationStatusType.Pending;
         org.PublicKey = null;
         org.PrivateKey = null;
 
-        // Act
-        var result = sutProvider.Sut.ValidateOrganizationState(org);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<OrganizationAlreadyEnabledError>(result);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationAlreadyEnabledError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public void ValidateOrganizationState_OrgNotPending_ReturnsError(
+    public async Task ValidateAsync_OrgNotPending_ReturnsOrganizationNotPendingError(
+        User user,
+        OrganizationUser orgUser,
         Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
         org.Enabled = false;
         org.Status = OrganizationStatusType.Created;
         org.PublicKey = null;
         org.PrivateKey = null;
 
-        // Act
-        var result = sutProvider.Sut.ValidateOrganizationState(org);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<OrganizationNotPendingError>(result);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationNotPendingError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public void ValidateOrganizationState_OrgHasKeys_ReturnsError(
+    public async Task ValidateAsync_OrgHasKeys_ReturnsOrganizationHasKeysError(
+        User user,
+        OrganizationUser orgUser,
         Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
         org.Enabled = false;
         org.Status = OrganizationStatusType.Pending;
         org.PublicKey = "existing-public-key";
         org.PrivateKey = "existing-private-key";
 
-        // Act
-        var result = sutProvider.Sut.ValidateOrganizationState(org);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<OrganizationHasKeysError>(result);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<OrganizationHasKeysError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public void ValidateOrganizationMatch_Matching_ReturnsNull(
-        OrganizationUser orgUser,
-        Guid organizationId,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
-        orgUser.OrganizationId = organizationId;
-
-        // Act
-        var result = sutProvider.Sut.ValidateOrganizationMatch(orgUser, organizationId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public void ValidateOrganizationMatch_NotMatching_ReturnsError(
-        OrganizationUser orgUser,
-        Guid organizationId,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
-        orgUser.OrganizationId = Guid.NewGuid();
-
-        // Act
-        var result = sutProvider.Sut.ValidateOrganizationMatch(orgUser, organizationId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<OrganizationMismatchError>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidatePoliciesAsync_AllPoliciesPass_ReturnsNull(
+    public async Task ValidateAsync_SingleOrgPolicyViolation_ReturnsError(
         User user,
-        Guid organizationId,
+        OrganizationUser orgUser,
+        Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Any<string>())
-            .Returns(false);
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        SetValidOrganizationState(org);
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
-            .Returns(false);
-
-        var twoFactorReq = new RequireTwoFactorPolicyRequirement(Enumerable.Empty<PolicyDetails>());
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
-            .Returns(twoFactorReq);
-
-        // Act
-        var result = await sutProvider.Sut.ValidatePoliciesAsync(user, organizationId);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidatePoliciesAsync_SingleOrgPolicyViolation_ReturnsError(
-        User user,
-        Guid organizationId,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(Arg.Any<string>())
             .Returns(false);
@@ -271,21 +198,64 @@ public class InitPendingOrganizationValidatorTests
             .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
             .Returns(true);
 
-        // Act
-        var result = await sutProvider.Sut.ValidatePoliciesAsync(user, organizationId);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<SingleOrgPolicyViolationError>(result);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<SingleOrgPolicyViolationError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidatePoliciesAsync_TwoFactorRequired_UserDoesNotHave2FA_ReturnsError(
+    public async Task ValidateAsync_AutoConfirmPolicyViolation_ReturnsError(
         User user,
-        Guid organizationId,
+        OrganizationUser orgUser,
+        Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        SetValidOrganizationState(org);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyDetails = new PolicyDetails
+        {
+            OrganizationId = org.Id,
+            PolicyType = PolicyType.AutomaticUserConfirmation,
+            OrganizationUserType = OrganizationUserType.Owner,
+            OrganizationUserStatus = OrganizationUserStatusType.Invited
+        };
+
+        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new[] { policyDetails });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(autoConfirmReq);
+
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
+
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<SingleOrgPolicyViolationError>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_TwoFactorRequired_UserDoesNotHave2FA_ReturnsError(
+        User user,
+        OrganizationUser orgUser,
+        Organization org,
+        SutProvider<InitPendingOrganizationValidator> sutProvider)
+    {
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        SetValidOrganizationState(org);
+
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(Arg.Any<string>())
             .Returns(false);
@@ -294,9 +264,12 @@ public class InitPendingOrganizationValidatorTests
             .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
             .Returns(false);
 
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
+
         var policyDetails = new PolicyDetails
         {
-            OrganizationId = organizationId,
+            OrganizationId = validationRequest.OrganizationId,
             PolicyType = PolicyType.TwoFactorAuthentication,
             OrganizationUserType = OrganizationUserType.Owner,
             OrganizationUserStatus = OrganizationUserStatusType.Invited
@@ -311,125 +284,173 @@ public class InitPendingOrganizationValidatorTests
             .TwoFactorIsEnabledAsync(user)
             .Returns(false);
 
-        // Act
-        var result = await sutProvider.Sut.ValidatePoliciesAsync(user, organizationId);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<TwoFactorRequiredError>(result);
+        Assert.True(result.IsError);
+        Assert.IsType<TwoFactorRequiredError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateFreeOrganizationLimitAsync_PaidOrg_ReturnsNull(
+    public async Task ValidateAsync_FreeOrgAdminLimitExceeded_ReturnsError(
         User user,
-        Organization org,
         OrganizationUser orgUser,
+        Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
-        org.PlanType = PlanType.EnterpriseAnnually;
-        orgUser.Type = OrganizationUserType.Owner;
-
-        // Act
-        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateFreeOrganizationLimitAsync_FreeOrgNonAdmin_ReturnsNull(
-        User user,
-        Organization org,
-        OrganizationUser orgUser,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
-        org.PlanType = PlanType.Free;
-        orgUser.Type = OrganizationUserType.User;
-
-        // Act
-        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateFreeOrganizationLimitAsync_FreeOrgAdminNoExisting_ReturnsNull(
-        User user,
-        Organization org,
-        OrganizationUser orgUser,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        SetValidOrganizationState(org);
         org.PlanType = PlanType.Free;
         orgUser.Type = OrganizationUserType.Owner;
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
-            .Returns(0);
-
-        // Act
-        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateFreeOrganizationLimitAsync_FreeOrgAdminLimitExceeded_ReturnsError(
-        User user,
-        Organization org,
-        OrganizationUser orgUser,
-        SutProvider<InitPendingOrganizationValidator> sutProvider)
-    {
-        // Arrange
-        org.PlanType = PlanType.Free;
-        orgUser.Type = OrganizationUserType.Owner;
+        SetupPassingPolicies(user, sutProvider);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetCountByFreeOrganizationAdminUserAsync(user.Id)
             .Returns(1);
 
-        // Act
-        var result = await sutProvider.Sut.ValidateFreeOrganizationLimitAsync(user, org, orgUser);
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<FreeOrgAdminLimitError>(result);
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsError);
+        Assert.IsType<FreeOrgAdminLimitError>(result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidatePoliciesAsync_AutoConfirmPolicyViolation_ReturnsError(
+    public async Task ValidateAsync_AllValid_ReturnsValid(
         User user,
-        Guid organizationId,
+        OrganizationUser orgUser,
+        Organization org,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        SetValidOrganizationState(org);
 
-        var policyDetails = new PolicyDetails
+        SetupPassingPolicies(user, sutProvider);
+
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
+
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_PaidOrg_SkipsFreeOrgLimit_ReturnsValid(
+        User user,
+        OrganizationUser orgUser,
+        Organization org,
+        SutProvider<InitPendingOrganizationValidator> sutProvider)
+    {
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        SetValidOrganizationState(org);
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.Type = OrganizationUserType.Owner;
+
+        SetupPassingPolicies(user, sutProvider);
+
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
+
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_FreeOrgNonAdmin_SkipsFreeOrgLimit_ReturnsValid(
+        User user,
+        OrganizationUser orgUser,
+        Organization org,
+        SutProvider<InitPendingOrganizationValidator> sutProvider)
+    {
+        orgUser.Email = user.Email;
+        var token = CreateValidToken(orgUser, sutProvider);
+        SetValidOrganizationState(org);
+        org.PlanType = PlanType.Free;
+        orgUser.Type = OrganizationUserType.User;
+
+        SetupPassingPolicies(user, sutProvider);
+
+        var validationRequest = CreateValidationRequest(user, org, orgUser, token);
+        orgUser.OrganizationId = validationRequest.OrganizationId;
+
+        var result = await sutProvider.Sut.ValidateAsync(validationRequest);
+
+        Assert.True(result.IsValid);
+    }
+
+    private void SetupTokenFactory(SutProvider<InitPendingOrganizationValidator> sutProvider)
+    {
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+    }
+
+    private string CreateValidToken(
+        OrganizationUser orgUser,
+        SutProvider<InitPendingOrganizationValidator> sutProvider)
+    {
+        SetupTokenFactory(sutProvider);
+
+        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
         {
-            OrganizationId = organizationId,
-            PolicyType = PolicyType.AutomaticUserConfirmation,
-            OrganizationUserType = OrganizationUserType.Owner,
-            OrganizationUserStatus = OrganizationUserStatusType.Invited
+            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+        });
+
+        var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
+        return _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+    }
+
+    private static void SetValidOrganizationState(Organization org)
+    {
+        org.Enabled = false;
+        org.Status = OrganizationStatusType.Pending;
+        org.PublicKey = null;
+        org.PrivateKey = null;
+    }
+
+    private static InitPendingOrganizationValidationRequest CreateValidationRequest(
+        User user,
+        Organization org,
+        OrganizationUser orgUser,
+        string emailToken)
+    {
+        return new InitPendingOrganizationValidationRequest
+        {
+            User = user,
+            OrganizationId = Guid.NewGuid(),
+            OrganizationUserId = orgUser.Id,
+            OrganizationKeys = new Bit.Core.KeyManagement.Models.Data.PublicKeyEncryptionKeyPairData(
+                wrappedPrivateKey: "wrapped-private-key",
+                publicKey: "public-key"),
+            CollectionName = null,
+            EmailToken = emailToken,
+            EncryptedOrganizationSymmetricKey = "encrypted-org-key",
+            Organization = org,
+            OrganizationUser = orgUser,
         };
+    }
 
-        var autoConfirmReq = new AutomaticUserConfirmationPolicyRequirement(new[] { policyDetails });
+    private static void SetupPassingPolicies(
+        User user,
+        SutProvider<InitPendingOrganizationValidator> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Arg.Any<string>())
+            .Returns(false);
 
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
+            .Returns(false);
+
+        var twoFactorReq = new RequireTwoFactorPolicyRequirement(Enumerable.Empty<PolicyDetails>());
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
-            .Returns(autoConfirmReq);
-
-        // Act
-        var result = await sutProvider.Sut.ValidatePoliciesAsync(user, organizationId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.IsType<SingleOrgPolicyViolationError>(result);
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(twoFactorReq);
     }
 }
