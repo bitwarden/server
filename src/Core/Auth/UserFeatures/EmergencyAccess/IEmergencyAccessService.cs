@@ -43,6 +43,7 @@ public interface IEmergencyAccessService
     /// <param name="emergencyAccessId">Id of the emergency access being acted on</param>
     /// <param name="userId">Id of the user (needs to be the grantor or grantee) trying to delete the emergency access</param>
     /// <returns>void</returns>
+    [Obsolete("Use IDeleteEmergencyAccessCommand.DeleteByIdAndUserIdAsync instead.")]
     Task DeleteAsync(Guid emergencyAccessId, Guid userId);
     /// <summary>
     /// The grantor user confirms the acceptance of the emergency contact request. This stores the encrypted key allowing the grantee
