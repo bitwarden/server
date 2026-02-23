@@ -7,9 +7,9 @@ namespace Bit.Seeder.Pipeline;
 /// Fluent API for building seeding pipelines with DI-based step registration and validation.
 /// </summary>
 /// <remarks>
-/// RecipeBuilder wraps <see cref="IServiceCollection"/> and a recipe name.
-/// It tracks step count for deterministic ordering and validation flags for dependency rules.
-/// <strong>Phase Order:</strong> Org → Owner → Generator → Roster → Users → Groups → Collections → Ciphers
+/// Wraps <see cref="IServiceCollection"/> and a recipe name, tracking step count for
+/// deterministic ordering and validation flags for dependency rules.
+/// <strong>Phase Order:</strong> Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
 /// </remarks>
 public class RecipeBuilder
 {
@@ -39,13 +39,19 @@ public class RecipeBuilder
 
     internal bool HasGeneratedCiphers { get; set; }
 
+    internal bool HasFolders { get; set; }
+
+    internal bool HasCipherFolderAssignment { get; set; }
+
+    internal bool HasPersonalCiphers { get; set; }
+
     /// <summary>
     /// Registers a step as a keyed singleton service with preserved ordering.
     /// </summary>
     /// <remarks>
     /// Steps execute in the order they are registered. Callers must register steps
     /// in the correct phase order: Org, Owner, Generator, Roster, Users, Groups,
-    /// Collections, Ciphers.
+    /// Collections, Folders, Ciphers, PersonalCiphers.
     /// </remarks>
     /// <param name="factory">Factory function that creates the step from an IServiceProvider</param>
     /// <returns>This builder for fluent chaining</returns>

@@ -7,7 +7,9 @@ internal record SeedPreset
     public SeedPresetUsers? Users { get; init; }
     public SeedPresetGroups? Groups { get; init; }
     public SeedPresetCollections? Collections { get; init; }
+    public bool? Folders { get; init; }
     public SeedPresetCiphers? Ciphers { get; init; }
+    public SeedPresetPersonalCiphers? PersonalCiphers { get; init; }
 }
 
 internal record SeedPresetOrganization
@@ -15,7 +17,8 @@ internal record SeedPresetOrganization
     public string? Fixture { get; init; }
     public string? Name { get; init; }
     public string? Domain { get; init; }
-    public int Seats { get; init; } = 10;
+    public int? Seats { get; init; }
+    public string? PlanType { get; init; }
 }
 
 internal record SeedPresetRoster
@@ -43,4 +46,10 @@ internal record SeedPresetCiphers
 {
     public string? Fixture { get; init; }
     public int Count { get; init; }
+    public bool AssignFolders { get; init; }
+}
+
+internal record SeedPresetPersonalCiphers
+{
+    public int CountPerUser { get; init; }
 }

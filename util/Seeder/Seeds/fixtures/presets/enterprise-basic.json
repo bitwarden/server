@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "qa-enterprise",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "enterprise-basic"
+  },
+  "ciphers": {
+    "fixture": "enterprise-basic"
+  }
+}

@@ -13,13 +13,12 @@ Hand-crafted JSON fixtures for Bitwarden Seeder test data.
 ```
 Seeds/
 ├── fixtures/           Your seed data goes here
-│   ├── ciphers/        Vault items (logins, cards, identities, notes)
+│   ├── ciphers/        Vault items
 │   ├── organizations/  Organization definitions
 │   ├── rosters/        Users, groups, collections, permissions
 │   └── presets/        Complete seeding scenarios
 ├── schemas/            JSON Schema validation (auto-checked by editors)
 ├── templates/          Starter files - copy these
-│   └── CONTRIBUTING.md Detailed guide for contributors
 └── README.md           This file
 ```
 
@@ -27,81 +26,46 @@ Seeds/
 
 ### Ciphers
 
-Vault items - logins, cards, identities, secure notes.
-
 | Type         | Required Object | Description                |
 | ------------ | --------------- | -------------------------- |
 | `login`      | `login`         | Website credentials + URIs |
 | `card`       | `card`          | Payment card details       |
 | `identity`   | `identity`      | Personal identity info     |
 | `secureNote` | —               | Uses `notes` field only    |
+| `sshKey`     | `sshKey`        | SSH key credentials        |
 
-**Example** (`fixtures/ciphers/banking-logins.json`):
-
-```json
-{
-  "$schema": "../../schemas/cipher.schema.json",
-  "items": [
-    {
-      "type": "login",
-      "name": "Chase Bank",
-      "login": {
-        "username": "myuser",
-        "password": "MyP@ssw0rd",
-        "uris": [{ "uri": "https://chase.com", "match": "domain" }]
-      }
-    }
-  ]
-}
-```
+**Schema**: `schemas/cipher.schema.json`
 
 ### Organizations
 
-Organization definitions with name, domain, and seat count.
+Organization identity definitions with name and domain. Plan type and seats are defined in presets, not org fixtures.
 
-```json
-{
-  "$schema": "../../schemas/organization.schema.json",
-  "name": "Acme Corp",
-  "domain": "acme.com",
-  "seats": 100
-}
-```
+**Required fields**: `name`, `domain`
+
+**Schema**: `schemas/organization.schema.json`
 
 ### Rosters
 
 Complete user/group/collection structures with permissions. User emails auto-generated as `firstName.lastName@domain`.
 
 **User roles**: `owner`, `admin`, `user`, `custom`
-
 **Collection permissions**: `readOnly`, `hidePasswords`, `manage`
-
-See `rosters/dunder-mifflin.json` for a complete 58-user example.
+**Schema**: `schemas/roster.schema.json`
+**Example**: See `fixtures/rosters/dunder-mifflin.json` for a complete 58-user example
 
 ### Presets
 
-Combine organization, roster, and ciphers into complete scenarios.
+Combine organization, roster, and ciphers into complete scenarios. Presets can reference fixtures, generate data programmatically, or mix both approaches.
 
-**From fixtures**:
+**Key features**:
 
-```json
-{
-  "$schema": "../../schemas/preset.schema.json",
-  "organization": { "fixture": "acme-corp" },
-  "roster": { "fixture": "acme-roster" },
-  "ciphers": { "fixture": "banking-logins" }
-}
-```
+- Reference existing fixtures by name
+- Generate users, groups, collections, and ciphers with count parameters
+- Add personal ciphers (user-owned, encrypted with user key, not in collections)
+- Mix fixture references and generated data
 
-**Mixed approach**:
-
-```json
-{
-  "organization": { "fixture": "acme-corp" },
-  "users": { "count": 50 },
-  "ciphers": { "count": 500 }
-}
-```
+**Schema**: `schemas/preset.schema.json`
+**Examples**: See `fixtures/presets/` for complete examples including fixture-based, generated, and hybrid approaches
 
 ## Validation
 
@@ -113,19 +77,6 @@ Build errors catch schema violations:
 dotnet build util/Seeder/Seeder.csproj
 ```
 
-## Testing
-
-Add integration test in `test/SeederApi.IntegrationTest/SeedReaderTests.cs`:
-
-```csharp
-[Fact]
-public void Read_YourFixture_Success()
-{
-    var result = _reader.Read<SeedFile>("ciphers.your-fixture");
-    Assert.NotEmpty(result.Items);
-}
-```
-
 ## Naming Conventions
 
 | Element     | Pattern            | Example                  |
@@ -135,15 +86,39 @@ public void Read_YourFixture_Success()
 | User refs   | firstName.lastName | `jane.doe`               |
 | Org domains | Realistic or .test | `acme.com`, `test.local` |
 
+## QA Test Fixture Migration Matrix
+
+These Seeds consolidate test data previously found across the `bitwarden/test` repo.
+The table below maps existing QA fixtures to their Seeder equivalents.
+
+| QA Source (`test/Bitwarden.Web.Tests/TestData/SetupData/`) | Used By                           | Seeder Preset                       | Org Fixture                 | Roster Fixture           | Cipher Fixture           |
+| ---------------------------------------------------------- | --------------------------------- | ----------------------------------- | --------------------------- | ------------------------ | ------------------------ |
+| `CollectionPermissionsOrg.json`                            | Web, Extension                    | `collection-permissions-enterprise` | `qa-collection-permissions` | `collection-permissions` | `collection-permissions` |
+| `EnterpriseOrg.json`                                       | Web, Extension, Android, iOS, CLI | `enterprise-basic`                  | `qa-enterprise`             | `enterprise-basic`       | `enterprise-basic`       |
+| `SsoOrg.json`                                              | Web                               | `sso-enterprise`                    | `qa-sso-org`                | `sso-basic`              | `sso-vault`              |
+| `TDEOrg.json`                                              | Web, Extension, Android, iOS      | `tde-enterprise`                    | `qa-tde-org`                | `tde-basic`              | `tde-vault`              |
+| _(Confluence: Policy Org guide)_                           | QA manual setup                   | `policy-enterprise`                 | `qa-policy-org`             | `policy-org`             | —                        |
+
+### Not Yet Migrated
+
+| QA Source             | Used By                      | Status                                                                |
+| --------------------- | ---------------------------- | --------------------------------------------------------------------- |
+| `FreeAccount.json`    | All 7 platforms              | Planned — `free-personal-vault` preset (separate PR due to file size) |
+| `FamiliesOrg.json`    | Web, Extension               | Planned — `families-basic` preset                                     |
+| `PremiumAccount.json` | Web, Extension, Android, iOS | Planned — `premium-personal-vault` preset                             |
+| `SecretsManager.json` | Web                          | Planned — `secrets-manager-enterprise` preset                         |
+| `FreeOrg.json`        | Web                          | Planned — `free-org-basic` preset                                     |
+
+### Additional Sources
+
+| Source                             | Location                        | Status                                                                                                           |
+| ---------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `bw_importer.py`                   | `github.com/bitwarden/qa-tools` | Superseded by generation-based presets (`"ciphers": {"count": N}`)                                               |
+| `mass_org_manager.py`              | `github.com/bitwarden/qa-tools` | Superseded by roster fixtures with groups/members/collections                                                    |
+| Admin Console Testing Setup guides | Confluence QA space             | Codified as `collection-permissions-enterprise`, `policy-enterprise`, `sso-enterprise`, `tde-enterprise` presets |
+
 ## Security
 
-- Test password: `asdfasdfasdf`
 - Use fictional names/addresses
 - Never commit real passwords or PII
 - Never seed production databases
-
-## Examples
-
-- **Small org**: `presets/dunder-mifflin-full.json` (58 users, realistic structure)
-- **Browser testing**: `ciphers/autofill-testing.json` (18 specialized items)
-- **Real websites**: `ciphers/public-site-logins.json` (90+ website examples)

@@ -28,13 +28,14 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         var organizationUsers = new List<OrganizationUser>(count);
         var hardenedOrgUserIds = new List<Guid>();
         var userDigests = new List<EntityRegistry.UserDigest>();
+        var password = context.GetPassword();
 
         for (var i = 0; i < count; i++)
         {
             var email = $"user{i}@{domain}";
             var mangledEmail = context.GetMangler().Mangle(email);
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, UserSeeder.DefaultPassword);
-            var user = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password);
+            var user = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password);
 
             var status = statusDistribution.Select(i, count);
 
