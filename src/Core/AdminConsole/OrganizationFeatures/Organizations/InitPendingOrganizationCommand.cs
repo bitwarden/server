@@ -14,10 +14,8 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -28,8 +26,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly ICollectionRepository _collectionRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IDataProtector _dataProtector;
-    private readonly IGlobalSettings _globalSettings;
     private readonly IPolicyService _policyService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IFeatureService _featureService;
@@ -48,8 +44,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             ICollectionRepository collectionRepository,
             IOrganizationRepository organizationRepository,
             IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-            IDataProtectionProvider dataProtectionProvider,
-            IGlobalSettings globalSettings,
             IPolicyService policyService,
             IOrganizationUserRepository organizationUserRepository,
             IFeatureService featureService,
@@ -68,8 +62,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _collectionRepository = collectionRepository;
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
-        _globalSettings = globalSettings;
         _policyService = policyService;
         _organizationUserRepository = organizationUserRepository;
         _featureService = featureService;
