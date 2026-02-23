@@ -1,0 +1,64 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "Enterprise", "lastName": "Owner", "role": "owner" },
+    { "firstName": "Enterprise", "lastName": "Admin", "role": "admin" },
+    { "firstName": "Enterprise", "lastName": "User", "role": "user" },
+    { "firstName": "Enterprise", "lastName": "Custom", "role": "custom" },
+    { "firstName": "Enterprise", "lastName": "Custom-Two", "role": "custom" }
+  ],
+  "groups": [
+    {
+      "name": "All Members",
+      "members": [
+        "enterprise.owner",
+        "enterprise.admin",
+        "enterprise.user",
+        "enterprise.custom",
+        "enterprise.custom-two"
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Default collection",
+      "groups": [{ "group": "All Members" }],
+      "users": [{ "user": "enterprise.owner", "manage": true }]
+    },
+    { "name": "Collection-20360", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-20356", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-1793363", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-21895", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-20319", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-317432", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-997761-2", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-1793362", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-20308", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-21896", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-20359", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-20358", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-19619", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-19711", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-21891", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-997761-1", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-1867254", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-383003", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-19620", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-19933", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-20306", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-20294", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-842054", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-1892038", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-1892039", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-1892047-No-Access" },
+    { "name": "Collection-1892047-View", "groups": [{ "group": "All Members", "readOnly": true }] },
+    { "name": "Collection-1892047-Manage", "groups": [{ "group": "All Members", "manage": true }] },
+    { "name": "Collection-2532597", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-1793366", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-3925894", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-4204903", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-5172094", "externalId": "Collection-5172094", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-3392572", "groups": [{ "group": "All Members" }] },
+    { "name": "Collection-3171087", "groups": [{ "group": "All Members" }] }
+  ]
+}

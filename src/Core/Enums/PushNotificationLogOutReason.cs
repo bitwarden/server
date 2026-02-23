@@ -2,5 +2,6 @@
 
 public enum PushNotificationLogOutReason : byte
 {
-    KdfChange = 0
+    KdfChange = 0,
+    KeyRotation = 1
 }
