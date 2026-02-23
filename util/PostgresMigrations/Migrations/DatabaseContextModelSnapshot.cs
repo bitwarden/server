@@ -2061,6 +2061,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("text");
+
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("boolean");
 

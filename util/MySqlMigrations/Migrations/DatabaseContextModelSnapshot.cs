@@ -2055,6 +2055,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("tinyint(1)");
 
