@@ -60,7 +60,7 @@ public class TwoFactorAuthenticationValidator(
         var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)).ToList();
         if (orgs.Count > 0)
         {
-            var orgAbilities = await _applicationCacheService.FakeGetOrganizationAbilitiesAsync();
+            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync([]);
             var twoFactorOrgs = orgs.Where(o => OrgUsing2fa(orgAbilities, o.Id));
             if (twoFactorOrgs.Any())
             {
