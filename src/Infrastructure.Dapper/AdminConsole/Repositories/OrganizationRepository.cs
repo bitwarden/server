@@ -5,7 +5,6 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
@@ -279,19 +278,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             commandType: CommandType.StoredProcedure);
     }
 
-    public OrganizationInitializationUpdateAction BuildUpdateOrganizationAction(Organization organization)
-    {
-        return async (SqlConnection? connection, SqlTransaction? transaction, object? context) =>
-        {
-            await connection!.ExecuteAsync(
-                "[dbo].[Organization_Update]",
-                organization,
-                commandType: CommandType.StoredProcedure,
-                transaction: transaction);
-        };
-    }
-
-    public async Task ExecuteOrganizationInitializationUpdatesAsync(IEnumerable<OrganizationInitializationUpdateAction> updateActions)
+    public async Task InitializeOrganizationAsync(Organization organization, OrganizationInitializationAction confirmOwnerAction)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
@@ -299,10 +286,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
 
         try
         {
-            foreach (var action in updateActions)
-            {
-                await action(connection, transaction);
-            }
+            await connection.ExecuteAsync(
+                "[dbo].[Organization_Update]",
+                organization,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await confirmOwnerAction(connection, transaction);
+
             await transaction.CommitAsync();
         }
         catch (Exception ex)

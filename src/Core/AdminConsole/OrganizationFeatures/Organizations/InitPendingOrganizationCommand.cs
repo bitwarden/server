@@ -15,7 +15,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
@@ -55,8 +54,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             IPushRegistrationService pushRegistrationService,
             IDeviceRepository deviceRepository,
             IInitPendingOrganizationValidator validator,
-            TimeProvider timeProvider
-            )
+            TimeProvider timeProvider)
     {
         _organizationService = organizationService;
         _collectionRepository = collectionRepository;
@@ -206,8 +204,11 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         PrepareOrganizationForInitialization(org, request);
         PrepareOrganizationUserForConfirmation(orgUser, request);
 
-        var updateActions = BuildDatabaseUpdateActions(org, orgUser, request);
-        await _organizationRepository.ExecuteOrganizationInitializationUpdatesAsync(updateActions);
+        var confirmOwnerAction = _organizationUserRepository.BuildConfirmOwnerAction(orgUser);
+        await _organizationRepository.InitializeOrganizationAsync(org, confirmOwnerAction);
+
+        await VerifyUserEmailAsync(request.User);
+        await CreateDefaultCollectionAsync(orgUser, request);
 
         await SendNotificationsAsync(org, orgUser, request.User);
 
@@ -231,50 +232,37 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         orgUser.Email = null;
     }
 
-    private List<OrganizationInitializationUpdateAction> BuildDatabaseUpdateActions(
-        Organization org,
-        OrganizationUser orgUser,
-        InitPendingOrganizationRequest request)
+    private async Task VerifyUserEmailAsync(User user)
     {
-        List<OrganizationInitializationUpdateAction> updateActions =
-        [
-            _organizationRepository.BuildUpdateOrganizationAction(org),
-            _organizationUserRepository.BuildConfirmOrganizationUserAction(orgUser),
-            _userRepository.BuildVerifyUserEmailAction(request.User.Id),
-        ];
-
-        if (!string.IsNullOrWhiteSpace(request.CollectionName))
+        if (!user.EmailVerified)
         {
-            var defaultCollectionAction = CreateDefaultCollectionAction(request);
-            updateActions.Add(defaultCollectionAction);
+            user.EmailVerified = true;
+            await _userRepository.ReplaceAsync(user);
         }
-
-        return updateActions;
     }
 
-    private OrganizationInitializationUpdateAction CreateDefaultCollectionAction(InitPendingOrganizationRequest request)
+    private async Task CreateDefaultCollectionAsync(OrganizationUser orgUser, InitPendingOrganizationRequest request)
     {
-        var collection = new Collection
+        if (string.IsNullOrWhiteSpace(request.CollectionName))
         {
-            Id = CoreHelpers.GenerateComb(),
-            Name = request.CollectionName!,
-            OrganizationId = request.OrganizationId,
-            CreationDate = _timeProvider.GetUtcNow().UtcDateTime,
-            RevisionDate = _timeProvider.GetUtcNow().UtcDateTime
+            return;
+        }
+
+        List<CollectionAccessSelection> defaultOwnerAccess =
+        [
+            new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }
+        ];
+
+        var defaultCollection = new Collection
+        {
+            Name = request.CollectionName,
+            OrganizationId = request.OrganizationId
         };
 
-        var collectionUsers = new[]
-        {
-            new CollectionAccessSelection
-            {
-                Id = request.OrganizationUserId,
-                HidePasswords = false,
-                ReadOnly = false,
-                Manage = true
-            }
-        };
-
-        return _collectionRepository.BuildCreateDefaultCollectionAction(collection, collectionUsers);
+        await _collectionRepository.CreateAsync(
+            obj: defaultCollection,
+            groups: null,
+            users: defaultOwnerAccess);
     }
 
     private async Task SendNotificationsAsync(Organization org, OrganizationUser orgUser, User user)

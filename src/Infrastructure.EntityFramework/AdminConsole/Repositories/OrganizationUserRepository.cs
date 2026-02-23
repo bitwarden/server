@@ -10,7 +10,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -981,7 +980,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public OrganizationInitializationUpdateAction BuildConfirmOrganizationUserAction(Core.Entities.OrganizationUser organizationUser)
+    public OrganizationInitializationAction BuildConfirmOwnerAction(Core.Entities.OrganizationUser organizationUser)
     {
         return async (SqlConnection? _, SqlTransaction? _, object? context) =>
         {

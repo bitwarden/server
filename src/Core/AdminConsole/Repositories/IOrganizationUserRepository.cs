@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 #nullable enable
 
@@ -111,9 +110,12 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId);
 
     /// <summary>
-    /// Builds an action that confirms an organization user (sets status to Confirmed, links to user, sets key).
+    /// Builds an action that confirms the organization owner within a shared transaction.
+    /// The returned action is intended to be passed to
+    /// <see cref="IOrganizationRepository.InitializeOrganizationAsync"/> to execute atomically
+    /// alongside the organization update.
     /// </summary>
-    /// <param name="organizationUser">The organization user entity with updated properties</param>
+    /// <param name="organizationUser">The organization user entity with updated properties (status, userId, key)</param>
     /// <returns>An action that can be executed within a transaction</returns>
-    OrganizationInitializationUpdateAction BuildConfirmOrganizationUserAction(OrganizationUser organizationUser);
+    OrganizationInitializationAction BuildConfirmOwnerAction(OrganizationUser organizationUser);
 }

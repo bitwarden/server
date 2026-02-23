@@ -2,11 +2,20 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Microsoft.Data.SqlClient;
 
 #nullable enable
 
 namespace Bit.Core.Repositories;
+
+/// <summary>
+/// Represents a database action that can be executed within a shared transaction
+/// during organization initialization. Used to atomically update the organization
+/// and confirm the first org user together.
+/// </summary>
+public delegate Task OrganizationInitializationAction(SqlConnection? connection = null,
+    SqlTransaction? transaction = null,
+    object? context = null);
 
 public interface IOrganizationRepository : IRepository<Organization, Guid>
 {
@@ -69,16 +78,11 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
 
     /// <summary>
-    /// Builds an action that updates an organization for initialization (sets keys, status, and enabled state).
+    /// Atomically initializes a pending organization and confirms its first owner user
+    /// within a single transaction. Both updates succeed or fail together.
     /// </summary>
-    /// <param name="organization">The organization entity with updated properties</param>
-    /// <returns>An action that can be executed within a transaction</returns>
-    OrganizationInitializationUpdateAction BuildUpdateOrganizationAction(Organization organization);
-
-    /// <summary>
-    /// Executes organization initialization updates within a single transaction.
-    /// </summary>
-    /// <param name="updateActions">Collection of initialization update delegates to execute</param>
-    /// <returns>A task representing the asynchronous operation</returns>
-    Task ExecuteOrganizationInitializationUpdatesAsync(IEnumerable<OrganizationInitializationUpdateAction> updateActions);
+    /// <param name="organization">The organization entity with updated properties (enabled, keys, status)</param>
+    /// <param name="confirmOwnerAction">Action to confirm the organization owner, obtained from
+    /// <see cref="IOrganizationUserRepository.BuildConfirmOwnerAction"/></param>
+    Task InitializeOrganizationAsync(Organization organization, OrganizationInitializationAction confirmOwnerAction);
 }

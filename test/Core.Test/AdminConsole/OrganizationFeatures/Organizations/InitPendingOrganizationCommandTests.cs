@@ -7,7 +7,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -225,7 +224,7 @@ public class InitPendingOrganizationCommandTests
 
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceive()
-            .ExecuteOrganizationInitializationUpdatesAsync(Arg.Any<IEnumerable<OrganizationInitializationUpdateAction>>());
+            .InitializeOrganizationAsync(Arg.Any<Organization>(), Arg.Any<OrganizationInitializationAction>());
     }
 
     [Theory, BitAutoData]
@@ -243,8 +242,12 @@ public class InitPendingOrganizationCommandTests
         Assert.False(result.IsError);
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        await organizationRepository.Received(1).ExecuteOrganizationInitializationUpdatesAsync(
-            Arg.Is<IEnumerable<OrganizationInitializationUpdateAction>>(list => list.Count() == 3));
+        await organizationRepository.Received(1).InitializeOrganizationAsync(
+            org, Arg.Any<OrganizationInitializationAction>());
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default, default, default);
 
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
@@ -269,8 +272,14 @@ public class InitPendingOrganizationCommandTests
         Assert.False(result.IsError);
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        await organizationRepository.Received(1).ExecuteOrganizationInitializationUpdatesAsync(
-            Arg.Is<IEnumerable<OrganizationInitializationUpdateAction>>(list => list.Count() == 4));
+        await organizationRepository.Received(1).InitializeOrganizationAsync(
+            org, Arg.Any<OrganizationInitializationAction>());
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
+            .CreateAsync(
+                Arg.Is<Collection>(c => c.Name == "My Collection" && c.OrganizationId == requestWithCollection.OrganizationId),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(l => l == null),
+                Arg.Is<IEnumerable<CollectionAccessSelection>>(l => l.Any(i => i.Manage)));
     }
 
     private static void SetupSuccessfulValidation(
@@ -295,21 +304,9 @@ public class InitPendingOrganizationCommandTests
                 return new ValidationResult<InitPendingOrganizationValidationRequest>(req, new OneOf.Types.None());
             });
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .BuildUpdateOrganizationAction(Arg.Any<Organization>())
-            .Returns(callInfo => new OrganizationInitializationUpdateAction((conn, trans, ctx) => Task.CompletedTask));
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .BuildConfirmOrganizationUserAction(Arg.Any<OrganizationUser>())
-            .Returns(callInfo => new OrganizationInitializationUpdateAction((conn, trans, ctx) => Task.CompletedTask));
-
-        sutProvider.GetDependency<IUserRepository>()
-            .BuildVerifyUserEmailAction(request.User.Id)
-            .Returns(new OrganizationInitializationUpdateAction((conn, trans, ctx) => Task.CompletedTask));
-
-        sutProvider.GetDependency<ICollectionRepository>()
-            .BuildCreateDefaultCollectionAction(Arg.Any<Collection>(), Arg.Any<CollectionAccessSelection[]>())
-            .Returns(callInfo => new OrganizationInitializationUpdateAction((conn, trans, ctx) => Task.CompletedTask));
+            .BuildConfirmOwnerAction(Arg.Any<OrganizationUser>())
+            .Returns(new OrganizationInitializationAction((conn, trans, ctx) => Task.CompletedTask));
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(request.User.Id)
