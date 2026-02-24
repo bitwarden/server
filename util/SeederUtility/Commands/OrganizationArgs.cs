@@ -51,6 +51,11 @@ public class OrganizationArgs : IArgumentModel
             throw new ArgumentException("Users must be at least 1.");
         }
 
+        if (!Domain.EndsWith(".example", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Domain must end with '.example' (RFC 2606). Example: myorg.example");
+        }
+
         if (!string.IsNullOrEmpty(Structure))
         {
             ParseOrgStructure(Structure);
