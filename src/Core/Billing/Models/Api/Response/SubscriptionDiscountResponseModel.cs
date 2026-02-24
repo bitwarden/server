@@ -6,7 +6,6 @@ namespace Bit.Core.Billing.Models.Api.Response;
 
 public class SubscriptionDiscountResponseModel
 {
-    public Guid Id { get; init; }
     public string StripeCouponId { get; init; } = null!;
     public IEnumerable<string>? StripeProductIds { get; init; }
     public decimal? PercentOff { get; init; }
