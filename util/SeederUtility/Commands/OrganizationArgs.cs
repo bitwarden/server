@@ -6,10 +6,10 @@ using CommandDotNet;
 namespace Bit.SeederUtility.Commands;
 
 /// <summary>
-/// CLI argument model for the vault-organization command.
+/// CLI argument model for the organization command.
 /// Maps to <see cref="OrganizationVaultOptions"/> for the Seeder library.
 /// </summary>
-public class VaultOrganizationArgs : IArgumentModel
+public class OrganizationArgs : IArgumentModel
 {
     [Option('n', "name", Description = "Name of organization")]
     public string Name { get; set; } = null!;
@@ -20,10 +20,10 @@ public class VaultOrganizationArgs : IArgumentModel
     [Option('d', "domain", Description = "Email domain for users")]
     public string Domain { get; set; } = null!;
 
-    [Option('c', "ciphers", Description = "Number of login ciphers to create (minimum 1)")]
+    [Option('c', "ciphers", Description = "Number of ciphers to create (0 = no vault data)")]
     public int Ciphers { get; set; }
 
-    [Option('g', "groups", Description = "Number of groups to create (minimum 1)")]
+    [Option('g', "groups", Description = "Number of groups to create (0 = no groups)")]
     public int Groups { get; set; }
 
     [Option('m', "mix-user-statuses", Description = "Use realistic status mix (85% confirmed, 5% each invited/accepted/revoked). Requires >= 10 users.")]
@@ -48,17 +48,7 @@ public class VaultOrganizationArgs : IArgumentModel
     {
         if (Users < 1)
         {
-            throw new ArgumentException("Users must be at least 1. Use another command for orgs without users.");
-        }
-
-        if (Ciphers < 1)
-        {
-            throw new ArgumentException("Ciphers must be at least 1. Use another command for orgs without vault data.");
-        }
-
-        if (Groups < 1)
-        {
-            throw new ArgumentException("Groups must be at least 1. Use another command for orgs without groups.");
+            throw new ArgumentException("Users must be at least 1.");
         }
 
         if (!string.IsNullOrEmpty(Structure))

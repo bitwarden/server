@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Seeder.Options;
 using Bit.Seeder.Recipes;
 using Bit.Seeder.Services;
 using Bit.SeederUtility.Configuration;
@@ -11,32 +10,40 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SeederUtility.Commands;
 
-[Command("organization", Description = "Seed an organization and organization users")]
+[Command("organization", Description = "Seed an organization with users and optional vault data (ciphers, collections, groups)")]
 public class OrganizationCommand
 {
     [DefaultCommand]
-    public void Execute(
-        [Option('n', "Name", Description = "Name of organization")]
-        string name,
-        [Option('u', "users", Description = "Number of users to generate")]
-        int users,
-        [Option('d', "domain", Description = "Email domain for users")]
-        string domain
-    )
+    public void Execute(OrganizationArgs args)
     {
+        args.Validate();
+
         var services = new ServiceCollection();
-        ServiceCollectionExtension.ConfigureServices(services);
+        ServiceCollectionExtension.ConfigureServices(services, enableMangling: args.Mangle);
         var serviceProvider = services.BuildServiceProvider();
 
         using var scope = serviceProvider.CreateScope();
         var scopedServices = scope.ServiceProvider;
-        var db = scopedServices.GetRequiredService<DatabaseContext>();
 
-        var mapper = scopedServices.GetRequiredService<IMapper>();
-        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
         var manglerService = scopedServices.GetRequiredService<IManglerService>();
-        var recipe = new OrganizationRecipe(db, mapper, passwordHasher, manglerService);
-        var options = new OrganizationVaultOptions { Name = name, Domain = domain, Users = users };
-        recipe.Seed(options);
+        var recipe = new OrganizationRecipe(
+            scopedServices.GetRequiredService<DatabaseContext>(),
+            scopedServices.GetRequiredService<IMapper>(),
+            scopedServices.GetRequiredService<IPasswordHasher<User>>(),
+            manglerService);
+
+        recipe.Seed(args.ToOptions());
+
+        if (!manglerService.IsEnabled)
+        {
+            return;
+        }
+
+        var map = manglerService.GetMangleMap();
+        Console.WriteLine("--- Mangled Data Map ---");
+        foreach (var (original, mangled) in map)
+        {
+            Console.WriteLine($"{original} -> {mangled}");
+        }
     }
 }
