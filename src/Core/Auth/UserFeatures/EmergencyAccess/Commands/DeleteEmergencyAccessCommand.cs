@@ -1,5 +1,4 @@
-﻿using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
+﻿using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Mail;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Mail.Mailer;
@@ -12,96 +11,96 @@ public class DeleteEmergencyAccessCommand(
     IMailer mailer) : IDeleteEmergencyAccessCommand
 {
     /// <inheritdoc />
-    public async Task<EmergencyAccessDetails> DeleteByIdGrantorIdAsync(Guid emergencyAccessId, Guid grantorId)
+    public async Task DeleteByIdAndUserIdAsync(Guid emergencyAccessId, Guid userId)
     {
-        var emergencyAccessDetails = await _emergencyAccessRepository.GetDetailsByIdGrantorIdAsync(emergencyAccessId, grantorId);
+        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
 
-        if (emergencyAccessDetails == null || emergencyAccessDetails.GrantorId != grantorId)
+        // Error if the emergency access doesn't exist or the user trying to delete is neither the grantor nor the grantee
+        if (emergencyAccess == null || (emergencyAccess.GrantorId != userId && emergencyAccess.GranteeId != userId))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var (grantorEmails, granteeEmails) = await DeleteEmergencyAccessAsync([emergencyAccessDetails]);
+        await _emergencyAccessRepository.DeleteAsync(emergencyAccess);
 
-        // Send notification email to grantor
-        await SendEmergencyAccessRemoveGranteesEmailAsync(grantorEmails, granteeEmails);
-        return emergencyAccessDetails;
+
+        // TODO: add email notification support 
+        // Emails may be null if the grantor or grantee user account has since been deleted
+        // so ensure we have both emails we need.
+        // if (!string.IsNullOrEmpty(emergencyAccessDetails.GrantorEmail) &&
+        //     !string.IsNullOrEmpty(emergencyAccessDetails.GranteeEmail))
+        // {
+        //     await SendGranteesRemovalNotificationToGrantorAsync(
+        //         emergencyAccessDetails.GrantorEmail,
+        //         [emergencyAccessDetails.GranteeEmail]);
+        // }
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<EmergencyAccessDetails>?> DeleteAllByGrantorIdAsync(Guid grantorId)
+    public async Task DeleteAllByUserIdAsync(Guid userId)
     {
-        var emergencyAccessDetails = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(grantorId);
+        await DeleteAllByUserIdsAsync([userId]);
+    }
 
-        // if there is nothing return an empty array and do not send an email
+
+    /// <inheritdoc />
+    public async Task DeleteAllByUserIdsAsync(ICollection<Guid> userIds)
+    {
+        var emergencyAccessDetails = await _emergencyAccessRepository.GetManyDetailsByUserIdsAsync(userIds);
+
         if (emergencyAccessDetails.Count == 0)
         {
-            return emergencyAccessDetails;
+            // No records found, so nothing to delete or notify
+            // However, don't throw an error since the end state of "no records for these user IDs" 
+            // is already achieved
+            return;
         }
 
-        var (grantorEmails, granteeEmails) = await DeleteEmergencyAccessAsync(emergencyAccessDetails);
+        // Delete all records using existing DeleteManyAsync (batching already implemented)
+        var emergencyAccessIds = emergencyAccessDetails.Select(ea => ea.Id).ToList();
+        await _emergencyAccessRepository.DeleteManyAsync(emergencyAccessIds);
 
-        // Send notification email to grantor
-        await SendEmergencyAccessRemoveGranteesEmailAsync(grantorEmails, granteeEmails);
+        // Email notifications: Notify all affected grantors about their removed grantees
+        // Group by grantor to send each grantor only their specific removed grantees
+        // GrantorEmail may be null if the grantor's account has since been deleted
+        // so we must filter out null GrantorEmails before grouping and sending notifications.
+        var grantorEmergencyAccessDetailGroups = emergencyAccessDetails
+            .Where(ea => !string.IsNullOrEmpty(ea.GrantorEmail))
+            .GroupBy(ea => ea.GrantorEmail!); // .GrantorEmail is safe here due to the Where above
 
-        return emergencyAccessDetails;
-    }
-
-    /// <inheritdoc />
-    public async Task<ICollection<EmergencyAccessDetails>?> DeleteAllByGranteeIdAsync(Guid granteeId)
-    {
-        var emergencyAccessDetails = await _emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(granteeId);
-
-        // if there is nothing return an empty array
-        if (emergencyAccessDetails == null || emergencyAccessDetails.Count == 0)
+        foreach (var grantorGroup in grantorEmergencyAccessDetailGroups)
         {
-            return emergencyAccessDetails;
+            var grantorEmail = grantorGroup.Key;
+            var granteeEmails = grantorGroup
+                .Select(ea => ea.GranteeEmail)
+                // Filter out null grantee emails, which may occur if a grantee's account has been deleted
+                .Where(e => !string.IsNullOrEmpty(e))
+                .Cast<string>() // Cast is safe here due to the Where above
+                .Distinct();
+
+            if (granteeEmails.Any())
+            {
+                await SendGranteesRemovalNotificationToGrantorAsync(grantorEmail, granteeEmails);
+            }
         }
-
-        var (grantorEmails, granteeEmails) = await DeleteEmergencyAccessAsync(emergencyAccessDetails);
-
-        // Send notification email to grantor(s)
-        await SendEmergencyAccessRemoveGranteesEmailAsync(grantorEmails, granteeEmails);
-
-        return emergencyAccessDetails;
-    }
-
-    private async Task<(HashSet<string> grantorEmails, HashSet<string> granteeEmails)> DeleteEmergencyAccessAsync(IEnumerable<EmergencyAccessDetails> emergencyAccessDetails)
-    {
-        var grantorEmails = new HashSet<string>();
-        var granteeEmails = new HashSet<string>();
-
-        await _emergencyAccessRepository.DeleteManyAsync([.. emergencyAccessDetails.Select(ea => ea.Id)]);
-
-        foreach (var details in emergencyAccessDetails)
-        {
-            granteeEmails.Add(details.GranteeEmail ?? string.Empty);
-            grantorEmails.Add(details.GrantorEmail);
-        }
-
-        return (grantorEmails, granteeEmails);
     }
 
     /// <summary>
-    /// Sends an email notification to the grantor about removed grantees.
+    /// Sends an email notification to a grantor about their removed grantees.
     /// </summary>
-    /// <param name="grantorEmails">The email addresses of the grantors to notify when deleting by grantee</param>
-    /// <param name="formattedGranteeIdentifiers">The formatted identifiers of the removed grantees to include in the email</param>
-    /// <returns></returns>
-    private async Task SendEmergencyAccessRemoveGranteesEmailAsync(IEnumerable<string> grantorEmails, IEnumerable<string> formattedGranteeIdentifiers)
+    /// <param name="grantorEmail">The email address of the grantor to notify</param>
+    /// <param name="granteeEmails">The email addresses of the removed grantees</param>
+    private async Task SendGranteesRemovalNotificationToGrantorAsync(string grantorEmail, IEnumerable<string> granteeEmails)
     {
-        foreach (var email in grantorEmails)
+        var emailViewModel = new EmergencyAccessRemoveGranteesMail
         {
-            var emailViewModel = new EmergencyAccessRemoveGranteesMail
+            ToEmails = [grantorEmail],
+            View = new EmergencyAccessRemoveGranteesMailView
             {
-                ToEmails = [email],
-                View = new EmergencyAccessRemoveGranteesMailView
-                {
-                    RemovedGranteeEmails = formattedGranteeIdentifiers
-                }
-            };
+                RemovedGranteeEmails = granteeEmails
+            }
+        };
 
-            await mailer.SendEmail(emailViewModel);
-        }
+        await mailer.SendEmail(emailViewModel);
     }
 }
