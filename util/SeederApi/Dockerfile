@@ -23,7 +23,8 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/util/SeederApi
-RUN . /tmp/rid.txt && dotnet restore SeederApi.csproj -r $RID
+RUN apk add --no-cache cargo
+RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
 WORKDIR /source/util/SeederApi
