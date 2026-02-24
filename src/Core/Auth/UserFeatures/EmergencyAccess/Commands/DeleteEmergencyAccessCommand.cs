@@ -13,27 +13,25 @@ public class DeleteEmergencyAccessCommand(
     /// <inheritdoc />
     public async Task DeleteByIdAndUserIdAsync(Guid emergencyAccessId, Guid userId)
     {
-        var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
+        var emergencyAccessDetails = await _emergencyAccessRepository.GetDetailsByIdAsync(emergencyAccessId);
 
         // Error if the emergency access doesn't exist or the user trying to delete is neither the grantor nor the grantee
-        if (emergencyAccess == null || (emergencyAccess.GrantorId != userId && emergencyAccess.GranteeId != userId))
+        if (emergencyAccessDetails == null || (emergencyAccessDetails.GrantorId != userId && emergencyAccessDetails.GranteeId != userId))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        await _emergencyAccessRepository.DeleteAsync(emergencyAccess);
+        await _emergencyAccessRepository.DeleteAsync(emergencyAccessDetails);
 
-
-        // TODO: add email notification support 
         // Emails may be null if the grantor or grantee user account has since been deleted
         // so ensure we have both emails we need.
-        // if (!string.IsNullOrEmpty(emergencyAccessDetails.GrantorEmail) &&
-        //     !string.IsNullOrEmpty(emergencyAccessDetails.GranteeEmail))
-        // {
-        //     await SendGranteesRemovalNotificationToGrantorAsync(
-        //         emergencyAccessDetails.GrantorEmail,
-        //         [emergencyAccessDetails.GranteeEmail]);
-        // }
+        if (!string.IsNullOrEmpty(emergencyAccessDetails.GrantorEmail) &&
+            !string.IsNullOrEmpty(emergencyAccessDetails.GranteeEmail))
+        {
+            await SendGranteesRemovalNotificationToGrantorAsync(
+                emergencyAccessDetails.GrantorEmail,
+                [emergencyAccessDetails.GranteeEmail]);
+        }
     }
 
     /// <inheritdoc />
