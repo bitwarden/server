@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "pinnacle-designs",
+    "planType": "enterprise-annually"
+  },
+  "roster": {
+    "fixture": "starter-team"
+  },
+  "policies": {
+    "enableAll": true,
+    "except": ["requireSso", "require2fa"]
+  }
+}

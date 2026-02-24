@@ -104,26 +104,47 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         var unpaidSubscriptions = subscriptions?.Data.Where(subscription =>
             subscription.Status == StripeConstants.SubscriptionStatus.Unpaid).ToList();
 
-        if (unpaidSubscriptions == null || unpaidSubscriptions.Count == 0)
+        var incompleteSubscriptions = subscriptions?.Data.Where(subscription =>
+            subscription.Status == StripeConstants.SubscriptionStatus.Incomplete).ToList();
+
+        // Process unpaid subscriptions
+        if (unpaidSubscriptions != null && unpaidSubscriptions.Count > 0)
+        {
+            foreach (var subscription in unpaidSubscriptions)
+            {
+                await AttemptToPayOpenSubscriptionAsync(subscription);
+            }
+        }
+
+        // Process incomplete subscriptions - only if there's exactly one to avoid overcharging
+        if (incompleteSubscriptions == null || incompleteSubscriptions.Count == 0)
         {
             return;
         }
 
-        foreach (var unpaidSubscription in unpaidSubscriptions)
-        {
-            await AttemptToPayOpenSubscriptionAsync(unpaidSubscription);
-        }
-    }
-
-    private async Task AttemptToPayOpenSubscriptionAsync(Subscription unpaidSubscription)
-    {
-        var latestInvoice = unpaidSubscription.LatestInvoice;
-
-        if (unpaidSubscription.LatestInvoice is null)
+        if (incompleteSubscriptions.Count > 1)
         {
             _logger.LogWarning(
-                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice didn't exist",
-                unpaidSubscription.Id);
+                "Customer {CustomerId} has {Count} incomplete subscriptions. Skipping automatic payment retry to avoid overcharging. Subscription IDs: {SubscriptionIds}",
+                customer.Id,
+                incompleteSubscriptions.Count,
+                string.Join(", ", incompleteSubscriptions.Select(s => s.Id)));
+            return;
+        }
+
+        // Exactly one incomplete subscription - safe to retry
+        await AttemptToPayOpenSubscriptionAsync(incompleteSubscriptions.First());
+    }
+
+    private async Task AttemptToPayOpenSubscriptionAsync(Subscription subscription)
+    {
+        var latestInvoice = subscription.LatestInvoice;
+
+        if (subscription.LatestInvoice is null)
+        {
+            _logger.LogWarning(
+                "Attempted to pay subscription {SubscriptionId} with status {Status} but latest invoice didn't exist",
+                subscription.Id, subscription.Status);
 
             return;
         }
@@ -131,8 +152,8 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         if (latestInvoice.Status != StripeInvoiceStatus.Open)
         {
             _logger.LogWarning(
-                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice wasn't \"open\"",
-                unpaidSubscription.Id);
+                "Attempted to pay subscription {SubscriptionId} with status {Status} but latest invoice wasn't \"open\"",
+                subscription.Id, subscription.Status);
 
             return;
         }
@@ -144,8 +165,8 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         catch (Exception e)
         {
             _logger.LogError(e,
-                "Attempted to pay open invoice {InvoiceId} on unpaid subscription {SubscriptionId} but encountered an error",
-                latestInvoice.Id, unpaidSubscription.Id);
+                "Attempted to pay open invoice {InvoiceId} on subscription {SubscriptionId} with status {Status} but encountered an error",
+                latestInvoice.Id, subscription.Id, subscription.Status);
             throw;
         }
     }

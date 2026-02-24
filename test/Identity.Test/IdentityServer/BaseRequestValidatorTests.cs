@@ -58,6 +58,7 @@ public class BaseRequestValidatorTests
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly IClientVersionValidator _clientVersionValidator;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -82,6 +83,7 @@ public class BaseRequestValidatorTests
         _authRequestRepository = Substitute.For<IAuthRequestRepository>();
         _mailService = Substitute.For<IMailService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
+        _clientVersionValidator = Substitute.For<IClientVersionValidator>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -102,7 +104,13 @@ public class BaseRequestValidatorTests
             _policyRequirementQuery,
             _authRequestRepository,
             _mailService,
-            _userAccountKeysQuery);
+            _userAccountKeysQuery,
+            _clientVersionValidator);
+
+        // Default client version validator behavior: allow to pass unless a test overrides.
+        _clientVersionValidator
+            .Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+            .Returns(true);
     }
 
     /* Logic path
@@ -1264,6 +1272,38 @@ public class BaseRequestValidatorTests
         // Recovery flag should be set for audit purposes
         Assert.True(requestContext.TwoFactorRecoveryRequested,
             "TwoFactorRecoveryRequested flag should be set for audit/logging");
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_ClientVersionValidator_IsInvoked(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true; // ensure initial context validation passes
+
+        // Force a grant type that will evaluate SSO after client version validation
+        context.ValidatedTokenRequest.GrantType = "password";
+
+        // Make client version validation succeed but ensure it's invoked
+        _clientVersionValidator
+            .Validate(requestContext.User, requestContext)
+            .Returns(true);
+
+        // Ensure SSO requirement triggers an early stop after version validation to avoid success path setup
+        _policyService.AnyPoliciesApplicableToUserAsync(
+                Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
+            .Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        _clientVersionValidator.Received(1)
+            .Validate(requestContext.User, requestContext);
     }
 
     /// <summary>

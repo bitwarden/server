@@ -9,11 +9,9 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
@@ -21,7 +19,6 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -51,7 +48,6 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IProviderUserRepository providerUserRepository,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService)
     : IProviderBillingService
@@ -518,6 +514,7 @@ public class ProviderBillingService(
         }
 
         var braintreeCustomerId = "";
+        var setupIntentId = "";
 
         // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
         switch (paymentMethod.Type)
@@ -539,7 +536,7 @@ public class ProviderBillingService(
                         throw new BillingException();
                     }
 
-                    await setupIntentCache.Set(provider.Id, setupIntent.Id);
+                    setupIntentId = setupIntent.Id;
                     break;
                 }
             case TokenizablePaymentMethodType.Card:
@@ -558,7 +555,15 @@ public class ProviderBillingService(
 
         try
         {
-            return await stripeAdapter.CreateCustomerAsync(options);
+            var customer = await stripeAdapter.CreateCustomerAsync(options);
+
+            if (!string.IsNullOrEmpty(setupIntentId))
+            {
+                await stripeAdapter.UpdateSetupIntentAsync(setupIntentId,
+                    new SetupIntentUpdateOptions { Customer = customer.Id });
+            }
+
+            return customer;
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.TaxIdInvalid)
         {
@@ -577,12 +582,10 @@ public class ProviderBillingService(
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (paymentMethod.Type)
             {
-                case TokenizablePaymentMethodType.BankAccount:
+                case TokenizablePaymentMethodType.BankAccount when !string.IsNullOrEmpty(setupIntentId):
                     {
-                        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
                         await stripeAdapter.CancelSetupIntentAsync(setupIntentId,
                             new SetupIntentCancelOptions { CancellationReason = "abandoned" });
-                        await setupIntentCache.RemoveSetupIntentForSubscriber(provider.Id);
                         break;
                     }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
@@ -635,17 +638,18 @@ public class ProviderBillingService(
             });
         }
 
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(provider.Id);
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
+        {
+            Customer = customer.Id,
+            Expand = ["data.payment_method"]
+        });
 
-        var setupIntent = !string.IsNullOrEmpty(setupIntentId)
-            ? await stripeAdapter.GetSetupIntentAsync(setupIntentId,
-                new SetupIntentGetOptions { Expand = ["payment_method"] })
-            : null;
+        var hasUnverifiedBankAccount = setupIntents?.Any(si => si.IsUnverifiedBankAccount()) ?? false;
 
         var usePaymentMethod =
             !string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId) ||
             customer.Metadata?.ContainsKey(BraintreeCustomerIdKey) == true ||
-            setupIntent?.IsUnverifiedBankAccount() == true;
+            hasUnverifiedBankAccount;
 
         int? trialPeriodDays = provider.Type switch
         {
@@ -697,19 +701,6 @@ public class ProviderBillingService(
             throw new BadRequestException(
                 "Your location wasn't recognized. Please ensure your country and postal code are valid.");
         }
-    }
-
-    public async Task UpdatePaymentMethod(
-        Provider provider,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        await Task.WhenAll(
-            subscriberService.UpdatePaymentSource(provider, tokenizedPaymentSource),
-            subscriberService.UpdateTaxInformation(provider, taxInformation));
-
-        await stripeAdapter.UpdateSubscriptionAsync(provider.GatewaySubscriptionId,
-            new SubscriptionUpdateOptions { CollectionMethod = CollectionMethod.ChargeAutomatically });
     }
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
