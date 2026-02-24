@@ -223,8 +223,11 @@ If your feature should be automatically enabled based on plan type at signup (e.
 need to:
 
 1. Work with the Billing Team to add a `HasMyFeature` property to the Plan model and configure which plans include it
-2. Update `src/Core/AdminConsole/OrganizationFeatures/Organizations/CloudOrganizationSignUpCommand.cs` to map
-   `plan.HasMyFeature` to `organization.UseMyFeature`
+2. Update the following files to map `plan.HasMyFeature` to `organization.UseMyFeature`:
+    - `src/Core/AdminConsole/OrganizationFeatures/Organizations/CloudOrganizationSignUpCommand.cs` — Used during
+      organization creation and plan upgrades
+    - `src/Core/Billing/Subscriptions/Commands/RestartSubscriptionCommand.cs` — Used when restarting a canceled
+      subscription with a potentially different plan
 
 **Note:** This step is not required if your feature is enabled manually via the Admin Portal.
 

@@ -1,5 +1,7 @@
 ﻿using Bit.Seeder;
+using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
+using Bit.Seeder.Services;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -13,7 +15,7 @@ public class RecipeBuilderValidationTests
         var builder = services.AddRecipe("test");
 
         builder.AddUsers(10);
-        var ex = Assert.Throws<InvalidOperationException>(() => builder.UseRoster("test"));
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.UseRoster("test", _stubReader));
         Assert.Contains("Cannot call UseRoster() after AddUsers()", ex.Message);
     }
 
@@ -23,7 +25,7 @@ public class RecipeBuilderValidationTests
         var services = new ServiceCollection();
         var builder = services.AddRecipe("test");
 
-        builder.UseRoster("test");
+        builder.UseRoster("test", _stubReader);
         var ex = Assert.Throws<InvalidOperationException>(() => builder.AddUsers(10));
         Assert.Contains("Cannot call AddUsers() after UseRoster()", ex.Message);
     }
@@ -86,7 +88,7 @@ public class RecipeBuilderValidationTests
         var services = new ServiceCollection();
         var builder = services.AddRecipe("test");
 
-        builder.UseRoster("test");
+        builder.UseRoster("test", _stubReader);
         builder.AddCollections(5);
     }
 
@@ -110,6 +112,18 @@ public class RecipeBuilderValidationTests
         builder.UseOrganization("test");
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
         Assert.Contains("Owner is required", ex.Message);
+    }
+
+    [Fact]
+    public void Validate_WithRosterOwner_Succeeds()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.UseOrganization("test");
+        builder.UseRoster("test", _stubReaderWithOwner);
+
+        builder.Validate(); // should not throw — roster provides the owner
     }
 
     [Fact]
@@ -153,5 +167,27 @@ public class RecipeBuilderValidationTests
         {
             Assert.Equal(i, orderedSteps[i].Order);
         }
+    }
+
+    private static readonly ISeedReader _stubReader = new StubSeedReader(hasOwner: false);
+    private static readonly ISeedReader _stubReaderWithOwner = new StubSeedReader(hasOwner: true);
+
+    /// <summary>
+    /// Stub reader for builder validation tests that don't need real fixture data.
+    /// </summary>
+    private sealed class StubSeedReader(bool hasOwner) : ISeedReader
+    {
+        public T Read<T>(string seedName) =>
+            (T)(object)new SeedRoster
+            {
+                Users = [new SeedRosterUser
+                {
+                    FirstName = "Test",
+                    LastName = "User",
+                    Role = hasOwner ? "owner" : "user"
+                }]
+            };
+
+        public IReadOnlyList<string> ListAvailable() => [];
     }
 }

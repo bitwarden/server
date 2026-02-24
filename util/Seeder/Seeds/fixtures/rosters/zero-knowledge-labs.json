@@ -1,0 +1,1337 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "Marcus", "lastName": "Chen", "title": "CEO", "role": "owner", "branch": "Leadership", "department": "Executive" },
+    { "firstName": "Priya", "lastName": "Narayanan", "title": "CTO", "role": "owner", "branch": "Leadership", "department": "Executive" },
+    { "firstName": "Catherine", "lastName": "Okonkwo", "title": "CFO", "role": "owner", "branch": "Leadership", "department": "Executive" },
+    { "firstName": "James", "lastName": "Whitfield", "title": "COO", "role": "owner", "branch": "Leadership", "department": "Executive" },
+    { "firstName": "Elena", "lastName": "Vasquez", "title": "VP Engineering", "role": "owner", "branch": "Leadership", "department": "Executive" },
+    { "firstName": "Robert", "lastName": "Adeyemi", "title": "CISO", "role": "owner", "branch": "Leadership", "department": "Executive" },
+
+    { "firstName": "Takeshi", "lastName": "Yamamoto", "title": "Principal Architect", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Ingrid", "lastName": "Bergstrom", "title": "Principal Software Engineer", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Omar", "lastName": "Farouk", "title": "Principal Software Engineer", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Lucia", "lastName": "Moreno", "title": "Principal Software Engineer", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Devon", "lastName": "Chakravarti", "title": "Staff Software Engineer", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Astrid", "lastName": "Nielsen", "title": "Staff Software Engineer", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Kofi", "lastName": "Mensah", "title": "Staff Software Engineer", "branch": "Engineering", "department": "Architecture" },
+    { "firstName": "Rachel", "lastName": "Petrov", "title": "Staff Software Engineer", "branch": "Engineering", "department": "Architecture" },
+
+    { "firstName": "Sanjay", "lastName": "Patel", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Yuki", "lastName": "Tanaka", "title": "Scrum Master", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Maria", "lastName": "Santos", "title": "Product Owner", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Derek", "lastName": "Osei", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Hannah", "lastName": "Liu", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Viktor", "lastName": "Kozlov", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Amara", "lastName": "Johnson", "title": "Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Felix", "lastName": "Mueller", "title": "Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Zara", "lastName": "Ahmad", "title": "Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Tyler", "lastName": "Brooks", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Avengers" },
+    { "firstName": "Nina", "lastName": "Kowalski", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Avengers" },
+
+    { "firstName": "Fatima", "lastName": "Al-Rashid", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Bjorn", "lastName": "Eriksen", "title": "Scrum Master", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Grace", "lastName": "Ndunge", "title": "Product Owner", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Andrei", "lastName": "Volkov", "title": "Senior Software Engineer", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Mei-Lin", "lastName": "Wu", "title": "Senior Software Engineer", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Santiago", "lastName": "Rivera", "title": "Senior Software Engineer", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Jasper", "lastName": "Thornton", "title": "Software Engineer", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Aisha", "lastName": "Okafor", "title": "Software Engineer", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Liam", "lastName": "Brennan", "title": "Software Engineer", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Priscilla", "lastName": "Huang", "title": "Intern Software Engineer", "branch": "Engineering", "department": "X-Force" },
+    { "firstName": "Ravi", "lastName": "Sundaram", "title": "Software Engineer in Test", "branch": "Engineering", "department": "X-Force" },
+
+    { "firstName": "Patrick", "lastName": "O'Sullivan", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Keiko", "lastName": "Hashimoto", "title": "Scrum Master", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Daniel", "lastName": "Obi", "title": "Product Owner", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Natasha", "lastName": "Filipova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Carlos", "lastName": "Herrera", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Samantha", "lastName": "Park", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Ibrahim", "lastName": "Diallo", "title": "Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Emma", "lastName": "Johansson", "title": "Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Raj", "lastName": "Mehta", "title": "Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Olivia", "lastName": "Chen", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Thunderbolts" },
+    { "firstName": "Marco", "lastName": "Rossi", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Thunderbolts" },
+
+    { "firstName": "Wei", "lastName": "Zhang", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Anna", "lastName": "Kowalczyk", "title": "Scrum Master", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Trevor", "lastName": "Williams", "title": "Product Owner", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Olga", "lastName": "Petrova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Hassan", "lastName": "Mahmoud", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Jennifer", "lastName": "Reyes", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Kwame", "lastName": "Asante", "title": "Software Engineer", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Mia", "lastName": "Larsson", "title": "Software Engineer", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Dmitri", "lastName": "Sokolov", "title": "Software Engineer", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Sophia", "lastName": "Nguyen", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Guardians" },
+    { "firstName": "Lucas", "lastName": "Almeida", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Guardians" },
+
+    { "firstName": "Rashid", "lastName": "Khan", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Elsa", "lastName": "Lindqvist", "title": "Scrum Master", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Chioma", "lastName": "Eze", "title": "Product Owner", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Pierre", "lastName": "Dubois", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Yuna", "lastName": "Kim", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Maxwell", "lastName": "Wright", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Fatou", "lastName": "Diop", "title": "Software Engineer", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Adrian", "lastName": "Stanescu", "title": "Software Engineer", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Kayla", "lastName": "Morrison", "title": "Software Engineer", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Ethan", "lastName": "Park", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Defenders" },
+    { "firstName": "Shreya", "lastName": "Iyer", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Defenders" },
+
+    { "firstName": "Nneka", "lastName": "Okonkwo", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Lars", "lastName": "Andersen", "title": "Scrum Master", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Rosa", "lastName": "Martinez", "title": "Product Owner", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Hiroshi", "lastName": "Sato", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Claudia", "lastName": "Fischer", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "David", "lastName": "Mensah", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Leila", "lastName": "Hosseini", "title": "Software Engineer", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Thomas", "lastName": "Olsen", "title": "Software Engineer", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Blessing", "lastName": "Adebayo", "title": "Software Engineer", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Jamie", "lastName": "Walsh", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Wakanda" },
+    { "firstName": "Ananya", "lastName": "Krishnan", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Wakanda" },
+
+    { "firstName": "Alexander", "lastName": "Petrov", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Sakura", "lastName": "Mori", "title": "Scrum Master", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Chinedu", "lastName": "Emeka", "title": "Product Owner", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Eva", "lastName": "Novak", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Richard", "lastName": "Otunga", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Min-Ji", "lastName": "Lee", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Gustaf", "lastName": "Svensson", "title": "Software Engineer", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Aaliyah", "lastName": "Brown", "title": "Software Engineer", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Pavel", "lastName": "Dvorak", "title": "Software Engineer", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Chloe", "lastName": "Williams", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Asgard" },
+    { "firstName": "Deepak", "lastName": "Sharma", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Asgard" },
+
+    { "firstName": "Brigitte", "lastName": "Hoffman", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Javier", "lastName": "Castillo", "title": "Scrum Master", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Fiona", "lastName": "McGregor", "title": "Product Owner", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Nikolai", "lastName": "Volkov", "title": "Senior Software Engineer", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Sunita", "lastName": "Reddy", "title": "Senior Software Engineer", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Connor", "lastName": "Murphy", "title": "Senior Software Engineer", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Youssef", "lastName": "El-Amin", "title": "Software Engineer", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Karin", "lastName": "Bergman", "title": "Software Engineer", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Tariq", "lastName": "Hassan", "title": "Software Engineer", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Lily", "lastName": "Nakamura", "title": "Intern Software Engineer", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+    { "firstName": "Roisin", "lastName": "O'Brien", "title": "Software Engineer in Test", "branch": "Engineering", "department": "S.H.I.E.L.D." },
+
+    { "firstName": "Aditya", "lastName": "Kapoor", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Freya", "lastName": "Johansson", "title": "Scrum Master", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Binta", "lastName": "Diallo", "title": "Product Owner", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Ivan", "lastName": "Kovalenko", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Julia", "lastName": "Santos", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Kenneth", "lastName": "Osei", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Hanna", "lastName": "Eriksson", "title": "Software Engineer", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Moussa", "lastName": "Toure", "title": "Software Engineer", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Crystal", "lastName": "Zhang", "title": "Software Engineer", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Leo", "lastName": "Park", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Infinity" },
+    { "firstName": "Vladimir", "lastName": "Novak", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Infinity" },
+
+    { "firstName": "Sarah", "lastName": "Mitchell", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Akio", "lastName": "Watanabe", "title": "Scrum Master", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Nadia", "lastName": "Benali", "title": "Product Owner", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Friedrich", "lastName": "Weber", "title": "Senior Software Engineer", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Amira", "lastName": "Khalil", "title": "Senior Software Engineer", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Bryan", "lastName": "Torres", "title": "Senior Software Engineer", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Sienna", "lastName": "Russo", "title": "Software Engineer", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Lars", "lastName": "Hagen", "title": "Software Engineer", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Dayo", "lastName": "Ogundimu", "title": "Software Engineer", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Mason", "lastName": "Rivera", "title": "Intern Software Engineer", "branch": "Engineering", "department": "New Mutants" },
+    { "firstName": "Petra", "lastName": "Kovar", "title": "Software Engineer in Test", "branch": "Engineering", "department": "New Mutants" },
+
+    { "firstName": "Rebecca", "lastName": "Goldstein", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Hiroki", "lastName": "Suzuki", "title": "Scrum Master", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Folake", "lastName": "Adewale", "title": "Product Owner", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Christian", "lastName": "Bach", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Priyanka", "lastName": "Gupta", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Andre", "lastName": "Ferreira", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Ingrid", "lastName": "Dahl", "title": "Software Engineer", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Rasheed", "lastName": "Thomas", "title": "Software Engineer", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Luna", "lastName": "Garcia", "title": "Software Engineer", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Noah", "lastName": "Kim", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Fantastic Four" },
+    { "firstName": "Tomoko", "lastName": "Ishikawa", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Fantastic Four" },
+
+    { "firstName": "Michael", "lastName": "Ochieng", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Katerina", "lastName": "Novotna", "title": "Scrum Master", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Jared", "lastName": "Sullivan", "title": "Product Owner", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Svetlana", "lastName": "Kuznetsova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Ahmed", "lastName": "Mansour", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Heather", "lastName": "Douglas", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Fabio", "lastName": "Costa", "title": "Software Engineer", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Ayesha", "lastName": "Malik", "title": "Software Engineer", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Erik", "lastName": "Lindberg", "title": "Software Engineer", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Zoe", "lastName": "Papadopoulos", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Excelsior" },
+    { "firstName": "Mateo", "lastName": "Vargas", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Excelsior" },
+
+    { "firstName": "Yumiko", "lastName": "Takahashi", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Henrik", "lastName": "Larsen", "title": "Scrum Master", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Adaeze", "lastName": "Nwachukwu", "title": "Product Owner", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Mikhail", "lastName": "Popov", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Carmen", "lastName": "Delgado", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Robert", "lastName": "Tan", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Freya", "lastName": "Schmidt", "title": "Software Engineer", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Oumar", "lastName": "Sy", "title": "Software Engineer", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Maeve", "lastName": "O'Connor", "title": "Software Engineer", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Jin-Ho", "lastName": "Lee", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Alpha Flight" },
+    { "firstName": "Daniela", "lastName": "Ionescu", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Alpha Flight" },
+
+    { "firstName": "Benjamin", "lastName": "Okafor", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Lena", "lastName": "Muller", "title": "Scrum Master", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Vikram", "lastName": "Singh", "title": "Product Owner", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Tatiana", "lastName": "Romanova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Jorge", "lastName": "Gutierrez", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Susan", "lastName": "Chen", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Amadou", "lastName": "Bah", "title": "Software Engineer", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Elise", "lastName": "Dubois", "title": "Software Engineer", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Naveen", "lastName": "Patel", "title": "Software Engineer", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Ava", "lastName": "Johansson", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Midnight Sons" },
+    { "firstName": "Cristina", "lastName": "Popescu", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Midnight Sons" },
+
+    { "firstName": "Diana", "lastName": "Vasquez", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Tomas", "lastName": "Novak", "title": "Scrum Master", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Adebola", "lastName": "Ogunlade", "title": "Product Owner", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Mikael", "lastName": "Lindstrom", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Rachael", "lastName": "Otieno", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Jakub", "lastName": "Kowalski", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Mariam", "lastName": "Toure", "title": "Software Engineer", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Sebastian", "lastName": "Vogel", "title": "Software Engineer", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Anita", "lastName": "Desai", "title": "Software Engineer", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Caleb", "lastName": "Hernandez", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Illuminati" },
+    { "firstName": "Oleg", "lastName": "Ivanov", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Illuminati" },
+
+    { "firstName": "Jonathan", "lastName": "Edwards", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Yui", "lastName": "Kimura", "title": "Scrum Master", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Precious", "lastName": "Obi", "title": "Product Owner", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Henrik", "lastName": "Strand", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Layla", "lastName": "Hassan", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Maxwell", "lastName": "Chen", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Birgit", "lastName": "Fjord", "title": "Software Engineer", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Emeka", "lastName": "Nwosu", "title": "Software Engineer", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Daniella", "lastName": "Cruz", "title": "Software Engineer", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Ryan", "lastName": "Tanaka", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Power Pack" },
+    { "firstName": "Arjun", "lastName": "Mehta", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Power Pack" },
+
+    { "firstName": "Teresa", "lastName": "Rodrigues", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Anders", "lastName": "Nilsson", "title": "Scrum Master", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Kemi", "lastName": "Oladipo", "title": "Product Owner", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Franz", "lastName": "Huber", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Nkechi", "lastName": "Ike", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Paul", "lastName": "Henderson", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Maja", "lastName": "Bergstrom", "title": "Software Engineer", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Chidi", "lastName": "Okoro", "title": "Software Engineer", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Lena", "lastName": "Schultz", "title": "Software Engineer", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Kai", "lastName": "Watanabe", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Inhumans" },
+    { "firstName": "Sofia", "lastName": "Alexandrova", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Inhumans" },
+
+    { "firstName": "Vincent", "lastName": "Mensah", "title": "Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Camille", "lastName": "Laurent", "title": "Scrum Master", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Haruto", "lastName": "Nakamura", "title": "Product Owner", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Isabella", "lastName": "Costa", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Kwesi", "lastName": "Boateng", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Natalia", "lastName": "Sokolova", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Oscar", "lastName": "Lindgren", "title": "Software Engineer", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Zahra", "lastName": "Ahmadi", "title": "Software Engineer", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Philippe", "lastName": "Girard", "title": "Software Engineer", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Milo", "lastName": "Fitzgerald", "title": "Intern Software Engineer", "branch": "Engineering", "department": "Ravagers" },
+    { "firstName": "Eun-Ji", "lastName": "Choi", "title": "Software Engineer in Test", "branch": "Engineering", "department": "Ravagers" },
+
+    { "firstName": "Malcolm", "lastName": "Sterling", "title": "Security Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Yara", "lastName": "Bashir", "title": "Senior AppSec Engineer", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Darius", "lastName": "Wolfe", "title": "Senior AppSec Engineer", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Keiko", "lastName": "Taniguchi", "title": "AppSec Engineer", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Rafael", "lastName": "Dominguez", "title": "AppSec Engineer", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Samira", "lastName": "Haddad", "title": "Senior Penetration Tester", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Tobias", "lastName": "Engel", "title": "Penetration Tester", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Zuri", "lastName": "Mwangi", "title": "Security Researcher", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Aleksei", "lastName": "Volkov", "title": "Security Researcher", "branch": "Engineering", "department": "Security Engineering" },
+    { "firstName": "Isla", "lastName": "Reeves", "title": "Security Researcher", "branch": "Engineering", "department": "Security Engineering" },
+
+    { "firstName": "Rowan", "lastName": "McKenzie", "title": "Platform Engineering Manager", "role": "admin", "branch": "Engineering", "department": "Platform Engineering" },
+    { "firstName": "Fumiko", "lastName": "Ota", "title": "Senior Platform Engineer", "branch": "Engineering", "department": "Platform Engineering" },
+    { "firstName": "Stefan", "lastName": "Novak", "title": "Senior Platform Engineer", "branch": "Engineering", "department": "Platform Engineering" },
+    { "firstName": "Khadija", "lastName": "Osman", "title": "Platform Engineer", "branch": "Engineering", "department": "Platform Engineering" },
+    { "firstName": "Brendan", "lastName": "Foley", "title": "Platform Engineer", "branch": "Engineering", "department": "Platform Engineering" },
+    { "firstName": "Linh", "lastName": "Tran", "title": "Senior DevEx Engineer", "branch": "Engineering", "department": "Platform Engineering" },
+    { "firstName": "Maxwell", "lastName": "Botha", "title": "DevEx Engineer", "branch": "Engineering", "department": "Platform Engineering" },
+    { "firstName": "Ines", "lastName": "Ferreira", "title": "DevEx Engineer", "branch": "Engineering", "department": "Platform Engineering" },
+
+    { "firstName": "Gloria", "lastName": "Hammond", "title": "Director of QA", "role": "admin", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Satoshi", "lastName": "Kimura", "title": "QA Manager - Automation", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Bianca", "lastName": "Moretti", "title": "QA Manager - Manual", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Rajesh", "lastName": "Venkatesh", "title": "Lead QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Fiona", "lastName": "O'Reilly", "title": "Senior QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Kwabena", "lastName": "Owusu", "title": "Senior QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Marta", "lastName": "Kaczmarek", "title": "QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Daisuke", "lastName": "Harada", "title": "QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Abigail", "lastName": "Foster", "title": "QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Mamadou", "lastName": "Camara", "title": "QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Hilde", "lastName": "Brandt", "title": "QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Tariq", "lastName": "Nazari", "title": "QA Engineer", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Siobhan", "lastName": "Kelly", "title": "Senior SDET", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Enrique", "lastName": "Padilla", "title": "Senior SDET", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Chen", "lastName": "Wei", "title": "SDET", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Natalya", "lastName": "Chernov", "title": "SDET", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Oscar", "lastName": "Lindholm", "title": "SDET", "branch": "Engineering", "department": "Quality Assurance" },
+    { "firstName": "Priya", "lastName": "Balasubramanian", "title": "SDET", "branch": "Engineering", "department": "Quality Assurance" },
+
+    { "firstName": "Curtis", "lastName": "Washington", "title": "SRE Manager", "role": "admin", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Annika", "lastName": "Holm", "title": "Senior SRE", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Jamal", "lastName": "Baptiste", "title": "Senior SRE", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Miriam", "lastName": "Schulz", "title": "Senior SRE", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Renzo", "lastName": "Bianchi", "title": "SRE", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Thandi", "lastName": "Ndlovu", "title": "SRE", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Erik", "lastName": "Gustafsson", "title": "SRE", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Amelia", "lastName": "Watts", "title": "SRE", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Kosei", "lastName": "Ishida", "title": "CloudOps Engineer", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Blessing", "lastName": "Chibuike", "title": "CloudOps Engineer", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Sven", "lastName": "Kristiansen", "title": "CloudOps Engineer", "branch": "Engineering", "department": "SRE" },
+    { "firstName": "Paloma", "lastName": "Ruiz", "title": "CloudOps Engineer", "branch": "Engineering", "department": "SRE" },
+
+    { "firstName": "Gregory", "lastName": "Hampton", "title": "Senior Manager, Build & Release", "role": "admin", "branch": "Engineering", "department": "Build & Release" },
+    { "firstName": "Yoko", "lastName": "Fujimoto", "title": "Staff Build Release Engineer", "branch": "Engineering", "department": "Build & Release" },
+    { "firstName": "Marcel", "lastName": "Dubois", "title": "Staff Build Release Engineer", "branch": "Engineering", "department": "Build & Release" },
+    { "firstName": "Chinara", "lastName": "Abiodun", "title": "Senior Build Release Engineer", "branch": "Engineering", "department": "Build & Release" },
+    { "firstName": "Nikolaj", "lastName": "Petersen", "title": "Build Release Engineer", "branch": "Engineering", "department": "Build & Release" },
+    { "firstName": "Sadie", "lastName": "Gallagher", "title": "Build Release Engineer", "branch": "Engineering", "department": "Build & Release" },
+    { "firstName": "Emre", "lastName": "Yilmaz", "title": "Build Release Engineer", "branch": "Engineering", "department": "Build & Release" },
+    { "firstName": "Lenka", "lastName": "Horakova", "title": "Build Release Engineer", "branch": "Engineering", "department": "Build & Release" },
+
+    { "firstName": "Victoria", "lastName": "Chang", "title": "Senior Director of Product", "role": "admin", "branch": "Product", "department": "Product" },
+    { "firstName": "Idris", "lastName": "Bello", "title": "Group Product Manager", "branch": "Product", "department": "Product" },
+    { "firstName": "Alina", "lastName": "Federova", "title": "Group Product Manager", "branch": "Product", "department": "Product" },
+    { "firstName": "Marcus", "lastName": "Lindgren", "title": "Senior Product Owner", "branch": "Product", "department": "Product" },
+    { "firstName": "Nkeiru", "lastName": "Anya", "title": "Senior Product Owner", "branch": "Product", "department": "Product" },
+    { "firstName": "Hugh", "lastName": "MacIntyre", "title": "Senior Product Owner", "branch": "Product", "department": "Product" },
+    { "firstName": "Catalina", "lastName": "Herrera", "title": "Product Owner", "branch": "Product", "department": "Product" },
+    { "firstName": "Ryota", "lastName": "Shimizu", "title": "Product Owner", "branch": "Product", "department": "Product" },
+
+    { "firstName": "Madeleine", "lastName": "Girard", "title": "Director of Design", "role": "admin", "branch": "Product", "department": "Design" },
+    { "firstName": "Kenzo", "lastName": "Aoki", "title": "Senior Product Designer", "branch": "Product", "department": "Design" },
+    { "firstName": "Saskia", "lastName": "van-der-Berg", "title": "Senior Product Designer", "branch": "Product", "department": "Design" },
+    { "firstName": "Tobenna", "lastName": "Okafor", "title": "Product Designer", "branch": "Product", "department": "Design" },
+    { "firstName": "Eloise", "lastName": "Martin", "title": "Design Engineer", "branch": "Product", "department": "Design" },
+    { "firstName": "Ashwin", "lastName": "Nair", "title": "Design Engineer", "branch": "Product", "department": "Design" },
+    { "firstName": "Frederica", "lastName": "Lang", "title": "Content Designer", "branch": "Product", "department": "Design" },
+    { "firstName": "Joon", "lastName": "Park", "title": "Content Designer", "branch": "Product", "department": "Design" },
+
+    { "firstName": "Adriana", "lastName": "Popescu", "title": "Data Science Lead", "role": "admin", "branch": "Engineering", "department": "Data Science" },
+    { "firstName": "Yiannis", "lastName": "Papadakis", "title": "Senior Data Scientist", "branch": "Engineering", "department": "Data Science" },
+    { "firstName": "Mei", "lastName": "Zhao", "title": "Data Scientist", "branch": "Engineering", "department": "Data Science" },
+    { "firstName": "Olumide", "lastName": "Adebayo", "title": "Senior ML Engineer", "branch": "Engineering", "department": "Data Science" },
+    { "firstName": "Katarina", "lastName": "Novak", "title": "ML Engineer", "branch": "Engineering", "department": "Data Science" },
+    { "firstName": "Finn", "lastName": "Callahan", "title": "ML Engineer", "branch": "Engineering", "department": "Data Science" },
+
+    { "firstName": "Raymond", "lastName": "Park", "title": "Head of Information Security", "role": "admin", "branch": "Operations", "department": "InfoSec & IT" },
+    { "firstName": "Farida", "lastName": "Saleh", "title": "IT Security Engineer", "branch": "Operations", "department": "InfoSec & IT" },
+    { "firstName": "Brendan", "lastName": "Walsh", "title": "IT Security Engineer", "branch": "Operations", "department": "InfoSec & IT" },
+    { "firstName": "Akiko", "lastName": "Morimoto", "title": "Senior IT Admin", "branch": "Operations", "department": "InfoSec & IT" },
+    { "firstName": "Desmond", "lastName": "Clarke", "title": "IT Admin", "branch": "Operations", "department": "InfoSec & IT" },
+    { "firstName": "Vera", "lastName": "Sokolova", "title": "IT Admin", "branch": "Operations", "department": "InfoSec & IT" },
+    { "firstName": "Kenneth", "lastName": "Owusu", "title": "IT Manager", "branch": "Operations", "department": "InfoSec & IT" },
+    { "firstName": "Miranda", "lastName": "Lopes", "title": "IT Support Specialist", "branch": "Operations", "department": "InfoSec & IT" },
+
+    { "firstName": "Sandra", "lastName": "Okonkwo", "title": "Senior Technical Program Manager", "branch": "Engineering", "department": "TPM" },
+    { "firstName": "Philip", "lastName": "Strauss", "title": "Technical Program Manager", "branch": "Engineering", "department": "TPM" },
+    { "firstName": "Noor", "lastName": "Abbasi", "title": "Technical Program Manager", "branch": "Engineering", "department": "TPM" },
+    { "firstName": "Grant", "lastName": "Morrison", "title": "Technical Program Manager", "branch": "Engineering", "department": "TPM" },
+
+    { "firstName": "Danielle", "lastName": "Moreau", "title": "VP People Operations", "role": "admin", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Elijah", "lastName": "Osei", "title": "People Operations Lead", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Kirsten", "lastName": "Arndt", "title": "People Operations Lead", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Matias", "lastName": "Silva", "title": "HR Business Partner", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Deborah", "lastName": "Nyong'o", "title": "HR Business Partner", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Trevor", "lastName": "Kim", "title": "Senior Recruiter", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Joanna", "lastName": "Wisniewska", "title": "Recruiter", "branch": "Operations", "department": "People Operations" },
+    { "firstName": "Hamza", "lastName": "El-Khoury", "title": "Recruiter", "branch": "Operations", "department": "People Operations" },
+
+    { "firstName": "Leonard", "lastName": "Strauss", "title": "Director of Finance", "role": "admin", "branch": "Operations", "department": "Finance" },
+    { "firstName": "Chidinma", "lastName": "Obi", "title": "FP&A Director", "branch": "Operations", "department": "Finance" },
+    { "firstName": "Margot", "lastName": "Lefevre", "title": "Senior Accountant", "branch": "Operations", "department": "Finance" },
+    { "firstName": "Yoshiko", "lastName": "Tanaka", "title": "Senior Accountant", "branch": "Operations", "department": "Finance" },
+    { "firstName": "Darren", "lastName": "Frost", "title": "Accountant", "branch": "Operations", "department": "Finance" },
+    { "firstName": "Luciana", "lastName": "Barbosa", "title": "Accountant", "branch": "Operations", "department": "Finance" },
+
+    { "firstName": "Arthur", "lastName": "Kensington", "title": "General Counsel", "role": "admin", "branch": "Operations", "department": "Legal" },
+    { "firstName": "Habiba", "lastName": "Omar", "title": "Senior Legal Counsel", "branch": "Operations", "department": "Legal" },
+    { "firstName": "Jean-Pierre", "lastName": "Renaud", "title": "Legal Counsel", "branch": "Operations", "department": "Legal" },
+    { "firstName": "Mirabel", "lastName": "Okonkwo", "title": "Paralegal", "branch": "Operations", "department": "Legal" },
+    { "firstName": "Stavros", "lastName": "Papadimitriou", "title": "Paralegal", "branch": "Operations", "department": "Legal" },
+
+    { "firstName": "Evelyn", "lastName": "Hartmann", "title": "Chief Compliance Officer", "role": "admin", "branch": "Operations", "department": "Compliance" },
+    { "firstName": "Rashid", "lastName": "Al-Farsi", "title": "Senior Compliance Analyst", "branch": "Operations", "department": "Compliance" },
+    { "firstName": "Moira", "lastName": "Flanagan", "title": "Compliance Analyst", "branch": "Operations", "department": "Compliance" },
+    { "firstName": "Takuya", "lastName": "Endo", "title": "Risk Analyst", "branch": "Operations", "department": "Compliance" },
+    { "firstName": "Grace", "lastName": "Nyambura", "title": "Risk Analyst", "branch": "Operations", "department": "Compliance" },
+
+    { "firstName": "Vanessa", "lastName": "Cole", "title": "VP Customer Success", "role": "admin", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Bernard", "lastName": "Leclerc", "title": "CS Manager - Enterprise", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Chiamaka", "lastName": "Okafor", "title": "CS Manager - Mid-Market", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Wesley", "lastName": "Chambers", "title": "Senior CS Engineer", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Fumie", "lastName": "Watanabe", "title": "Senior CS Engineer", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Randall", "lastName": "Pierce", "title": "CS Engineer", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Adwoa", "lastName": "Mensah", "title": "CS Engineer", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Fritz", "lastName": "Baumgartner", "title": "CS Engineer", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Mariana", "lastName": "Ortiz", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Duncan", "lastName": "Fraser", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Yewande", "lastName": "Afolabi", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Clyde", "lastName": "Patterson", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Anja", "lastName": "Richter", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Riku", "lastName": "Saito", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
+    { "firstName": "Natalie", "lastName": "Barrett", "title": "CS Specialist", "branch": "Go-to-Market", "department": "Customer Success" },
+
+    { "firstName": "Harrison", "lastName": "Blake", "title": "Sales Director", "role": "admin", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Simone", "lastName": "Beaumont", "title": "Enterprise Account Executive", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Dorian", "lastName": "Achebe", "title": "Enterprise Account Executive", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Katelyn", "lastName": "Ross", "title": "Enterprise Account Executive", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Vladimir", "lastName": "Kamenev", "title": "Mid-Market Account Executive", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Jasmine", "lastName": "Oduya", "title": "Mid-Market Account Executive", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Barrett", "lastName": "Sullivan", "title": "Mid-Market Account Executive", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Alondra", "lastName": "Cervantes", "title": "Sales Development Representative", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Niall", "lastName": "O'Donovan", "title": "Sales Development Representative", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Aisha", "lastName": "Jallow", "title": "Sales Development Representative", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Cedric", "lastName": "Thibault", "title": "Sales Development Representative", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Megan", "lastName": "Holloway", "title": "Sales Development Representative", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Olu", "lastName": "Adeyinka", "title": "Sales Operations Analyst", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Phoebe", "lastName": "Gallagher", "title": "Sales Operations Analyst", "branch": "Go-to-Market", "department": "Sales" },
+    { "firstName": "Tadashi", "lastName": "Ogawa", "title": "Sales Operations Manager", "branch": "Go-to-Market", "department": "Sales" },
+
+    { "firstName": "Celeste", "lastName": "Dupont", "title": "Marketing Director", "role": "admin", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Kwesi", "lastName": "Appiah", "title": "Growth Marketing Manager", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Ilona", "lastName": "Szabo", "title": "Growth Marketing Specialist", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Derek", "lastName": "Chambers", "title": "Product Marketing Manager", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Natsuki", "lastName": "Yamada", "title": "Product Marketing Specialist", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Orlando", "lastName": "Reyes", "title": "Technical Marketing Manager", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Bridget", "lastName": "Flanagan", "title": "Content Marketing Manager", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Davi", "lastName": "Santos", "title": "Content Marketing Specialist", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Lydia", "lastName": "Osei", "title": "Social Media Manager", "branch": "Go-to-Market", "department": "Marketing" },
+    { "firstName": "Costas", "lastName": "Nikolaou", "title": "Marketing Operations Analyst", "branch": "Go-to-Market", "department": "Marketing" },
+
+    { "firstName": "Margaret", "lastName": "Sullivan", "title": "Technical Writing Manager", "role": "admin", "branch": "Product", "department": "Technical Writing" },
+    { "firstName": "Rahul", "lastName": "Deshmukh", "title": "Senior Technical Writer", "branch": "Product", "department": "Technical Writing" },
+    { "firstName": "Astrid", "lastName": "Eriksen", "title": "Senior Technical Writer", "branch": "Product", "department": "Technical Writing" },
+    { "firstName": "Oluwaseun", "lastName": "Adeniyi", "title": "Technical Writer", "branch": "Product", "department": "Technical Writing" },
+    { "firstName": "Carmen", "lastName": "Vidal", "title": "Technical Writer", "branch": "Product", "department": "Technical Writing" },
+
+    { "firstName": "Franklin", "lastName": "Osei-Bonsu", "title": "Solutions Engineering Manager", "role": "admin", "branch": "Go-to-Market", "department": "Solutions Engineering" },
+    { "firstName": "Hana", "lastName": "Kato", "title": "Senior Solutions Engineer", "branch": "Go-to-Market", "department": "Solutions Engineering" },
+    { "firstName": "Vladimir", "lastName": "Kravchenko", "title": "Senior Solutions Engineer", "branch": "Go-to-Market", "department": "Solutions Engineering" },
+    { "firstName": "Destiny", "lastName": "Okafor", "title": "Solutions Engineer", "branch": "Go-to-Market", "department": "Solutions Engineering" },
+    { "firstName": "Lachlan", "lastName": "McPherson", "title": "Solutions Engineer", "branch": "Go-to-Market", "department": "Solutions Engineering" },
+    { "firstName": "Elif", "lastName": "Demir", "title": "Solutions Engineer", "branch": "Go-to-Market", "department": "Solutions Engineering" },
+
+    { "firstName": "Xavier", "lastName": "Fontaine", "title": "Head of Innovation", "role": "admin", "branch": "Engineering", "department": "Innovation Lab" },
+    { "firstName": "Anika", "lastName": "Joshi", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Innovation Lab" },
+    { "firstName": "Dimitri", "lastName": "Alexandrov", "title": "Senior Software Engineer", "branch": "Engineering", "department": "Innovation Lab" },
+    { "firstName": "Solange", "lastName": "Mbeki", "title": "Research Engineer", "branch": "Engineering", "department": "Innovation Lab" },
+    { "firstName": "Eoin", "lastName": "Gallagher", "title": "Research Engineer", "branch": "Engineering", "department": "Innovation Lab" },
+
+    { "firstName": "Nolan", "lastName": "Fischer", "title": "Internal Tools Lead", "role": "admin", "branch": "Engineering", "department": "Internal Tools" },
+    { "firstName": "Ayumi", "lastName": "Kobayashi", "title": "Full-Stack Engineer", "branch": "Engineering", "department": "Internal Tools" },
+    { "firstName": "Thabo", "lastName": "Dlamini", "title": "Full-Stack Engineer", "branch": "Engineering", "department": "Internal Tools" },
+    { "firstName": "Gemma", "lastName": "Whitaker", "title": "Full-Stack Engineer", "branch": "Engineering", "department": "Internal Tools" }
+  ],
+  "groups": [
+    {
+      "name": "Team Avengers",
+      "members": [
+        "sanjay.patel", "yuki.tanaka", "maria.santos", "derek.osei", "hannah.liu",
+        "viktor.kozlov", "amara.johnson", "felix.mueller", "zara.ahmad",
+        "tyler.brooks", "nina.kowalski"
+      ]
+    },
+    {
+      "name": "Team X-Force",
+      "members": [
+        "fatima.al-rashid", "bjorn.eriksen", "grace.ndunge", "andrei.volkov", "mei-lin.wu",
+        "santiago.rivera", "jasper.thornton", "aisha.okafor", "liam.brennan",
+        "priscilla.huang", "ravi.sundaram"
+      ]
+    },
+    {
+      "name": "Team Thunderbolts",
+      "members": [
+        "patrick.o'sullivan", "keiko.hashimoto", "daniel.obi", "natasha.filipova", "carlos.herrera",
+        "samantha.park", "ibrahim.diallo", "emma.johansson", "raj.mehta",
+        "olivia.chen", "marco.rossi"
+      ]
+    },
+    {
+      "name": "Team Guardians",
+      "members": [
+        "wei.zhang", "anna.kowalczyk", "trevor.williams", "olga.petrova", "hassan.mahmoud",
+        "jennifer.reyes", "kwame.asante", "mia.larsson", "dmitri.sokolov",
+        "sophia.nguyen", "lucas.almeida"
+      ]
+    },
+    {
+      "name": "Team Defenders",
+      "members": [
+        "rashid.khan", "elsa.lindqvist", "chioma.eze", "pierre.dubois", "yuna.kim",
+        "maxwell.wright", "fatou.diop", "adrian.stanescu", "kayla.morrison",
+        "ethan.park", "shreya.iyer"
+      ]
+    },
+    {
+      "name": "Team Wakanda",
+      "members": [
+        "nneka.okonkwo", "lars.andersen", "rosa.martinez", "hiroshi.sato", "claudia.fischer",
+        "david.mensah", "leila.hosseini", "thomas.olsen", "blessing.adebayo",
+        "jamie.walsh", "ananya.krishnan"
+      ]
+    },
+    {
+      "name": "Team Asgard",
+      "members": [
+        "alexander.petrov", "sakura.mori", "chinedu.emeka", "eva.novak", "richard.otunga",
+        "min-ji.lee", "gustaf.svensson", "aaliyah.brown", "pavel.dvorak",
+        "chloe.williams", "deepak.sharma"
+      ]
+    },
+    {
+      "name": "Team S.H.I.E.L.D.",
+      "members": [
+        "brigitte.hoffman", "javier.castillo", "fiona.mcgregor", "nikolai.volkov", "sunita.reddy",
+        "connor.murphy", "youssef.el-amin", "karin.bergman", "tariq.hassan",
+        "lily.nakamura", "roisin.o'brien"
+      ]
+    },
+    {
+      "name": "Team Infinity",
+      "members": [
+        "aditya.kapoor", "freya.johansson", "binta.diallo", "ivan.kovalenko", "julia.santos",
+        "kenneth.osei", "hanna.eriksson", "moussa.toure", "crystal.zhang",
+        "leo.park", "vladimir.novak"
+      ]
+    },
+    {
+      "name": "Team New Mutants",
+      "members": [
+        "sarah.mitchell", "akio.watanabe", "nadia.benali", "friedrich.weber", "amira.khalil",
+        "bryan.torres", "sienna.russo", "lars.hagen", "dayo.ogundimu",
+        "mason.rivera", "petra.kovar"
+      ]
+    },
+    {
+      "name": "Team Fantastic Four",
+      "members": [
+        "rebecca.goldstein", "hiroki.suzuki", "folake.adewale", "christian.bach", "priyanka.gupta",
+        "andre.ferreira", "ingrid.dahl", "rasheed.thomas", "luna.garcia",
+        "noah.kim", "tomoko.ishikawa"
+      ]
+    },
+    {
+      "name": "Team Excelsior",
+      "members": [
+        "michael.ochieng", "katerina.novotna", "jared.sullivan", "svetlana.kuznetsova", "ahmed.mansour",
+        "heather.douglas", "fabio.costa", "ayesha.malik", "erik.lindberg",
+        "zoe.papadopoulos", "mateo.vargas"
+      ]
+    },
+    {
+      "name": "Team Alpha Flight",
+      "members": [
+        "yumiko.takahashi", "henrik.larsen", "adaeze.nwachukwu", "mikhail.popov", "carmen.delgado",
+        "robert.tan", "freya.schmidt", "oumar.sy", "maeve.o'connor",
+        "jin-ho.lee", "daniela.ionescu"
+      ]
+    },
+    {
+      "name": "Team Midnight Sons",
+      "members": [
+        "benjamin.okafor", "lena.muller", "vikram.singh", "tatiana.romanova", "jorge.gutierrez",
+        "susan.chen", "amadou.bah", "elise.dubois", "naveen.patel",
+        "ava.johansson", "cristina.popescu"
+      ]
+    },
+    {
+      "name": "Team Illuminati",
+      "members": [
+        "diana.vasquez", "tomas.novak", "adebola.ogunlade", "mikael.lindstrom", "rachael.otieno",
+        "jakub.kowalski", "mariam.toure", "sebastian.vogel", "anita.desai",
+        "caleb.hernandez", "oleg.ivanov"
+      ]
+    },
+    {
+      "name": "Team Power Pack",
+      "members": [
+        "jonathan.edwards", "yui.kimura", "precious.obi", "henrik.strand", "layla.hassan",
+        "maxwell.chen", "birgit.fjord", "emeka.nwosu", "daniella.cruz",
+        "ryan.tanaka", "arjun.mehta"
+      ]
+    },
+    {
+      "name": "Team Inhumans",
+      "members": [
+        "teresa.rodrigues", "anders.nilsson", "kemi.oladipo", "franz.huber", "nkechi.ike",
+        "paul.henderson", "maja.bergstrom", "chidi.okoro", "lena.schultz",
+        "kai.watanabe", "sofia.alexandrova"
+      ]
+    },
+    {
+      "name": "Team Ravagers",
+      "members": [
+        "vincent.mensah", "camille.laurent", "haruto.nakamura", "isabella.costa", "kwesi.boateng",
+        "natalia.sokolova", "oscar.lindgren", "zahra.ahmadi", "philippe.girard",
+        "milo.fitzgerald", "eun-ji.choi"
+      ]
+    },
+    {
+      "name": "Architecture",
+      "members": [
+        "takeshi.yamamoto", "ingrid.bergstrom", "omar.farouk", "lucia.moreno",
+        "devon.chakravarti", "astrid.nielsen", "kofi.mensah", "rachel.petrov"
+      ]
+    },
+    {
+      "name": "Security Engineering",
+      "members": [
+        "malcolm.sterling", "yara.bashir", "darius.wolfe", "keiko.taniguchi",
+        "rafael.dominguez", "samira.haddad", "tobias.engel", "zuri.mwangi",
+        "aleksei.volkov", "isla.reeves"
+      ]
+    },
+    {
+      "name": "Platform Engineering",
+      "members": [
+        "rowan.mckenzie", "fumiko.ota", "stefan.novak", "khadija.osman",
+        "brendan.foley", "linh.tran", "maxwell.botha", "ines.ferreira"
+      ]
+    },
+    {
+      "name": "Quality Assurance",
+      "members": [
+        "gloria.hammond", "satoshi.kimura", "bianca.moretti", "rajesh.venkatesh",
+        "fiona.o'reilly", "kwabena.owusu", "marta.kaczmarek", "daisuke.harada",
+        "abigail.foster", "mamadou.camara", "hilde.brandt", "tariq.nazari",
+        "siobhan.kelly", "enrique.padilla", "chen.wei", "natalya.chernov",
+        "oscar.lindholm", "priya.balasubramanian"
+      ]
+    },
+    {
+      "name": "SRE",
+      "members": [
+        "curtis.washington", "annika.holm", "jamal.baptiste", "miriam.schulz",
+        "renzo.bianchi", "thandi.ndlovu", "erik.gustafsson", "amelia.watts",
+        "kosei.ishida", "blessing.chibuike", "sven.kristiansen", "paloma.ruiz"
+      ]
+    },
+    {
+      "name": "Build & Release",
+      "members": [
+        "gregory.hampton", "yoko.fujimoto", "marcel.dubois", "chinara.abiodun",
+        "nikolaj.petersen", "sadie.gallagher", "emre.yilmaz", "lenka.horakova"
+      ]
+    },
+    {
+      "name": "Product",
+      "members": [
+        "victoria.chang", "idris.bello", "alina.federova", "marcus.lindgren",
+        "nkeiru.anya", "hugh.macintyre", "catalina.herrera", "ryota.shimizu"
+      ]
+    },
+    {
+      "name": "Design",
+      "members": [
+        "madeleine.girard", "kenzo.aoki", "saskia.van-der-berg", "tobenna.okafor",
+        "eloise.martin", "ashwin.nair", "frederica.lang", "joon.park"
+      ]
+    },
+    {
+      "name": "Data Science",
+      "members": [
+        "adriana.popescu", "yiannis.papadakis", "mei.zhao",
+        "olumide.adebayo", "katarina.novak", "finn.callahan"
+      ]
+    },
+    {
+      "name": "InfoSec & IT",
+      "members": [
+        "raymond.park", "farida.saleh", "brendan.walsh", "akiko.morimoto",
+        "desmond.clarke", "vera.sokolova", "kenneth.owusu", "miranda.lopes"
+      ]
+    },
+    {
+      "name": "People Operations",
+      "members": [
+        "danielle.moreau", "elijah.osei", "kirsten.arndt", "matias.silva",
+        "deborah.nyong'o", "trevor.kim", "joanna.wisniewska", "hamza.el-khoury"
+      ]
+    },
+    {
+      "name": "Finance",
+      "members": [
+        "leonard.strauss", "chidinma.obi", "margot.lefevre",
+        "yoshiko.tanaka", "darren.frost", "luciana.barbosa"
+      ]
+    },
+    {
+      "name": "Legal",
+      "members": [
+        "arthur.kensington", "habiba.omar", "jean-pierre.renaud",
+        "mirabel.okonkwo", "stavros.papadimitriou"
+      ]
+    },
+    {
+      "name": "Compliance",
+      "members": [
+        "evelyn.hartmann", "rashid.al-farsi", "moira.flanagan",
+        "takuya.endo", "grace.nyambura"
+      ]
+    },
+    {
+      "name": "Customer Success",
+      "members": [
+        "vanessa.cole", "bernard.leclerc", "chiamaka.okafor", "wesley.chambers",
+        "fumie.watanabe", "randall.pierce", "adwoa.mensah", "fritz.baumgartner",
+        "mariana.ortiz", "duncan.fraser", "yewande.afolabi", "clyde.patterson",
+        "anja.richter", "riku.saito", "natalie.barrett"
+      ]
+    },
+    {
+      "name": "Sales",
+      "members": [
+        "harrison.blake", "simone.beaumont", "dorian.achebe", "katelyn.ross",
+        "vladimir.kamenev", "jasmine.oduya", "barrett.sullivan", "alondra.cervantes",
+        "niall.o'donovan", "aisha.jallow", "cedric.thibault", "megan.holloway",
+        "olu.adeyinka", "phoebe.gallagher", "tadashi.ogawa"
+      ]
+    },
+    {
+      "name": "Marketing",
+      "members": [
+        "celeste.dupont", "kwesi.appiah", "ilona.szabo", "derek.chambers",
+        "natsuki.yamada", "orlando.reyes", "bridget.flanagan", "davi.santos",
+        "lydia.osei", "costas.nikolaou"
+      ]
+    },
+    {
+      "name": "All Engineering",
+      "members": [
+        "sanjay.patel", "yuki.tanaka", "maria.santos", "derek.osei", "hannah.liu",
+        "viktor.kozlov", "amara.johnson", "felix.mueller", "zara.ahmad",
+        "tyler.brooks", "nina.kowalski",
+        "fatima.al-rashid", "bjorn.eriksen", "grace.ndunge", "andrei.volkov", "mei-lin.wu",
+        "santiago.rivera", "jasper.thornton", "aisha.okafor", "liam.brennan",
+        "priscilla.huang", "ravi.sundaram",
+        "patrick.o'sullivan", "keiko.hashimoto", "daniel.obi", "natasha.filipova", "carlos.herrera",
+        "samantha.park", "ibrahim.diallo", "emma.johansson", "raj.mehta",
+        "olivia.chen", "marco.rossi",
+        "wei.zhang", "anna.kowalczyk", "trevor.williams", "olga.petrova", "hassan.mahmoud",
+        "jennifer.reyes", "kwame.asante", "mia.larsson", "dmitri.sokolov",
+        "sophia.nguyen", "lucas.almeida",
+        "rashid.khan", "elsa.lindqvist", "chioma.eze", "pierre.dubois", "yuna.kim",
+        "maxwell.wright", "fatou.diop", "adrian.stanescu", "kayla.morrison",
+        "ethan.park", "shreya.iyer",
+        "nneka.okonkwo", "lars.andersen", "rosa.martinez", "hiroshi.sato", "claudia.fischer",
+        "david.mensah", "leila.hosseini", "thomas.olsen", "blessing.adebayo",
+        "jamie.walsh", "ananya.krishnan",
+        "alexander.petrov", "sakura.mori", "chinedu.emeka", "eva.novak", "richard.otunga",
+        "min-ji.lee", "gustaf.svensson", "aaliyah.brown", "pavel.dvorak",
+        "chloe.williams", "deepak.sharma",
+        "brigitte.hoffman", "javier.castillo", "fiona.mcgregor", "nikolai.volkov", "sunita.reddy",
+        "connor.murphy", "youssef.el-amin", "karin.bergman", "tariq.hassan",
+        "lily.nakamura", "roisin.o'brien",
+        "aditya.kapoor", "freya.johansson", "binta.diallo", "ivan.kovalenko", "julia.santos",
+        "kenneth.osei", "hanna.eriksson", "moussa.toure", "crystal.zhang",
+        "leo.park", "vladimir.novak",
+        "sarah.mitchell", "akio.watanabe", "nadia.benali", "friedrich.weber", "amira.khalil",
+        "bryan.torres", "sienna.russo", "lars.hagen", "dayo.ogundimu",
+        "mason.rivera", "petra.kovar",
+        "rebecca.goldstein", "hiroki.suzuki", "folake.adewale", "christian.bach", "priyanka.gupta",
+        "andre.ferreira", "ingrid.dahl", "rasheed.thomas", "luna.garcia",
+        "noah.kim", "tomoko.ishikawa",
+        "michael.ochieng", "katerina.novotna", "jared.sullivan", "svetlana.kuznetsova", "ahmed.mansour",
+        "heather.douglas", "fabio.costa", "ayesha.malik", "erik.lindberg",
+        "zoe.papadopoulos", "mateo.vargas",
+        "yumiko.takahashi", "henrik.larsen", "adaeze.nwachukwu", "mikhail.popov", "carmen.delgado",
+        "robert.tan", "freya.schmidt", "oumar.sy", "maeve.o'connor",
+        "jin-ho.lee", "daniela.ionescu",
+        "benjamin.okafor", "lena.muller", "vikram.singh", "tatiana.romanova", "jorge.gutierrez",
+        "susan.chen", "amadou.bah", "elise.dubois", "naveen.patel",
+        "ava.johansson", "cristina.popescu",
+        "diana.vasquez", "tomas.novak", "adebola.ogunlade", "mikael.lindstrom", "rachael.otieno",
+        "jakub.kowalski", "mariam.toure", "sebastian.vogel", "anita.desai",
+        "caleb.hernandez", "oleg.ivanov",
+        "jonathan.edwards", "yui.kimura", "precious.obi", "henrik.strand", "layla.hassan",
+        "maxwell.chen", "birgit.fjord", "emeka.nwosu", "daniella.cruz",
+        "ryan.tanaka", "arjun.mehta",
+        "teresa.rodrigues", "anders.nilsson", "kemi.oladipo", "franz.huber", "nkechi.ike",
+        "paul.henderson", "maja.bergstrom", "chidi.okoro", "lena.schultz",
+        "kai.watanabe", "sofia.alexandrova",
+        "vincent.mensah", "camille.laurent", "haruto.nakamura", "isabella.costa", "kwesi.boateng",
+        "natalia.sokolova", "oscar.lindgren", "zahra.ahmadi", "philippe.girard",
+        "milo.fitzgerald", "eun-ji.choi",
+        "takeshi.yamamoto", "ingrid.bergstrom", "omar.farouk", "lucia.moreno",
+        "devon.chakravarti", "astrid.nielsen", "kofi.mensah", "rachel.petrov",
+        "malcolm.sterling", "yara.bashir", "darius.wolfe", "keiko.taniguchi",
+        "rafael.dominguez", "samira.haddad", "tobias.engel", "zuri.mwangi",
+        "aleksei.volkov", "isla.reeves",
+        "rowan.mckenzie", "fumiko.ota", "stefan.novak", "khadija.osman",
+        "brendan.foley", "linh.tran", "maxwell.botha", "ines.ferreira",
+        "gloria.hammond", "satoshi.kimura", "bianca.moretti", "rajesh.venkatesh",
+        "fiona.o'reilly", "kwabena.owusu", "marta.kaczmarek", "daisuke.harada",
+        "abigail.foster", "mamadou.camara", "hilde.brandt", "tariq.nazari",
+        "siobhan.kelly", "enrique.padilla", "chen.wei", "natalya.chernov",
+        "oscar.lindholm", "priya.balasubramanian",
+        "curtis.washington", "annika.holm", "jamal.baptiste", "miriam.schulz",
+        "renzo.bianchi", "thandi.ndlovu", "erik.gustafsson", "amelia.watts",
+        "kosei.ishida", "blessing.chibuike", "sven.kristiansen", "paloma.ruiz",
+        "gregory.hampton", "yoko.fujimoto", "marcel.dubois", "chinara.abiodun",
+        "nikolaj.petersen", "sadie.gallagher", "emre.yilmaz", "lenka.horakova",
+        "adriana.popescu", "yiannis.papadakis", "mei.zhao",
+        "olumide.adebayo", "katarina.novak", "finn.callahan",
+        "xavier.fontaine", "anika.joshi", "dimitri.alexandrov",
+        "solange.mbeki", "eoin.gallagher",
+        "nolan.fischer", "ayumi.kobayashi", "thabo.dlamini", "gemma.whitaker",
+        "sandra.okonkwo", "philip.strauss", "noor.abbasi", "grant.morrison"
+      ]
+    },
+    {
+      "name": "Engineering Managers",
+      "members": [
+        "sanjay.patel", "fatima.al-rashid", "patrick.o'sullivan", "wei.zhang",
+        "rashid.khan", "nneka.okonkwo", "alexander.petrov", "brigitte.hoffman",
+        "aditya.kapoor", "sarah.mitchell", "rebecca.goldstein", "michael.ochieng",
+        "yumiko.takahashi", "benjamin.okafor", "diana.vasquez", "jonathan.edwards",
+        "teresa.rodrigues", "vincent.mensah"
+      ]
+    },
+    {
+      "name": "Technical Writing",
+      "members": [
+        "margaret.sullivan", "rahul.deshmukh", "astrid.eriksen",
+        "oluwaseun.adeniyi", "carmen.vidal"
+      ]
+    },
+    {
+      "name": "Solutions Engineering",
+      "members": [
+        "franklin.osei-bonsu", "hana.kato", "vladimir.kravchenko",
+        "destiny.okafor", "lachlan.mcpherson", "elif.demir"
+      ]
+    },
+    {
+      "name": "Innovation Lab",
+      "members": [
+        "xavier.fontaine", "anika.joshi", "dimitri.alexandrov",
+        "solange.mbeki", "eoin.gallagher"
+      ]
+    },
+    {
+      "name": "Internal Tools",
+      "members": [
+        "nolan.fischer", "ayumi.kobayashi", "thabo.dlamini", "gemma.whitaker"
+      ]
+    },
+    {
+      "name": "TPM",
+      "members": [
+        "sandra.okonkwo", "philip.strauss", "noor.abbasi", "grant.morrison"
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Engineering/Avengers",
+      "groups": [
+        { "group": "Team Avengers" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "sanjay.patel", "manage": true },
+        { "user": "tyler.brooks", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/X-Force",
+      "groups": [
+        { "group": "Team X-Force" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "fatima.al-rashid", "manage": true },
+        { "user": "priscilla.huang", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Thunderbolts",
+      "groups": [
+        { "group": "Team Thunderbolts" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "patrick.o'sullivan", "manage": true },
+        { "user": "olivia.chen", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Guardians",
+      "groups": [
+        { "group": "Team Guardians" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "wei.zhang", "manage": true },
+        { "user": "sophia.nguyen", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Defenders",
+      "groups": [
+        { "group": "Team Defenders" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "rashid.khan", "manage": true },
+        { "user": "ethan.park", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Wakanda",
+      "groups": [
+        { "group": "Team Wakanda" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "nneka.okonkwo", "manage": true },
+        { "user": "jamie.walsh", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Asgard",
+      "groups": [
+        { "group": "Team Asgard" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "alexander.petrov", "manage": true },
+        { "user": "chloe.williams", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/S.H.I.E.L.D.",
+      "groups": [
+        { "group": "Team S.H.I.E.L.D." },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "brigitte.hoffman", "manage": true },
+        { "user": "lily.nakamura", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Infinity",
+      "groups": [
+        { "group": "Team Infinity" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "aditya.kapoor", "manage": true },
+        { "user": "leo.park", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/New Mutants",
+      "groups": [
+        { "group": "Team New Mutants" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "sarah.mitchell", "manage": true },
+        { "user": "mason.rivera", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Fantastic Four",
+      "groups": [
+        { "group": "Team Fantastic Four" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "rebecca.goldstein", "manage": true },
+        { "user": "noah.kim", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Excelsior",
+      "groups": [
+        { "group": "Team Excelsior" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "michael.ochieng", "manage": true },
+        { "user": "zoe.papadopoulos", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Alpha Flight",
+      "groups": [
+        { "group": "Team Alpha Flight" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "yumiko.takahashi", "manage": true },
+        { "user": "jin-ho.lee", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Midnight Sons",
+      "groups": [
+        { "group": "Team Midnight Sons" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "benjamin.okafor", "manage": true },
+        { "user": "ava.johansson", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Illuminati",
+      "groups": [
+        { "group": "Team Illuminati" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "diana.vasquez", "manage": true },
+        { "user": "caleb.hernandez", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Power Pack",
+      "groups": [
+        { "group": "Team Power Pack" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "jonathan.edwards", "manage": true },
+        { "user": "ryan.tanaka", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Inhumans",
+      "groups": [
+        { "group": "Team Inhumans" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "teresa.rodrigues", "manage": true },
+        { "user": "kai.watanabe", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Engineering/Ravagers",
+      "groups": [
+        { "group": "Team Ravagers" },
+        { "group": "Architecture", "readOnly": true }
+      ],
+      "users": [
+        { "user": "vincent.mensah", "manage": true },
+        { "user": "milo.fitzgerald", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "QA/Automation",
+      "groups": [
+        { "group": "Quality Assurance" }
+      ],
+      "users": [
+        { "user": "gloria.hammond", "manage": true }
+      ]
+    },
+    {
+      "name": "QA/Manual Testing",
+      "groups": [
+        { "group": "Quality Assurance" }
+      ],
+      "users": [
+        { "user": "gloria.hammond", "manage": true }
+      ]
+    },
+    {
+      "name": "QA/Performance",
+      "groups": [
+        { "group": "Quality Assurance" }
+      ],
+      "users": [
+        { "user": "gloria.hammond", "manage": true }
+      ]
+    },
+    {
+      "name": "Executive/Reports",
+      "users": [
+        { "user": "marcus.chen", "manage": true },
+        { "user": "priya.narayanan", "manage": true },
+        { "user": "catherine.okonkwo", "manage": true },
+        { "user": "james.whitfield", "manage": true },
+        { "user": "elena.vasquez", "manage": true },
+        { "user": "robert.adeyemi", "manage": true }
+      ]
+    },
+    {
+      "name": "Executive/Financial",
+      "groups": [
+        { "group": "Finance", "readOnly": true }
+      ],
+      "users": [
+        { "user": "marcus.chen", "manage": true },
+        { "user": "priya.narayanan", "manage": true },
+        { "user": "catherine.okonkwo", "manage": true },
+        { "user": "james.whitfield", "manage": true },
+        { "user": "elena.vasquez", "manage": true },
+        { "user": "robert.adeyemi", "manage": true }
+      ]
+    },
+    {
+      "name": "Sales/Enterprise",
+      "groups": [
+        { "group": "Sales" }
+      ],
+      "users": [
+        { "user": "harrison.blake", "manage": true }
+      ]
+    },
+    {
+      "name": "Sales/Mid-Market",
+      "groups": [
+        { "group": "Sales" }
+      ],
+      "users": [
+        { "user": "harrison.blake", "manage": true }
+      ]
+    },
+    {
+      "name": "Sales/Development",
+      "groups": [
+        { "group": "Sales" }
+      ],
+      "users": [
+        { "user": "harrison.blake", "manage": true }
+      ]
+    },
+    {
+      "name": "Marketing/Growth",
+      "groups": [
+        { "group": "Marketing" }
+      ],
+      "users": [
+        { "user": "celeste.dupont", "manage": true }
+      ]
+    },
+    {
+      "name": "Marketing/Product",
+      "groups": [
+        { "group": "Marketing" }
+      ],
+      "users": [
+        { "user": "celeste.dupont", "manage": true }
+      ]
+    },
+    {
+      "name": "Marketing/Content",
+      "groups": [
+        { "group": "Marketing" }
+      ],
+      "users": [
+        { "user": "celeste.dupont", "manage": true }
+      ]
+    },
+    {
+      "name": "Customer Success/Engineering",
+      "groups": [
+        { "group": "Customer Success" }
+      ],
+      "users": [
+        { "user": "vanessa.cole", "manage": true }
+      ]
+    },
+    {
+      "name": "Customer Success/Support",
+      "groups": [
+        { "group": "Customer Success" }
+      ],
+      "users": [
+        { "user": "vanessa.cole", "manage": true }
+      ]
+    },
+    {
+      "name": "Cloud Infrastructure",
+      "groups": [
+        { "group": "SRE" },
+        { "group": "Team Guardians", "readOnly": true },
+        { "group": "Team S.H.I.E.L.D.", "readOnly": true }
+      ],
+      "users": [
+        { "user": "curtis.washington", "manage": true }
+      ]
+    },
+    {
+      "name": "CI/CD Pipelines",
+      "groups": [
+        { "group": "Build & Release" },
+        { "group": "Team S.H.I.E.L.D." },
+        { "group": "Platform Engineering", "readOnly": true }
+      ],
+      "users": [
+        { "user": "gregory.hampton", "manage": true }
+      ]
+    },
+    {
+      "name": "Architecture/Technical Standards",
+      "groups": [
+        { "group": "Architecture", "manage": true }
+      ],
+      "users": [
+        { "user": "elena.vasquez", "manage": true }
+      ]
+    },
+    {
+      "name": "Security Credentials",
+      "groups": [
+        { "group": "Security Engineering", "manage": true }
+      ],
+      "users": [
+        { "user": "robert.adeyemi", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Production Access",
+      "groups": [
+        { "group": "SRE" },
+        { "group": "Engineering Managers", "readOnly": true }
+      ],
+      "users": [
+        { "user": "curtis.washington", "manage": true },
+        { "user": "elena.vasquez", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Vendor Licenses",
+      "groups": [
+        { "group": "Finance", "manage": true },
+        { "group": "Legal", "readOnly": true }
+      ]
+    },
+    {
+      "name": "HR Systems",
+      "groups": [
+        { "group": "People Operations", "manage": true }
+      ]
+    },
+    {
+      "name": "Benefits Portal",
+      "groups": [
+        { "group": "People Operations", "manage": true }
+      ]
+    },
+    {
+      "name": "Legal Documents",
+      "groups": [
+        { "group": "Legal", "manage": true },
+        { "group": "Compliance", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Compliance Policies",
+      "groups": [
+        { "group": "Compliance", "manage": true },
+        { "group": "Legal", "readOnly": true },
+        { "group": "All Engineering", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Regulatory Filings",
+      "groups": [
+        { "group": "Compliance", "manage": true }
+      ]
+    },
+    {
+      "name": "Marketing Assets",
+      "groups": [
+        { "group": "Marketing" }
+      ],
+      "users": [
+        { "user": "celeste.dupont", "manage": true }
+      ]
+    },
+    {
+      "name": "Sales Playbooks",
+      "groups": [
+        { "group": "Sales" }
+      ],
+      "users": [
+        { "user": "harrison.blake", "manage": true }
+      ]
+    },
+    {
+      "name": "Customer Success Tools",
+      "groups": [
+        { "group": "Customer Success" }
+      ],
+      "users": [
+        { "user": "vanessa.cole", "manage": true }
+      ]
+    },
+    {
+      "name": "Onboarding",
+      "groups": [
+        { "group": "People Operations", "manage": true },
+        { "group": "All Engineering", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Environment Setup",
+      "groups": [
+        { "group": "All Engineering", "readOnly": true },
+        { "group": "Platform Engineering", "manage": true }
+      ]
+    },
+    {
+      "name": "Shared API Keys",
+      "groups": [
+        { "group": "Platform Engineering", "manage": true },
+        { "group": "All Engineering", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Data Science Notebooks",
+      "groups": [
+        { "group": "Data Science" }
+      ],
+      "users": [
+        { "user": "adriana.popescu", "manage": true }
+      ]
+    },
+    {
+      "name": "Innovation Lab",
+      "groups": [
+        { "group": "Innovation Lab" }
+      ],
+      "users": [
+        { "user": "xavier.fontaine", "manage": true }
+      ]
+    },
+    {
+      "name": "Internal Tools",
+      "groups": [
+        { "group": "Internal Tools" }
+      ],
+      "users": [
+        { "user": "nolan.fischer", "manage": true }
+      ]
+    },
+    {
+      "name": "Pen Test Reports",
+      "groups": [
+        { "group": "Security Engineering", "manage": true }
+      ],
+      "users": [
+        { "user": "robert.adeyemi", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Incident Postmortems",
+      "groups": [
+        { "group": "SRE", "manage": true },
+        { "group": "All Engineering", "readOnly": true }
+      ]
+    }
+  ]
+}

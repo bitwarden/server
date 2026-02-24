@@ -171,13 +171,13 @@ public static class FeatureFlagKeys
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
 
     /* Autofill Team */
-    public const string SSHAgent = "ssh-agent";
     public const string SSHAgentV2 = "ssh-agent-v2";
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string NotificationRefresh = "notification-refresh";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
+    public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
 
     /* Billing Team */
@@ -196,7 +196,6 @@ public static class FeatureFlagKeys
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string Argon2Default = "argon2-default";
-    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
@@ -210,6 +209,7 @@ public static class FeatureFlagKeys
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
     public const string UnlockViaSdk = "unlock-via-sdk";
+    public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
     /* Mobile Team */
@@ -273,9 +273,6 @@ public static class FeatureFlagKeys
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
-
-    /* Secrets Manager Team */
-    public const string SM1719_RemoveSecretsManagerAds = "sm-1719-remove-secrets-manager-ads";
 
     public static List<string> GetAllKeys()
     {

@@ -1,0 +1,155 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "View-And-Manage-Login",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "View-Items-Login-Delete",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Edit-Items-Login-Delete",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Edit-Items-Hidden-Passwords-Login-Delete",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "View-Items-Hidden-Passwords-Login-Delete",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Manage-Login",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Edit-Items-Hidden-Passwords-Login",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Edit-Items-Login",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "View-Items-Login",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "View-Items-Hidden-Passwords-Login",
+      "fields": [
+        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      ],
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "testing123",
+        "uris": [
+          { "uri": "bitwarden.com" }
+        ]
+      }
+    }
+  ]
+}

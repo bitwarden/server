@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.KeyManagement.Utilities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -90,7 +91,19 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastKeyRotationDate = now;
-        user.SecurityStamp = Guid.NewGuid().ToString();
+
+        // V2UpgradeToken is only valid for V1 users transitioning to V2.
+        // For V2 users the token is semantically invalid — discard it and perform a full logout.
+        var shouldPersistV2UpgradeToken = model.V2UpgradeToken != null && !IsV2EncryptionUserAsync(user);
+        if (shouldPersistV2UpgradeToken)
+        {
+            user.V2UpgradeToken = model.V2UpgradeToken!.ToJson();
+        }
+        else
+        {
+            user.V2UpgradeToken = null;
+            user.SecurityStamp = Guid.NewGuid().ToString();
+        }
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = [];
 
@@ -99,7 +112,17 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         UpdateUserData(model, user, saveEncryptedDataActions);
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
-        await _pushService.PushLogOutAsync(user.Id);
+
+        if (shouldPersistV2UpgradeToken)
+        {
+            await _pushService.PushLogOutAsync(user.Id,
+                reason: PushNotificationLogOutReason.KeyRotation);
+        }
+        else
+        {
+            await _pushService.PushLogOutAsync(user.Id);
+        }
+
         return IdentityResult.Success;
     }
 
@@ -137,7 +160,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         }
         else
         {
-            if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
+            if (EncryptionParsing.GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.AesCbc256_HmacSha256_B64)
             {
                 throw new InvalidOperationException("The provided account private key was not wrapped with AES-256-CBC-HMAC");
             }
@@ -209,7 +232,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     {
         // Returns whether the user is a V2 user based on the private key's encryption type.
         ArgumentNullException.ThrowIfNull(user);
-        var isPrivateKeyEncryptionV2 = GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+        var isPrivateKeyEncryptionV2 = EncryptionParsing.GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
         return isPrivateKeyEncryptionV2;
     }
 
@@ -237,7 +260,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             throw new InvalidOperationException("Signature key pair data is required for V2 encryption.");
         }
-        if (GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
         {
             throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
         }
@@ -246,7 +269,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("The provided signature key pair data does not contain a valid verifying key.");
         }
 
-        if (GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
         {
             throw new InvalidOperationException("The provided private key encryption key is not wrapped with XChaCha20-Poly1305.");
         }
@@ -258,25 +281,5 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             throw new InvalidOperationException("No signed security state provider for V2 user");
         }
-    }
-
-    /// <summary>
-    /// Helper method to convert an encryption type string to an enum value.
-    /// </summary>
-    private static EncryptionType GetEncryptionType(string encString)
-    {
-        var parts = encString.Split('.');
-        if (parts.Length == 1)
-        {
-            throw new ArgumentException("Invalid encryption type string.");
-        }
-        if (byte.TryParse(parts[0], out var encryptionTypeNumber))
-        {
-            if (Enum.IsDefined(typeof(EncryptionType), encryptionTypeNumber))
-            {
-                return (EncryptionType)encryptionTypeNumber;
-            }
-        }
-        throw new ArgumentException("Invalid encryption type string.");
     }
 }
