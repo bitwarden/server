@@ -51,6 +51,17 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         }
     }
 
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new EmergencyAccessDetailsViewQuery();
+            var query = view.Run(dbContext).Where(ea => ea.Id == id);
+            return await query.FirstOrDefaultAsync();
+        }
+    }
+
     public async Task<ICollection<EmergencyAccessDetails>> GetExpiredRecoveriesAsync()
     {
         using (var scope = ServiceScopeFactory.CreateScope())

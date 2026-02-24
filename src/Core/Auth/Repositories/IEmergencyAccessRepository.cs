@@ -23,6 +23,12 @@ public interface IEmergencyAccessRepository : IRepository<EmergencyAccess, Guid>
     /// <returns>EmergencyAccessDetails or null</returns>
     Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId);
     /// <summary>
+    /// Fetches emergency access details by EmergencyAccess id
+    /// </summary>
+    /// <param name="id">Emergency Access Id</param>
+    /// <returns>EmergencyAccessDetails or null</returns>
+    Task<EmergencyAccessDetails?> GetDetailsByIdAsync(Guid id);
+    /// <summary>
     /// Database call to fetch emergency accesses that need notification emails sent through a Job
     /// </summary>
     /// <returns>collection of EmergencyAccessNotify objects that require notification</returns>

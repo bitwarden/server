@@ -344,6 +344,66 @@ public class EmergencyAccessRepositoriesTests
     }
 
     /// <summary>
+    /// Verifies GetDetailsByIdAsync returns the correct EmergencyAccessDetails record,
+    /// including email and name fields populated via the view JOIN.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdAsync_ReturnsDetails_WhenRecordExistsAsync(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository)
+    {
+        // Arrange
+        var grantorEmail = $"test+grantor{Guid.NewGuid()}@email.com";
+        var granteeEmail = $"test+grantee{Guid.NewGuid()}@email.com";
+
+        var grantorUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantor Name",
+            Email = grantorEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var granteeUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Grantee Name",
+            Email = granteeEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var ea = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantorUser.Id,
+            GranteeId = granteeUser.Id,
+            Status = EmergencyAccessStatusType.Confirmed,
+        });
+
+        // Act
+        var result = await emergencyAccessRepository.GetDetailsByIdAsync(ea.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(ea.Id, result.Id);
+        Assert.Equal(grantorEmail, result.GrantorEmail);
+        Assert.Equal(granteeEmail, result.GranteeEmail);
+    }
+
+    /// <summary>
+    /// Verifies GetDetailsByIdAsync returns null when no record matches the given ID.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdAsync_ReturnsNull_WhenRecordDoesNotExistAsync(
+        IEmergencyAccessRepository emergencyAccessRepository)
+    {
+        // Act
+        var result = await emergencyAccessRepository.GetDetailsByIdAsync(Guid.NewGuid());
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    /// <summary>
     /// Verifies GetManyDetailsByUserIdsAsync returns invited emergency access records
     /// (where GranteeId is null and only Email is set) when querying by grantor ID,
     /// and that GranteeEmail falls back to the invite email address.

@@ -86,6 +86,19 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
         }
     }
 
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                "[dbo].[EmergencyAccessDetails_ReadById]",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<ICollection<EmergencyAccessNotify>> GetManyToNotifyAsync()
     {
         using (var connection = new SqlConnection(ConnectionString))
