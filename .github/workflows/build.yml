@@ -87,6 +87,9 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+          - project_name: SeederApi
+            base_path: ./util
+            dotnet: true
           - project_name: Setup
             base_path: ./util
             dotnet: true
