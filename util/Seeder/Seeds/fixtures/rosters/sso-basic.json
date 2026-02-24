@@ -1,8 +1,0 @@
-{
-  "$schema": "../../schemas/roster.schema.json",
-  "users": [
-    { "firstName": "Sso", "lastName": "Owner", "role": "owner" },
-    { "firstName": "Sso", "lastName": "User", "role": "user" },
-    { "firstName": "Sso", "lastName": "Provisioning", "role": "user" }
-  ]
-}
