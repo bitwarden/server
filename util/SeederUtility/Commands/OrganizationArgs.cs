@@ -20,11 +20,11 @@ public class OrganizationArgs : IArgumentModel
     [Option('d', "domain", Description = "Email domain for users")]
     public string Domain { get; set; } = null!;
 
-    [Option('c', "ciphers", Description = "Number of ciphers to create (0 = no vault data)")]
-    public int Ciphers { get; set; }
+    [Option('c', "ciphers", Description = "Number of ciphers to create (default: 0, no vault data)")]
+    public int? Ciphers { get; set; }
 
-    [Option('g', "groups", Description = "Number of groups to create (0 = no groups)")]
-    public int Groups { get; set; }
+    [Option('g', "groups", Description = "Number of groups to create (default: 0, no groups)")]
+    public int? Groups { get; set; }
 
     [Option('m', "mix-user-statuses", Description = "Use realistic status mix (85% confirmed, 5% each invited/accepted/revoked). Requires >= 10 users.")]
     public bool MixStatuses { get; set; } = true;
@@ -74,8 +74,8 @@ public class OrganizationArgs : IArgumentModel
         Name = Name,
         Domain = Domain,
         Users = Users,
-        Ciphers = Ciphers,
-        Groups = Groups,
+        Ciphers = Ciphers ?? 0,
+        Groups = Groups ?? 0,
         RealisticStatusMix = MixStatuses,
         StructureModel = ParseOrgStructure(Structure),
         Region = ParseGeographicRegion(Region),
