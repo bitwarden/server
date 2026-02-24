@@ -77,7 +77,7 @@ public class SendValidationService : ISendValidationService
         if (send.HideEmail.GetValueOrDefault())
         {
             var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
-            if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
+            if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
             }
@@ -91,14 +91,14 @@ public class SendValidationService : ISendValidationService
             return;
         }
 
-        var disableSendRequirement = await _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
-        if (disableSendRequirement.DisableSend)
+        var sendRequirement = await _policyRequirementQuery.GetAsync<SendPolicyRequirement>(userId.Value);
+
+        if (sendRequirement.DisableSend)
         {
             throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
         }
 
-        var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
-        if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
+        if (sendRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
         {
             throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
         }

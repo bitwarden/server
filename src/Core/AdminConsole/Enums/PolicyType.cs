@@ -8,6 +8,7 @@ public enum PolicyType : byte
     SingleOrg = 3,
     RequireSso = 4,
     OrganizationDataOwnership = 5,
+    [Obsolete("Consolidated into SendOptions (type 7). Use SendOptions policy with SendPolicyData.DisableSend.")]
     DisableSend = 6,
     SendOptions = 7,
     ResetPassword = 8,
@@ -41,7 +42,7 @@ public static class PolicyTypeExtensions
             PolicyType.RequireSso => "Require single sign-on authentication",
             PolicyType.OrganizationDataOwnership => "Enforce organization data ownership",
             PolicyType.DisableSend => "Remove Send",
-            PolicyType.SendOptions => "Send options",
+            PolicyType.SendOptions => "Send",
             PolicyType.ResetPassword => "Account recovery administration",
             PolicyType.MaximumVaultTimeout => "Vault timeout",
             PolicyType.DisablePersonalVaultExport => "Remove individual vault export",

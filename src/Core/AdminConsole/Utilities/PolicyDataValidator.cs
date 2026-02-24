@@ -35,7 +35,7 @@ public static class PolicyDataValidator
                     ValidateModel(masterPasswordData, policyType);
                     break;
                 case PolicyType.SendOptions:
-                    CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(json);
+                    CoreHelpers.LoadClassFromJsonData<SendPolicyData>(json);
                     break;
                 case PolicyType.ResetPassword:
                     CoreHelpers.LoadClassFromJsonData<ResetPasswordDataModel>(json);
