@@ -116,6 +116,58 @@ public class DeleteEmergencyAccessCommandTests
     }
 
     /// <summary>
+    /// Verifies that a grantee (not just a grantor) can delete an emergency access record,
+    /// and that the grantor still receives a notification email.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task DeleteByIdAndUserIdAsync_GranteeDeletes_DeletesAndSendsEmailAsync(
+        SutProvider<DeleteEmergencyAccessCommand> sutProvider,
+        EmergencyAccessDetails emergencyAccessDetails)
+    {
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetDetailsByIdAsync(emergencyAccessDetails.Id)
+            .Returns(emergencyAccessDetails);
+
+        // Act as the grantee, not the grantor
+        await sutProvider.Sut.DeleteByIdAndUserIdAsync(emergencyAccessDetails.Id, emergencyAccessDetails.GranteeId.Value);
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .DeleteAsync(emergencyAccessDetails);
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Is<EmergencyAccessRemoveGranteesMail>(mail =>
+                mail.ToEmails.Contains(emergencyAccessDetails.GrantorEmail) &&
+                mail.View.RemovedGranteeEmails.Contains(emergencyAccessDetails.GranteeEmail)));
+    }
+
+    /// <summary>
+    /// Verifies that a user who is neither the grantor nor the grantee cannot delete
+    /// the emergency access record and receives a <see cref="BadRequestException"/>.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task DeleteByIdAndUserIdAsync_UnauthorizedUser_ThrowsBadRequestAsync(
+        SutProvider<DeleteEmergencyAccessCommand> sutProvider,
+        EmergencyAccessDetails emergencyAccessDetails,
+        Guid unauthorizedUserId)
+    {
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetDetailsByIdAsync(emergencyAccessDetails.Id)
+            .Returns(emergencyAccessDetails);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteByIdAndUserIdAsync(emergencyAccessDetails.Id, unauthorizedUserId));
+
+        Assert.Contains("Emergency Access not valid.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
+    }
+
+    /// <summary>
     /// Verifies that <see cref="IDeleteEmergencyAccessCommand.DeleteAllByUserIdAsync"/> correctly
     /// delegates to <see cref="IDeleteEmergencyAccessCommand.DeleteAllByUserIdsAsync"/>
     /// using a single-element collection containing the provided user ID.
