@@ -51,7 +51,6 @@ public class OrganizationReportsController : Controller
         _updateOrganizationReportApplicationDataCommand = updateOrganizationReportApplicationDataCommand;
     }
 
-    #region Whole OrganizationReport Endpoints
 
     [HttpGet("{organizationId}/latest")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
@@ -126,10 +125,6 @@ public class OrganizationReportsController : Controller
         return Ok(response);
     }
 
-    #endregion
-
-    # region SummaryData Field Endpoints
-
     [HttpGet("{organizationId}/data/summary")]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
@@ -191,9 +186,7 @@ public class OrganizationReportsController : Controller
 
         return Ok(response);
     }
-    #endregion
 
-    #region ReportData Field Endpoints
 
     [HttpGet("{organizationId}/data/report/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportDataAsync(Guid organizationId, Guid reportId)
@@ -236,10 +229,6 @@ public class OrganizationReportsController : Controller
 
         return Ok(response);
     }
-
-    #endregion
-
-    #region ApplicationData Field Endpoints
 
     [HttpGet("{organizationId}/data/application/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
@@ -297,5 +286,4 @@ public class OrganizationReportsController : Controller
         }
     }
 
-    #endregion
 }

@@ -48,8 +48,6 @@ public class OrganizationReportsV2Controller : Controller
         }
     }
 
-    #region SummaryData Field Endpoints
-
     [HttpGet("{organizationId}/data/summary")]
     public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetOrganizationReportSummaryDataByDateRangeV2Async(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
@@ -104,6 +102,4 @@ public class OrganizationReportsV2Controller : Controller
 
         return new OrganizationReportResponseModel(updatedReport);
     }
-
-    #endregion
 }
