@@ -9,13 +9,13 @@ ARG TARGETPLATFORM
 # Determine proper runtime value for .NET
 # We put the value in a file to be read by later layers.
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    RID=linux-musl-x64 ; \
-    RUST_TARGET=x86_64-unknown-linux-musl ; \
+    RID=linux-x64 ; \
+    RUST_TARGET=x86_64-unknown-linux-gnu ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    RID=linux-musl-arm64 ; \
-    RUST_TARGET=aarch64-unknown-linux-musl ; \
+    RID=linux-arm64 ; \
+    RUST_TARGET=aarch64-unknown-linux-gnu ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    RID=linux-musl-arm ; \
+    RID=linux-arm ; \
     RUST_TARGET=armv7-unknown-linux-gnueabihf ; \
     fi \
     && echo "RID=$RID" > /tmp/rid.txt \
@@ -34,6 +34,8 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/util/SeederApi
+# echo the files in the current working directory
+RUN ls -la
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
