@@ -2,12 +2,15 @@
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
+using Bit.Core.Billing.Models.Api.Response;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using OneOf.Types;
 using Xunit;
@@ -20,6 +23,7 @@ public class AccountBillingVNextControllerTests
     private readonly IUpdatePremiumStorageCommand _updatePremiumStorageCommand;
     private readonly IGetUserLicenseQuery _getUserLicenseQuery;
     private readonly IUpgradePremiumToOrganizationCommand _upgradePremiumToOrganizationCommand;
+    private readonly IGetApplicableDiscountsQuery _getApplicableDiscountsQuery;
     private readonly AccountBillingVNextController _sut;
 
     public AccountBillingVNextControllerTests()
@@ -27,6 +31,7 @@ public class AccountBillingVNextControllerTests
         _updatePremiumStorageCommand = Substitute.For<IUpdatePremiumStorageCommand>();
         _getUserLicenseQuery = Substitute.For<IGetUserLicenseQuery>();
         _upgradePremiumToOrganizationCommand = Substitute.For<IUpgradePremiumToOrganizationCommand>();
+        _getApplicableDiscountsQuery = Substitute.For<IGetApplicableDiscountsQuery>();
 
         _sut = new AccountBillingVNextController(
             Substitute.For<Core.Billing.Payment.Commands.ICreateBitPayInvoiceForCreditCommand>(),
@@ -38,7 +43,8 @@ public class AccountBillingVNextControllerTests
             Substitute.For<IReinstateSubscriptionCommand>(),
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
             _updatePremiumStorageCommand,
-            _upgradePremiumToOrganizationCommand);
+            _upgradePremiumToOrganizationCommand,
+            _getApplicableDiscountsQuery);
     }
 
     [Theory, BitAutoData]
@@ -248,5 +254,40 @@ public class AccountBillingVNextControllerTests
         // Assert
         var okResult = Assert.IsAssignableFrom<IResult>(result);
         await _updatePremiumStorageCommand.Received(1).Run(user, 5);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetApplicableDiscountsAsync_NoEligibleDiscounts_ReturnsOkWithEmptyArray(User user)
+    {
+        // Arrange
+        _getApplicableDiscountsQuery.Run(user)
+            .Returns(Array.Empty<SubscriptionDiscountResponseModel>());
+
+        // Act
+        var result = await _sut.GetApplicableDiscountsAsync(user);
+
+        // Assert
+        var okResult = Assert.IsType<Ok<SubscriptionDiscountResponseModel[]>>(result);
+        Assert.Empty(okResult.Value!);
+        await _getApplicableDiscountsQuery.Received(1).Run(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetApplicableDiscountsAsync_EligibleDiscounts_ReturnsOkWithDiscounts(
+        User user,
+        SubscriptionDiscountResponseModel firstModel,
+        SubscriptionDiscountResponseModel secondModel)
+    {
+        // Arrange
+        var models = new[] { firstModel, secondModel };
+        _getApplicableDiscountsQuery.Run(user).Returns(models);
+
+        // Act
+        var result = await _sut.GetApplicableDiscountsAsync(user);
+
+        // Assert
+        var okResult = Assert.IsType<Ok<SubscriptionDiscountResponseModel[]>>(result);
+        Assert.Equal(models, okResult.Value);
+        await _getApplicableDiscountsQuery.Received(1).Run(user);
     }
 }
