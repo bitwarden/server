@@ -6,16 +6,21 @@
     "seats": 25
   },
   "users": {
-    "count": 10,
+    "count": 25,
     "realisticStatusMix": true
   },
   "groups": {
-    "count": 3
+    "count": 8
   },
   "collections": {
-    "count": 5
+    "count": 15
   },
+  "folders": true,
   "ciphers": {
-    "count": 100
+    "count": 250,
+    "assignFolders": true
+  },
+  "personalCiphers": {
+    "countPerUser": 25
   }
 }
