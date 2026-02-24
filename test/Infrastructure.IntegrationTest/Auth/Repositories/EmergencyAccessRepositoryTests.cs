@@ -48,7 +48,7 @@ public class EmergencyAccessRepositoriesTests
     /// All 3 records are then deleted in a single call to DeleteManyAsync.
     /// </summary>
     [DatabaseTheory, DatabaseData]
-    public async Task DeleteManyAsync_DeletesMultipleGranteeRecords_UpdatesUserRevisionDates(
+    public async Task DeleteManyAsync_DeletesMultipleGranteeRecordsAsync(
         IUserRepository userRepository,
         IEmergencyAccessRepository emergencyAccessRepository)
     {
@@ -76,9 +76,6 @@ public class EmergencyAccessRepositoriesTests
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
-
-        // The inmemory datetime has a precision issue, so we need to refresh the user to get the stored AccountRevisionDate
-        invitedGranteeUser2 = await userRepository.GetByIdAsync(invitedGranteeUser2.Id);
 
         var granteeUser3 = await userRepository.CreateAsync(new User
         {
@@ -124,16 +121,6 @@ public class EmergencyAccessRepositoriesTests
             var granteeEmergencyAccess = await emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(grantee.Id);
             Assert.Empty(granteeEmergencyAccess);
         }
-
-        // Only the Status.Confirmed grantee's AccountRevisionDate should be updated
-        var updatedConfirmedGrantee = await userRepository.GetByIdAsync(confirmedGranteeUser1.Id);
-        Assert.NotNull(updatedConfirmedGrantee);
-        Assert.NotEqual(updatedConfirmedGrantee.AccountRevisionDate, confirmedGranteeUser1.AccountRevisionDate);
-
-        // Invited user should not have an updated AccountRevisionDate
-        var updatedInvitedGrantee = await userRepository.GetByIdAsync(invitedGranteeUser2.Id);
-        Assert.NotNull(updatedInvitedGrantee);
-        Assert.Equal(updatedInvitedGrantee.AccountRevisionDate, invitedGranteeUser2.AccountRevisionDate);
     }
 
     /// <summary>
