@@ -10,12 +10,23 @@ ARG TARGETPLATFORM
 # We put the value in a file to be read by later layers.
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-musl-x64 ; \
+    RUST_TARGET=x86_64-unknown-linux-musl ; \
     elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     RID=linux-musl-arm64 ; \
+    RUST_TARGET=aarch64-unknown-linux-musl ; \
     elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
     RID=linux-musl-arm ; \
+    RUST_TARGET=armv7-unknown-linux-gnueabihf ; \
     fi \
-    && echo "RID=$RID" > /tmp/rid.txt
+    && echo "RID=$RID" > /tmp/rid.txt \
+    && echo "$RUST_TARGET" > /tmp/rust_target.txt
+
+# Install Rust
+RUN apk add --no-cache build-base curl
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | /bin/sh -s -- -y --default-toolchain stable --profile minimal \
+     && . $HOME/.cargo/env \
+     && rustup target add $(cat /tmp/rust_target.txt)
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Copy required project files
 WORKDIR /source
@@ -23,7 +34,6 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/util/SeederApi
-RUN apk add --no-cache cargo
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Build project
