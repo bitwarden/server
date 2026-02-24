@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Subscriptions.Entities;
+﻿using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Billing.Services;

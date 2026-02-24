@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Services.DiscountAudienceFilters;
+﻿using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;

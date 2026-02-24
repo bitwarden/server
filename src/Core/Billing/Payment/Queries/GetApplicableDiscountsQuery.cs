@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Models.Api.Response;
