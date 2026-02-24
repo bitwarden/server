@@ -7,16 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.DbSeederUtility;
+namespace Bit.SeederUtility.Configuration;
 
 public static class ServiceCollectionExtension
 {
     public static void ConfigureServices(ServiceCollection services, bool enableMangling = false)
     {
-        // Load configuration using the GlobalSettingsFactory
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
 
-        // Register services
         services.AddLogging(builder =>
         {
             builder.AddConsole();
@@ -27,9 +25,7 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.TryAddSingleton<ISeedReader, SeedReader>();
 
-        // Add Data Protection services
-        services.AddDataProtection()
-            .SetApplicationName("Bitwarden");
+        services.AddDataProtection().SetApplicationName("Bitwarden");
 
         services.AddDatabaseRepositories(globalSettings);
 

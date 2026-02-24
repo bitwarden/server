@@ -103,8 +103,10 @@
     border-radius: 3px;
   }
 @media only screen and (max-width: 480px) {
-        .hide-mobile { display: none !important; }
+    .hide-mobile {
+      display: none !important;
     }
+  }
     </style>
     <!-- Include shared head styles -->
 <!-- Include admin console shared styles -->
@@ -287,7 +289,7 @@
               <tr>
                 <td align="left" style="font-size:0px;padding:15px 15px 0px 15px;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue','Inter',Helvetica,Arial,sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;">As a member of <b>{{OrganizationName}}</b>:</div>
+      <div style="font-family:'Helvetica Neue','Inter',Helvetica,Arial,sans-serif;font-size:16px;line-height:24px;text-align:left;color:#1B2029;">As a member of <b>{{ OrganizationName }}</b>:</div>
     
                 </td>
               </tr>
@@ -513,11 +515,12 @@
               <tr>
                 <td align="left" style="font-size:0px;padding:0 0 24px 0;word-break:break-word;">
                   
-      <div style="font-family:'Helvetica Neue','Inter',Helvetica,Arial,sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">Already using the <a href="https://bitwarden.com/download/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">browser extension</a>?
-                        Download the Bitwarden mobile app from the
-                        <a href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">App Store</a>
-                        or <a href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">Google Play</a>
-                        to quickly save logins and autofill forms on the go.</div>
+      <div style="font-family:'Helvetica Neue','Inter',Helvetica,Arial,sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#1B2029;">Already using the
+            <a href="https://bitwarden.com/download/" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">browser extension</a>? Download the Bitwarden mobile app from the
+            <a href="https://apps.apple.com/us/app/bitwarden-password-manager/id1137397744" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">App Store</a>
+            or
+            <a href="https://play.google.com/store/apps/details?id=com.x8bit.bitwarden" class="link" style="text-decoration: none; color: #175ddc; font-weight: 600;">Google Play</a>
+            to quickly save logins and autofill forms on the go.</div>
     
                 </td>
               </tr>
@@ -928,14 +931,15 @@
                 <td align="center" style="font-size:0px;padding:10px 25px;word-break:break-word;">
                   
       <div style="font-family:'Helvetica Neue','Inter',Helvetica,Arial,sans-serif;font-size:12px;line-height:16px;text-align:center;color:#5A6D91;"><p style="margin-bottom: 5px; margin-top: 5px">
-        © {{ CurrentYear }} Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102, Santa
-        Barbara, CA, USA
+        © {{ CurrentYear }} Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102,
+        Santa Barbara, CA, USA
       </p>
       <p style="margin-top: 5px">
         Always confirm you are on a trusted Bitwarden domain before logging
         in:<br>
-        <a href="https://bitwarden.com/" style="text-decoration:none;color:#175ddc; font-weight:400">bitwarden.com</a> |
-        <a href="https://bitwarden.com/help/emails-from-bitwarden/" style="text-decoration:none; color:#175ddc; font-weight:400">Learn why we include this</a>
+        <a href="https://bitwarden.com/" style="text-decoration: none; color: #175ddc; font-weight: 400">bitwarden.com</a>
+        |
+        <a href="https://bitwarden.com/help/emails-from-bitwarden/" style="text-decoration: none; color: #175ddc; font-weight: 400">Learn why we include this</a>
       </p></div>
     
                 </td>

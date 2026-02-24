@@ -1,6 +1,6 @@
 ﻿using CommandDotNet;
 
-namespace Bit.DbSeederUtility;
+namespace Bit.SeederUtility.Commands;
 
 /// <summary>
 /// CLI argument model for the seed command.
@@ -22,17 +22,14 @@ public class SeedArgs : IArgumentModel
 
     public void Validate()
     {
-        // List mode is standalone
         if (List)
         {
             return;
         }
 
-        // Must specify preset
         if (string.IsNullOrEmpty(Preset))
         {
-            throw new ArgumentException(
-                "--preset must be specified. Use --list to see available presets.");
+            throw new ArgumentException("--preset must be specified. Use --list to see available presets.");
         }
     }
 }

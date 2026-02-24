@@ -34,7 +34,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+    /// Resolution order: Org → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
@@ -62,17 +62,20 @@ internal static class PresetLoader
             domain = org.Domain;
         }
 
-        builder.AddOwner();
+        if (preset.Roster?.Fixture is not null)
+        {
+            builder.UseRoster(preset.Roster.Fixture, reader);
+        }
+
+        if (!builder.HasRosterOwner)
+        {
+            builder.AddOwner();
+        }
 
         // Generator requires a domain and is needed for generated ciphers, personal ciphers, or folders
         if (domain is not null && (preset.Ciphers?.Count > 0 || preset.PersonalCiphers?.CountPerUser > 0 || preset.Folders == true))
         {
             builder.WithGenerator(domain);
-        }
-
-        if (preset.Roster?.Fixture is not null)
-        {
-            builder.UseRoster(preset.Roster.Fixture);
         }
 
         if (preset.Users is not null)

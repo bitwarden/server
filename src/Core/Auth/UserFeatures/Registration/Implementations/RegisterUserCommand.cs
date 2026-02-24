@@ -33,7 +33,6 @@ public class RegisterUserCommand : IRegisterUserCommand
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
-    private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IDataProtector _providerServiceDataProtector;
 
     private readonly IUserService _userService;
@@ -69,8 +68,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         _organizationDomainRepository = organizationDomainRepository;
         _featureService = featureService;
 
-        _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
-            "OrganizationServiceDataProtector");
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
 
@@ -172,7 +169,8 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (orgInviteTokenProvided && orgUserId.HasValue)
         {
             // We have token data so validate it
-            if (IsOrgInviteTokenValid(orgInviteToken, orgUserId.Value, user.Email))
+            if (OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+                    _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email))
             {
                 return;
             }
@@ -211,25 +209,6 @@ public class RegisterUserCommand : IRegisterUserCommand
     }
 
     /// <summary>
-    /// Validates the org invite token using the new tokenable logic first, then falls back to the old token validation logic for backwards compatibility.
-    /// Will set the out parameter organizationWelcomeEmailDetails if the new token is valid. If the token is invalid then no welcome email needs to be sent
-    /// so the out parameter is set to null.
-    /// </summary>
-    /// <param name="orgInviteToken">Invite token</param>
-    /// <param name="orgUserId">Inviting Organization UserId</param>
-    /// <param name="userEmail">User email</param>
-    /// <returns>true if the token is valid false otherwise</returns>
-    private bool IsOrgInviteTokenValid(string orgInviteToken, Guid orgUserId, string userEmail)
-    {
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newOrgInviteTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId, userEmail);
-        return newOrgInviteTokenValid || CoreHelpers.UserInviteTokenIsValid(
-            _organizationServiceDataProtector, orgInviteToken, userEmail, orgUserId, _globalSettings);
-    }
-
-
-    /// <summary>
     /// Handles initializing the user with Email 2FA enabled if they are subject to an enabled 2FA organizational policy.
     /// </summary>
     /// <param name="orgUserId">The optional org user id</param>
@@ -263,7 +242,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         }
         return orgUser;
     }
-
 
     private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath, Organization? organization)
     {

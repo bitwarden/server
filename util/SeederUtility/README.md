@@ -1,10 +1,10 @@
-# Bitwarden Database Seeder Utility
+# Bitwarden Seeder Utility
 
-A CLI wrapper around the Seeder library for generating test data in your local Bitwarden database.
+A CLI wrapper around the Seeder library for generating test data in a Bitwarden database.
 
 ## Getting Started
 
-Build and run from the `util/DbSeederUtility` directory:
+Build and run from the `util/SeederUtility` directory:
 
 ```bash
 dotnet build
@@ -15,6 +15,16 @@ dotnet run -- <command> [options]
 
 ## Commands
 
+### `organization` - Users Only (No Vault Data)
+
+```bash
+# 100 users
+dotnet run -- organization -n MyOrgNoCiphers -u 100 -d myorg-no-ciphers.com
+
+# 10,000 users for load testing
+dotnet run -- organization -n LargeOrgNoCiphers -u 10000 -d large-org-no-ciphers.test
+```
+
 ### `seed` - Fixture-Based Seeding
 
 ```bash
@@ -22,25 +32,17 @@ dotnet run -- <command> [options]
 dotnet run -- seed --list
 
 # Load the Dunder Mifflin preset (58 users, 14 groups, 15 collections, ciphers)
-dotnet run -- seed --preset dunder-mifflin-full
+dotnet run -- seed --preset dunder-mifflin-enterprise-full
 
 # Load with ID mangling for test isolation
-dotnet run -- seed --preset dunder-mifflin-full --mangle
+dotnet run -- seed --preset dunder-mifflin-enterprise-full --mangle
+
+dotnet run -- seed --preset stark-free-basic --mangle
 
 # Large enterprise preset for performance testing
 dotnet run -- seed --preset large-enterprise
 
-dotnet run -- seed --preset dunder-mifflin-full --password "MyTestPassword1" --mangle
-```
-
-### `organization` - Users Only (No Vault Data)
-
-```bash
-# 100 users
-dotnet run -- organization -n MyOrg -u 100 -d myorg.com
-
-# 10,000 users for load testing
-dotnet run -- organization -n seeded -u 10000 -d large.test
+dotnet run -- seed --preset dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
 ```
 
 ### `vault-organization` - Users + Encrypted Vault Data
