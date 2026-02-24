@@ -47,6 +47,11 @@ internal sealed class EntityRegistry
     internal List<Guid> CipherIds { get; } = [];
 
     /// <summary>
+    /// Folder IDs per user, for cipher-to-folder assignment.
+    /// </summary>
+    internal Dictionary<Guid, List<Guid>> UserFolderIds { get; } = [];
+
+    /// <summary>
     /// Clears all registry lists. Called by <see cref="RecipeExecutor"/> before each pipeline run.
     /// </summary>
     internal void Clear()
@@ -56,5 +61,6 @@ internal sealed class EntityRegistry
         GroupIds.Clear();
         CollectionIds.Clear();
         CipherIds.Clear();
+        UserFolderIds.Clear();
     }
 }

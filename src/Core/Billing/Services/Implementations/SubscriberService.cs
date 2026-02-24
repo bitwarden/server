@@ -4,7 +4,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -35,7 +34,6 @@ public class SubscriberService(
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
     IProviderRepository providerRepository,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ITaxService taxService,
     IUserRepository userRepository) : ISubscriberService
@@ -338,7 +336,7 @@ public class SubscriberService(
             Expand = ["default_source", "invoice_settings.default_payment_method"]
         });
 
-        return await GetPaymentSourceAsync(subscriber.Id, customer);
+        return await GetPaymentSourceAsync(customer);
     }
 
     public async Task<Subscription> GetSubscription(
@@ -504,130 +502,6 @@ public class SubscriberService(
             {
                 await stripeAdapter.DetachPaymentMethodAsync(paymentMethod.Id);
             }
-        }
-    }
-
-    public async Task UpdatePaymentSource(
-        ISubscriber subscriber,
-        TokenizedPaymentSource tokenizedPaymentSource)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNull(tokenizedPaymentSource);
-
-        var customerGetOptions = new CustomerGetOptions { Expand = ["tax", "tax_ids"] };
-        var customer = await GetCustomerOrThrow(subscriber, customerGetOptions);
-
-        var (type, token) = tokenizedPaymentSource;
-
-        if (string.IsNullOrEmpty(token))
-        {
-            logger.LogError("Updated payment method for ({SubscriberID}) must contain a token", subscriber.Id);
-
-            throw new BillingException();
-        }
-
-        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-        switch (type)
-        {
-            case PaymentMethodType.BankAccount:
-                {
-                    var getSetupIntentsForUpdatedPaymentMethod = stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
-                    {
-                        PaymentMethod = token
-                    });
-
-                    // Find the setup intent for the incoming payment method token.
-                    var setupIntentsForUpdatedPaymentMethod = await getSetupIntentsForUpdatedPaymentMethod;
-
-                    if (setupIntentsForUpdatedPaymentMethod.Count != 1)
-                    {
-                        logger.LogError("There were more than 1 setup intents for subscriber's ({SubscriberID}) updated payment method", subscriber.Id);
-
-                        throw new BillingException();
-                    }
-
-                    var matchingSetupIntent = setupIntentsForUpdatedPaymentMethod.First();
-
-                    // Store the incoming payment method's setup intent ID in the cache for the subscriber so it can be verified later.
-                    await setupIntentCache.Set(subscriber.Id, matchingSetupIntent.Id);
-
-                    // Remove the customer's other attached Stripe payment methods.
-                    var postProcessing = new List<Task>
-                    {
-                        RemoveStripePaymentMethodsAsync(customer),
-                        RemoveBraintreeCustomerIdAsync(customer)
-                    };
-
-                    await Task.WhenAll(postProcessing);
-
-                    break;
-                }
-            case PaymentMethodType.Card:
-                {
-                    // Remove the customer's other attached Stripe payment methods.
-                    await RemoveStripePaymentMethodsAsync(customer);
-
-                    // Attach the incoming payment method.
-                    await stripeAdapter.AttachPaymentMethodAsync(token,
-                        new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
-
-                    var metadata = customer.Metadata;
-
-                    if (metadata.TryGetValue(BraintreeCustomerIdKey, out var value))
-                    {
-                        metadata[BraintreeCustomerIdOldKey] = value;
-                        metadata[BraintreeCustomerIdKey] = null;
-                    }
-
-                    // Set the customer's default payment method in Stripe and remove their Braintree customer ID.
-                    await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
-                    {
-                        InvoiceSettings = new CustomerInvoiceSettingsOptions
-                        {
-                            DefaultPaymentMethod = token
-                        },
-                        Metadata = metadata
-                    });
-
-                    break;
-                }
-            case PaymentMethodType.PayPal:
-                {
-                    string braintreeCustomerId;
-
-                    if (customer.Metadata != null)
-                    {
-                        var hasBraintreeCustomerId = customer.Metadata.TryGetValue(BraintreeCustomerIdKey, out braintreeCustomerId);
-
-                        if (hasBraintreeCustomerId)
-                        {
-                            var braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
-                            if (braintreeCustomer == null)
-                            {
-                                logger.LogError("Failed to retrieve Braintree customer ({BraintreeCustomerId}) when updating payment method for subscriber ({SubscriberID})", braintreeCustomerId, subscriber.Id);
-
-                                throw new BillingException();
-                            }
-
-                            await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
-
-                            return;
-                        }
-                    }
-
-                    braintreeCustomerId = await CreateBraintreeCustomer(subscriber, token);
-
-                    await AddBraintreeCustomerIdAsync(customer, braintreeCustomerId);
-
-                    break;
-                }
-            default:
-                {
-                    logger.LogError("Cannot update subscriber's ({SubscriberID}) payment method to type ({PaymentMethodType}) as it is not supported", subscriber.Id, type.ToString());
-
-                    throw new BillingException();
-                }
         }
     }
 
@@ -819,23 +693,7 @@ public class SubscriberService(
 
     #region Shared Utilities
 
-    private async Task AddBraintreeCustomerIdAsync(
-        Customer customer,
-        string braintreeCustomerId)
-    {
-        var metadata = customer.Metadata ?? new Dictionary<string, string>();
-
-        metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
-
-        await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
-        {
-            Metadata = metadata
-        });
-    }
-
-    private async Task<PaymentSource> GetPaymentSourceAsync(
-        Guid subscriberId,
-        Customer customer)
+    private async Task<PaymentSource> GetPaymentSourceAsync(Customer customer)
     {
         if (customer.Metadata != null)
         {
@@ -858,108 +716,17 @@ public class SubscriberService(
 
         /*
          * attachedPaymentMethodDTO being null represents a case where we could be looking for the SetupIntent for an unverified "us_bank_account".
-         * We store the ID of this SetupIntent in the cache when we originally update the payment method.
+         * Query Stripe for SetupIntents associated with this customer.
          */
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriberId);
-
-        if (string.IsNullOrEmpty(setupIntentId))
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
         {
-            return null;
-        }
-
-        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
-        {
-            Expand = ["payment_method"]
+            Customer = customer.Id,
+            Expand = ["data.payment_method"]
         });
 
-        return PaymentSource.From(setupIntent);
-    }
+        var unverifiedBankAccount = setupIntents?.FirstOrDefault(si => si.IsUnverifiedBankAccount());
 
-    private async Task RemoveBraintreeCustomerIdAsync(
-        Customer customer)
-    {
-        var metadata = customer.Metadata ?? new Dictionary<string, string>();
-
-        if (metadata.TryGetValue(BraintreeCustomerIdKey, out var value))
-        {
-            metadata[BraintreeCustomerIdOldKey] = value;
-            metadata[BraintreeCustomerIdKey] = null;
-
-            await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
-            {
-                Metadata = metadata
-            });
-        }
-    }
-
-    private async Task RemoveStripePaymentMethodsAsync(
-        Customer customer)
-    {
-        if (customer.Sources != null && customer.Sources.Any())
-        {
-            foreach (var source in customer.Sources)
-            {
-                switch (source)
-                {
-                    case BankAccount:
-                        await stripeAdapter.DeleteBankAccountAsync(customer.Id, source.Id);
-                        break;
-                    case Card:
-                        await stripeAdapter.DeleteCardAsync(customer.Id, source.Id);
-                        break;
-                }
-            }
-        }
-
-        var paymentMethods = await stripeAdapter.ListCustomerPaymentMethodsAsync(customer.Id);
-
-        await Task.WhenAll(paymentMethods.Select(pm => stripeAdapter.DetachPaymentMethodAsync(pm.Id)));
-    }
-
-    private async Task ReplaceBraintreePaymentMethodAsync(
-        Braintree.Customer customer,
-        string defaultPaymentMethodToken)
-    {
-        var existingDefaultPaymentMethod = customer.DefaultPaymentMethod;
-
-        var createPaymentMethodResult = await braintreeGateway.PaymentMethod.CreateAsync(new PaymentMethodRequest
-        {
-            CustomerId = customer.Id,
-            PaymentMethodNonce = defaultPaymentMethodToken
-        });
-
-        if (!createPaymentMethodResult.IsSuccess())
-        {
-            logger.LogError("Failed to replace payment method for Braintree customer ({ID}) - Creation of new payment method failed | Error: {Error}", customer.Id, createPaymentMethodResult.Message);
-
-            throw new BillingException();
-        }
-
-        var updateCustomerResult = await braintreeGateway.Customer.UpdateAsync(
-            customer.Id,
-            new CustomerRequest { DefaultPaymentMethodToken = createPaymentMethodResult.Target.Token });
-
-        if (!updateCustomerResult.IsSuccess())
-        {
-            logger.LogError("Failed to replace payment method for Braintree customer ({ID}) - Customer update failed | Error: {Error}",
-                customer.Id, updateCustomerResult.Message);
-
-            await braintreeGateway.PaymentMethod.DeleteAsync(createPaymentMethodResult.Target.Token);
-
-            throw new BillingException();
-        }
-
-        if (existingDefaultPaymentMethod != null)
-        {
-            var deletePaymentMethodResult = await braintreeGateway.PaymentMethod.DeleteAsync(existingDefaultPaymentMethod.Token);
-
-            if (!deletePaymentMethodResult.IsSuccess())
-            {
-                logger.LogWarning(
-                    "Failed to delete replaced payment method for Braintree customer ({ID}) - outdated payment method still exists | Error: {Error}",
-                    customer.Id, deletePaymentMethodResult.Message);
-            }
-        }
+        return unverifiedBankAccount != null ? PaymentSource.From(unverifiedBankAccount) : null;
     }
 
     #endregion

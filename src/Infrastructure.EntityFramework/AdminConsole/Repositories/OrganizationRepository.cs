@@ -31,6 +31,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         _logger = logger;
     }
 
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewayCustomerId == gatewayCustomerId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
+    }
+
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewaySubscriptionId == gatewaySubscriptionId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
+    }
+
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

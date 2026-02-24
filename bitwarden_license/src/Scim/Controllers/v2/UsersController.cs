@@ -1,17 +1,22 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using IRevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
+using IRevokeOrganizationUserCommandV2 = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2.IRevokeOrganizationUserCommand;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -28,6 +33,8 @@ public class UsersController : Controller
     private readonly IPostUserCommand _postUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IRevokeOrganizationUserCommandV2 _revokeOrganizationUserCommandV2;
 
     public UsersController(IOrganizationUserRepository organizationUserRepository,
         IGetUsersListQuery getUsersListQuery,
@@ -35,7 +42,9 @@ public class UsersController : Controller
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
-        IRevokeOrganizationUserCommand revokeOrganizationUserCommand)
+        IRevokeOrganizationUserCommand revokeOrganizationUserCommand,
+        IFeatureService featureService,
+        IRevokeOrganizationUserCommandV2 revokeOrganizationUserCommandV2)
     {
         _organizationUserRepository = organizationUserRepository;
         _getUsersListQuery = getUsersListQuery;
@@ -44,6 +53,8 @@ public class UsersController : Controller
         _postUserCommand = postUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
+        _featureService = featureService;
+        _revokeOrganizationUserCommandV2 = revokeOrganizationUserCommandV2;
     }
 
     [HttpGet("{id}")]
@@ -100,7 +111,33 @@ public class UsersController : Controller
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
+            if (_featureService.IsEnabled(FeatureFlagKeys.ScimRevokeV2))
+            {
+                var results = await _revokeOrganizationUserCommandV2.RevokeUsersAsync(
+                    new RevokeOrganizationUsersRequest(
+                        organizationId,
+                        [id],
+                        new SystemUser(EventSystemUser.SCIM)));
+
+                var errors = results.Select(x => x.Result.Match(
+                    y => $"{y.Message} for user {x.Id}",
+                    _ => null))
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToList();
+
+                if (errors.Count != 0)
+                {
+                    return new BadRequestObjectResult(new ScimErrorResponseModel
+                    {
+                        Status = 400,
+                        Detail = string.Join(", ", errors)
+                    });
+                }
+            }
+            else
+            {
+                await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
+            }
         }
 
         // Have to get full details object for response model

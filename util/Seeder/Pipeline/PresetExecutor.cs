@@ -18,11 +18,13 @@ internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
     /// <param name="passwordHasher">Password hasher for user creation</param>
     /// <param name="manglerService">Mangler service for test isolation</param>
+    /// <param name="password">Optional password for all seeded accounts</param>
     /// <returns>Execution result with organization ID and entity counts</returns>
     internal ExecutionResult Execute(
         string presetName,
         IPasswordHasher<User> passwordHasher,
-        IManglerService manglerService)
+        IManglerService manglerService,
+        string? password = null)
     {
         var reader = new SeedReader();
 
@@ -30,6 +32,7 @@ internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
         services.AddSingleton(passwordHasher);
         services.AddSingleton(manglerService);
         services.AddSingleton<ISeedReader>(reader);
+        services.AddSingleton(new SeederSettings(password));
         services.AddSingleton(db);
 
         PresetLoader.RegisterRecipe(presetName, reader, services);

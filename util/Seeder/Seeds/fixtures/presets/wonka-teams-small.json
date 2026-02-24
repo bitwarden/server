@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "wonka-confections",
+    "planType": "teams-annually",
+    "seats": 25
+  },
+  "users": {
+    "count": 10,
+    "realisticStatusMix": true
+  },
+  "groups": {
+    "count": 3
+  },
+  "collections": {
+    "count": 5
+  },
+  "ciphers": {
+    "count": 100
+  }
+}

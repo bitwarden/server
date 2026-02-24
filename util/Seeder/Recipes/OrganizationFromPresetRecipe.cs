@@ -27,10 +27,11 @@ public class OrganizationFromPresetRecipe(
     /// Seeds an organization from an embedded preset.
     /// </summary>
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
+    /// <param name="password">Optional password for all seeded accounts</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(string presetName)
+    public SeedResult Seed(string presetName, string? password = null)
     {
-        var result = _executor.Execute(presetName, passwordHasher, manglerService);
+        var result = _executor.Execute(presetName, passwordHasher, manglerService, password);
 
         return new SeedResult(
             result.OrganizationId,

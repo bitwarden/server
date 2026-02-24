@@ -72,7 +72,6 @@ internal record SeedOrganization
 {
     public required string Name { get; init; }
     public required string Domain { get; init; }
-    public int Seats { get; init; } = 10;
 }
 
 internal record SeedRoster

@@ -31,6 +31,11 @@
           "minimum": 1,
           "default": 10,
           "description": "Number of seats in the organization."
+        },
+        "planType": {
+          "type": "string",
+          "enum": ["free", "teams-monthly", "teams-annually", "enterprise-monthly", "enterprise-annually", "teams-starter", "families-annually"],
+          "description": "Billing plan type. Defaults to enterprise-annually if omitted."
         }
       }
     },
@@ -90,6 +95,11 @@
       },
       "required": ["count"]
     },
+    "folders": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, generates folders for each user using a realistic distribution."
+    },
     "ciphers": {
       "type": "object",
       "description": "Cipher configuration. Use 'fixture' for a named fixture, or 'count' for random generation.",
@@ -103,6 +113,67 @@
           "type": "integer",
           "minimum": 1,
           "description": "Number of random ciphers to generate."
+        },
+        "assignFolders": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, assigns generated ciphers to user folders round-robin. Requires 'folders' to be true."
+        }
+      }
+    },
+    "personalCiphers": {
+      "type": "object",
+      "description": "Generate personal ciphers for each user's personal vault.",
+      "additionalProperties": false,
+      "properties": {
+        "countPerUser": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of personal ciphers to generate per user."
+        }
+      },
+      "required": ["countPerUser"]
+    },
+    "policies": {
+      "type": "object",
+      "description": "Organization policy configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "enableAll": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, enables all policy types."
+        },
+        "except": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Policy types to exclude when enableAll is true."
+        },
+        "enable": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific policy types to enable (alternative to enableAll)."
+        }
+      }
+    },
+    "sso": {
+      "type": "object",
+      "description": "Single Sign-On configuration for the organization.",
+      "additionalProperties": false,
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "description": "SSO organization identifier used in login flows."
+        },
+        "encryptionType": {
+          "type": "string",
+          "enum": ["masterPassword", "trustedDevices"],
+          "description": "How member keys are protected. 'masterPassword' = standard SSO, 'trustedDevices' = TDE (no master password)."
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["oidc", "saml"],
+          "description": "Identity provider protocol."
         }
       }
     }
