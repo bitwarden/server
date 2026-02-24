@@ -26,7 +26,7 @@ public class VaultOrganizationCommand
         var scopedServices = scope.ServiceProvider;
 
         var manglerService = scopedServices.GetRequiredService<IManglerService>();
-        var recipe = new OrganizationWithVaultRecipe(
+        var recipe = new OrganizationRecipe(
             scopedServices.GetRequiredService<DatabaseContext>(),
             scopedServices.GetRequiredService<IMapper>(),
             scopedServices.GetRequiredService<IPasswordHasher<User>>(),

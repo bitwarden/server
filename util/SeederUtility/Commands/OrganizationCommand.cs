@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder.Options;
 using Bit.Seeder.Recipes;
 using Bit.Seeder.Services;
 using Bit.SeederUtility.Configuration;
@@ -34,7 +35,8 @@ public class OrganizationCommand
         var mapper = scopedServices.GetRequiredService<IMapper>();
         var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
         var manglerService = scopedServices.GetRequiredService<IManglerService>();
-        var recipe = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
-        recipe.Seed(name: name, domain: domain, users: users);
+        var recipe = new OrganizationRecipe(db, mapper, passwordHasher, manglerService);
+        var options = new OrganizationVaultOptions { Name = name, Domain = domain, Users = users };
+        recipe.Seed(options);
     }
 }

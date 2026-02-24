@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
@@ -8,20 +9,20 @@ using Microsoft.AspNetCore.Identity;
 namespace Bit.Seeder.Recipes;
 
 /// <summary>
-/// Seeds an organization from an embedded preset.
+/// Seeds an organization from an embedded preset or programmatic options.
 /// </summary>
 /// <remarks>
-/// This recipe is a thin facade over the internal Pipeline architecture (PresetExecutor).
+/// Thin facade over the internal Pipeline architecture (RecipeOrchestrator).
 /// All orchestration logic is encapsulated within the Pipeline, keeping this Recipe simple.
 /// The CLI remains "dumb" - it creates this recipe and calls Seed().
 /// </remarks>
-public class OrganizationFromPresetRecipe(
+public class OrganizationRecipe(
     DatabaseContext db,
     IMapper mapper,
     IPasswordHasher<User> passwordHasher,
     IManglerService manglerService)
 {
-    private readonly PresetExecutor _executor = new(db, mapper);
+    private readonly RecipeOrchestrator _orchestrator = new(db, mapper);
 
     /// <summary>
     /// Seeds an organization from an embedded preset.
@@ -31,7 +32,25 @@ public class OrganizationFromPresetRecipe(
     /// <returns>The organization ID and summary statistics.</returns>
     public SeedResult Seed(string presetName, string? password = null)
     {
-        var result = _executor.Execute(presetName, passwordHasher, manglerService, password);
+        var result = _orchestrator.Execute(presetName, passwordHasher, manglerService, password);
+
+        return new SeedResult(
+            result.OrganizationId,
+            result.OwnerEmail,
+            result.UsersCount,
+            result.GroupsCount,
+            result.CollectionsCount,
+            result.CiphersCount);
+    }
+
+    /// <summary>
+    /// Seeds an organization from programmatic options (CLI arguments).
+    /// </summary>
+    /// <param name="options">Options specifying what to seed.</param>
+    /// <returns>The organization ID and summary statistics.</returns>
+    public SeedResult Seed(OrganizationVaultOptions options)
+    {
+        var result = _orchestrator.Execute(options, passwordHasher, manglerService);
 
         return new SeedResult(
             result.OrganizationId,
@@ -48,7 +67,7 @@ public class OrganizationFromPresetRecipe(
     /// <returns>Available presets grouped by category.</returns>
     public static AvailableSeeds ListAvailable()
     {
-        var internalResult = PresetExecutor.ListAvailable();
+        var internalResult = RecipeOrchestrator.ListAvailable();
 
         return new AvailableSeeds(internalResult.Presets, internalResult.Fixtures);
     }
