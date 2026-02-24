@@ -11,7 +11,7 @@ public class UserHasNoPreviousSubscriptionsFilterTests
     private readonly UserHasNoPreviousSubscriptionsFilter _sut = new();
 
     [Theory, BitAutoData]
-    public void IsUserEligible_NotPremiumAndNoSubscriptionId_ReturnsTrue(
+    public void IsUserEligible_NotPremiumAndNoGatewaySubscriptionId_ReturnsTrue(
         User user,
         SubscriptionDiscount discount)
     {
@@ -27,7 +27,7 @@ public class UserHasNoPreviousSubscriptionsFilterTests
     }
 
     [Theory, BitAutoData]
-    public void IsUserEligible_IsPremium_ReturnsFalse(
+    public void IsUserEligible_HasPremium_ReturnsFalse(
         User user,
         SubscriptionDiscount discount)
     {
@@ -58,7 +58,7 @@ public class UserHasNoPreviousSubscriptionsFilterTests
     }
 
     [Theory, BitAutoData]
-    public void IsUserEligible_IsPremiumAndHasSubscriptionId_ReturnsFalse(
+    public void IsUserEligible_HasPremiumAndHasGatewaySubscriptionId_ReturnsFalse(
         User user,
         SubscriptionDiscount discount)
     {
