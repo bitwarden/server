@@ -32,7 +32,29 @@ public class OrganizationCommand
             scopedServices.GetRequiredService<IPasswordHasher<User>>(),
             manglerService);
 
-        recipe.Seed(args.ToOptions());
+        var result = recipe.Seed(args.ToOptions());
+
+        Console.WriteLine($"✓ Created organization (ID: {result.OrganizationId})");
+        if (result.OwnerEmail is not null)
+        {
+            Console.WriteLine($"✓ Owner: {result.OwnerEmail}");
+        }
+        if (result.UsersCount > 0)
+        {
+            Console.WriteLine($"✓ Created {result.UsersCount} users");
+        }
+        if (result.GroupsCount > 0)
+        {
+            Console.WriteLine($"✓ Created {result.GroupsCount} groups");
+        }
+        if (result.CollectionsCount > 0)
+        {
+            Console.WriteLine($"✓ Created {result.CollectionsCount} collections");
+        }
+        if (result.CiphersCount > 0)
+        {
+            Console.WriteLine($"✓ Created {result.CiphersCount} ciphers");
+        }
 
         if (!manglerService.IsEnabled)
         {
