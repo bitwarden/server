@@ -88,6 +88,20 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         }
     }
 
+    public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByUserIdsAsync(ICollection<Guid> userIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new EmergencyAccessDetailsViewQuery();
+            var query = view.Run(dbContext).Where(ea =>
+                userIds.Contains(ea.GrantorId) ||
+                (ea.GranteeId.HasValue && userIds.Contains(ea.GranteeId.Value))
+            );
+            return await query.ToListAsync();
+        }
+    }
+
     public async Task<ICollection<EmergencyAccessNotify>> GetManyToNotifyAsync()
     {
         using (var scope = ServiceScopeFactory.CreateScope())
