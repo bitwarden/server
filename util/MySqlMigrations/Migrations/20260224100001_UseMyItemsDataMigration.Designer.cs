@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260218100001_UseMyItemsDataMigration")]
+    [Migration("20260224100001_UseMyItemsDataMigration")]
     partial class UseMyItemsDataMigration
     {
         /// <inheritdoc />
