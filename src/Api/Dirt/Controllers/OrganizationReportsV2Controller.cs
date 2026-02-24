@@ -45,8 +45,6 @@ public class OrganizationReportsV2Controller : Controller
         }
     }
 
-    #region ApplicationData Field Endpoints
-
     [HttpGet("{organizationId}/data/application/{reportId}")]
     public async Task<OrganizationReportApplicationDataResponse> GetOrganizationReportApplicationDataV2Async(
         Guid organizationId, Guid reportId)
@@ -83,6 +81,4 @@ public class OrganizationReportsV2Controller : Controller
 
         return new OrganizationReportResponseModel(updatedReport);
     }
-
-    #endregion
 }
