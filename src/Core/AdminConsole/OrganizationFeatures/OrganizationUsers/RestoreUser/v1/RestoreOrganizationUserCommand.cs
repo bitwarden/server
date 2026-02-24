@@ -108,7 +108,6 @@ public class RestoreOrganizationUserCommand(
         if (organizationUser.UserId.HasValue
            && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled
            && status == OrganizationUserStatusType.Confirmed
-           && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
            && !string.IsNullOrWhiteSpace(defaultCollectionName))
         {
             await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
@@ -251,11 +250,8 @@ public class RestoreOrganizationUserCommand(
             }
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore))
-        {
-            await CreateDefaultCollectionsForConfirmedUsersAsync(organizationId, defaultCollectionName,
-                result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
-        }
+        await CreateDefaultCollectionsForConfirmedUsersAsync(organizationId, defaultCollectionName,
+            result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
 
         return result;
     }
