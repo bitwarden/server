@@ -2,6 +2,8 @@
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Models;
+using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
 
 namespace Bit.Seeder.Pipeline;
@@ -75,8 +77,9 @@ public static class RecipeBuilderExtensions
     /// <param name="builder">The recipe builder</param>
     /// <param name="fixture">Roster fixture name without extension</param>
     /// <returns>The builder for fluent chaining</returns>
+    /// <param name="reader">Seed reader for peeking the roster fixture to detect owner declarations</param>
     /// <exception cref="InvalidOperationException">Thrown when AddUsers() was already called</exception>
-    public static RecipeBuilder UseRoster(this RecipeBuilder builder, string fixture)
+    public static RecipeBuilder UseRoster(this RecipeBuilder builder, string fixture, ISeedReader reader)
     {
         if (builder.HasGeneratedUsers)
         {
@@ -85,6 +88,13 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasRosterUsers = true;
+
+        var roster = reader.Read<SeedRoster>($"rosters.{fixture}");
+        if (roster.Users.Any(u => string.Equals(u.Role, "owner", StringComparison.OrdinalIgnoreCase)))
+        {
+            builder.HasRosterOwner = true;
+        }
+
         builder.AddStep(_ => new CreateRosterStep(fixture));
         return builder;
     }
@@ -274,10 +284,10 @@ public static class RecipeBuilderExtensions
                 "Organization is required. Call UseOrganization() or CreateOrganization().");
         }
 
-        if (!builder.HasOwner)
+        if (!builder.HasOwner && !builder.HasRosterOwner)
         {
             throw new InvalidOperationException(
-                "Owner is required. Call AddOwner().");
+                "Owner is required. Call AddOwner() or declare a user with role 'owner' in the roster.");
         }
 
         if (builder.HasGeneratedCiphers && !builder.HasGenerator)

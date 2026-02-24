@@ -61,7 +61,7 @@ public class OrganizationWithVaultRecipe(
 
         // Create organization via factory
         var organization = OrganizationSeeder.Create(
-            options.Name, options.Domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey, options.PlanType);
+            options.Name, options.Domain, seats, manglerService, orgKeys.PublicKey, orgKeys.PrivateKey, options.PlanType);
 
         // Create owner user via factory
         var ownerEmail = $"owner@{options.Domain}";

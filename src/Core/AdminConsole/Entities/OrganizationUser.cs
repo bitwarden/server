@@ -81,6 +81,17 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// </summary>
     public bool AccessSecretsManager { get; set; }
 
+    /// <summary>
+    /// Checks whether the given reset password key is non-null and non-whitespace.
+    /// </summary>
+    public static bool IsValidResetPasswordKey(string? resetPasswordKey)
+        => !string.IsNullOrWhiteSpace(resetPasswordKey);
+
+    /// <summary>
+    /// Whether this organization user is enrolled in account recovery.
+    /// </summary>
+    public bool IsEnrolledInAccountRecovery() => IsValidResetPasswordKey(ResetPasswordKey);
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

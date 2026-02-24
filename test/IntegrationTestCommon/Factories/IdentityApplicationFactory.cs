@@ -12,6 +12,8 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Services;
 using Bit.Identity;
+using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.Helpers;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
@@ -27,6 +29,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     public const string DefaultUserEmail = "DefaultEmail@bitwarden.com";
     public const string DefaultUserPasswordHash = "default_password_hash";
     private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+    public bool UseMockClientVersionValidator { get; set; } = true;
 
     /// <summary>
     /// A dictionary to store registration tokens for email verification. We cannot substitute the IMailService more than once, so
@@ -49,6 +52,16 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                     }
                 });
         });
+
+        if (UseMockClientVersionValidator)
+        {
+            // Bypass client version gating to isolate tests from client version behavior
+            SubstituteService<IClientVersionValidator>(svc =>
+            {
+                svc.Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                    .Returns(true);
+            });
+        }
 
         base.ConfigureWebHost(builder);
     }
@@ -296,7 +309,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         try
         {
-            if (ctx?.Response?.Body == null)
+            if (ctx?.Response.Body == null)
             {
                 return "<no body>";
             }
