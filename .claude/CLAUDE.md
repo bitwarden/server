@@ -43,6 +43,7 @@
 
 - **Build**: `dotnet build`
 - **Test**: `dotnet test`
+- **Format**: `dotnet format`
 - **Run locally**: `dotnet run --project src/Api`
 - **Database update**: `pwsh dev/migrate.ps1`
 - **Generate OpenAPI**: `pwsh dev/generate_openapi_files.ps1`
