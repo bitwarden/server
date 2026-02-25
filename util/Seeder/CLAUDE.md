@@ -35,7 +35,7 @@ Need to create test data?
 
 **Modern pattern for composable fixture-based and generated seeding.**
 
-**Flow**: Preset JSON → PresetLoader → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
+**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
 
 **Key actors**:
 
@@ -43,7 +43,7 @@ Need to create test data?
 - **IStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.)
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
 - **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
-- **PresetExecutor**: Orchestrates preset loading and execution
+- **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
 
 **Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
 

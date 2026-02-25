@@ -1,5 +1,5 @@
 {
   "$schema": "../../schemas/organization.schema.json",
   "name": "Dunder Mifflin",
-  "domain": "dundermifflin.com"
+  "domain": "dundermifflin.example"
 }

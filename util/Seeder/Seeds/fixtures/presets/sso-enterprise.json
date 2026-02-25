@@ -1,12 +1,12 @@
 {
   "$schema": "../../schemas/preset.schema.json",
   "organization": {
-    "fixture": "qa-sso-org",
+    "fixture": "verdant-health",
     "planType": "enterprise-annually",
     "seats": 10
   },
   "roster": {
-    "fixture": "sso-basic"
+    "fixture": "starter-team"
   },
   "ciphers": {
     "fixture": "sso-vault"
@@ -15,7 +15,7 @@
     "enable": ["requireSso"]
   },
   "sso": {
-    "identifier": "qa-sso-org",
+    "identifier": "verdant-health",
     "encryptionType": "masterPassword",
     "provider": "oidc"
   }

@@ -1,11 +1,11 @@
 {
   "$schema": "../../schemas/preset.schema.json",
   "organization": {
-    "fixture": "qa-policy-org",
+    "fixture": "pinnacle-designs",
     "planType": "enterprise-annually"
   },
   "roster": {
-    "fixture": "policy-org"
+    "fixture": "starter-team"
   },
   "policies": {
     "enableAll": true,
