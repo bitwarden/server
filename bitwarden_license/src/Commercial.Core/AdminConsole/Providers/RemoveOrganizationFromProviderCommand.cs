@@ -13,8 +13,12 @@ using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Mail.Provider.ProviderUpdatePaymentMethod;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -22,7 +26,8 @@ namespace Bit.Commercial.Core.AdminConsole.Providers;
 public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProviderCommand
 {
     private readonly IEventService _eventService;
-    private readonly IMailService _mailService;
+    private readonly IMailer _mailer;
+    private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
@@ -34,7 +39,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
-        IMailService mailService,
+        IMailer mailer,
+        IGlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
@@ -45,7 +51,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IPricingClient pricingClient)
     {
         _eventService = eventService;
-        _mailService = mailService;
+        _mailer = mailer;
+        _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
@@ -176,10 +183,16 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             await _subscriberService.RemovePaymentSource(organization);
         }
 
-        await _mailService.SendProviderUpdatePaymentMethod(
-            organization.Id,
-            organization.Name,
-            provider.Name!,
-            organizationOwnerEmails);
+        await _mailer.SendEmail(new ProviderUpdatePaymentMethodMail
+        {
+            ToEmails = organizationOwnerEmails,
+            View = new ProviderUpdatePaymentMethodMailView
+            {
+                OrganizationId = organization.Id.ToString(),
+                OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name),
+                ProviderName = CoreHelpers.SanitizeForEmail(provider.Name!),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+            }
+        });
     }
 }
