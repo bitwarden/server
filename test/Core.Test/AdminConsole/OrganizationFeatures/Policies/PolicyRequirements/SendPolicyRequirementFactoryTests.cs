@@ -82,4 +82,140 @@ public class SendPolicyRequirementFactoryTests
 
         Assert.True(actual.DisableHideEmail);
     }
+
+    [Theory, BitAutoData]
+    public void DisableNoAuthSends_IsFalse_IfNoPolicies(SutProvider<SendPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create([]);
+
+        Assert.False(actual.DisableNoAuthSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisableNoAuthSends_IsFalse_IfNotConfigured(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisableNoAuthSends = false });
+        policies[1].SetDataModel(new SendPolicyData { DisableNoAuthSends = false });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.False(actual.DisableNoAuthSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisableNoAuthSends_IsTrue_IfAnyConfigured(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisableNoAuthSends = true });
+        policies[1].SetDataModel(new SendPolicyData { DisableNoAuthSends = false });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.True(actual.DisableNoAuthSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisablePasswordSends_IsFalse_IfNoPolicies(SutProvider<SendPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create([]);
+
+        Assert.False(actual.DisablePasswordSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisablePasswordSends_IsFalse_IfNotConfigured(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisablePasswordSends = false });
+        policies[1].SetDataModel(new SendPolicyData { DisablePasswordSends = false });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.False(actual.DisablePasswordSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisablePasswordSends_IsTrue_IfAnyConfigured(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisablePasswordSends = true });
+        policies[1].SetDataModel(new SendPolicyData { DisablePasswordSends = false });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.True(actual.DisablePasswordSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisableEmailVerifiedSends_IsFalse_IfNoPolicies(SutProvider<SendPolicyRequirementFactory> sutProvider)
+    {
+        var actual = sutProvider.Sut.Create([]);
+
+        Assert.False(actual.DisableEmailVerifiedSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisableEmailVerifiedSends_IsFalse_IfNotConfigured(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisableEmailVerifiedSends = false });
+        policies[1].SetDataModel(new SendPolicyData { DisableEmailVerifiedSends = false });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.False(actual.DisableEmailVerifiedSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisableEmailVerifiedSends_IsTrue_IfAnyConfigured(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisableEmailVerifiedSends = true });
+        policies[1].SetDataModel(new SendPolicyData { DisableEmailVerifiedSends = false });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.True(actual.DisableEmailVerifiedSends);
+    }
+
+    [Theory, BitAutoData]
+    public void DisableSend_IsFalse_IfOnlyTwoAuthTypesDisabledAcrossOrgs(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisableNoAuthSends = true });
+        policies[1].SetDataModel(new SendPolicyData { DisablePasswordSends = true });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.False(actual.DisableSend);
+    }
+
+    [Theory, BitAutoData]
+    public void DisableSend_IsTrue_IfAllThreeAuthTypesDisabledAcrossOrgs(
+        [PolicyDetails(PolicyType.SendOptions)] PolicyDetails[] policies,
+        SutProvider<SendPolicyRequirementFactory> sutProvider
+        )
+    {
+        policies[0].SetDataModel(new SendPolicyData { DisableNoAuthSends = true, DisablePasswordSends = true });
+        policies[1].SetDataModel(new SendPolicyData { DisableEmailVerifiedSends = true });
+
+        var actual = sutProvider.Sut.Create(policies);
+
+        Assert.True(actual.DisableSend);
+    }
 }

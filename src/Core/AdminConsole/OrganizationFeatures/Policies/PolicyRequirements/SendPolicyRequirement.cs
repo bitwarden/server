@@ -18,6 +18,21 @@ public class SendPolicyRequirement : IPolicyRequirement
     /// Indicates whether the org users are prohibited from hiding their email from the recipient of a Send.
     /// </summary>
     public bool DisableHideEmail { get; init; }
+
+    /// <summary>
+    /// Indicates whether the org users are prohibited from creating or editing Sends that use no authorization.
+    /// </summary>
+    public bool DisableNoAuthSends { get; init; }
+
+    /// <summary>
+    /// Indicates whether the org users are prohibited from creating or editing Sends that use password authorization.
+    /// </summary>
+    public bool DisablePasswordSends { get; init; }
+
+    /// <summary>
+    /// Indicates whether the org users are prohibited from creating or editing Sends that use email verification.
+    /// </summary>
+    public bool DisableEmailVerifiedSends { get; init; }
 }
 
 public class SendPolicyRequirementFactory : BasePolicyRequirementFactory<SendPolicyRequirement>
@@ -30,10 +45,20 @@ public class SendPolicyRequirementFactory : BasePolicyRequirementFactory<SendPol
             .Select(p => p.GetDataModel<SendPolicyData>())
             .Aggregate(
                 new SendPolicyRequirement(),
-                (result, data) => new SendPolicyRequirement
+                (result, data) =>
                 {
-                    DisableSend = result.DisableSend || data.DisableSend,
-                    DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail
+                    var disableNoAuthSends = result.DisableNoAuthSends || data.DisableNoAuthSends;
+                    var disablePasswordSends = result.DisablePasswordSends || data.DisablePasswordSends;
+                    var disableEmailVerifiedSends = result.DisableEmailVerifiedSends || data.DisableEmailVerifiedSends;
+                    return new SendPolicyRequirement
+                    {
+                        DisableSend = result.DisableSend || data.DisableSend
+                            || (disableNoAuthSends && disablePasswordSends && disableEmailVerifiedSends),
+                        DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail,
+                        DisableNoAuthSends = disableNoAuthSends,
+                        DisablePasswordSends = disablePasswordSends,
+                        DisableEmailVerifiedSends = disableEmailVerifiedSends,
+                    };
                 });
     }
 }

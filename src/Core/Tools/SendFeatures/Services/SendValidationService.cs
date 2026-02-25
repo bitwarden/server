@@ -13,6 +13,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Tools.Services;
@@ -74,13 +75,37 @@ public class SendValidationService : ISendValidationService
             throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
         }
 
-        if (send.HideEmail.GetValueOrDefault())
+        var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
+        var sendOptionsPolicyData = sendOptionsPolicies
+            .Select(p => CoreHelpers.LoadClassFromJsonData<SendPolicyData>(p.PolicyData))
+            .Where(d => d != null)
+            .ToList();
+
+        if (sendOptionsPolicyData.Any(d => d.DisableSend))
         {
-            var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
-            if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
-            {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-            }
+            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+        }
+
+        if (send.HideEmail.GetValueOrDefault() && sendOptionsPolicyData.Any(d => d.DisableHideEmail))
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+        }
+
+        var authType = send.AuthType ?? AuthType.None;
+
+        if (authType == AuthType.None && sendOptionsPolicyData.Any(d => d.DisableNoAuthSends))
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to create or edit Sends without authentication.");
+        }
+
+        if (authType == AuthType.Password && sendOptionsPolicyData.Any(d => d.DisablePasswordSends))
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to create or edit Sends that use password authentication.");
+        }
+
+        if (authType == AuthType.Email && sendOptionsPolicyData.Any(d => d.DisableEmailVerifiedSends))
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to create or edit Sends that use email verification.");
         }
     }
 
@@ -101,6 +126,23 @@ public class SendValidationService : ISendValidationService
         if (sendRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
         {
             throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+        }
+
+        var authType = send.AuthType ?? AuthType.None;
+
+        if (sendRequirement.DisableNoAuthSends && authType == AuthType.None)
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to create or edit Sends without authentication.");
+        }
+
+        if (sendRequirement.DisablePasswordSends && authType == AuthType.Password)
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to create or edit Sends that use password authentication.");
+        }
+
+        if (sendRequirement.DisableEmailVerifiedSends && authType == AuthType.Email)
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to create or edit Sends that use email verification.");
         }
     }
 
