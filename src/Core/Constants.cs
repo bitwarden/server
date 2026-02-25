@@ -226,6 +226,7 @@ public static class FeatureFlagKeys
     public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
+    public const string DeviceAuthKey = "pm-27581-device-auth-key";
 
     /* Platform Team */
     public const string WebPush = "web-push";
