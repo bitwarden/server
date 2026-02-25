@@ -47,6 +47,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
+using V2_AdminRecoverAccountCommand = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
 namespace Bit.Core.OrganizationFeatures;
@@ -148,6 +149,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
         services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
         services.AddScoped<IAdminRecoverAccountCommand, AdminRecoverAccountCommand>();
+        services.AddScoped<V2_AdminRecoverAccountCommand.IAdminRecoverAccountCommand, V2_AdminRecoverAccountCommand.AdminRecoverAccountCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
 

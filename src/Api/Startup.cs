@@ -213,6 +213,7 @@ public class Startup
         {
             config.Conventions.Add(new ApiExplorerGroupConvention());
             config.Conventions.Add(new PublicApiControllersModelConvention());
+            config.Conventions.Add(new VersionedRouteConvention());
         });
 
         services.AddSwaggerGen(globalSettings, Environment);

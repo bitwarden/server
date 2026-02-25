@@ -8,6 +8,7 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
@@ -43,6 +44,7 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
+using V2_AdminRecoverAccountCommand = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
 namespace Bit.Api.AdminConsole.Controllers;
@@ -82,6 +84,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
+    private readonly V2_AdminRecoverAccountCommand.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -115,7 +118,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
-        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
+        ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
+        V2_AdminRecoverAccountCommand.IAdminRecoverAccountCommand adminRecoverAccountCommandV2)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -149,6 +153,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
+        _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
     }
 
     [HttpGet("{id}")]
@@ -525,6 +530,47 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
+        if (result.Succeeded)
+        {
+            return TypedResults.Ok();
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        await Task.Delay(2000);
+        return TypedResults.BadRequest(ModelState);
+    }
+
+    [HttpPut("{id}/reset-password")]
+    [VersionedRoute(2)]
+    [Authorize<ManageAccountRecoveryRequirement>]
+    public async Task<IResult> PutResetPasswordV2(Guid orgId, Guid id,
+        [FromBody] OrganizationUserResetPasswordV2RequestModel model)
+    {
+        var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, targetOrganizationUser,
+            new RecoverAccountAuthorizationRequirement());
+        if (!authorizationResult.Succeeded)
+        {
+            var failureReason = authorizationResult.Failure?.FailureReasons.FirstOrDefault()?.Message
+                ?? RecoverAccountAuthorizationHandler.FailureReason;
+            // This should be a 403 Forbidden, but that causes a logout on our client apps so we're using 400 Bad Request instead
+            return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
+        }
+
+        var authenticationData = model.MasterPasswordAuthentication.ToData();
+        var unlockData = model.MasterPasswordUnlock.ToData();
+
+        var result = await _adminRecoverAccountCommandV2.RecoverAccountAsync(orgId, targetOrganizationUser,
+            authenticationData, unlockData);
         if (result.Succeeded)
         {
             return TypedResults.Ok();
