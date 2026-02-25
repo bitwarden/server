@@ -53,7 +53,7 @@ public class UpdateOrganizationReportDataCommand : IUpdateOrganizationReportData
                 throw new BadRequestException("Organization report does not belong to the specified organization");
             }
 
-            var updatedReport = await _organizationReportRepo.UpdateReportDataAsync(request.OrganizationId, request.ReportId, request.ReportData);
+            var updatedReport = await _organizationReportRepo.UpdateReportDataAsync(request.OrganizationId, request.ReportId, request.ReportData ?? string.Empty);
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated organization report data {reportId} for organization {organizationId}",
                 request.ReportId, request.OrganizationId);

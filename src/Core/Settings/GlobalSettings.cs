@@ -15,6 +15,7 @@ public class GlobalSettings : IGlobalSettings
         BaseServiceUri = new BaseServiceUriSettings(this);
         Attachment = new FileStorageSettings(this, "attachments", "attachments");
         Send = new FileStorageSettings(this, "attachments/send", "attachments/send");
+        OrganizationReport = new FileStorageSettings(this, "reports/organization-reports", "reports/organization-reports");
         DataProtection = new DataProtectionSettings(this);
     }
 
@@ -62,6 +63,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
+    public virtual FileStorageSettings OrganizationReport { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
