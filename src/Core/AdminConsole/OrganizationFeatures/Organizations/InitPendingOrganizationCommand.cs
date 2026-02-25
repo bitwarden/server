@@ -92,6 +92,10 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         }
 
         var org = await _organizationRepository.GetByIdAsync(organizationId);
+        if (org == null)
+        {
+            throw new BadRequestException("Organization not found.");
+        }
 
         if (org.Enabled)
         {
