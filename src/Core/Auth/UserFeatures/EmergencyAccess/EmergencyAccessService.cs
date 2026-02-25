@@ -161,6 +161,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         return emergencyAccess;
     }
 
+    // TODO: remove with PM-31327 when we migrate to the command. 
     public async Task DeleteAsync(Guid emergencyAccessId, Guid userId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
