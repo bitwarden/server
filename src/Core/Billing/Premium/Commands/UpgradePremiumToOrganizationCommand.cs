@@ -6,11 +6,11 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using Stripe;
 
 namespace Bit.Core.Billing.Premium.Commands;
@@ -26,13 +26,19 @@ public interface IUpgradePremiumToOrganizationCommand
     /// <param name="user">The user with an active Premium subscription to upgrade.</param>
     /// <param name="organizationName">The name for the new organization.</param>
     /// <param name="key">The encrypted organization key for the owner.</param>
+    /// <param name="publicKey">The organization's public key.</param>
+    /// <param name="encryptedPrivateKey">The organization's encrypted private key.</param>
+    /// <param name="collectionName">Optional name for the default collection.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
     /// <param name="billingAddress">The billing address for tax calculation.</param>
-    /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
-    Task<BillingCommandResult<None>> Run(
+    /// <returns>A billing command result containing the new organization ID on success, or error details on failure.</returns>
+    Task<BillingCommandResult<Guid>> Run(
         User user,
         string organizationName,
         string key,
+        string publicKey,
+        string encryptedPrivateKey,
+        string? collectionName,
         PlanType targetPlanType,
         Payment.Models.BillingAddress billingAddress);
 }
@@ -45,15 +51,21 @@ public class UpgradePremiumToOrganizationCommand(
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
+    ICollectionRepository collectionRepository,
     IApplicationCacheService applicationCacheService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
-    public Task<BillingCommandResult<None>> Run(
+    private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
+
+    public Task<BillingCommandResult<Guid>> Run(
         User user,
         string organizationName,
         string key,
+        string publicKey,
+        string encryptedPrivateKey,
+        string? collectionName,
         PlanType targetPlanType,
-        Payment.Models.BillingAddress billingAddress) => HandleAsync<None>(async () =>
+        Payment.Models.BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -164,6 +176,8 @@ public class UpgradePremiumToOrganizationCommand(
             Gateway = GatewayType.Stripe,
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
+            PublicKey = publicKey,
+            PrivateKey = encryptedPrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
@@ -217,6 +231,33 @@ public class UpgradePremiumToOrganizationCommand(
         organizationUser.SetNewId();
         await organizationUserRepository.CreateAsync(organizationUser);
 
+        // Create default collection if collection name is provided
+        if (!string.IsNullOrWhiteSpace(collectionName))
+        {
+            try
+            {
+                // Give the owner Can Manage access over the default collection
+                List<CollectionAccessSelection> defaultOwnerAccess =
+                    [new CollectionAccessSelection { Id = organizationUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+
+                var defaultCollection = new Collection
+                {
+                    Name = collectionName,
+                    OrganizationId = organization.Id,
+                    CreationDate = organization.CreationDate,
+                    RevisionDate = organization.CreationDate
+                };
+                await collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "{Command}: Failed to create default collection for organization {OrganizationId}. Organization upgrade will continue.",
+                    CommandName, organization.Id);
+                // Continue - organization is fully functional without default collection
+            }
+        }
+
         // Remove subscription from user
         user.Premium = false;
         user.PremiumExpirationDate = null;
@@ -225,6 +266,6 @@ public class UpgradePremiumToOrganizationCommand(
         user.RevisionDate = DateTime.UtcNow;
         await userService.SaveUserAsync(user);
 
-        return new None();
+        return organization.Id;
     });
 }

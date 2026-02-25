@@ -132,8 +132,8 @@ public class AccountBillingVNextController(
         [BindNever] User user,
         [FromBody] UpgradePremiumToOrganizationRequest request)
     {
-        var (organizationName, key, planType, billingAddress) = request.ToDomain();
-        var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, planType, billingAddress);
+        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = request.ToDomain();
+        var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress);
         return Handle(result);
     }
 }
