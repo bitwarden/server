@@ -36,9 +36,9 @@ public class UpdateOrganizationReportSummaryV2Command : IUpdateOrganizationRepor
         }
 
         await _organizationReportRepo.UpdateMetricsAsync(
-            request.ReportId, OrganizationReportMetricsData.From(request.OrganizationId, request.ReportMetrics));
+            request.ReportId, OrganizationReportMetricsData.From(request.OrganizationId, request.Metrics));
 
         return await _organizationReportRepo.UpdateSummaryDataAsync(
-            request.OrganizationId, request.ReportId, request.SummaryData!);
+            request.OrganizationId, request.ReportId, request.SummaryData ?? string.Empty);
     }
 }

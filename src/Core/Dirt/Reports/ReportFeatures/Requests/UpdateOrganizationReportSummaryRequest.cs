@@ -5,5 +5,5 @@ public class UpdateOrganizationReportSummaryRequest
     public Guid OrganizationId { get; set; }
     public Guid ReportId { get; set; }
     public string? SummaryData { get; set; }
-    public OrganizationReportMetrics? ReportMetrics { get; set; }
+    public OrganizationReportMetrics? Metrics { get; set; }
 }

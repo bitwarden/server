@@ -89,6 +89,10 @@ public class OrganizationReportsV2Controller : Controller
         Guid organizationId, Guid reportId,
         [FromBody] UpdateOrganizationReportSummaryRequest request)
     {
+        if (organizationId == Guid.Empty) throw new BadRequestException("OrganizationId is required.");
+
+        if (reportId == Guid.Empty) throw new BadRequestException("ReportId is required.");
+
         if (request.OrganizationId != organizationId) throw new BadRequestException("Organization ID in the request body must match the route parameter");
 
         if (request.ReportId != reportId) throw new BadRequestException("Report ID in the request body must match the route parameter");

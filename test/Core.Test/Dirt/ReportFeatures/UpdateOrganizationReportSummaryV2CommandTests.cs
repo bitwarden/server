@@ -42,7 +42,7 @@ public class UpdateOrganizationReportSummaryV2CommandTests
             ReportId = reportId,
             OrganizationId = organizationId,
             SummaryData = summaryData,
-            ReportMetrics = new OrganizationReportMetrics
+            Metrics = new OrganizationReportMetrics
             {
                 ApplicationCount = 10,
                 ApplicationAtRiskCount = 2

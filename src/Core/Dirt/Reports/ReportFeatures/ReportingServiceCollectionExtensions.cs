@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -25,8 +26,8 @@ public static class ReportingServiceCollectionExtensions
         services.AddScoped<IUpdateOrganizationReportApplicationDataCommand, UpdateOrganizationReportApplicationDataCommand>();
 
         // v2 summary data
-        services.AddScoped<IGetOrganizationReportSummaryDataByDateRangeV2Query, GetOrganizationReportSummaryDataByDateRangeV2Query>();
-        services.AddScoped<IGetOrganizationReportSummaryDataV2Query, GetOrganizationReportSummaryDataV2Query>();
-        services.AddScoped<IUpdateOrganizationReportSummaryV2Command, UpdateOrganizationReportSummaryV2Command>();
+        services.TryAddScoped<IGetOrganizationReportSummaryDataByDateRangeV2Query, GetOrganizationReportSummaryDataByDateRangeV2Query>();
+        services.TryAddScoped<IGetOrganizationReportSummaryDataV2Query, GetOrganizationReportSummaryDataV2Query>();
+        services.TryAddScoped<IUpdateOrganizationReportSummaryV2Command, UpdateOrganizationReportSummaryV2Command>();
     }
 }

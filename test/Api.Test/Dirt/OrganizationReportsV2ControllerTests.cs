@@ -31,7 +31,6 @@ public class OrganizationReportsV2ControllerTests
             .Returns(new OrganizationAbility { UseRiskInsights = useRiskInsights });
     }
 
-    #region GetOrganizationReportSummaryDataByDateRangeV2Async
 
     [Theory, BitAutoData]
     public async Task GetOrganizationReportSummaryDataByDateRangeV2Async_WithValidParams_ReturnsList(
@@ -104,9 +103,6 @@ public class OrganizationReportsV2ControllerTests
             .GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
     }
 
-    #endregion
-
-    #region GetOrganizationReportSummaryV2Async
 
     [Theory, BitAutoData]
     public async Task GetOrganizationReportSummaryV2Async_WithValidIds_ReturnsResponse(
@@ -187,9 +183,6 @@ public class OrganizationReportsV2ControllerTests
         Assert.Equal("Organization report summary data not found.", exception.Message);
     }
 
-    #endregion
-
-    #region UpdateOrganizationReportSummaryV2Async
 
     [Theory, BitAutoData]
     public async Task UpdateOrganizationReportSummaryV2Async_WithValidRequest_ReturnsResponse(
@@ -309,5 +302,4 @@ public class OrganizationReportsV2ControllerTests
             .UpdateSummaryAsync(Arg.Any<UpdateOrganizationReportSummaryRequest>());
     }
 
-    #endregion
 }
