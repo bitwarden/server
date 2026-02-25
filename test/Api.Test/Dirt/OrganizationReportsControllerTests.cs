@@ -18,8 +18,6 @@ namespace Bit.Api.Test.Dirt;
 [SutProviderCustomize]
 public class OrganizationReportControllerTests
 {
-    #region Whole OrganizationReport Endpoints
-
     [Theory, BitAutoData]
     public async Task GetLatestOrganizationReportAsync_WithValidOrgId_ReturnsOkResult(
         SutProvider<OrganizationReportsController> sutProvider,
@@ -449,10 +447,6 @@ public class OrganizationReportControllerTests
             .UpdateOrganizationReportAsync(request);
     }
 
-    #endregion
-
-    #region SummaryData Field Endpoints
-
     [Theory, BitAutoData]
     public async Task GetOrganizationReportSummaryDataByDateRangeAsync_WithValidParameters_ReturnsOkResult(
         SutProvider<OrganizationReportsController> sutProvider,
@@ -714,10 +708,6 @@ public class OrganizationReportControllerTests
             .UpdateOrganizationReportSummaryAsync(request);
     }
 
-    #endregion
-
-    #region ReportData Field Endpoints
-
     [Theory, BitAutoData]
     public async Task GetOrganizationReportDataAsync_WithValidIds_ReturnsOkResult(
         SutProvider<OrganizationReportsController> sutProvider,
@@ -929,10 +919,6 @@ public class OrganizationReportControllerTests
             .Received(1)
             .UpdateOrganizationReportDataAsync(request);
     }
-
-    #endregion
-
-    #region ApplicationData Field Endpoints
 
     [Theory, BitAutoData]
     public async Task GetOrganizationReportApplicationDataAsync_WithValidIds_ReturnsOkResult(
@@ -1167,6 +1153,4 @@ public class OrganizationReportControllerTests
             .Received(1)
             .UpdateOrganizationReportApplicationDataAsync(request);
     }
-
-    #endregion
 }
