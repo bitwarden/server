@@ -19,14 +19,14 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RUST_TARGET=armv7-unknown-linux-gnueabihf ; \
     fi \
     && echo "RID=$RID" > /tmp/env.txt \
-    && echo "CARGO_BUILD_TARGET=$RUST_TARGET" >> /tmp/env.txt \
     && echo "$RUST_TARGET" > /tmp/rust_target.txt
 
 # Install Rust
 RUN apk add --no-cache build-base curl
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | /bin/sh -s -- -y --default-toolchain stable --profile minimal \
      && . $HOME/.cargo/env \
-     && rustup target add $(cat /tmp/rust_target.txt)
+     && rustup target add $(cat /tmp/rust_target.txt) \
+     && rustup set default-host $(cat /tmp/rust_target.txt)
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Copy required project files
