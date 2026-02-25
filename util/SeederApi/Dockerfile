@@ -27,6 +27,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | /bin/sh -s -- -y
      && . $HOME/.cargo/env \
      && rustup target add $(cat /tmp/rust_target.txt)
 ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup set default-host $(cat /tmp/rust_target.txt)
 
 # Copy required project files
 WORKDIR /source
