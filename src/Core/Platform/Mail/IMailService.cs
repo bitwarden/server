@@ -88,6 +88,7 @@ public interface IMailService
         DateTime dueDate,
         List<string> items,
         bool mentionInvoices);
+    [Obsolete("Use IMailer with ProviderInvoiceUpcomingMail instead")]
     Task SendProviderInvoiceUpcoming(
         IEnumerable<string> emails,
         decimal amount,
@@ -116,6 +117,7 @@ public interface IMailService
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
     Task SendProviderConfirmedEmailAsync(string providerName, string email);
     Task SendProviderUserRemoved(string providerName, string email);
+    [Obsolete("Use IMailer with ProviderUpdatePaymentMethodMail instead")]
     Task SendProviderUpdatePaymentMethod(
         Guid organizationId,
         string organizationName,
