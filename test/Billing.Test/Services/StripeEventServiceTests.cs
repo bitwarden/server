@@ -689,6 +689,26 @@ public class StripeEventServiceTests
             mockSetupIntent.Id,
             Arg.Any<SetupIntentGetOptions>());
     }
+
+    [Fact]
+    public async Task ValidateCloudRegion_CouponDeleted_ReturnsTrue()
+    {
+        // Arrange
+        var stripeEvent = CreateMockEvent("evt_test", "coupon.deleted", new Coupon { Id = "cou_test" });
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSetupIntent(null);
+    }
     #endregion
 
     private static Event CreateMockEvent<T>(string id, string type, T dataObject) where T : IStripeEntity

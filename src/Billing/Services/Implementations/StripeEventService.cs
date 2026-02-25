@@ -84,6 +84,11 @@ public class StripeEventService(
 
     public async Task<bool> ValidateCloudRegion(Event stripeEvent)
     {
+        if (EventTypeAppliesToAllRegions(stripeEvent.Type))
+        {
+            return true;
+        }
+
         var serverRegion = globalSettings.BaseServiceUri.CloudRegion;
 
         var customerExpansion = new List<string> { "customer" };
@@ -138,6 +143,16 @@ public class StripeEventService(
             return customer?.Metadata;
         }
     }
+
+    /// <summary>
+    /// Returns true for event types that should be processed by all cloud regions.
+    /// </summary>
+    private static bool EventTypeAppliesToAllRegions(string eventType) => eventType switch
+    {
+        // Business rules say that coupons are allowed to be imported into multiple regions, so coupon deleted events are not region-segmented
+        HandledStripeWebhook.CouponDeleted => true,
+        _ => false
+    };
 
     private static T Extract<T>(Event stripeEvent)
         => stripeEvent.Data.Object is not T type
