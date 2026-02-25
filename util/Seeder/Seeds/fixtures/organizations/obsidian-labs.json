@@ -1,5 +1,5 @@
 {
   "$schema": "../../schemas/organization.schema.json",
-  "name": "SSO QA Org",
-  "domain": "qa-sso.test"
+  "name": "Obsidian Labs",
+  "domain": "obsidian.example"
 }

@@ -51,13 +51,23 @@
     { "name": "Collection-1892038", "groups": [{ "group": "All Members" }] },
     { "name": "Collection-1892039", "groups": [{ "group": "All Members" }] },
     { "name": "Collection-1892047-No-Access" },
-    { "name": "Collection-1892047-View", "groups": [{ "group": "All Members", "readOnly": true }] },
-    { "name": "Collection-1892047-Manage", "groups": [{ "group": "All Members", "manage": true }] },
+    {
+      "name": "Collection-1892047-View",
+      "groups": [{ "group": "All Members", "readOnly": true }]
+    },
+    {
+      "name": "Collection-1892047-Manage",
+      "groups": [{ "group": "All Members", "manage": true }]
+    },
     { "name": "Collection-2532597", "groups": [{ "group": "All Members" }] },
     { "name": "Collection-1793366", "groups": [{ "group": "All Members" }] },
     { "name": "Collection-3925894", "groups": [{ "group": "All Members" }] },
     { "name": "Collection-4204903", "groups": [{ "group": "All Members" }] },
-    { "name": "Collection-5172094", "externalId": "Collection-5172094", "groups": [{ "group": "All Members" }] },
+    {
+      "name": "Collection-5172094",
+      "externalId": "Collection-5172094",
+      "groups": [{ "group": "All Members" }]
+    },
     { "name": "Collection-3392572", "groups": [{ "group": "All Members" }] },
     { "name": "Collection-3171087", "groups": [{ "group": "All Members" }] }
   ]

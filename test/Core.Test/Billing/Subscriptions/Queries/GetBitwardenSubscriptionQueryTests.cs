@@ -56,6 +56,30 @@ public class GetBitwardenSubscriptionQueryTests
     }
 
     [Fact]
+    public async Task Run_StripeSubscriptionNotFound_ReturnsNull()
+    {
+        var user = CreateUser();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = ErrorCodes.ResourceMissing } });
+
+        var result = await _query.Run(user);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Run_StripeExceptionNotResourceMissing_Throws()
+    {
+        var user = CreateUser();
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        await Assert.ThrowsAsync<StripeException>(() => _query.Run(user));
+    }
+
+    [Fact]
     public async Task Run_IncompleteStatus_ReturnsBitwardenSubscriptionWithSuspension()
     {
         var user = CreateUser();

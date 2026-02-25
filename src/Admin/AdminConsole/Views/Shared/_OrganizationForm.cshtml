@@ -178,6 +178,10 @@
                     <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium" disabled='@(canEditPlan ? null : "disabled")'>
                     <label class="form-check-label" asp-for="UsersGetPremium"></label>
                 </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseMyItems" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseMyItems"></label>
+                </div>
             </div>
             <div class="col-3">
                 <h3>Secrets Manager</h3>
