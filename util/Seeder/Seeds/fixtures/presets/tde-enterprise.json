@@ -1,12 +1,12 @@
 {
   "$schema": "../../schemas/preset.schema.json",
   "organization": {
-    "fixture": "qa-tde-org",
+    "fixture": "obsidian-labs",
     "planType": "enterprise-annually",
     "seats": 10
   },
   "roster": {
-    "fixture": "tde-basic"
+    "fixture": "starter-team"
   },
   "ciphers": {
     "fixture": "tde-vault"
@@ -15,7 +15,7 @@
     "enable": ["requireSso"]
   },
   "sso": {
-    "identifier": "qa-tde-org",
+    "identifier": "obsidian-labs",
     "encryptionType": "trustedDevices",
     "provider": "oidc"
   }

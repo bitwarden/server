@@ -51,6 +51,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         UsePhishingBlocker = organizationDetails.UsePhishingBlocker;
         UseDisableSMAdsForUsers = organizationDetails.UseDisableSMAdsForUsers;
         UsePasswordManager = organizationDetails.UsePasswordManager;
+        UseMyItems = organizationDetails.UseMyItems;
         SelfHost = organizationDetails.SelfHost;
         Seats = organizationDetails.Seats;
         MaxCollections = organizationDetails.MaxCollections;
@@ -104,6 +105,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool UseAutomaticUserConfirmation { get; set; }
     public bool UseDisableSMAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
+    public bool UseMyItems { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }

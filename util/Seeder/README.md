@@ -46,7 +46,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **RecipeBuilder**: Fluent API with dependency validation
 - **IStep**: Isolated unit of work (CreateOrganizationStep, CreateUsersStep, etc.)
 - **RecipeExecutor**: Executes steps, captures statistics, commits
-- **PresetExecutor**: Orchestrates preset loading and execution
+- **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
 - **SeederContext**: Shared mutable state (NOT thread-safe)
 
 **Why this architecture wins**:
