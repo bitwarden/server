@@ -35,6 +35,11 @@ public class UpdateOrganizationReportDataFileStorageCommand : IUpdateOrganizatio
             throw new NotFoundException("Report not found");
         }
 
+        if (existingReport.FileId != reportFileId)
+        {
+            throw new NotFoundException("Report not found");
+        }
+
         // Update revision date
         existingReport.RevisionDate = DateTime.UtcNow;
         await _organizationReportRepo.ReplaceAsync(existingReport);

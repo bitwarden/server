@@ -84,6 +84,55 @@ public class LocalOrganizationReportStorageServiceTests
         Assert.EndsWith("report-data.json", url);
     }
 
+    [Theory]
+    [InlineData("../../etc/malicious")]
+    [InlineData("../../../tmp/evil")]
+    public async Task UploadReportDataAsync_WithPathTraversalPayload_WritesOutsideBaseDirectory(string maliciousFileId)
+    {
+        // Arrange - demonstrates the path traversal vulnerability that is mitigated
+        // by validating reportFileId matches report.FileId at the controller/command layer
+        var fixture = new Fixture();
+        var tempDir = Path.Combine(Path.GetTempPath(), "bitwarden-test-" + Guid.NewGuid());
+
+        var globalSettings = new Core.Settings.GlobalSettings();
+        globalSettings.OrganizationReport.BaseDirectory = tempDir;
+        globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+
+        var sut = new LocalOrganizationReportStorageService(globalSettings);
+
+        var report = fixture.Build<OrganizationReport>()
+            .With(r => r.OrganizationId, Guid.NewGuid())
+            .With(r => r.Id, Guid.NewGuid())
+            .With(r => r.CreationDate, DateTime.UtcNow)
+            .Create();
+
+        var testData = "malicious content";
+        var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testData));
+
+        try
+        {
+            // Act
+            await sut.UploadReportDataAsync(report, maliciousFileId, stream);
+
+            // Assert - the file is written at a path that escapes the intended report directory
+            var intendedBaseDir = Path.Combine(tempDir, report.OrganizationId.ToString(),
+                report.CreationDate.ToString("MM-dd-yyyy"), report.Id.ToString());
+            var actualFilePath = Path.Combine(intendedBaseDir, maliciousFileId, "report-data.json");
+            var resolvedPath = Path.GetFullPath(actualFilePath);
+
+            // This demonstrates the vulnerability: the resolved path escapes the base directory
+            Assert.False(resolvedPath.StartsWith(Path.GetFullPath(intendedBaseDir)));
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
     [Fact]
     public async Task UploadReportDataAsync_CreatesDirectoryAndWritesFile()
     {

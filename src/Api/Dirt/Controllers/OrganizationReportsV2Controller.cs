@@ -165,6 +165,11 @@ public class OrganizationReportsV2Controller : Controller
             throw new BadRequestException("Invalid report ID");
         }
 
+        if (report.FileId != reportFileId)
+        {
+            throw new NotFoundException();
+        }
+
         await Request.GetFileAsync(async (stream) =>
         {
             await _storageService.UploadReportDataAsync(report, reportFileId, stream);
