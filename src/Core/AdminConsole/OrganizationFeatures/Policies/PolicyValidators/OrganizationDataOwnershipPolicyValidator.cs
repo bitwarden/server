@@ -55,7 +55,7 @@ public class OrganizationDataOwnershipPolicyValidator(
     {
         // FIXME: we should use the organizationAbility cache here, but it is currently flaky
         // and it's not obvious how to handle a cache failure.
-        // Revisit once https://bitwarden.atlassian.net/browse/PM-32104 is done
+        // https://bitwarden.atlassian.net/browse/PM-32699
         var organization = await organizationRepository.GetByIdAsync(policyUpdate.OrganizationId);
         if (organization == null)
         {
