@@ -113,6 +113,7 @@ public interface IMailService
     Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
     Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
+    [Obsolete("Use IMailer with BusinessUnitConversionInviteMail instead")]
     Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email);
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
     Task SendProviderConfirmedEmailAsync(string providerName, string email);
