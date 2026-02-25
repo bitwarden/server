@@ -1,4 +1,4 @@
-using Bit.Core.Platform.Mail.Mailer;
+﻿using Bit.Core.Platform.Mail.Mailer;
 
 namespace Bit.Core.Models.Mail.Provider.ProviderUpdatePaymentMethod;
 
