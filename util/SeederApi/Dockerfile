@@ -18,7 +18,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     RID=linux-arm ; \
     RUST_TARGET=armv7-unknown-linux-gnueabihf ; \
     fi \
-    && echo "RID=$RID" > /tmp/rid.txt \
+    && echo "RID=$RID" > /tmp/env.txt \
+    && echo "CARGO_BUILD_TARGET=$RUST_TARGET" >> /tmp/env.txt \
     && echo "$RUST_TARGET" > /tmp/rust_target.txt
 
 # Install Rust
@@ -27,7 +28,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | /bin/sh -s -- -y
      && . $HOME/.cargo/env \
      && rustup target add $(cat /tmp/rust_target.txt)
 ENV PATH="/root/.cargo/bin:${PATH}"
-RUN rustup set default-host $(cat /tmp/rust_target.txt)
 
 # Copy required project files
 WORKDIR /source
@@ -35,13 +35,11 @@ COPY . ./
 
 # Restore project dependencies and tools
 WORKDIR /source/util/SeederApi
-# echo the files in the current working directory
-RUN ls -la
-RUN . /tmp/rid.txt && dotnet restore -r $RID
+RUN . /tmp/env.txt && dotnet restore -r $RID
 
 # Build project
 WORKDIR /source/util/SeederApi
-RUN . /tmp/rid.txt && dotnet publish SeederApi.csproj \
+RUN . /tmp/env.txt && dotnet publish SeederApi.csproj \
     -c release \
     --no-restore \
     --self-contained \
