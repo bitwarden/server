@@ -26,6 +26,12 @@ public class SubscriptionDiscountService(
             return false;
         }
 
+        // AllUsers discounts have no audience restrictions - accept for all users
+        if (discount.AudienceType == DiscountAudienceType.AllUsers)
+        {
+            return true;
+        }
+
         if (discount.AudienceType != expectedAudienceType)
         {
             return false;

@@ -361,4 +361,85 @@ public class SubscriptionDiscountServiceTests
 
         Assert.False(result);
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountForUserAsync_AllUsers_NewUser_ReturnsTrue(
+        User user,
+        string stripeCouponId,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        user.Premium = false;
+        user.GatewaySubscriptionId = null;
+        user.GatewayCustomerId = null;
+
+        var discount = new SubscriptionDiscount
+        {
+            StripeCouponId = stripeCouponId,
+            AudienceType = DiscountAudienceType.AllUsers,
+            StartDate = DateTime.UtcNow.AddDays(-1),
+            EndDate = DateTime.UtcNow.AddDays(30)
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(stripeCouponId)
+            .Returns(discount);
+
+        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountForUserAsync_AllUsers_ExistingPremiumUser_ReturnsTrue(
+        User user,
+        string stripeCouponId,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var discount = new SubscriptionDiscount
+        {
+            StripeCouponId = stripeCouponId,
+            AudienceType = DiscountAudienceType.AllUsers,
+            StartDate = DateTime.UtcNow.AddDays(-1),
+            EndDate = DateTime.UtcNow.AddDays(30)
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(stripeCouponId)
+            .Returns(discount);
+
+        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountForUserAsync_AllUsers_UserWithPastSubscription_ReturnsTrue(
+        User user,
+        string stripeCouponId,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        user.Premium = false;
+        user.GatewaySubscriptionId = null;
+        user.GatewayCustomerId = "cus_123";
+
+        var discount = new SubscriptionDiscount
+        {
+            StripeCouponId = stripeCouponId,
+            AudienceType = DiscountAudienceType.AllUsers,
+            StartDate = DateTime.UtcNow.AddDays(-1),
+            EndDate = DateTime.UtcNow.AddDays(30)
+        };
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(stripeCouponId)
+            .Returns(discount);
+
+        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
+
+        Assert.True(result);
+    }
 }
