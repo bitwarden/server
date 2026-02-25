@@ -133,6 +133,49 @@
         }
       },
       "required": ["countPerUser"]
+    },
+    "policies": {
+      "type": "object",
+      "description": "Organization policy configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "enableAll": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, enables all policy types."
+        },
+        "except": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Policy types to exclude when enableAll is true."
+        },
+        "enable": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific policy types to enable (alternative to enableAll)."
+        }
+      }
+    },
+    "sso": {
+      "type": "object",
+      "description": "Single Sign-On configuration for the organization.",
+      "additionalProperties": false,
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "description": "SSO organization identifier used in login flows."
+        },
+        "encryptionType": {
+          "type": "string",
+          "enum": ["masterPassword", "trustedDevices"],
+          "description": "How member keys are protected. 'masterPassword' = standard SSO, 'trustedDevices' = TDE (no master password)."
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["oidc", "saml"],
+          "description": "Identity provider protocol."
+        }
+      }
     }
   }
 }
