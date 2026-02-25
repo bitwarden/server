@@ -9,6 +9,10 @@ BEGIN
 END
 GO
 
+-- Refresh view metadata after table modification
+EXEC sp_refreshview N'[dbo].[OrganizationReportView]';
+GO
+
 -- Update OrganizationReport_Create to include FileId
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
    @Id UNIQUEIDENTIFIER OUTPUT,
@@ -137,6 +141,9 @@ BEGIN
 END;
 GO
 
--- Refresh view metadata after table modification
-EXEC sp_refreshview N'[dbo].[OrganizationReportView]';
+-- Set FileId to 'Legacy' for all existing v1 reports (data stored in DB, not blob storage)
+-- This sentinel value makes it easy to distinguish v1 (DB-stored) from v2 (blob-stored) reports
+UPDATE [dbo].[OrganizationReport]
+SET [FileId] = 'Legacy'
+WHERE [FileId] IS NULL;
 GO
