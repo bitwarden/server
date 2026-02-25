@@ -245,6 +245,7 @@ public static class FeatureFlagKeys
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
+    public const string DefaultImportMyItems = "pm-32744-default-import-my-items";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
