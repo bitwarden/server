@@ -65,6 +65,7 @@ public class BusinessUnitConverter(
         organization.MaxCollections = updatedPlan.PasswordManager.MaxCollections;
         organization.MaxStorageGb = updatedPlan.PasswordManager.BaseStorageGb;
         organization.UsePolicies = updatedPlan.HasPolicies;
+        organization.UseMyItems = updatedPlan.HasPolicies; // TODO: use the plan property when added (PM-32366)
         organization.UseSso = updatedPlan.HasSso;
         organization.UseOrganizationDomains = updatedPlan.HasOrganizationDomains;
         organization.UseGroups = updatedPlan.HasGroups;

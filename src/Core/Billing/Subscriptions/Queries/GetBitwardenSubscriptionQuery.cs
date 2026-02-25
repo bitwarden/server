@@ -46,16 +46,12 @@ public class GetBitwardenSubscriptionQuery(
             return null;
         }
 
-        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+        var subscription = await FetchSubscriptionAsync(user);
+
+        if (subscription == null)
         {
-            Expand =
-            [
-                "customer.discount.coupon.applies_to",
-                "discounts.coupon.applies_to",
-                "items.data.price.product",
-                "test_clock"
-            ]
-        });
+            return null;
+        }
 
         var cart = await GetPremiumCartAsync(subscription);
 
@@ -246,6 +242,28 @@ public class GetBitwardenSubscriptionQuery(
         }
 
         return (cartLevel.FirstOrDefault(), productLevel);
+    }
+
+    private async Task<Subscription?> FetchSubscriptionAsync(User user)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+            {
+                Expand =
+                [
+                    "customer.discount.coupon.applies_to",
+                    "discounts.coupon.applies_to",
+                    "items.data.price.product",
+                    "test_clock"
+                ]
+            });
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscription ({SubscriptionID}) for User ({UserID}) was not found", user.GatewaySubscriptionId, user.Id);
+            return null;
+        }
     }
 
     #endregion

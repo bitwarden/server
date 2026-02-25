@@ -241,6 +241,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("tinyint(1)");
 
@@ -2051,6 +2054,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("longtext");
 
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("tinyint(1)");

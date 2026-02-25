@@ -236,6 +236,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("INTEGER");
 
@@ -2040,6 +2043,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("INTEGER");

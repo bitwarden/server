@@ -7,4 +7,5 @@ public enum EventSystemUser : byte
     DomainVerification = 2,
     PublicApi = 3,
     TwoFactorDisabled = 4,
+    BitwardenPortal = 5,
 }
