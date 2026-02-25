@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260220150033_2026-02-20_00_OrganizationReport_AddFileId.sql")]
-    partial class _20260220_00_OrganizationReport_AddFileIdsql
+    [Migration("20260225175740_2026-02-25_00_OrganizationReport_AddFileId.sql")]
+    partial class _20260225_00_OrganizationReport_AddFileIdsql
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -237,6 +237,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UseMyItems")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseOrganizationDomains")
@@ -2046,6 +2049,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("INTEGER");
