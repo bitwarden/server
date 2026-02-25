@@ -6,6 +6,7 @@ using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -88,6 +89,16 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
+        sutProvider.GetDependency<ILogger<DeleteEmergencyAccessCommand>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString().Contains(emergencyAccessDetails.GrantorId.ToString())
+                    && o.ToString().Contains("GrantorEmail missing: True")
+                    && o.ToString().Contains("GranteeEmail missing: False")),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
     }
 
     /// <summary>
@@ -113,6 +124,16 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
+        sutProvider.GetDependency<ILogger<DeleteEmergencyAccessCommand>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString().Contains(emergencyAccessDetails.GrantorId.ToString())
+                    && o.ToString().Contains("GrantorEmail missing: False")
+                    && o.ToString().Contains("GranteeEmail missing: True")),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
     }
 
     /// <summary>
@@ -671,6 +692,15 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
+        sutProvider.GetDependency<ILogger<DeleteEmergencyAccessCommand>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString().Contains(granteeUserIdAlice.ToString())
+                    && o.ToString().Contains("missing GranteeEmail")),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
     }
 
     /// <summary>
@@ -711,6 +741,15 @@ public class DeleteEmergencyAccessCommandTests
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<EmergencyAccessRemoveGranteesMailView>(default);
+        sutProvider.GetDependency<ILogger<DeleteEmergencyAccessCommand>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString().Contains(grantorUserIdBob.ToString())
+                    && o.ToString().Contains("missing GrantorEmail")),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
     }
 
     /// <summary>
@@ -779,6 +818,7 @@ public class DeleteEmergencyAccessCommandTests
     public async Task DeleteAllByUserIdsAsync_PartialNullGranteeEmails_SendsEmailForNonNullGranteesOnlyAsync(
         SutProvider<DeleteEmergencyAccessCommand> sutProvider,
         Guid grantorUserIdBob,
+        Guid granteeUserIdCarol,
         string granteeEmailAlice)
     {
         const string grantorEmailBob = "bob@example.com";
@@ -798,6 +838,7 @@ public class DeleteEmergencyAccessCommandTests
             Id = Guid.NewGuid(),
             GrantorId = grantorUserIdBob,
             GrantorEmail = grantorEmailBob,
+            GranteeId = granteeUserIdCarol, // Carol's user ID (account since deleted)
             GranteeEmail = null
         };
 
@@ -820,5 +861,15 @@ public class DeleteEmergencyAccessCommandTests
                 mail.ToEmails.Contains(grantorEmailBob) &&
                 mail.View.RemovedGranteeEmails.Count() == 1 &&
                 mail.View.RemovedGranteeEmails.Contains(granteeEmailAlice)));
+        // Carol's record (null grantee email) should trigger a warning with her user ID
+        sutProvider.GetDependency<ILogger<DeleteEmergencyAccessCommand>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString().Contains(granteeUserIdCarol.ToString())
+                    && o.ToString().Contains("missing GranteeEmail")),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
     }
 }
