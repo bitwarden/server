@@ -71,6 +71,18 @@ public class AdminRecoverAccountCommand(
         }
 
         // Validate submitted salt matches the user's stored salt
+        // PM-28827: Uncomment below block when MasterPasswordSalt exists on User.
+        // When the user has no stored salt, persist it from the request data.
+        // When the user already has a stored salt, validate it matches the request data.
+        // if (string.IsNullOrEmpty(user.MasterPasswordSalt))
+        // {
+        //     user.MasterPasswordSalt = authenticationData.Salt;
+        // }
+        // else
+        // {
+        //     unlockData.ValidateSaltUnchangedForUser(user);
+        //     authenticationData.ValidateSaltUnchangedForUser(user);
+        // }
         unlockData.ValidateSaltUnchangedForUser(user);
         authenticationData.ValidateSaltUnchangedForUser(user);
 

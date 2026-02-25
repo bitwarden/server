@@ -544,6 +544,18 @@ public class OrganizationUsersController : BaseAdminConsoleController
         return TypedResults.BadRequest(ModelState);
     }
 
+    /// <summary>
+    /// Recovers an organization user's account by resetting their master password (v2).
+    /// </summary>
+    /// <remarks>
+    /// Unlike v1, the request payload separates authentication data and unlock data into distinct objects,
+    /// each carrying explicit KDF settings and salt alongside the hash or wrapped key. This enables
+    /// server-side cross-validation of KDF parameters and salt against the target user's stored values —
+    /// something v1 cannot do because it only receives a flat master-password hash and encrypted key
+    /// with no KDF context.
+    ///
+    ///
+    /// </remarks>
     [HttpPut("{id}/reset-password")]
     [VersionedRoute(2)]
     [Authorize<ManageAccountRecoveryRequirement>]
