@@ -22,7 +22,7 @@ public class SeedCommand
 
             if (args.List)
             {
-                var available = OrganizationFromPresetRecipe.ListAvailable();
+                var available = OrganizationRecipe.ListAvailable();
                 PrintAvailableSeeds(available);
                 return;
             }
@@ -39,7 +39,7 @@ public class SeedCommand
             var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
             var manglerService = scopedServices.GetRequiredService<IManglerService>();
 
-            var recipe = new OrganizationFromPresetRecipe(db, mapper, passwordHasher, manglerService);
+            var recipe = new OrganizationRecipe(db, mapper, passwordHasher, manglerService);
 
             Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
             var result = recipe.Seed(args.Preset!, args.Password);

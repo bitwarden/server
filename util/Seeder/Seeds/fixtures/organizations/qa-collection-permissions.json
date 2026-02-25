@@ -1,5 +1,0 @@
-{
-  "$schema": "../../schemas/organization.schema.json",
-  "name": "Collection Permissions QA Org",
-  "domain": "qa-collperms.test"
-}
