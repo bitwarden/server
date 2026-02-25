@@ -65,7 +65,7 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<EmergencyAccessDetails>(
-                "[dbo].[EmergencyAccessDetails_ReadByUserIds]",
+                "[dbo].[EmergencyAccessDetails_ReadManyByUserIds]",
                 new { UserIds = userIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 
