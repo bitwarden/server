@@ -23,5 +23,12 @@ public static class ReportingServiceCollectionExtensions
         services.AddScoped<IUpdateOrganizationReportDataCommand, UpdateOrganizationReportDataCommand>();
         services.AddScoped<IGetOrganizationReportApplicationDataQuery, GetOrganizationReportApplicationDataQuery>();
         services.AddScoped<IUpdateOrganizationReportApplicationDataCommand, UpdateOrganizationReportApplicationDataCommand>();
+
+        // v2 file storage commands
+        services.AddScoped<ICreateOrganizationReportV2Command, CreateOrganizationReportV2Command>();
+        services.AddScoped<IUpdateOrganizationReportDataV2Command, UpdateOrganizationReportDataV2Command>();
+
+        // v2 file storage queries
+        services.AddScoped<IGetOrganizationReportDataV2Query, GetOrganizationReportDataV2Query>();
     }
 }
