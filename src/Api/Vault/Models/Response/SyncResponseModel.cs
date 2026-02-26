@@ -49,11 +49,13 @@ public class SyncResponseModel() : ResponseModel("sync")
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
         Folders = folders.Select(f => new FolderResponseModel(f));
+
+
         Ciphers = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(
                 cipher,
                 user,
-                organizationAbilities,
+                GetOrganizationAbility(cipher, organizationAbilities),
                 globalSettings,
                 collectionCiphersDict));
         Collections = collections?.Select(
@@ -87,16 +89,22 @@ public class SyncResponseModel() : ResponseModel("sync")
                     Salt = user.Email.ToLowerInvariant()
                 }
                 : null,
-            WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null,
-            V2UpgradeToken = V2UpgradeTokenData.FromJson(user.V2UpgradeToken) is { } data
-                ? new V2UpgradeTokenResponseModel
-                {
-                    WrappedUserKey1 = data.WrappedUserKey1,
-                    WrappedUserKey2 = data.WrappedUserKey2
-                }
-                : null
+            WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null
         };
+        return;
+
+        OrganizationAbility GetOrganizationAbility(CipherDetails cipherDetails, IDictionary<Guid, OrganizationAbility> organizationAbilities)
+        {
+            OrganizationAbility organizationAbility = null;
+            if (cipherDetails.OrganizationId.HasValue && !organizationAbilities.TryGetValue(cipherDetails.OrganizationId.Value, out organizationAbility))
+            {
+                throw new Exception("OrganizationAbility not found for organization cipher.");
+            }
+
+            return organizationAbility;
+        }
     }
+
 
     public ProfileResponseModel Profile { get; set; }
     public IEnumerable<FolderResponseModel> Folders { get; set; }
