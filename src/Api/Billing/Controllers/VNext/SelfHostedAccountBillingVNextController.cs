@@ -1,7 +1,6 @@
 using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Utilities;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;

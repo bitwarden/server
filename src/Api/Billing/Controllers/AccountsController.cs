@@ -4,7 +4,6 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
