@@ -6,6 +6,7 @@ using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace Bit.Core.Platform.Push;
 
@@ -87,7 +88,7 @@ public interface IPushNotificationService
             ExcludeCurrentContext = true,
         });
 
-    Task PushSyncCiphersAsync(Guid userId)
+    Task PushSyncCiphersAsync(Guid userId, bool excludeCurrentContext = false)
         => PushAsync(new PushNotification<UserPushNotification>
         {
             Type = PushType.SyncCiphers,
@@ -100,7 +101,7 @@ public interface IPushNotificationService
                 Date = TimeProvider.GetUtcNow().UtcDateTime,
 #pragma warning restore BWP0001 // Type or member is obsolete
             },
-            ExcludeCurrentContext = false,
+            ExcludeCurrentContext = excludeCurrentContext,
         });
 
     Task PushSyncVaultAsync(Guid userId)
