@@ -196,6 +196,7 @@ mod tests {
             view_password: true,
             local_data: None,
             attachments: None,
+            attachment_decryption_failures: None,
             fields: None,
             password_history: None,
             creation_date: "2025-01-01T00:00:00Z".parse().unwrap(),

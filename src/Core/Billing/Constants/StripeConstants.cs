@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace Bit.Core.Billing.Constants;
+﻿namespace Bit.Core.Billing.Constants;
 
 public static class StripeConstants
 {
@@ -51,14 +49,18 @@ public static class StripeConstants
         public const string PaymentMethodMicroDepositVerificationAttemptsExceeded = "payment_method_microdeposit_verification_attempts_exceeded";
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
+        public const string ResourceMissing = "resource_missing";
         public const string TaxIdInvalid = "tax_id_invalid";
 
-        public static string[] Get() =>
-            typeof(ErrorCodes)
-                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                .Where(fi => fi is { IsLiteral: true, IsInitOnly: false } && fi.FieldType == typeof(string))
-                .Select(fi => (string)fi.GetValue(null)!)
-                .ToArray();
+        public static string[] InputErrors() =>
+        [
+            CustomerTaxLocationInvalid,
+            InvoiceUpcomingNone,
+            PaymentMethodMicroDepositVerificationAttemptsExceeded,
+            PaymentMethodMicroDepositVerificationDescriptorCodeMismatch,
+            PaymentMethodMicroDepositVerificationTimeout,
+            TaxIdInvalid
+        ];
     }
 
     public static class InvoiceStatus
