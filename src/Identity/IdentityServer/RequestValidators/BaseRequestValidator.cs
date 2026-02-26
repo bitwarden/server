@@ -40,6 +40,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
+    private readonly IClientVersionValidator _clientVersionValidator;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -69,7 +70,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator
     )
     {
         _userManager = userManager;
@@ -91,6 +93,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _authRequestRepository = authRequestRepository;
         _mailService = mailService;
         _accountKeysQuery = userAccountKeysQuery;
+        _clientVersionValidator = clientVersionValidator;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -135,7 +138,13 @@ public abstract class BaseRequestValidator<T> where T : class
             // validation to perform the recovery as part of scheme validation based on the request.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateGrantSpecificContext(context, validatorContext),
+                // Now check the version number of the client. Do this after ValidateContextAsync so that
+                // we prevent account enumeration. If we were to do this before ValidateContextAsync, then attackers
+                // could use a known invalid client version and make a request for a user (before we know if they have
+                // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
+                // an error response back from the validator saying the user is not compatible with the client.
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -148,7 +157,13 @@ public abstract class BaseRequestValidator<T> where T : class
             // The typical validation scenario.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateGrantSpecificContext(context, validatorContext),
+                // Now check the version number of the client. Do this after ValidateContextAsync so that
+                // we prevent account enumeration. If we were to do this before ValidateContextAsync, then attackers
+                // could use a known invalid client version and make a request for a user (before we know if they have
+                // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
+                // an error response back from the validator saying the user is not compatible with the client.
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -201,12 +216,29 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Validates the user's Master Password hash.
+    /// Validates whether the client version is compatible for the user attempting to authenticate.
+    /// </summary>
+    /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
+    private async Task<bool> ValidateClientVersionAsync(T context, CustomValidatorRequestContext validatorContext)
+    {
+        var ok = _clientVersionValidator.Validate(validatorContext.User, validatorContext);
+        if (ok)
+        {
+            return true;
+        }
+
+        SetValidationErrorResult(context, validatorContext);
+        await LogFailedLoginEvent(validatorContext.User, EventType.User_FailedLogIn);
+        return false;
+    }
+
+    /// <summary>
+    /// Validates the user's master password, webauthen, or custom token request via the appropriate context validator.
     /// </summary>
     /// <param name="context">The current request context.</param>
     /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
     /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
-    private async Task<bool> ValidateMasterPasswordAsync(T context, CustomValidatorRequestContext validatorContext)
+    private async Task<bool> ValidateGrantSpecificContext(T context, CustomValidatorRequestContext validatorContext)
     {
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;

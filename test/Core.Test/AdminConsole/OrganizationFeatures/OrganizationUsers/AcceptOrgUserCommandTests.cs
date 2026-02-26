@@ -17,14 +17,10 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
-using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
@@ -316,30 +312,6 @@ public class AcceptOrgUserCommandTests
     // AcceptOrgUserByOrgIdAsync tests --------------------------------------------------------------------------------
 
     [Theory]
-    [EphemeralDataProtectionAutoData]
-    public async Task AcceptOrgUserByToken_OldToken_AcceptsUserAndVerifiesEmail(
-        SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
-    {
-        // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-        SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
-
-        var oldToken = CreateOldToken(sutProvider, orgUser);
-
-        // Act
-        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, oldToken, _userService);
-
-        // Assert
-        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
-
-        // Verify user email verified logic
-        Assert.True(user.EmailVerified);
-        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
-    }
-
-    [Theory]
     [BitAutoData]
     public async Task AcceptOrgUserByToken_NewToken_AcceptsUserAndVerifiesEmail(
         SutProvider<AcceptOrgUserCommand> sutProvider,
@@ -361,7 +333,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act
         var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService);
@@ -413,30 +385,6 @@ public class AcceptOrgUserCommandTests
     }
 
     [Theory]
-    [EphemeralDataProtectionAutoData]
-    public async Task AcceptOrgUserByToken_ExpiredOldToken_ThrowsBadRequest(
-        SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
-    {
-        // Arrange
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-        SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
-
-        // As the old token simply set a timestamp which was later compared against the
-        // OrganizationInviteExpirationHours global setting to determine if it was expired or not,
-        // we can simply set the expiration to 24 hours ago to simulate an expired token.
-        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(-24);
-
-        var oldToken = CreateOldToken(sutProvider, orgUser);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, oldToken, _userService));
-
-        Assert.Equal("Invalid token.", exception.Message);
-    }
-
-    [Theory]
     [BitAutoData]
     public async Task AcceptOrgUserByToken_ExpiredNewToken_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
@@ -459,7 +407,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(-1))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -504,7 +452,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -537,7 +485,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -814,7 +762,6 @@ public class AcceptOrgUserCommandTests
 
     private void SetupCommonAcceptOrgUserByTokenMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, OrganizationUser orgUser)
     {
-        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
         user.EmailVerified = false;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -885,21 +832,7 @@ public class AcceptOrgUserCommandTests
             .Returns(Valid(request));
     }
 
-
-    private string CreateOldToken(SutProvider<AcceptOrgUserCommand> sutProvider,
-        OrganizationUser organizationUser)
-    {
-        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
-            .CreateProtector("OrganizationServiceDataProtector");
-
-        // Token matching the format used in OrganizationService.InviteUserAsync
-        var oldToken = dataProtector.Protect(
-            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
-        return oldToken;
-    }
-
-    private string CreateNewToken(OrganizationUser orgUser)
+    private string CreateToken(OrganizationUser orgUser)
     {
         var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
         var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);

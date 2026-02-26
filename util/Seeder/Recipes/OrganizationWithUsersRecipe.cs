@@ -26,7 +26,7 @@ public class OrganizationWithUsersRecipe(
         // Generate organization keys
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var organization = OrganizationSeeder.Create(
-            name, domain, seats, orgKeys.PublicKey, orgKeys.PrivateKey);
+            name, domain, seats, manglerService, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner with SDK-generated keys
         var ownerUser = UserSeeder.Create($"owner@{domain}", passwordHasher, manglerService);
