@@ -91,6 +91,7 @@ RUN . /etc/environment \
     --no-restore \
     --self-contained \
     /p:PublishSingleFile=true \
+    /p:NoWarn=CA1305 \
     -r ${RID} \
     -o /app/out
 
