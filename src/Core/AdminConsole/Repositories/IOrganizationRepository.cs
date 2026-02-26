@@ -9,6 +9,8 @@ namespace Bit.Core.Repositories;
 
 public interface IOrganizationRepository : IRepository<Organization, Guid>
 {
+    Task<Organization?> GetByGatewayCustomerIdAsync(string gatewayCustomerId);
+    Task<Organization?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId);
     Task<Organization?> GetByIdentifierAsync(string identifier);
     Task<ICollection<Organization>> GetManyByEnabledAsync();
     Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
@@ -21,7 +23,9 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId);
 
     /// <summary>
-    /// Gets the organizations that have a verified domain matching the user's email domain.
+    /// Gets the organizations that have claimed the user's account. Currently, only one organization may claim a user.
+    /// This requires that the organization has claimed the user's domain and the user is an organization member.
+    /// It excludes invited members.
     /// </summary>
     Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId);
 

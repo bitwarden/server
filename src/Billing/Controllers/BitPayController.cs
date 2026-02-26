@@ -29,7 +29,7 @@ public class BitPayController(
     IUserRepository userRepository,
     IProviderRepository providerRepository,
     IMailService mailService,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     ILogger<BitPayController> logger,
     IPremiumUserBillingService premiumUserBillingService)
     : Controller

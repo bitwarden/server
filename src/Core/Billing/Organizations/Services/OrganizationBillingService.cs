@@ -1,20 +1,16 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
 using Microsoft.Extensions.Logging;
@@ -32,7 +28,6 @@ public class OrganizationBillingService(
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     ITaxService taxService) : IOrganizationBillingService
@@ -52,79 +47,6 @@ public class OrganizationBillingService(
             organization.Enabled = true;
             organization.ExpirationDate = subscription.GetCurrentPeriodEnd();
             await organizationRepository.ReplaceAsync(organization);
-        }
-    }
-
-    public async Task<OrganizationMetadata?> GetMetadata(Guid organizationId)
-    {
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-
-        if (organization == null)
-        {
-            return null;
-        }
-
-        if (globalSettings.SelfHosted)
-        {
-            return OrganizationMetadata.Default;
-        }
-
-        var orgOccupiedSeats = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            return OrganizationMetadata.Default with
-            {
-                OrganizationOccupiedSeats = orgOccupiedSeats.Total
-            };
-        }
-
-        var customer = await subscriberService.GetCustomer(organization);
-
-        var subscription = await subscriberService.GetSubscription(organization, new SubscriptionGetOptions
-        {
-            Expand = ["discounts.coupon.applies_to"]
-        });
-
-        if (customer == null || subscription == null)
-        {
-            return OrganizationMetadata.Default with
-            {
-                OrganizationOccupiedSeats = orgOccupiedSeats.Total
-            };
-        }
-
-        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
-
-        return new OrganizationMetadata(
-            isOnSecretsManagerStandalone,
-            orgOccupiedSeats.Total);
-    }
-
-    public async Task UpdatePaymentMethod(
-        Organization organization,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation)
-    {
-        if (string.IsNullOrEmpty(organization.GatewayCustomerId))
-        {
-            var customer = await CreateCustomerAsync(organization,
-                new CustomerSetup
-                {
-                    TokenizedPaymentSource = tokenizedPaymentSource,
-                    TaxInformation = taxInformation
-                });
-
-            organization.Gateway = GatewayType.Stripe;
-            organization.GatewayCustomerId = customer.Id;
-
-            await organizationRepository.ReplaceAsync(organization);
-        }
-        else
-        {
-            await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
-            await subscriberService.UpdateTaxInformation(organization, taxInformation);
-            await UpdateMissingPaymentMethodBehaviourAsync(organization);
         }
     }
 
@@ -161,7 +83,7 @@ public class OrganizationBillingService(
         try
         {
             // Update the subscription in Stripe
-            await stripeAdapter.SubscriptionUpdateAsync(subscription.Id, updateOptions);
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
             organization.PlanType = newPlan.Type;
             await organizationRepository.ReplaceAsync(organization);
         }
@@ -178,14 +100,26 @@ public class OrganizationBillingService(
 
     public async Task UpdateOrganizationNameAndEmail(Organization organization)
     {
-        if (organization.GatewayCustomerId is null)
+        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
-            throw new BillingException("Cannot update an organization in Stripe without a GatewayCustomerId.");
+            logger.LogWarning(
+                "Organization ({OrganizationId}) has no Stripe customer to update",
+                organization.Id);
+            return;
         }
 
         var newDisplayName = organization.DisplayName();
 
-        await stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId,
+        // Organization.DisplayName() can return null - handle gracefully
+        if (string.IsNullOrWhiteSpace(newDisplayName))
+        {
+            logger.LogWarning(
+                "Organization ({OrganizationId}) has no name to update in Stripe",
+                organization.Id);
+            return;
+        }
+
+        await stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId,
             new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail,
@@ -197,9 +131,7 @@ public class OrganizationBillingService(
                         new CustomerInvoiceSettingsCustomFieldOptions
                         {
                             Name = organization.SubscriberType(),
-                            Value = newDisplayName.Length <= 30
-                                ? newDisplayName
-                                : newDisplayName[..30]
+                            Value = newDisplayName
                         }]
                 },
             });
@@ -240,6 +172,7 @@ public class OrganizationBillingService(
         };
 
         var braintreeCustomerId = "";
+        var setupIntentId = "";
 
         if (customerSetup.IsBillable)
         {
@@ -324,7 +257,7 @@ public class OrganizationBillingService(
                 case PaymentMethodType.BankAccount:
                     {
                         var setupIntent =
-                            (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
+                            (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = paymentMethodToken }))
                             .FirstOrDefault();
 
                         if (setupIntent == null)
@@ -333,7 +266,7 @@ public class OrganizationBillingService(
                             throw new BillingException();
                         }
 
-                        await setupIntentCache.Set(organization.Id, setupIntent.Id);
+                        setupIntentId = setupIntent.Id;
                         break;
                     }
                 case PaymentMethodType.Card:
@@ -358,7 +291,13 @@ public class OrganizationBillingService(
 
         try
         {
-            var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
+
+            if (!string.IsNullOrEmpty(setupIntentId))
+            {
+                await stripeAdapter.UpdateSetupIntentAsync(setupIntentId,
+                    new SetupIntentUpdateOptions { Customer = customer.Id });
+            }
 
             organization.Gateway = GatewayType.Stripe;
             organization.GatewayCustomerId = customer.Id;
@@ -393,11 +332,6 @@ public class OrganizationBillingService(
                 // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
                 switch (customerSetup.TokenizedPaymentSource!.Type)
                 {
-                    case PaymentMethodType.BankAccount:
-                        {
-                            await setupIntentCache.RemoveSetupIntentForSubscriber(organization.Id);
-                            break;
-                        }
                     case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
                         {
                             await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
@@ -509,7 +443,7 @@ public class OrganizationBillingService(
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
         organization.GatewaySubscriptionId = subscription.Id;
         await organizationRepository.ReplaceAsync(organization);
@@ -537,14 +471,14 @@ public class OrganizationBillingService(
         customer = customer switch
         {
             { Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
                         TaxExempt = StripeConstants.TaxExempt.Reverse
                     }),
             { Address.Country: Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.CustomerUpdateAsync(customer.Id,
+                stripeAdapter.UpdateCustomerAsync(customer.Id,
                     new CustomerUpdateOptions
                     {
                         Expand = expansions,
@@ -556,56 +490,6 @@ public class OrganizationBillingService(
         return customer;
     }
 
-    private async Task<bool> IsOnSecretsManagerStandalone(
-        Organization organization,
-        Customer? customer,
-        Subscription? subscription)
-    {
-        if (customer == null || subscription == null)
-        {
-            return false;
-        }
-
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
-
-        if (!plan.SupportsSecretsManager)
-        {
-            return false;
-        }
-
-        var coupon = subscription.Discounts?.FirstOrDefault(discount =>
-            discount.Coupon?.Id == StripeConstants.CouponIDs.SecretsManagerStandalone)?.Coupon;
-
-        if (coupon == null)
-        {
-            return false;
-        }
-
-        var subscriptionProductIds = subscription.Items.Data.Select(item => item.Plan.ProductId);
-
-        var couponAppliesTo = coupon.AppliesTo?.Products;
-
-        return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
-    }
-
-    private async Task UpdateMissingPaymentMethodBehaviourAsync(Organization organization)
-    {
-        var subscription = await subscriberService.GetSubscriptionOrThrow(organization);
-        if (subscription.TrialSettings?.EndBehavior?.MissingPaymentMethod == StripeConstants.MissingPaymentMethodBehaviorOptions.Cancel)
-        {
-            var options = new SubscriptionUpdateOptions
-            {
-                TrialSettings = new SubscriptionTrialSettingsOptions
-                {
-                    EndBehavior = new SubscriptionTrialSettingsEndBehaviorOptions
-                    {
-                        MissingPaymentMethod = StripeConstants.MissingPaymentMethodBehaviorOptions.CreateInvoice
-                    }
-                }
-            };
-            await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, options);
-        }
-    }
 
     #endregion
 }

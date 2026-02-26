@@ -53,7 +53,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator)
         : base(
             userManager,
             userService,
@@ -73,7 +74,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             policyRequirementQuery,
             authRequestRepository,
             mailService,
-            userAccountKeysQuery)
+            userAccountKeysQuery,
+            clientVersionValidator)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
@@ -139,14 +141,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
-            customResponse);
-    }
-
-    [Obsolete("Consider using SetValidationErrorResult instead.")]
-    protected override void SetSsoResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
             customResponse);
     }
 

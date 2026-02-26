@@ -16,10 +16,7 @@ using Bit.Core.Settings;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
-using HandlebarsDotNet;
 using Microsoft.AspNetCore.Identity;
-
-#nullable enable
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -50,7 +47,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator)
         : base(
             userManager,
             userService,
@@ -70,7 +68,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             policyRequirementQuery,
             authRequestRepository,
             mailService,
-            userAccountKeysQuery)
+            userAccountKeysQuery,
+            clientVersionValidator)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -190,17 +189,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         Debug.Assert(context.Result is not null);
         context.Result.Error = "invalid_grant";
         context.Result.ErrorDescription = "Two factor required.";
-        context.Result.IsError = true;
-        context.Result.CustomResponse = customResponse;
-    }
-
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
-    protected override void SetSsoResult(CustomTokenRequestValidationContext context,
-        Dictionary<string, object> customResponse)
-    {
-        Debug.Assert(context.Result is not null);
-        context.Result.Error = "invalid_grant";
-        context.Result.ErrorDescription = "Sso authentication required.";
         context.Result.IsError = true;
         context.Result.CustomResponse = customResponse;
     }

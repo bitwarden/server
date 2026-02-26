@@ -19,7 +19,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -37,7 +36,7 @@ public class OrganizationsController(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationService organizationService,
     IUserService userService,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     ICurrentContext currentContext,
     IGetCloudOrganizationLicenseQuery getCloudOrganizationLicenseQuery,
     GlobalSettings globalSettings,
@@ -247,53 +246,6 @@ public class OrganizationsController(
         }
 
         await organizationService.ReinstateSubscriptionAsync(id);
-    }
-
-    [HttpGet("{id:guid}/tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<TaxInfoResponseModel> GetTaxInfo(Guid id)
-    {
-        if (!await currentContext.OrganizationOwner(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var taxInfo = await paymentService.GetTaxInfoAsync(organization);
-        return new TaxInfoResponseModel(taxInfo);
-    }
-
-    [HttpPut("{id:guid}/tax")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfo(Guid id, [FromBody] ExpandedTaxInfoUpdateRequestModel model)
-    {
-        if (!await currentContext.OrganizationOwner(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var taxInfo = new TaxInfo
-        {
-            TaxIdNumber = model.TaxId,
-            BillingAddressLine1 = model.Line1,
-            BillingAddressLine2 = model.Line2,
-            BillingAddressCity = model.City,
-            BillingAddressState = model.State,
-            BillingAddressPostalCode = model.PostalCode,
-            BillingAddressCountry = model.Country,
-        };
-        await paymentService.SaveTaxInfoAsync(organization, taxInfo);
     }
 
     /// <summary>

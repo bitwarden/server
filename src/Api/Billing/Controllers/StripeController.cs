@@ -1,5 +1,5 @@
-﻿using Bit.Core.Billing.Tax.Services;
-using Bit.Core.Services;
+﻿using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +28,7 @@ public class StripeController(
             Usage = "off_session"
         };
 
-        var setupIntent = await stripeAdapter.SetupIntentCreate(options);
+        var setupIntent = await stripeAdapter.CreateSetupIntentAsync(options);
 
         return TypedResults.Ok(setupIntent.ClientSecret);
     }
@@ -43,7 +43,7 @@ public class StripeController(
             Usage = "off_session"
         };
 
-        var setupIntent = await stripeAdapter.SetupIntentCreate(options);
+        var setupIntent = await stripeAdapter.CreateSetupIntentAsync(options);
 
         return TypedResults.Ok(setupIntent.ClientSecret);
     }

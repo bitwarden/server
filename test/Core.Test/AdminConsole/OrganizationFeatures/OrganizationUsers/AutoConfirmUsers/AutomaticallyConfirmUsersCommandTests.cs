@@ -3,13 +3,13 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -203,14 +203,10 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
-            .CreateAsync(
-                Arg.Is<Collection>(c =>
-                    c.OrganizationId == organization.Id &&
-                    c.Name == defaultCollectionName &&
-                    c.Type == CollectionType.DefaultUserCollection),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(groups => groups == null),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(access =>
-                    access.FirstOrDefault(x => x.Id == organizationUser.Id && x.Manage) != null));
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == organizationUser.Id),
+                defaultCollectionName);
     }
 
     [Theory]
@@ -252,9 +248,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
-            .CreateAsync(Arg.Any<Collection>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
     }
 
     [Theory]
@@ -290,9 +284,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         var collectionException = new Exception("Collection creation failed");
         sutProvider.GetDependency<ICollectionRepository>()
-            .CreateAsync(Arg.Any<Collection>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>(),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>())
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>())
             .ThrowsAsync(collectionException);
 
         // Act
@@ -726,5 +718,55 @@ public class AutomaticallyConfirmUsersCommandTests
             .DeleteUserRegistrationOrganizationAsync(
                 Arg.Any<IEnumerable<string>>(),
                 organization.Id.ToString());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_UsesNewMailer(
+        Organization organization,
+        string userEmail,
+        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        const bool accessSecretsManager = true;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(organization, userEmail, accessSecretsManager);
+
+        // Assert
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
+            .Received(1)
+            .SendConfirmationAsync(organization, userEmail, accessSecretsManager);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationConfirmedEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOff_UsesLegacyMailService(
+        Organization organization,
+        string userEmail,
+        SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        const bool accessSecretsManager = false;
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(organization, userEmail, accessSecretsManager);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationConfirmedEmailAsync(organization.Name, userEmail, accessSecretsManager);
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
+            .DidNotReceive()
+            .SendConfirmationAsync(Arg.Any<Organization>(), Arg.Any<string>(), Arg.Any<bool>());
     }
 }

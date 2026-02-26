@@ -91,7 +91,6 @@ jobs:
           - project_name: Nginx
           - project_name: Notifications
           - project_name: Scim
-          - project_name: Server
           - project_name: Setup
           - project_name: Sso
     steps:
@@ -106,7 +105,7 @@ jobs:
           echo "Github Release Option: $RELEASE_OPTION"
 
       - name: Check out repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
           persist-credentials: false

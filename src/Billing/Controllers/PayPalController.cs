@@ -23,7 +23,7 @@ public class PayPalController : Controller
     private readonly ILogger<PayPalController> _logger;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
     private readonly IProviderRepository _providerRepository;
@@ -34,7 +34,7 @@ public class PayPalController : Controller
         ILogger<PayPalController> logger,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         ITransactionRepository transactionRepository,
         IUserRepository userRepository,
         IProviderRepository providerRepository,

@@ -45,6 +45,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
+    public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
     public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
     public virtual string DatabaseProvider { get; set; }
@@ -57,7 +58,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
-    public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
+    public virtual AzureQueueEventSettings Events { get; set; } = new AzureQueueEventSettings();
     public virtual DistributedCacheSettings DistributedCache { get; set; } = new DistributedCacheSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
@@ -67,6 +68,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
+    public virtual WebAuthnSettings WebAuthn { get; set; } = new WebAuthnSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
@@ -82,8 +84,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
-    public virtual IPhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
-
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
@@ -93,6 +93,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
     public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
+    public virtual ICommunicationSettings Communication { get; set; } = new CommunicationSettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -396,6 +397,24 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
+    public class AzureQueueEventSettings : IConnectionStringSettings
+    {
+        private string _connectionString;
+        private string _queueName;
+
+        public string ConnectionString
+        {
+            get => _connectionString;
+            set => _connectionString = value?.Trim('"');
+        }
+
+        public string QueueName
+        {
+            get => _queueName;
+            set => _queueName = value?.Trim('"');
+        }
+    }
+
     public class ConnectionStringSettings : IConnectionStringSettings
     {
         private string _connectionString;
@@ -597,6 +616,12 @@ public class GlobalSettings : IGlobalSettings
         public string AKey { get; set; }
     }
 
+    public class WebAuthnSettings
+    {
+        public int PremiumMaximumAllowedCredentials { get; set; } = 10;
+        public int NonPremiumMaximumAllowedCredentials { get; set; } = 5;
+    }
+
     public class BraintreeSettings
     {
         public bool Production { get; set; }
@@ -671,12 +696,6 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApiKey { get; set; }
         public int MaxNetworkRetries { get; set; } = 2;
-    }
-
-    public class PhishingDomainSettings : IPhishingDomainSettings
-    {
-        public string UpdateUrl { get; set; }
-        public string ChecksumUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings
@@ -757,5 +776,18 @@ public class GlobalSettings : IGlobalSettings
     public class Fido2Settings
     {
         public HashSet<string> Origins { get; set; }
+    }
+
+    public class CommunicationSettings : ICommunicationSettings
+    {
+        public string Bootstrap { get; set; } = "none";
+        public ISsoCookieVendorSettings SsoCookieVendor { get; set; } = new SsoCookieVendorSettings();
+    }
+
+    public class SsoCookieVendorSettings : ISsoCookieVendorSettings
+    {
+        public string IdpLoginUrl { get; set; }
+        public string CookieName { get; set; }
+        public string CookieDomain { get; set; }
     }
 }

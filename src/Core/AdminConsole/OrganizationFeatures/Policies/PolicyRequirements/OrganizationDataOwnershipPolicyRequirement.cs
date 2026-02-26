@@ -72,6 +72,35 @@ public class OrganizationDataOwnershipPolicyRequirement : IPolicyRequirement
     {
         return _policyDetails.Any(p => p.OrganizationId == organizationId);
     }
+
+    /// <summary>
+    /// Ignore storage limits if the organization has data ownership policy enabled.
+    /// Allows users to seamlessly migrate their data into the organization without being blocked by storage limits.
+    /// Organization admins will need to manage storage after migration should overages occur.
+    /// </summary>
+    public bool IgnoreStorageLimitsOnMigration(Guid organizationId)
+    {
+        return _policyDetails.Any(p => p.OrganizationId == organizationId &&
+                                       p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed);
+    }
+
+    /// <summary>
+    /// Determines if a user is eligible for self-revocation under the Organization Data Ownership policy.
+    /// A user is eligible if they are a confirmed member of the organization and the policy is enabled.
+    /// This also handles exempt roles (Owner/Admin) and policy disabled state via the factory's Enforce predicate.
+    /// </summary>
+    /// <param name="organizationId">The organization ID to check.</param>
+    /// <returns>True if the user is eligible for self-revocation (policy applies to them), false otherwise.</returns>
+    /// <remarks>
+    /// Self-revoke is used to opt out of migrating the user's personal vault to the organization as required by this policy.
+    /// </remarks>
+    public bool EligibleForSelfRevoke(Guid organizationId)
+    {
+        var policyDetail = _policyDetails
+            .FirstOrDefault(p => p.OrganizationId == organizationId);
+
+        return policyDetail?.HasStatus([OrganizationUserStatusType.Confirmed]) ?? false;
+    }
 }
 
 public record DefaultCollectionRequest(Guid OrganizationUserId, bool ShouldCreateDefaultCollection)

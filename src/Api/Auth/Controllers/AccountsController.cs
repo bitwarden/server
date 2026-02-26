@@ -18,6 +18,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
@@ -37,13 +38,16 @@ public class AccountsController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
+    private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
+    private readonly IUserRepository _userRepository;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -52,12 +56,15 @@ public class AccountsController : Controller
         IUserService userService,
         IPolicyService policyService,
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
+        ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
+        ITdeSetPasswordCommand tdeSetPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
-        IChangeKdfCommand changeKdfCommand
+        IChangeKdfCommand changeKdfCommand,
+        IUserRepository userRepository
         )
     {
         _organizationService = organizationService;
@@ -66,12 +73,15 @@ public class AccountsController : Controller
         _userService = userService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
+        _tdeSetPasswordCommand = tdeSetPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
         _userAccountKeysQuery = userAccountKeysQuery;
         _twoFactorEmailService = twoFactorEmailService;
         _changeKdfCommand = changeKdfCommand;
+        _userRepository = userRepository;
     }
 
 
@@ -204,7 +214,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("set-password")]
-    public async Task PostSetPasswordAsync([FromBody] SetPasswordRequestModel model)
+    public async Task PostSetPasswordAsync([FromBody] SetInitialPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -212,33 +222,48 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        try
+        if (model.IsV2Request())
         {
-            user = model.ToUser(user);
+            if (model.IsTdeSetPasswordRequest())
+            {
+                await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
+            }
+            else
+            {
+                await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, model.ToData());
+            }
         }
-        catch (Exception e)
+        else
         {
-            ModelState.AddModelError(string.Empty, e.Message);
+            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
+            try
+            {
+                user = model.ToUser(user);
+            }
+            catch (Exception e)
+            {
+                ModelState.AddModelError(string.Empty, e.Message);
+                throw new BadRequestException(ModelState);
+            }
+
+            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+                user,
+                model.MasterPasswordHash,
+                model.Key,
+                model.OrgIdentifier);
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
             throw new BadRequestException(ModelState);
         }
-
-        var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
-            user,
-            model.MasterPasswordHash,
-            model.Key,
-            model.OrgIdentifier);
-
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]
@@ -432,16 +457,36 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.ReturnErrorOnExistingKeypair))
+        if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
         {
-            if (!string.IsNullOrWhiteSpace(user.PrivateKey) || !string.IsNullOrWhiteSpace(user.PublicKey))
-            {
-                throw new BadRequestException("User has existing keypair");
-            }
+            throw new BadRequestException("User has existing keypair");
         }
 
-        await _userService.SaveUserAsync(model.ToUser(user));
-        return new KeysResponseModel(user);
+        if (model.AccountKeys != null)
+        {
+            var accountKeysData = model.AccountKeys.ToAccountKeysData();
+            if (!accountKeysData.IsV2Encryption())
+            {
+                throw new BadRequestException("AccountKeys are only supported for V2 encryption.");
+            }
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
+            return new KeysResponseModel(accountKeysData, user.Key);
+        }
+        else
+        {
+            // Todo: Drop this after a transition period. This will drop no-account-keys requests.
+            // The V1 check in the other branch should persist
+            // https://bitwarden.atlassian.net/browse/PM-27329
+            await _userService.SaveUserAsync(model.ToUser(user));
+            return new KeysResponseModel(new UserAccountKeysData
+            {
+                PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                    user.PrivateKey,
+                    user.PublicKey
+                )
+            }, user.Key);
+        }
+
     }
 
     [HttpGet("keys")]
@@ -453,7 +498,8 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        return new KeysResponseModel(user);
+        var accountKeys = await _userAccountKeysQuery.Run(user);
+        return new KeysResponseModel(accountKeys, user.Key);
     }
 
     [HttpDelete]

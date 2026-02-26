@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Services;
+using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -56,7 +56,7 @@ public class PreviewPremiumTaxCommand(
                 });
             }
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
         });
 

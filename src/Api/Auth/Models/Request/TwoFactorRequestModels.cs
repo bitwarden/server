@@ -273,7 +273,7 @@ public class TwoFactorWebAuthnDeleteRequestModel : SecretVerificationRequestMode
             yield return validationResult;
         }
 
-        if (!Id.HasValue || Id < 0 || Id > 5)
+        if (!Id.HasValue)
         {
             yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
         }

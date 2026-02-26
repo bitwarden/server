@@ -1,10 +1,10 @@
-﻿using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,6 +25,8 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     IPushNotificationService pushNotificationService,
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
+    IFeatureService featureService,
+    ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand,
     TimeProvider timeProvider,
     ILogger<AutomaticallyConfirmOrganizationUserCommand> logger) : IAutomaticallyConfirmOrganizationUserCommand
 {
@@ -79,19 +81,10 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
                 return;
             }
 
-            await collectionRepository.CreateAsync(
-                new Collection
-                {
-                    OrganizationId = request.Organization!.Id,
-                    Name = request.DefaultUserCollectionName,
-                    Type = CollectionType.DefaultUserCollection
-                },
-                groups: null,
-                [new CollectionAccessSelection
-                {
-                    Id = request.OrganizationUser!.Id,
-                    Manage = true
-                }]);
+            await collectionRepository.CreateDefaultCollectionsAsync(
+                request.Organization!.Id,
+                [request.OrganizationUser!.Id],
+                request.DefaultUserCollectionName);
         }
         catch (Exception ex)
         {
@@ -143,9 +136,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         {
             var user = await userRepository.GetByIdAsync(request.OrganizationUser!.UserId!.Value);
 
-            await mailService.SendOrganizationConfirmedEmailAsync(request.Organization!.Name,
-                user!.Email,
-                request.OrganizationUser.AccessSecretsManager);
+            await SendOrganizationConfirmedEmailAsync(request.Organization!, user!.Email, request.OrganizationUser.AccessSecretsManager);
         }
         catch (Exception ex)
         {
@@ -182,5 +173,24 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
             OrganizationUser = await organizationUserRepository.GetByIdAsync(request.OrganizationUserId),
             Organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
         };
+    }
+
+    /// <summary>
+    /// Sends the organization confirmed email using either the new mailer pattern or the legacy mail service,
+    /// depending on the feature flag.
+    /// </summary>
+    /// <param name="organization">The organization the user was confirmed to.</param>
+    /// <param name="userEmail">The email address of the confirmed user.</param>
+    /// <param name="accessSecretsManager">Whether the user has access to Secrets Manager.</param>
+    internal async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
+        {
+            await sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
+        }
+        else
+        {
+            await mailService.SendOrganizationConfirmedEmailAsync(organization.Name, userEmail, accessSecretsManager);
+        }
     }
 }

@@ -9,13 +9,18 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -41,7 +46,7 @@ public class OrganizationsController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
@@ -56,6 +61,10 @@ public class OrganizationsController : Controller
     private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
+    private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IEventService _eventService;
+    private readonly IAutomaticUserConfirmationOrganizationPolicyComplianceValidator _automaticUserConfirmationOrganizationPolicyComplianceValidator;
+    private readonly IOrganizationAutoConfirmEnabledNotificationCommand _organizationAutoConfirmEnabledNotificationCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -66,7 +75,7 @@ public class OrganizationsController : Controller
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
         IPolicyRepository policyRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IApplicationCacheService applicationCacheService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
@@ -80,7 +89,11 @@ public class OrganizationsController : Controller
         IProviderBillingService providerBillingService,
         IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
         IPricingClient pricingClient,
-        IResendOrganizationInviteCommand resendOrganizationInviteCommand)
+        IResendOrganizationInviteCommand resendOrganizationInviteCommand,
+        IOrganizationBillingService organizationBillingService,
+        IEventService eventService,
+        IAutomaticUserConfirmationOrganizationPolicyComplianceValidator automaticUserConfirmationOrganizationPolicyComplianceValidator,
+        IOrganizationAutoConfirmEnabledNotificationCommand organizationAutoConfirmEnabledNotificationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -105,6 +118,10 @@ public class OrganizationsController : Controller
         _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
+        _organizationBillingService = organizationBillingService;
+        _eventService = eventService;
+        _automaticUserConfirmationOrganizationPolicyComplianceValidator = automaticUserConfirmationOrganizationPolicyComplianceValidator;
+        _organizationAutoConfirmEnabledNotificationCommand = organizationAutoConfirmEnabledNotificationCommand;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -230,6 +247,12 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = ModelState.GetErrorMessage();
+            return RedirectToAction("Edit", new { id });
+        }
+
         var organization = await _organizationRepository.GetByIdAsync(id);
 
         if (organization == null)
@@ -241,9 +264,12 @@ public class OrganizationsController : Controller
         var existingOrganizationData = new Organization
         {
             Id = organization.Id,
+            Name = organization.Name,
+            BillingEmail = organization.BillingEmail,
             Status = organization.Status,
             PlanType = organization.PlanType,
-            Seats = organization.Seats
+            Seats = organization.Seats,
+            UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation
         };
 
         if (model.PlanType.HasValue)
@@ -278,6 +304,13 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
+        if (await CheckOrganizationPolicyComplianceAsync(existingOrganizationData, organization) is { } error)
+        {
+            TempData["Error"] = error.Message;
+
+            return RedirectToAction("Edit", new { id });
+        }
+
         await HandlePotentialProviderSeatScalingAsync(
             existingOrganizationData,
             model);
@@ -286,7 +319,69 @@ public class OrganizationsController : Controller
 
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
+        if (existingOrganizationData.UseAutomaticUserConfirmation != organization.UseAutomaticUserConfirmation)
+        {
+            var eventType = organization.UseAutomaticUserConfirmation
+                ? EventType.Organization_AutoConfirmEnabled_Portal
+                : EventType.Organization_AutoConfirmDisabled_Portal;
+
+            await _eventService.LogOrganizationEventAsync(organization, eventType, EventSystemUser.BitwardenPortal);
+        }
+
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && organization.UseAutomaticUserConfirmation)
+        {
+            try
+            {
+                var emailsToNotify =
+                    (await _organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id))
+                    .Where(x =>
+                        (x.Type == OrganizationUserType.Admin
+                         || x.Type == OrganizationUserType.Owner
+                         || x.GetPermissions()?.ManageUsers == true)
+                        && !string.IsNullOrWhiteSpace(x.Email))
+                    .Select(x => x.Email)
+                    .ToList();
+
+                await _organizationAutoConfirmEnabledNotificationCommand.SendEmailAsync(
+                    new OrganizationAutoConfirmEnabledNotificationRequest(organization, emailsToNotify));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send email notification to admins when organization auto-confirm was enabled.");
+                TempData["Warning"] = "Organization updated successfully, but email notification to admins failed.";
+            }
+        }
+
+        // Sync name/email changes to Stripe
+        if (existingOrganizationData.Name != organization.Name || existingOrganizationData.BillingEmail != organization.BillingEmail)
+        {
+            try
+            {
+                await _organizationBillingService.UpdateOrganizationNameAndEmail(organization);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for organization {OrganizationId}. Database was updated successfully.",
+                    organization.Id);
+                TempData["Warning"] = "Organization updated successfully, but Stripe customer name/email synchronization failed.";
+            }
+        }
+
         return RedirectToAction("Edit", new { id });
+    }
+
+    private async Task<Error> CheckOrganizationPolicyComplianceAsync(Organization existingOrganizationData, Organization updatedOrganization)
+    {
+        if (!existingOrganizationData.UseAutomaticUserConfirmation && updatedOrganization.UseAutomaticUserConfirmation)
+        {
+            var validationResult = await _automaticUserConfirmationOrganizationPolicyComplianceValidator.IsOrganizationCompliantAsync(
+                new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(existingOrganizationData.Id));
+
+            return validationResult.Match(error => error, _ => null);
+        }
+
+        return null;
     }
 
     [HttpPost]
@@ -473,7 +568,9 @@ public class OrganizationsController : Controller
             organization.UseOrganizationDomains = model.UseOrganizationDomains;
             organization.UseAdminSponsoredFamilies = model.UseAdminSponsoredFamilies;
             organization.UseAutomaticUserConfirmation = model.UseAutomaticUserConfirmation;
+            organization.UseDisableSmAdsForUsers = model.UseDisableSmAdsForUsers;
             organization.UsePhishingBlocker = model.UsePhishingBlocker;
+            organization.UseMyItems = model.UseMyItems;
 
             //secrets
             organization.SmSeats = model.SmSeats;

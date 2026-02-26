@@ -5,11 +5,11 @@ namespace Bit.Core.Models.Mail.Billing.Renewal.Premium;
 public class PremiumRenewalMailView : BaseMailView
 {
     public required string BaseMonthlyRenewalPrice { get; set; }
-    public required string DiscountedMonthlyRenewalPrice { get; set; }
+    public required string DiscountedAnnualRenewalPrice { get; set; }
     public required string DiscountAmount { get; set; }
 }
 
 public class PremiumRenewalMail : BaseMail<PremiumRenewalMailView>
 {
-    public override string Subject { get => "Your Bitwarden Premium renewal is updating"; }
+    public override string Subject { get; set; } = "Your Bitwarden Premium renewal is updating";
 }

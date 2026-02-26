@@ -4,7 +4,6 @@
 
 using System.Security.Claims;
 using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -41,6 +40,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
+    private readonly IClientVersionValidator _clientVersionValidator;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -70,7 +70,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator
     )
     {
         _userManager = userManager;
@@ -92,160 +93,22 @@ public abstract class BaseRequestValidator<T> where T : class
         _authRequestRepository = authRequestRepository;
         _mailService = mailService;
         _accountKeysQuery = userAccountKeysQuery;
+        _clientVersionValidator = clientVersionValidator;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeSupportForSsoRequiredUsers))
+        var validators = DetermineValidationOrder(context, request, validatorContext);
+        var allValidationSchemesSuccessful = await ProcessValidatorsAsync(validators);
+        if (!allValidationSchemesSuccessful)
         {
-            var validators = DetermineValidationOrder(context, request, validatorContext);
-            var allValidationSchemesSuccessful = await ProcessValidatorsAsync(validators);
-            if (!allValidationSchemesSuccessful)
-            {
-                // Each validation task is responsible for setting its own non-success status, if applicable.
-                return;
-            }
-            await BuildSuccessResultAsync(validatorContext.User, context, validatorContext.Device,
-                validatorContext.RememberMeRequested);
+            // Each validation task is responsible for setting its own non-success status, if applicable.
+            return;
         }
-        else
-        {
-            // 1. We need to check if the user's master password hash is correct.
-            var valid = await ValidateContextAsync(context, validatorContext);
-            var user = validatorContext.User;
-            if (!valid)
-            {
-                await UpdateFailedAuthDetailsAsync(user);
 
-                await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
-                return;
-            }
-
-            // 2. Decide if this user belongs to an organization that requires SSO.
-            // TODO: Clean up Feature Flag: Remove this if block: PM-28281
-            if (!_featureService.IsEnabled(FeatureFlagKeys.RedirectOnSsoRequired))
-            {
-                validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);
-                if (validatorContext.SsoRequired)
-                {
-                    SetSsoResult(context,
-                        new Dictionary<string, object>
-                        {
-                            { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
-                        });
-                    return;
-                }
-            }
-            else
-            {
-                var ssoValid = await _ssoRequestValidator.ValidateAsync(user, request, validatorContext);
-                if (!ssoValid)
-                {
-                    // SSO is required
-                    SetValidationErrorResult(context, validatorContext);
-                    return;
-                }
-            }
-
-            // 3. Check if 2FA is required.
-            (validatorContext.TwoFactorRequired, var twoFactorOrganization) =
-                await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
-
-            // This flag is used to determine if the user wants a rememberMe token sent when
-            // authentication is successful.
-            var returnRememberMeToken = false;
-
-            if (validatorContext.TwoFactorRequired)
-            {
-                var twoFactorToken = request.Raw["TwoFactorToken"];
-                var twoFactorProvider = request.Raw["TwoFactorProvider"];
-                var validTwoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) &&
-                                            !string.IsNullOrWhiteSpace(twoFactorProvider);
-
-                // 3a. Response for 2FA required and not provided state.
-                if (!validTwoFactorRequest ||
-                    !Enum.TryParse(twoFactorProvider, out TwoFactorProviderType twoFactorProviderType))
-                {
-                    var resultDict = await _twoFactorAuthenticationValidator
-                        .BuildTwoFactorResultAsync(user, twoFactorOrganization);
-                    if (resultDict == null)
-                    {
-                        await BuildErrorResultAsync("No two-step providers enabled.", false, context, user);
-                        return;
-                    }
-
-                    // Include Master Password Policy in 2FA response.
-                    resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
-                    SetTwoFactorResult(context, resultDict);
-                    return;
-                }
-
-                var twoFactorTokenValid =
-                    await _twoFactorAuthenticationValidator
-                        .VerifyTwoFactorAsync(user, twoFactorOrganization, twoFactorProviderType, twoFactorToken);
-
-                // 3b. Response for 2FA required but request is not valid or remember token expired state.
-                if (!twoFactorTokenValid)
-                {
-                    // The remember me token has expired.
-                    if (twoFactorProviderType == TwoFactorProviderType.Remember)
-                    {
-                        var resultDict = await _twoFactorAuthenticationValidator
-                            .BuildTwoFactorResultAsync(user, twoFactorOrganization);
-
-                        // Include Master Password Policy in 2FA response
-                        resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicyAsync(user));
-                        SetTwoFactorResult(context, resultDict);
-                    }
-                    else
-                    {
-                        await SendFailedTwoFactorEmail(user, twoFactorProviderType);
-                        await UpdateFailedAuthDetailsAsync(user);
-                        await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
-                    }
-
-                    return;
-                }
-
-                // 3c. When the 2FA authentication is successful, we can check if the user wants a
-                // rememberMe token.
-                var twoFactorRemember = request.Raw["TwoFactorRemember"] == "1";
-                // Check if the user wants a rememberMe token.
-                if (twoFactorRemember
-                    // if the 2FA auth was rememberMe do not send another token.
-                    && twoFactorProviderType != TwoFactorProviderType.Remember)
-                {
-                    returnRememberMeToken = true;
-                }
-            }
-
-            // 4. Check if the user is logging in from a new device.
-            var deviceValid = await _deviceValidator.ValidateRequestDeviceAsync(request, validatorContext);
-            if (!deviceValid)
-            {
-                SetValidationErrorResult(context, validatorContext);
-                await LogFailedLoginEvent(validatorContext.User, EventType.User_FailedLogIn);
-                return;
-            }
-
-            // 5. Force legacy users to the web for migration.
-            if (UserService.IsLegacyUser(user) && request.ClientId != "web")
-            {
-                await FailAuthForLegacyUserAsync(user, context);
-                return;
-            }
-
-            // TODO: PM-24324 - This should be its own validator at some point.
-            // 6. Auth request handling
-            if (validatorContext.ValidatedAuthRequest != null)
-            {
-                validatorContext.ValidatedAuthRequest.AuthenticationDate = DateTime.UtcNow;
-                await _authRequestRepository.ReplaceAsync(validatorContext.ValidatedAuthRequest);
-            }
-
-            await BuildSuccessResultAsync(user, context, validatorContext.Device, returnRememberMeToken);
-        }
+        await BuildSuccessResultAsync(validatorContext.User, context, validatorContext.Device,
+            validatorContext.RememberMeRequested);
     }
 
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
@@ -275,7 +138,13 @@ public abstract class BaseRequestValidator<T> where T : class
             // validation to perform the recovery as part of scheme validation based on the request.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateGrantSpecificContext(context, validatorContext),
+                // Now check the version number of the client. Do this after ValidateContextAsync so that
+                // we prevent account enumeration. If we were to do this before ValidateContextAsync, then attackers
+                // could use a known invalid client version and make a request for a user (before we know if they have
+                // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
+                // an error response back from the validator saying the user is not compatible with the client.
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -288,7 +157,13 @@ public abstract class BaseRequestValidator<T> where T : class
             // The typical validation scenario.
             return
             [
-                () => ValidateMasterPasswordAsync(context, validatorContext),
+                () => ValidateGrantSpecificContext(context, validatorContext),
+                // Now check the version number of the client. Do this after ValidateContextAsync so that
+                // we prevent account enumeration. If we were to do this before ValidateContextAsync, then attackers
+                // could use a known invalid client version and make a request for a user (before we know if they have
+                // demonstrated ownership of the account via correct credentials) and identify if they exist by getting
+                // an error response back from the validator saying the user is not compatible with the client.
+                () => ValidateClientVersionAsync(context, validatorContext),
                 () => ValidateSsoAsync(context, request, validatorContext),
                 () => ValidateTwoFactorAsync(context, request, validatorContext),
                 () => ValidateNewDeviceAsync(context, request, validatorContext),
@@ -341,12 +216,29 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// Validates the user's Master Password hash.
+    /// Validates whether the client version is compatible for the user attempting to authenticate.
+    /// </summary>
+    /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
+    private async Task<bool> ValidateClientVersionAsync(T context, CustomValidatorRequestContext validatorContext)
+    {
+        var ok = _clientVersionValidator.Validate(validatorContext.User, validatorContext);
+        if (ok)
+        {
+            return true;
+        }
+
+        SetValidationErrorResult(context, validatorContext);
+        await LogFailedLoginEvent(validatorContext.User, EventType.User_FailedLogIn);
+        return false;
+    }
+
+    /// <summary>
+    /// Validates the user's master password, webauthen, or custom token request via the appropriate context validator.
     /// </summary>
     /// <param name="context">The current request context.</param>
     /// <param name="validatorContext"><see cref="Bit.Identity.IdentityServer.CustomValidatorRequestContext" /></param>
     /// <returns>true if the scheme successfully passed validation, otherwise false.</returns>
-    private async Task<bool> ValidateMasterPasswordAsync(T context, CustomValidatorRequestContext validatorContext)
+    private async Task<bool> ValidateGrantSpecificContext(T context, CustomValidatorRequestContext validatorContext)
     {
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
@@ -372,51 +264,14 @@ public abstract class BaseRequestValidator<T> where T : class
     private async Task<bool> ValidateSsoAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // TODO: Clean up Feature Flag: Remove this if block: PM-28281
-        if (!_featureService.IsEnabled(FeatureFlagKeys.RedirectOnSsoRequired))
+        var ssoValid = await _ssoRequestValidator.ValidateAsync(validatorContext.User, request, validatorContext);
+        if (ssoValid)
         {
-            validatorContext.SsoRequired = await RequireSsoLoginAsync(validatorContext.User, request.GrantType);
-            if (!validatorContext.SsoRequired)
-            {
-                return true;
-            }
-
-            // Users without SSO requirement requesting 2FA recovery will be fast-forwarded through login and are
-            // presented with their 2FA management area as a reminder to re-evaluate their 2FA posture after recovery and
-            // review their new recovery token if desired.
-            // SSO users cannot be assumed to be authenticated, and must prove authentication with their IdP after recovery.
-            // As described in validation order determination, if TwoFactorRequired, the 2FA validation scheme will have been
-            // evaluated, and recovery will have been performed if requested.
-            // We will send a descriptive message in these cases so clients can give the appropriate feedback and redirect
-            // to /login.
-            if (validatorContext.TwoFactorRequired &&
-                validatorContext.TwoFactorRecoveryRequested)
-            {
-                SetSsoResult(context, new Dictionary<string, object>
-            {
-                { "ErrorModel", new ErrorResponseModel("Two-factor recovery has been performed. SSO authentication is required.") }
-            });
-                return false;
-            }
-
-            SetSsoResult(context,
-                new Dictionary<string, object>
-                {
-                { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
-                });
-            return false;
+            return true;
         }
-        else
-        {
-            var ssoValid = await _ssoRequestValidator.ValidateAsync(validatorContext.User, request, validatorContext);
-            if (ssoValid)
-            {
-                return true;
-            }
 
-            SetValidationErrorResult(context, validatorContext);
-            return ssoValid;
-        }
+        SetValidationErrorResult(context, validatorContext);
+        return ssoValid;
     }
 
     /// <summary>
@@ -656,9 +511,6 @@ public abstract class BaseRequestValidator<T> where T : class
     protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
 
     [Obsolete("Consider using SetValidationErrorResult instead.")]
-    protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
-
-    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
 
     /// <summary>
@@ -673,40 +525,6 @@ public abstract class BaseRequestValidator<T> where T : class
         Dictionary<string, object> customResponse);
 
     protected abstract ClaimsPrincipal GetSubject(T context);
-
-    /// <summary>
-    /// Check if the user is required to authenticate via SSO. If the user requires SSO, but they are
-    /// logging in using an API Key (client_credentials) then they are allowed to bypass the SSO requirement.
-    /// If the GrantType is authorization_code or client_credentials we know the user is trying to login
-    /// using the SSO flow so they are allowed to continue.
-    /// </summary>
-    /// <param name="user">user trying to login</param>
-    /// <param name="grantType">magic string identifying the grant type requested</param>
-    /// <returns>true if sso required; false if not required or already in process</returns>
-    [Obsolete("This method is deprecated and will be removed in future versions, PM-28281. Please use the SsoRequestValidator scheme instead.")]
-    private async Task<bool> RequireSsoLoginAsync(User user, string grantType)
-    {
-        if (grantType == "authorization_code" || grantType == "client_credentials")
-        {
-            // Already using SSO to authenticate, or logging-in via api key to skip SSO requirement
-            // allow to authenticate successfully
-            return false;
-        }
-
-        // Check if user belongs to any organization with an active SSO policy
-        var ssoRequired = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await PolicyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(user.Id))
-            .SsoRequired
-            : await PolicyService.AnyPoliciesApplicableToUserAsync(
-                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (ssoRequired)
-        {
-            return true;
-        }
-
-        // Default - SSO is not required
-        return false;
-    }
 
     private async Task ResetFailedAuthDetailsAsync(User user)
     {
@@ -736,11 +554,8 @@ public abstract class BaseRequestValidator<T> where T : class
 
     private async Task SendFailedTwoFactorEmail(User user, TwoFactorProviderType failedAttemptType)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.FailedTwoFactorEmail))
-        {
-            await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, failedAttemptType, DateTime.UtcNow,
-                CurrentContext.IpAddress);
-        }
+        await _mailService.SendFailedTwoFactorAttemptEmailAsync(user.Email, failedAttemptType, DateTime.UtcNow,
+            CurrentContext.IpAddress);
     }
 
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicyAsync(User user)
@@ -795,6 +610,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var customResponse = new Dictionary<string, object>();
         if (!string.IsNullOrWhiteSpace(user.PrivateKey))
         {
+            // PrivateKey usage is now deprecated in favor of AccountKeys
             customResponse.Add("PrivateKey", user.PrivateKey);
             var accountKeys = await _accountKeysQuery.Run(user);
             customResponse.Add("AccountKeys", new PrivateKeysResponseModel(accountKeys));
@@ -802,6 +618,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (!string.IsNullOrWhiteSpace(user.Key))
         {
+            // Key is deprecated in favor of UserDecryptionOptions.MasterPasswordUnlock.MasterKeyEncryptedUserKey
             customResponse.Add("Key", user.Key);
         }
 

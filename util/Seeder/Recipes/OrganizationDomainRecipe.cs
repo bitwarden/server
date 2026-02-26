@@ -5,7 +5,7 @@ namespace Bit.Seeder.Recipes;
 
 public class OrganizationDomainRecipe(DatabaseContext db)
 {
-    public void AddVerifiedDomainToOrganization(Guid organizationId, string domainName)
+    public void Seed(Guid organizationId, string domainName)
     {
         var domain = new OrganizationDomain
         {

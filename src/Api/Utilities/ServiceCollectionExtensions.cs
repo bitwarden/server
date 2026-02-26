@@ -1,9 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.Tools.Authorization;
-using Bit.Core.PhishingDomainFeatures;
-using Bit.Core.PhishingDomainFeatures.Interfaces;
-using Bit.Core.Repositories;
-using Bit.Core.Repositories.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
@@ -11,7 +7,7 @@ using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace Bit.Api.Utilities;
 
@@ -102,26 +98,5 @@ public static class ServiceCollectionExtensions
 
         // Admin Console authorization handlers
         services.AddAdminConsoleAuthorizationHandlers();
-    }
-
-    public static void AddPhishingDomainServices(this IServiceCollection services, GlobalSettings globalSettings)
-    {
-        services.AddHttpClient("PhishingDomains", client =>
-        {
-            client.DefaultRequestHeaders.Add("User-Agent", globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
-            client.Timeout = TimeSpan.FromSeconds(1000); // the source list is very slow
-        });
-
-        services.AddSingleton<AzurePhishingDomainStorageService>();
-        services.AddSingleton<IPhishingDomainRepository, AzurePhishingDomainRepository>();
-
-        if (globalSettings.SelfHosted)
-        {
-            services.AddScoped<ICloudPhishingDomainQuery, CloudPhishingDomainRelayQuery>();
-        }
-        else
-        {
-            services.AddScoped<ICloudPhishingDomainQuery, CloudPhishingDomainDirectQuery>();
-        }
     }
 }

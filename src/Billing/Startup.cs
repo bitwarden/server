@@ -2,7 +2,6 @@
 #nullable disable
 
 using System.Globalization;
-using System.Net.Http.Headers;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Commercial.Core.Utilities;
@@ -49,6 +48,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // PayPal IPN Client
         services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
@@ -70,6 +70,7 @@ public class Startup
         services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
         services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
         services.AddScoped<ISetupIntentSucceededHandler, SetupIntentSucceededHandler>();
+        services.AddScoped<ICouponDeletedHandler, CouponDeletedHandler>();
         services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity
@@ -97,13 +98,6 @@ public class Startup
 
         // Authentication
         services.AddAuthentication();
-
-        // Set up HttpClients
-        services.AddHttpClient("FreshdeskApi");
-        services.AddHttpClient("OnyxApi", client =>
-        {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", billingSettings.Onyx.ApiKey);
-        });
 
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();

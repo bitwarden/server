@@ -21,7 +21,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("webauthn")]
-[Authorize(Policies.Web)]
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
@@ -62,6 +61,7 @@ public class WebAuthnController : Controller
         _featureService = featureService;
     }
 
+    [Authorize(Policies.Web)]
     [HttpGet("")]
     public async Task<ListResponseModel<WebAuthnCredentialResponseModel>> Get()
     {
@@ -71,6 +71,7 @@ public class WebAuthnController : Controller
         return new ListResponseModel<WebAuthnCredentialResponseModel>(credentials.Select(c => new WebAuthnCredentialResponseModel(c)));
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("attestation-options")]
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> AttestationOptions([FromBody] SecretVerificationRequestModel model)
     {
@@ -88,6 +89,7 @@ public class WebAuthnController : Controller
         };
     }
 
+    [Authorize(Policies.Web)]
     [HttpPost("assertion-options")]
     public async Task<WebAuthnLoginAssertionOptionsResponseModel> AssertionOptions([FromBody] SecretVerificationRequestModel model)
     {
@@ -104,6 +106,7 @@ public class WebAuthnController : Controller
         };
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("")]
     public async Task Post([FromBody] WebAuthnLoginCredentialCreateRequestModel model)
     {
@@ -149,6 +152,7 @@ public class WebAuthnController : Controller
         }
     }
 
+    [Authorize(Policies.Application)]
     [HttpPut()]
     public async Task UpdateCredential([FromBody] WebAuthnLoginCredentialUpdateRequestModel model)
     {
@@ -172,6 +176,7 @@ public class WebAuthnController : Controller
         await _credentialRepository.UpdateAsync(credential);
     }
 
+    [Authorize(Policies.Web)]
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid id, [FromBody] SecretVerificationRequestModel model)
     {

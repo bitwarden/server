@@ -394,9 +394,18 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
     }
 
-    [Fact]
-    public async Task Put_RevokeUser_Success()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Put_RevokeUser_Success(bool scimRevokeV2Enabled)
     {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.ScimRevokeV2)
+                .Returns(scimRevokeV2Enabled));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
         var inputModel = new ScimUserRequestModel
         {
@@ -418,13 +427,13 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+        var context = await localFactory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
-        var databaseContext = _factory.GetDatabaseContext();
+        var databaseContext = localFactory.GetDatabaseContext();
         var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
         Assert.Equal(OrganizationUserStatusType.Revoked, revokedUser.Status);
     }

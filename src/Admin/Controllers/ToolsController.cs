@@ -8,6 +8,7 @@ using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;

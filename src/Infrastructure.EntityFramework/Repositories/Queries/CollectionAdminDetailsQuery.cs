@@ -62,7 +62,7 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
         {
             baseCollectionQuery = baseCollectionQuery.Where(x =>
                 x.c.OrganizationId == _organizationId &&
-                x.c.Type != CollectionType.DefaultUserCollection);
+                x.c.Type == CollectionType.SharedCollection);
         }
         else if (_collectionId.HasValue)
         {

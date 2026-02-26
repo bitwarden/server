@@ -4,7 +4,7 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -58,7 +58,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 5500
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(purchase, billingAddress);
 
@@ -68,7 +68,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(55.00m, total);
 
         // Verify the correct Stripe API call for sponsored subscription
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -116,7 +116,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 8250
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(purchase, billingAddress);
 
@@ -126,7 +126,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(82.50m, total);
 
         // Verify the correct Stripe API call for standalone secrets manager
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
@@ -179,7 +179,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 12200
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(purchase, billingAddress);
 
@@ -189,7 +189,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(122.00m, total);
 
         // Verify the correct Stripe API call for comprehensive purchase with storage and service accounts
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "GB" &&
@@ -240,7 +240,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 3300
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(purchase, billingAddress);
 
@@ -250,7 +250,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(33.00m, total);
 
         // Verify the correct Stripe API call for Families tier (non-seat-based plan)
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -292,7 +292,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 2700
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(purchase, billingAddress);
 
@@ -302,7 +302,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(27.00m, total);
 
         // Verify the correct Stripe API call for business use in non-US country (tax exempt reverse)
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "DE" &&
@@ -345,7 +345,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 12100
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(purchase, billingAddress);
 
@@ -355,7 +355,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(121.00m, total);
 
         // Verify the correct Stripe API call for Spanish NIF that adds both Spanish NIF and EU VAT tax IDs
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "ES" &&
@@ -405,7 +405,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 1320
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -415,7 +415,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(13.20m, total);
 
         // Verify the correct Stripe API call for free organization upgrade to Teams
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -458,7 +458,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 4400
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -468,7 +468,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(44.00m, total);
 
         // Verify the correct Stripe API call for free organization upgrade to Families (no SM for Families)
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
@@ -522,7 +522,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = new Customer { Discount = null }
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -534,7 +534,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 9900
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -543,7 +543,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(9.00m, tax);
         Assert.Equal(99.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -597,7 +597,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = new Customer { Discount = null }
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -609,7 +609,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 13200
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -618,7 +618,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(12.00m, tax);
         Assert.Equal(132.00m, total);
 
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -661,7 +661,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 8800
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -671,7 +671,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(88.00m, total);
 
         // Verify the correct Stripe API call for free organization with SM to Enterprise
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "GB" &&
@@ -730,7 +730,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = new Customer { Discount = null }
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -738,7 +738,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 16500
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -748,7 +748,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(165.00m, total);
 
         // Verify the correct Stripe API call for existing subscription upgrade
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "DE" &&
@@ -814,7 +814,7 @@ public class PreviewOrganizationTaxCommandTests
             }
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -822,7 +822,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 6600
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, planChange, billingAddress);
 
@@ -832,7 +832,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(66.00m, total);
 
         // Verify the correct Stripe API call preserves existing discount
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -876,8 +876,8 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal("Organization does not have a subscription.", badRequest.Response);
 
         // Verify no Stripe API calls were made
-        await _stripeAdapter.DidNotReceive().InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>());
-        await _stripeAdapter.DidNotReceive().SubscriptionGetAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+        await _stripeAdapter.DidNotReceive().CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>());
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     #endregion
@@ -919,7 +919,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = customer
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -927,7 +927,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 6600
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, update);
 
@@ -937,7 +937,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(66.00m, total);
 
         // Verify the correct Stripe API call for PM seats only
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&
@@ -984,7 +984,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = customer
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -992,7 +992,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 13200
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, update);
 
@@ -1002,7 +1002,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(132.00m, total);
 
         // Verify the correct Stripe API call for PM seats + storage
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "CA" &&
@@ -1051,7 +1051,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = customer
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -1059,7 +1059,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 8800
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, update);
 
@@ -1069,7 +1069,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(88.00m, total);
 
         // Verify the correct Stripe API call for SM seats only
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "DE" &&
@@ -1119,7 +1119,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = customer
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -1127,7 +1127,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 16500
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, update);
 
@@ -1137,7 +1137,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(165.00m, total);
 
         // Verify the correct Stripe API call for SM seats + service accounts with tax ID
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "GB" &&
@@ -1200,7 +1200,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = customer
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -1208,7 +1208,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 27500
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, update);
 
@@ -1218,7 +1218,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(275.00m, total);
 
         // Verify the correct Stripe API call for comprehensive update with discount and Spanish tax ID
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "ES" &&
@@ -1276,7 +1276,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = customer
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -1284,7 +1284,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 5500
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, update);
 
@@ -1294,7 +1294,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(55.00m, total);
 
         // Verify the correct Stripe API call for Families tier (personal usage, no business tax exemption)
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "AU" &&
@@ -1334,8 +1334,8 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal("Organization does not have a subscription.", badRequest.Response);
 
         // Verify no Stripe API calls were made
-        await _stripeAdapter.DidNotReceive().InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>());
-        await _stripeAdapter.DidNotReceive().SubscriptionGetAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+        await _stripeAdapter.DidNotReceive().CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>());
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
@@ -1378,7 +1378,7 @@ public class PreviewOrganizationTaxCommandTests
             Customer = customer
         };
 
-        _stripeAdapter.SubscriptionGetAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var invoice = new Invoice
         {
@@ -1386,7 +1386,7 @@ public class PreviewOrganizationTaxCommandTests
             Total = 3300
         };
 
-        _stripeAdapter.InvoiceCreatePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
         var result = await _command.Run(organization, update);
 
@@ -1396,7 +1396,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(33.00m, total);
 
         // Verify only PM seats are included (storage=0 excluded, SM seats=0 so entire SM excluded)
-        await _stripeAdapter.Received(1).InvoiceCreatePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.AutomaticTax.Enabled == true &&
             options.Currency == "usd" &&
             options.CustomerDetails.Address.Country == "US" &&

@@ -79,7 +79,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility() } });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility { Id = cipherDetails.OrganizationId.Value } } });
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.PutCollections_vNext(id, model);
@@ -95,7 +95,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility() } });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility { Id = cipherDetails.OrganizationId.Value } } });
 
         var result = await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -158,9 +158,9 @@ public class CiphersControllerTests
     [BitAutoData(OrganizationUserType.Custom, false, false)]
     public async Task CanEditCiphersAsAdminAsync_FlexibleCollections_Success(
         OrganizationUserType userType, bool allowAdminsAccessToAllItems, bool shouldSucceed,
-        CurrentContextOrganization organization, Guid userId, CipherDetails cipherDetails, SutProvider<CiphersController> sutProvider)
+        CurrentContextOrganization organization, Guid userId, CipherOrganizationDetails cipherOrgDetails, SutProvider<CiphersController> sutProvider)
     {
-        cipherDetails.OrganizationId = organization.Id;
+        cipherOrgDetails.OrganizationId = organization.Id;
         organization.Type = userType;
         if (userType == OrganizationUserType.Custom)
         {
@@ -171,9 +171,9 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
 
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
 
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherDetails });
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherOrgDetails });
 
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
@@ -183,13 +183,13 @@ public class CiphersControllerTests
 
         if (shouldSucceed)
         {
-            await sutProvider.Sut.DeleteAdmin(cipherDetails.Id);
+            await sutProvider.Sut.DeleteAdmin(cipherOrgDetails.Id);
             await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
                 .DeleteAsync(default, default);
         }
         else
         {
-            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipherDetails.Id));
+            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipherOrgDetails.Id));
             await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
                 .DeleteAsync(default, default);
         }
@@ -199,25 +199,23 @@ public class CiphersControllerTests
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     public async Task DeleteAdmin_WithOwnerOrAdmin_WithManagePermission_DeletesCipher(
-        OrganizationUserType organizationUserType, CipherDetails cipherDetails, Guid userId,
+        OrganizationUserType organizationUserType, CipherOrganizationDetails cipherOrgDetails, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
-        cipherDetails.UserId = null;
-        cipherDetails.OrganizationId = organization.Id;
-        cipherDetails.Edit = true;
-        cipherDetails.Manage = true;
+        cipherOrgDetails.UserId = null;
+        cipherOrgDetails.OrganizationId = organization.Id;
 
         organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails>
             {
-                cipherDetails
+                new CipherDetails(cipherOrgDetails) { Edit = true, Manage = true }
             });
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
@@ -227,34 +225,35 @@ public class CiphersControllerTests
                 LimitItemDeletion = true
             });
 
-        await sutProvider.Sut.DeleteAdmin(cipherDetails.Id);
+        await sutProvider.Sut.DeleteAdmin(cipherOrgDetails.Id);
 
-        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(cipherDetails, userId, true);
+        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(
+            Arg.Is<CipherDetails>(c => c.Id == cipherOrgDetails.Id && c.OrganizationId == cipherOrgDetails.OrganizationId),
+            userId,
+            true);
     }
 
     [Theory]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     public async Task DeleteAdmin_WithOwnerOrAdmin_WithoutManagePermission_ThrowsNotFoundException(
-        OrganizationUserType organizationUserType, CipherDetails cipherDetails, Guid userId,
+        OrganizationUserType organizationUserType, CipherOrganizationDetails cipherOrgDetails, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
-        cipherDetails.UserId = null;
-        cipherDetails.OrganizationId = organization.Id;
-        cipherDetails.Edit = true;
-        cipherDetails.Manage = false;
+        cipherOrgDetails.UserId = null;
+        cipherOrgDetails.OrganizationId = organization.Id;
 
         organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails>
             {
-                cipherDetails
+                new CipherDetails(cipherOrgDetails) { Edit = true, Manage = false }
             });
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
@@ -264,7 +263,7 @@ public class CiphersControllerTests
                 LimitItemDeletion = true
             });
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipherDetails.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipherOrgDetails.Id));
 
         await sutProvider.GetDependency<ICipherService>().DidNotReceive().DeleteAsync(Arg.Any<CipherDetails>(), Arg.Any<Guid>(), Arg.Any<bool>());
     }
@@ -273,21 +272,21 @@ public class CiphersControllerTests
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     public async Task DeleteAdmin_WithOwnerOrAdmin_WithAccessToUnassignedCipher_DeletesCipher(
-        OrganizationUserType organizationUserType, CipherDetails cipherDetails, Guid userId,
+        OrganizationUserType organizationUserType, CipherOrganizationDetails cipherOrgDetails, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
-        cipherDetails.OrganizationId = organization.Id;
+        cipherOrgDetails.OrganizationId = organization.Id;
         organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organization.Id)
             .Returns(new List<CipherOrganizationDetails>
             {
-                new() { Id = cipherDetails.Id, OrganizationId = cipherDetails.OrganizationId }
+                new() { Id = cipherOrgDetails.Id, OrganizationId = cipherOrgDetails.OrganizationId }
             });
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
@@ -297,54 +296,65 @@ public class CiphersControllerTests
                 LimitItemDeletion = true
             });
 
-        await sutProvider.Sut.DeleteAdmin(cipherDetails.Id);
+        await sutProvider.Sut.DeleteAdmin(cipherOrgDetails.Id);
 
-        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(cipherDetails, userId, true);
+        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(Arg.Is<CipherDetails>(c => c.Id == cipherOrgDetails.Id && c.OrganizationId == cipherOrgDetails.OrganizationId),
+        userId,
+        true);
     }
 
     [Theory]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]
     public async Task DeleteAdmin_WithAdminOrOwner_WithAccessToAllCollectionItems_DeletesCipher(
-        OrganizationUserType organizationUserType, CipherDetails cipherDetails, Guid userId,
+        OrganizationUserType organizationUserType, CipherOrganizationDetails cipherOrgDetails, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
-        cipherDetails.OrganizationId = organization.Id;
+
+        organization.Type = organizationUserType;
+
+        cipherOrgDetails.OrganizationId = organization.Id;
         organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherDetails });
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherOrgDetails });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(new OrganizationAbility
         {
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = true
         });
 
-        await sutProvider.Sut.DeleteAdmin(cipherDetails.Id);
+        await sutProvider.Sut.DeleteAdmin(cipherOrgDetails.Id);
 
-        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(cipherDetails, userId, true);
+        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(
+            Arg.Is<CipherDetails>(c => c.Id == cipherOrgDetails.Id && c.OrganizationId == cipherOrgDetails.OrganizationId),
+            userId,
+            true);
     }
 
     [Theory]
     [BitAutoData]
     public async Task DeleteAdmin_WithCustomUser_WithEditAnyCollectionTrue_DeletesCipher(
-        CipherDetails cipherDetails, Guid userId,
+        CipherOrganizationDetails cipherOrgDetails, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
-        cipherDetails.OrganizationId = organization.Id;
+        cipherOrgDetails.OrganizationId = organization.Id;
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions.EditAnyCollection = true;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherDetails });
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id).Returns(cipherOrgDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(new List<Cipher> { cipherOrgDetails });
 
-        await sutProvider.Sut.DeleteAdmin(cipherDetails.Id);
+        await sutProvider.Sut.DeleteAdmin(cipherOrgDetails.Id);
 
-        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(cipherDetails, userId, true);
+        await sutProvider.GetDependency<ICipherService>().Received(1).DeleteAsync(
+            Arg.Is<CipherDetails>(c => c.Id == cipherOrgDetails.Id && c.OrganizationId == cipherOrgDetails.OrganizationId),
+            userId,
+            true);
     }
 
     [Theory]
@@ -1908,5 +1918,238 @@ public class CiphersControllerTests
             .Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_WithNullFolderAndFalseFavorite_UpdatesFieldsCorrectly(
+        Guid cipherId,
+        Guid userId,
+        Guid organizationId,
+        Guid folderId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var user = new User { Id = userId };
+        var userIdKey = userId.ToString().ToUpperInvariant();
+
+        var existingCipher = new Cipher
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, folderId.ToString().ToUpperInvariant() } }),
+            Favorites = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, true } })
+        };
+
+        // Clears folder and favorite when sharing
+        var model = new CipherShareRequestModel
+        {
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = organizationId.ToString(),
+                Name = "SharedCipher",
+                Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+                FolderId = null,
+                Favorite = false,
+                EncryptedFor = userId
+            },
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(existingCipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+
+        var sharedCipher = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            FolderId = null,
+            Favorite = false
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(sharedCipher);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { organizationId, new OrganizationAbility { Id = organizationId } }
+            });
+
+        var result = await sutProvider.Sut.PutShare(cipherId, model);
+
+        Assert.Null(result.FolderId);
+        Assert.False(result.Favorite);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_WithFolderAndFavoriteSet_AddsUserSpecificFields(
+        Guid cipherId,
+        Guid userId,
+        Guid organizationId,
+        Guid folderId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var user = new User { Id = userId };
+        var userIdKey = userId.ToString().ToUpperInvariant();
+
+        var existingCipher = new Cipher
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = null,
+            Favorites = null
+        };
+
+        // Sets folder and favorite when sharing
+        var model = new CipherShareRequestModel
+        {
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = organizationId.ToString(),
+                Name = "SharedCipher",
+                Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+                FolderId = folderId.ToString(),
+                Favorite = true,
+                EncryptedFor = userId
+            },
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(existingCipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+
+        var sharedCipher = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, folderId.ToString().ToUpperInvariant() } }),
+            Favorites = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, true } }),
+            FolderId = folderId,
+            Favorite = true
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(sharedCipher);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { organizationId, new OrganizationAbility { Id = organizationId } }
+            });
+
+        var result = await sutProvider.Sut.PutShare(cipherId, model);
+
+        Assert.Equal(folderId, result.FolderId);
+        Assert.True(result.Favorite);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutShare_UpdateExistingFolderAndFavorite_UpdatesUserSpecificFields(
+        Guid cipherId,
+        Guid userId,
+        Guid organizationId,
+        Guid oldFolderId,
+        Guid newFolderId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var user = new User { Id = userId };
+        var userIdKey = userId.ToString().ToUpperInvariant();
+
+        // Existing cipher with old folder and not favorited
+        var existingCipher = new Cipher
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, oldFolderId.ToString().ToUpperInvariant() } }),
+            Favorites = null
+        };
+
+        var model = new CipherShareRequestModel
+        {
+            Cipher = new CipherRequestModel
+            {
+                Type = CipherType.Login,
+                OrganizationId = organizationId.ToString(),
+                Name = "SharedCipher",
+                Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+                FolderId = newFolderId.ToString(),  // Update to new folder
+                Favorite = true,  // Add favorite
+                EncryptedFor = userId
+            },
+            CollectionIds = [Guid.NewGuid().ToString()]
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(existingCipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+
+        var sharedCipher = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = JsonSerializer.Serialize(new { Username = "test", Password = "test" }),
+            Folders = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, newFolderId.ToString().ToUpperInvariant() } }),
+            Favorites = JsonSerializer.Serialize(new Dictionary<string, object> { { userIdKey, true } }),
+            FolderId = newFolderId,
+            Favorite = true
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, userId)
+            .Returns(sharedCipher);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { organizationId, new OrganizationAbility { Id = organizationId } }
+            });
+
+        var result = await sutProvider.Sut.PutShare(cipherId, model);
+
+        Assert.Equal(newFolderId, result.FolderId);
+        Assert.True(result.Favorite);
     }
 }

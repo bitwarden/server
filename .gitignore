@@ -234,6 +234,7 @@ bitwarden_license/src/Sso/Sso.zip
 /identity.json
 /api.json
 /api.public.json
+.serena/
 
 # Serena
 .serena/

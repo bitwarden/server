@@ -1,17 +1,23 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -98,6 +104,57 @@ public class ProviderServiceTests
 
         await sutProvider.GetDependency<IProviderUserRepository>().Received()
             .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CompleteSetupAsync_WithAutoConfirmEnabled_ThrowsUserCannotJoinProviderError(User user, Provider provider,
+        string key,
+        TokenizedPaymentMethod tokenizedPaymentMethod, BillingAddress billingAddress,
+        [ProviderUser] ProviderUser providerUser,
+        SutProvider<ProviderService> sutProvider)
+    {
+        providerUser.ProviderId = provider.Id;
+        providerUser.UserId = user.Id;
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByIdAsync(user.Id).Returns(user);
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetByProviderUserAsync(provider.Id, user.Id).Returns(providerUser);
+
+        var dataProtectionProvider = DataProtectionProvider.Create("ApplicationName");
+        var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
+        sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+
+        var providerBillingService = sutProvider.GetDependency<IProviderBillingService>();
+
+        var customer = new Customer { Id = "customer_id" };
+        providerBillingService.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress).Returns(customer);
+
+        var subscription = new Subscription { Id = "subscription_id" };
+        providerBillingService.SetupSubscription(provider).Returns(subscription);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyDetails = new List<PolicyDetails> { new() { OrganizationId = Guid.NewGuid(), IsProvider = false } };
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(policyRequirement);
+
+        sutProvider.Create();
+
+        var token = protector.Protect(
+            $"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, tokenizedPaymentMethod,
+                billingAddress));
+
+        Assert.Equal(new UserCannotJoinProvider().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -580,6 +637,132 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptUserAsync_WithAutoConfirmEnabledAndPolicyExists_Throws(
+        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetByIdAsync(providerUser.Id)
+            .Returns(providerUser);
+
+        var protector = DataProtectionProvider
+            .Create("ApplicationName")
+            .CreateProtector("ProviderServiceDataProtector");
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+
+        sutProvider.Create();
+
+        providerUser.Email = user.Email;
+        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyDetails = new List<PolicyDetails>
+        {
+            new() { OrganizationId = Guid.NewGuid(), IsProvider = false }
+        };
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(policyRequirement);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token));
+
+        Assert.Equal(new UserCannotJoinProvider().Message, exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_WithAutoConfirmEnabledButNoPolicyExists_Success(
+        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetByIdAsync(providerUser.Id)
+            .Returns(providerUser);
+
+        var protector = DataProtectionProvider
+            .Create("ApplicationName")
+            .CreateProtector("ProviderServiceDataProtector");
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+        sutProvider.Create();
+
+        providerUser.Email = user.Email;
+        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement([]);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(policyRequirement);
+
+        // Act
+        var pu = await sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token);
+
+        // Assert
+        Assert.Null(pu.Email);
+        Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
+        Assert.Equal(user.Id, pu.UserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_WithAutoConfirmDisabled_Success(
+        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser,
+        User user,
+        SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetByIdAsync(providerUser.Id)
+            .Returns(providerUser);
+
+        var protector = DataProtectionProvider
+            .Create("ApplicationName")
+            .CreateProtector("ProviderServiceDataProtector");
+
+        sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("ProviderServiceDataProtector")
+            .Returns(protector);
+        sutProvider.Create();
+
+        providerUser.Email = user.Email;
+        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        // Act
+        var pu = await sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token);
+
+        // Assert
+        Assert.Null(pu.Email);
+        Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
+        Assert.Equal(user.Id, pu.UserId);
+
+        // Verify that policy check was never called when feature flag is disabled
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceive()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+    }
+
+    [Theory, BitAutoData]
     public async Task ConfirmUsersAsync_NoValid(
         [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser pu1,
         [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu2,
@@ -626,12 +809,130 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task ConfirmUsersAsync_WithAutoConfirmEnabledAndPolicyExists_ReturnsError(
+        [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu1, User u1,
+        Provider provider, User confirmingUser, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        pu1.ProviderId = provider.Id;
+        pu1.UserId = u1.Id;
+        var providerUsers = new[] { pu1 };
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetManyAsync([]).ReturnsForAnyArgs(providerUsers);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyDetails = new List<PolicyDetails>
+        {
+            new() { OrganizationId = Guid.NewGuid(), IsProvider = false }
+        };
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(u1.Id)
+            .Returns(policyRequirement);
+
+        var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, confirmingUser.Id);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(new UserCannotJoinProvider().Message, result[0].Item2);
+
+        // Verify user was not confirmed
+        await providerUserRepository.DidNotReceive().ReplaceAsync(Arg.Any<ProviderUser>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUsersAsync_WithAutoConfirmEnabledButNoPolicyExists_Success(
+        [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu1, User u1,
+        Provider provider, User confirmingUser, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        pu1.ProviderId = provider.Id;
+        pu1.UserId = u1.Id;
+        var providerUsers = new[] { pu1 };
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetManyAsync([]).ReturnsForAnyArgs(providerUsers);
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(u1.Id)
+            .Returns(policyRequirement);
+
+        var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, confirmingUser.Id);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("", result[0].Item2);
+
+        // Verify user was confirmed
+        await providerUserRepository.Received(1).ReplaceAsync(Arg.Is<ProviderUser>(pu =>
+            pu.Status == ProviderUserStatusType.Confirmed));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUsersAsync_WithAutoConfirmDisabled_Success(
+        [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu1, User u1,
+        Provider provider, User confirmingUser, SutProvider<ProviderService> sutProvider)
+    {
+        // Arrange
+        pu1.ProviderId = provider.Id;
+        pu1.UserId = u1.Id;
+        var providerUsers = new[] { pu1 };
+
+        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
+        providerUserRepository.GetManyAsync([]).ReturnsForAnyArgs(providerUsers);
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, confirmingUser.Id);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("", result[0].Item2);
+
+        // Verify user was confirmed
+        await providerUserRepository.Received(1).ReplaceAsync(Arg.Is<ProviderUser>(pu =>
+            pu.Status == ProviderUserStatusType.Confirmed));
+
+        // Verify that policy check was never called when feature flag is disabled
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceive()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task SaveUserAsync_UserIdIsInvalid_Throws(ProviderUser providerUser,
         SutProvider<ProviderService> sutProvider)
     {
-        providerUser.Id = default;
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(providerUser, default));
+        providerUser.Id = Guid.Empty;
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.SaveUserAsync(providerUser, Guid.Empty));
         Assert.Equal("Invite the user first.", exception.Message);
     }
 
@@ -757,7 +1058,7 @@ public class ProviderServiceTests
         await organizationRepository.Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == provider.BillingEmail));
 
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
             organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options => options.Email == provider.BillingEmail));
 
@@ -828,9 +1129,9 @@ public class ProviderServiceTests
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var subscriptionItem = GetSubscription(organization.GatewaySubscriptionId);
-        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
+        sutProvider.GetDependency<IStripeAdapter>().GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .Returns(GetSubscription(organization.GatewaySubscriptionId));
-        await sutProvider.GetDependency<IStripeAdapter>().SubscriptionUpdateAsync(
+        await sutProvider.GetDependency<IStripeAdapter>().UpdateSubscriptionAsync(
             organization.GatewaySubscriptionId, SubscriptionUpdateRequest(expectedPlanId, subscriptionItem));
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);

@@ -139,6 +139,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
          [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
          [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
+        userAsymmetricKeys.AccountKeys = null;
         // Localize substitutions to this test.
         var localFactory = new IdentityApplicationFactory();
 
@@ -202,6 +203,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
        [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
+        userAsymmetricKeys.AccountKeys = null;
         // Localize substitutions to this test.
         var localFactory = new IdentityApplicationFactory();
         localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
@@ -233,6 +235,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
          [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
         KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
+        userAsymmetricKeys.AccountKeys = null;
 
         // Localize factory to just this test.
         var localFactory = new IdentityApplicationFactory();
@@ -310,6 +313,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
      [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
     KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism, Guid orgSponsorshipId)
     {
+        userAsymmetricKeys.AccountKeys = null;
 
         // Localize factory to just this test.
         var localFactory = new IdentityApplicationFactory();
@@ -386,6 +390,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
      [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
     KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism, EmergencyAccess emergencyAccess)
     {
+        userAsymmetricKeys.AccountKeys = null;
 
         // Localize factory to just this test.
         var localFactory = new IdentityApplicationFactory();
@@ -455,6 +460,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
      [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
     KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
+        userAsymmetricKeys.AccountKeys = null;
 
         // Localize factory to just this test.
         var localFactory = new IdentityApplicationFactory();

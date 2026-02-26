@@ -95,6 +95,7 @@ public static class OrganizationTestHelpers
             SyncSeats = false,
             UseAutomaticUserConfirmation = true,
             UsePhishingBlocker = true,
+            UseDisableSmAdsForUsers = true,
         });
     }
 

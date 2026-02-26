@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace Bit.Core.Billing.Constants;
+﻿namespace Bit.Core.Billing.Constants;
 
 public static class StripeConstants
 {
@@ -39,20 +37,30 @@ public static class StripeConstants
         }
     }
 
+    public static class CouponExpandablePropertyNames
+    {
+        public const string AppliesTo = "applies_to";
+    }
+
     public static class ErrorCodes
     {
         public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
+        public const string InvoiceUpcomingNone = "invoice_upcoming_none";
         public const string PaymentMethodMicroDepositVerificationAttemptsExceeded = "payment_method_microdeposit_verification_attempts_exceeded";
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
+        public const string ResourceMissing = "resource_missing";
         public const string TaxIdInvalid = "tax_id_invalid";
 
-        public static string[] Get() =>
-            typeof(ErrorCodes)
-                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                .Where(fi => fi is { IsLiteral: true, IsInitOnly: false } && fi.FieldType == typeof(string))
-                .Select(fi => (string)fi.GetValue(null)!)
-                .ToArray();
+        public static string[] InputErrors() =>
+        [
+            CustomerTaxLocationInvalid,
+            InvoiceUpcomingNone,
+            PaymentMethodMicroDepositVerificationAttemptsExceeded,
+            PaymentMethodMicroDepositVerificationDescriptorCodeMismatch,
+            PaymentMethodMicroDepositVerificationTimeout,
+            TaxIdInvalid
+        ];
     }
 
     public static class InvoiceStatus
@@ -65,8 +73,10 @@ public static class StripeConstants
     public static class MetadataKeys
     {
         public const string BraintreeCustomerId = "btCustomerId";
+        public const string BraintreeTransactionId = "btTransactionId";
         public const string InvoiceApproved = "invoice_approved";
         public const string OrganizationId = "organizationId";
+        public const string PayPalTransactionId = "btPayPalTransactionId";
         public const string ProviderId = "providerId";
         public const string Region = "region";
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";

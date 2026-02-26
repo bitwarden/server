@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Microsoft.IdentityModel.Logging;
 
 namespace Bit.EventsProcessor;
 
@@ -30,15 +29,16 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
-        // Hosted Services
+        // Add event integration services
+        services.AddDistributedCache(globalSettings);
         services.AddAzureServiceBusListeners(globalSettings);
         services.AddHostedService<AzureQueueHostedService>();
     }
 
     public void Configure(IApplicationBuilder app)
     {
-        IdentityModelEventSource.ShowPII = true;
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseRouting();
