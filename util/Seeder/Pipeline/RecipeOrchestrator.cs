@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,9 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bit.Seeder.Pipeline;
 
 /// <summary>
-/// Orchestrates preset-based seeding by coordinating the Pipeline infrastructure.
+/// Orchestrates recipe-based seeding by coordinating the Pipeline infrastructure.
 /// </summary>
-internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
+internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
 {
     /// <summary>
     /// Executes a preset by registering its recipe, building a service provider, and running all steps.
@@ -40,6 +41,56 @@ internal sealed class PresetExecutor(DatabaseContext db, IMapper mapper)
         using var serviceProvider = services.BuildServiceProvider();
         var committer = new BulkCommitter(db, mapper);
         var executor = new RecipeExecutor(presetName, serviceProvider, committer);
+
+        return executor.Execute();
+    }
+
+    /// <summary>
+    /// Executes a recipe built programmatically from CLI options.
+    /// </summary>
+    internal ExecutionResult Execute(
+        OrganizationVaultOptions options,
+        IPasswordHasher<User> passwordHasher,
+        IManglerService manglerService)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(passwordHasher);
+        services.AddSingleton(manglerService);
+        services.AddSingleton(new SeederSettings(options.Password));
+
+        var recipeName = "from-options";
+        var builder = services.AddRecipe(recipeName);
+
+        builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType);
+        builder.AddOwner();
+        builder.WithGenerator(options.Domain);
+        builder.AddUsers(options.Users, options.RealisticStatusMix);
+
+        if (options.Groups > 0)
+        {
+            builder.AddGroups(options.Groups);
+        }
+
+        if (options.StructureModel.HasValue)
+        {
+            builder.AddCollections(options.StructureModel.Value);
+        }
+        else if (options.Ciphers > 0)
+        {
+            builder.AddCollections(1);
+        }
+
+        if (options.Ciphers > 0)
+        {
+            builder.AddFolders();
+            builder.AddCiphers(options.Ciphers, options.CipherTypeDistribution, options.PasswordDistribution);
+        }
+
+        builder.Validate();
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var committer = new BulkCommitter(db, mapper);
+        var executor = new RecipeExecutor(recipeName, serviceProvider, committer);
 
         return executor.Execute();
     }
