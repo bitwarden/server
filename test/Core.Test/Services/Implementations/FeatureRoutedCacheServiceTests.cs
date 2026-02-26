@@ -19,41 +19,11 @@ namespace Bit.Core.Test.Services.Implementations;
 public class FeatureRoutedCacheServiceTests
 {
     [Theory, BitAutoData]
-    public async Task GetOrganizationAbilitiesAsync_WhenFeatureIsEnabled_ReturnsFromVNextService(
+    public async Task GetOrganizationAbilitiesAsync_ReturnsFromInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         IDictionary<Guid, OrganizationAbility> expectedResult)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-        sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
-            .Returns(expectedResult);
-
-        // Act
-        var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync();
-
-        // Assert
-        Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .GetOrganizationAbilitiesAsync();
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetOrganizationAbilitiesAsync();
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationAbilitiesAsync_WhenFeatureIsDisabled_ReturnsFromInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        IDictionary<Guid, OrganizationAbility> expectedResult)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
         sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetOrganizationAbilitiesAsync()
             .Returns(expectedResult);
@@ -66,51 +36,15 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .GetOrganizationAbilitiesAsync();
-
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetOrganizationAbilitiesAsync();
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationAbilityAsync_WhenFeatureIsEnabled_ReturnsFromVNextService(
+    public async Task GetOrganizationAbilityAsync_ReturnsFromInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         Guid orgId,
         OrganizationAbility expectedResult)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-        sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .GetOrganizationAbilityAsync(orgId)
-            .Returns(expectedResult);
-
-        // Act
-        var result = await sutProvider.Sut.GetOrganizationAbilityAsync(orgId);
-
-        // Assert
-        Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .GetOrganizationAbilityAsync(orgId);
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetOrganizationAbilityAsync(orgId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationAbilityAsync_WhenFeatureIsDisabled_ReturnsFromInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Guid orgId,
-        OrganizationAbility expectedResult)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
         sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetOrganizationAbilityAsync(orgId)
             .Returns(expectedResult);
@@ -123,49 +57,14 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .GetOrganizationAbilityAsync(orgId);
-
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetOrganizationAbilityAsync(orgId);
     }
 
     [Theory, BitAutoData]
-    public async Task GetProviderAbilitiesAsync_WhenFeatureIsEnabled_ReturnsFromVNextService(
+    public async Task GetProviderAbilitiesAsync_ReturnsFromInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         IDictionary<Guid, ProviderAbility> expectedResult)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-        sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .GetProviderAbilitiesAsync()
-            .Returns(expectedResult);
-
-        // Act
-        var result = await sutProvider.Sut.GetProviderAbilitiesAsync();
-
-        // Assert
-        Assert.Equal(expectedResult, result);
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .GetProviderAbilitiesAsync();
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetProviderAbilitiesAsync();
-    }
-
-
-    [Theory, BitAutoData]
-    public async Task GetProviderAbilitiesAsync_WhenFeatureIsDisabled_ReturnsFromInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        IDictionary<Guid, ProviderAbility> expectedResult)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
         sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .GetProviderAbilitiesAsync()
             .Returns(expectedResult);
@@ -178,45 +77,13 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .GetProviderAbilitiesAsync();
-
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetProviderAbilitiesAsync();
     }
 
     [Theory, BitAutoData]
-    public async Task UpsertOrganizationAbilityAsync_WhenFeatureIsEnabled_CallsVNextService(
+    public async Task UpsertOrganizationAbilityAsync_CallsInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         Organization organization)
     {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.UpsertOrganizationAbilityAsync(organization);
-
-        // Assert
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .UpsertOrganizationAbilityAsync(organization);
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetProviderAbilitiesAsync();
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpsertOrganizationAbilityAsync_WhenFeatureIsDisabled_CallsInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Organization organization)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
         // Act
         await sutProvider.Sut.UpsertOrganizationAbilityAsync(organization);
 
@@ -224,45 +91,13 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(organization);
-
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .GetProviderAbilitiesAsync();
     }
 
     [Theory, BitAutoData]
-    public async Task UpsertProviderAbilityAsync_WhenFeatureIsEnabled_CallsVNextService(
+    public async Task UpsertProviderAbilityAsync_CallsInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         Provider provider)
     {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.UpsertProviderAbilityAsync(provider);
-
-        // Assert
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .UpsertProviderAbilityAsync(provider);
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .UpsertProviderAbilityAsync(provider);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpsertProviderAbilityAsync_WhenFeatureIsDisabled_CallsInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Provider provider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
         // Act
         await sutProvider.Sut.UpsertProviderAbilityAsync(provider);
 
@@ -270,45 +105,13 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .UpsertProviderAbilityAsync(provider);
-
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .UpsertProviderAbilityAsync(provider);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteOrganizationAbilityAsync_WhenFeatureIsEnabled_CallsVNextService(
+    public async Task DeleteOrganizationAbilityAsync_CallsInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         Guid organizationId)
     {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.DeleteOrganizationAbilityAsync(organizationId);
-
-        // Assert
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .DeleteOrganizationAbilityAsync(organizationId);
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .DeleteOrganizationAbilityAsync(organizationId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteOrganizationAbilityAsync_WhenFeatureIsDisabled_CallsInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Guid organizationId)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
         // Act
         await sutProvider.Sut.DeleteOrganizationAbilityAsync(organizationId);
 
@@ -316,45 +119,13 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .DeleteOrganizationAbilityAsync(organizationId);
-
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .DeleteOrganizationAbilityAsync(organizationId);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteProviderAbilityAsync_WhenFeatureIsEnabled_CallsVNextService(
+    public async Task DeleteProviderAbilityAsync_CallsInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         Guid providerId)
     {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.DeleteProviderAbilityAsync(providerId);
-
-        // Assert
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .DeleteProviderAbilityAsync(providerId);
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .DeleteProviderAbilityAsync(providerId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteProviderAbilityAsync_WhenFeatureIsDisabled_CallsInMemoryService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Guid providerId)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
         // Act
         await sutProvider.Sut.DeleteProviderAbilityAsync(providerId);
 
@@ -362,56 +133,18 @@ public class FeatureRoutedCacheServiceTests
         await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
             .Received(1)
             .DeleteProviderAbilityAsync(providerId);
-
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .DeleteProviderAbilityAsync(providerId);
     }
 
     [Theory, BitAutoData]
-    public async Task BaseUpsertOrganizationAbilityAsync_WhenFeatureIsEnabled_CallsVNextService(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
+    public async Task BaseUpsertOrganizationAbilityAsync_CallsServiceBusCache(
         Organization organization)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.BaseUpsertOrganizationAbilityAsync(organization);
-
-        // Assert
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .UpsertOrganizationAbilityAsync(organization);
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .UpsertOrganizationAbilityAsync(organization);
-    }
-
-    [Theory, BitAutoData]
-    public async Task BaseUpsertOrganizationAbilityAsync_WhenFeatureIsDisabled_CallsServiceBusCache(
-        Organization organization)
-    {
-        // Arrange
-        var featureService = Substitute.For<IFeatureService>();
-
         var currentCacheService = CreateCurrentCacheMockService();
-
-        featureService
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
-        var sutProvider = Substitute.For<FeatureRoutedCacheService>(
-            featureService,
-            Substitute.For<IVNextInMemoryApplicationCacheService>(),
-            currentCacheService,
-            Substitute.For<IApplicationCacheServiceBusMessaging>());
+        var sut = new FeatureRoutedCacheService(currentCacheService);
 
         // Act
-        await sutProvider.BaseUpsertOrganizationAbilityAsync(organization);
+        await sut.BaseUpsertOrganizationAbilityAsync(organization);
 
         // Assert
         await currentCacheService
@@ -419,14 +152,56 @@ public class FeatureRoutedCacheServiceTests
             .BaseUpsertOrganizationAbilityAsync(organization);
     }
 
+    [Theory, BitAutoData]
+    public async Task BaseUpsertOrganizationAbilityAsync_WhenServiceIsNotServiceBusCache_ThrowsException(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Organization organization)
+    {
+        // Act
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.BaseUpsertOrganizationAbilityAsync(organization));
+
+        // Assert
+        Assert.Equal(ExpectedErrorMessage, ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BaseDeleteOrganizationAbilityAsync_CallsServiceBusCache(
+        Guid organizationId)
+    {
+        // Arrange
+        var currentCacheService = CreateCurrentCacheMockService();
+        var sut = new FeatureRoutedCacheService(currentCacheService);
+
+        // Act
+        await sut.BaseDeleteOrganizationAbilityAsync(organizationId);
+
+        // Assert
+        await currentCacheService
+            .Received(1)
+            .BaseDeleteOrganizationAbilityAsync(organizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task BaseDeleteOrganizationAbilityAsync_WhenServiceIsNotServiceBusCache_ThrowsException(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid organizationId)
+    {
+        // Act
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sutProvider.Sut.BaseDeleteOrganizationAbilityAsync(organizationId));
+
+        // Assert
+        Assert.Equal(ExpectedErrorMessage, ex.Message);
+    }
+
     /// <summary>
-    /// Our SUT is using a method that is not part of the IVCurrentInMemoryApplicationCacheService,
-    /// so AutoFixture’s auto-created mock won’t work.
+    /// Our SUT uses a method that is not part of IVCurrentInMemoryApplicationCacheService,
+    /// so AutoFixture's auto-created mock won't work.
     /// </summary>
-    /// <returns></returns>
     private static InMemoryServiceBusApplicationCacheService CreateCurrentCacheMockService()
     {
-        var currentCacheService = Substitute.For<InMemoryServiceBusApplicationCacheService>(
+        return Substitute.For<InMemoryServiceBusApplicationCacheService>(
             Substitute.For<IOrganizationRepository>(),
             Substitute.For<IProviderRepository>(),
             new GlobalSettings
@@ -439,103 +214,8 @@ public class FeatureRoutedCacheServiceTests
                     ApplicationCacheSubscriptionName = "test-subscription"
                 }
             });
-        return currentCacheService;
     }
 
-    [Theory, BitAutoData]
-    public async Task BaseUpsertOrganizationAbilityAsync_WhenFeatureIsDisabled_AndServiceIsNotServiceBusCache_ThrowsException(
-        SutProvider<FeatureRoutedCacheService> sutProvider,
-        Organization organization)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
-        // Act
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => sutProvider.Sut.BaseUpsertOrganizationAbilityAsync(organization));
-
-        // Assert
-        Assert.Equal(
-            ExpectedErrorMessage,
-            ex.Message);
-    }
-
-    private static string ExpectedErrorMessage
-    {
-        get => "Expected inMemoryApplicationCacheService to be of type InMemoryServiceBusApplicationCacheService";
-    }
-
-    [Theory, BitAutoData]
-    public async Task BaseDeleteOrganizationAbilityAsync_WhenFeatureIsEnabled_CallsVNextService(
-            SutProvider<FeatureRoutedCacheService> sutProvider,
-            Guid organizationId)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.BaseDeleteOrganizationAbilityAsync(organizationId);
-
-        // Assert
-        await sutProvider.GetDependency<IVNextInMemoryApplicationCacheService>()
-            .Received(1)
-            .DeleteOrganizationAbilityAsync(organizationId);
-
-        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
-            .DidNotReceive()
-            .DeleteOrganizationAbilityAsync(organizationId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task BaseDeleteOrganizationAbilityAsync_WhenFeatureIsDisabled_CallsServiceBusCache(
-        Guid organizationId)
-    {
-        // Arrange
-        var featureService = Substitute.For<IFeatureService>();
-
-        var currentCacheService = CreateCurrentCacheMockService();
-
-        featureService
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
-        var sutProvider = Substitute.For<FeatureRoutedCacheService>(
-            featureService,
-            Substitute.For<IVNextInMemoryApplicationCacheService>(),
-            currentCacheService,
-            Substitute.For<IApplicationCacheServiceBusMessaging>());
-
-        // Act
-        await sutProvider.BaseDeleteOrganizationAbilityAsync(organizationId);
-
-        // Assert
-        await currentCacheService
-            .Received(1)
-            .BaseDeleteOrganizationAbilityAsync(organizationId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task
-        BaseDeleteOrganizationAbilityAsync_WhenFeatureIsDisabled_AndServiceIsNotServiceBusCache_ThrowsException(
-            SutProvider<FeatureRoutedCacheService> sutProvider,
-            Guid organizationId)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM23845_VNextApplicationCache)
-            .Returns(false);
-
-        // Act
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sutProvider.Sut.BaseDeleteOrganizationAbilityAsync(organizationId));
-
-        // Assert
-        Assert.Equal(
-            ExpectedErrorMessage,
-            ex.Message);
-    }
+    private static string ExpectedErrorMessage =>
+        "Expected inMemoryApplicationCacheService to be of type InMemoryServiceBusApplicationCacheService";
 }

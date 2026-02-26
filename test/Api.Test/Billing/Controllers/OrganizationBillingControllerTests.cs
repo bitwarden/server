@@ -1,8 +1,6 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -20,50 +18,6 @@ namespace Bit.Api.Test.Billing.Controllers;
 [SutProviderCustomize]
 public class OrganizationBillingControllerTests
 {
-    [Theory, BitAutoData]
-    public async Task GetMetadataAsync_Unauthorized_ReturnsUnauthorized(
-        Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(false);
-
-        var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
-
-        AssertUnauthorized(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetMetadataAsync_MetadataNull_NotFound(
-        Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadata)null);
-
-        var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
-
-        AssertNotFound(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetMetadataAsync_OK(
-        Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true, 10));
-
-        var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
-
-        Assert.IsType<Ok<OrganizationMetadata>>(result);
-
-        var response = ((Ok<OrganizationMetadata>)result).Value;
-
-        Assert.True(response.IsOnSecretsManagerStandalone);
-        Assert.Equal(10, response.OrganizationOccupiedSeats);
-    }
-
     [Theory, BitAutoData]
     public async Task GetHistoryAsync_Unauthorized_ReturnsUnauthorized(
         Guid organizationId,
