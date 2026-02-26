@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
@@ -222,7 +223,7 @@ public class InitPendingOrganizationCommandTests
 
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceive()
-            .InitializeOrganizationAsync(Arg.Any<Organization>(), Arg.Any<OrganizationInitializationAction>());
+            .InitializeOrganizationAsync(Arg.Any<Organization>(), Arg.Any<Func<DbConnection, DbTransaction, Task>>());
     }
 
     [Theory, BitAutoData]
@@ -241,7 +242,7 @@ public class InitPendingOrganizationCommandTests
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         await organizationRepository.Received(1).InitializeOrganizationAsync(
-            org, Arg.Any<OrganizationInitializationAction>());
+            org, Arg.Any<Func<DbConnection, DbTransaction, Task>>());
 
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -271,7 +272,7 @@ public class InitPendingOrganizationCommandTests
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         await organizationRepository.Received(1).InitializeOrganizationAsync(
-            org, Arg.Any<OrganizationInitializationAction>());
+            org, Arg.Any<Func<DbConnection, DbTransaction, Task>>());
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1)
             .CreateAsync(
@@ -304,7 +305,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .BuildConfirmOwnerAction(Arg.Any<OrganizationUser>())
-            .Returns(new OrganizationInitializationAction((conn, trans, ctx) => Task.CompletedTask));
+            .Returns((Func<DbConnection, DbTransaction, Task>)((_, __) => Task.CompletedTask));
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(request.User.Id)

@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
@@ -710,11 +711,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public OrganizationInitializationAction BuildConfirmOwnerAction(OrganizationUser organizationUser)
+    public Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(OrganizationUser organizationUser)
     {
-        return async (SqlConnection? connection, SqlTransaction? transaction, object? context) =>
+        return async (DbConnection connection, DbTransaction transaction) =>
         {
-            await connection!.ExecuteAsync(
+            await connection.ExecuteAsync(
                 "[dbo].[OrganizationUser_Update]",
                 organizationUser,
                 commandType: CommandType.StoredProcedure,

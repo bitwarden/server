@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
@@ -14,7 +15,6 @@ using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -980,11 +980,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public OrganizationInitializationAction BuildConfirmOwnerAction(Core.Entities.OrganizationUser organizationUser)
+    public Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(Core.Entities.OrganizationUser organizationUser)
     {
-        return async (SqlConnection? _, SqlTransaction? _, object? context) =>
+        return async (DbConnection connection, DbTransaction transaction) =>
         {
-            var dbContext = (DatabaseContext)context!;
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            dbContext.Database.SetDbConnection(connection);
+            await dbContext.Database.UseTransactionAsync(transaction);
 
             var efOrganizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUser.Id);
             if (efOrganizationUser != null)

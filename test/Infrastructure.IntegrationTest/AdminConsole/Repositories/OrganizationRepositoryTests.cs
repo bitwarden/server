@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -342,8 +343,8 @@ public class OrganizationRepositoryTests
         organization.PrivateKey = "private-key";
         organization.RevisionDate = DateTime.UtcNow;
 
-        OrganizationInitializationAction failingAction =
-            (Microsoft.Data.SqlClient.SqlConnection? _, Microsoft.Data.SqlClient.SqlTransaction? _, object? __) =>
+        Func<DbConnection, DbTransaction, Task> failingAction =
+            (DbConnection _, DbTransaction __) =>
             {
                 throw new Exception("Simulated failure to test rollback");
             };

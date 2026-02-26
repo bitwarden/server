@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -466,12 +467,15 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.RevisionDate, requestDate));
     }
 
-    public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, OrganizationInitializationAction confirmOwnerAction)
+    public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         try
         {
@@ -487,7 +491,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 await dbContext.SaveChangesAsync();
             }
 
-            await confirmOwnerAction(connection: null, transaction: null, context: dbContext);
+            await confirmOwnerAction(connection, transaction);
 
             await transaction.CommitAsync();
         }

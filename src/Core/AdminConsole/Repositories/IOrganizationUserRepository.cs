@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
@@ -117,5 +118,5 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="organizationUser">The organization user entity with updated properties (status, userId, key)</param>
     /// <returns>An action that can be executed within a transaction</returns>
-    OrganizationInitializationAction BuildConfirmOwnerAction(OrganizationUser organizationUser);
+    Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(OrganizationUser organizationUser);
 }

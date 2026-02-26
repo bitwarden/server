@@ -1,21 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Microsoft.Data.SqlClient;
 
 #nullable enable
 
 namespace Bit.Core.Repositories;
-
-/// <summary>
-/// Represents a database action that can be executed within a shared transaction
-/// during organization initialization. Used to atomically update the organization
-/// and confirm the first org user together.
-/// </summary>
-public delegate Task OrganizationInitializationAction(SqlConnection? connection = null,
-    SqlTransaction? transaction = null,
-    object? context = null);
 
 public interface IOrganizationRepository : IRepository<Organization, Guid>
 {
@@ -84,5 +75,5 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="organization">The organization entity with updated properties (enabled, keys, status)</param>
     /// <param name="confirmOwnerAction">Action to confirm the organization owner, obtained from
     /// <see cref="IOrganizationUserRepository.BuildConfirmOwnerAction"/></param>
-    Task InitializeOrganizationAsync(Organization organization, OrganizationInitializationAction confirmOwnerAction);
+    Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction);
 }

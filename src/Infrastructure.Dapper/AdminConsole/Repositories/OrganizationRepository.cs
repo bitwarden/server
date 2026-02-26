@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
@@ -278,7 +279,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task InitializeOrganizationAsync(Organization organization, OrganizationInitializationAction confirmOwnerAction)
+    public async Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.OpenAsync();
