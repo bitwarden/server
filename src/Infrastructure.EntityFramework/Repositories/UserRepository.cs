@@ -601,5 +601,4 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             item.Collection.RevisionDate = DateTime.UtcNow;
         }
     }
-
 }

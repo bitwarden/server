@@ -846,5 +846,4 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     public Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds,
         string defaultCollectionName) =>
         CreateDefaultCollectionsAsync(organizationId, organizationUserIds, defaultCollectionName);
-
 }
