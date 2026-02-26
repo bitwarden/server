@@ -15,7 +15,8 @@ BEGIN
             OU.[Type]        AS OrganizationUserType,
             OU.[Status]      AS OrganizationUserStatus,
             OU.[Permissions] AS OrganizationUserPermissionsData,
-            OU.[UserId]      AS UserId
+            OU.[UserId]      AS UserId,
+            OU.[RevocationReason] AS OrganizationUserRevocationReason
         FROM [dbo].[PolicyView] P
                  INNER JOIN [dbo].[OrganizationUserView] OU ON P.[OrganizationId] = OU.[OrganizationId]
                  INNER JOIN [dbo].[OrganizationView] O ON P.[OrganizationId] = O.[Id]
@@ -37,7 +38,8 @@ BEGIN
                  OU.[Type]        AS OrganizationUserType,
                  OU.[Status]      AS OrganizationUserStatus,
                  OU.[Permissions] AS OrganizationUserPermissionsData,
-                 U.[Id]           AS UserId
+                 U.[Id]           AS UserId,
+                 OU.[RevocationReason] AS OrganizationUserRevocationReason
              FROM [dbo].[PolicyView] P
                       INNER JOIN [dbo].[OrganizationUserView] OU ON P.[OrganizationId] = OU.[OrganizationId]
                       INNER JOIN [dbo].[OrganizationView] O ON P.[OrganizationId] = O.[Id]
@@ -75,7 +77,8 @@ BEGIN
         AU.OrganizationUserStatus,
         AU.OrganizationUserPermissionsData,
         AU.UserId,
-        IIF(PL.UserId IS NOT NULL, 1, 0) AS IsProvider
+        IIF(PL.UserId IS NOT NULL, 1, 0) AS IsProvider,
+        AU.OrganizationUserRevocationReason
     FROM AllUsers AU
              LEFT JOIN ProviderLookup PL
                        ON AU.UserId = PL.UserId

@@ -81,6 +81,8 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// </summary>
     public bool AccessSecretsManager { get; set; }
 
+    public RevocationReason? RevocationReason { get; set; }
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

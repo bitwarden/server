@@ -33,7 +33,8 @@ BEGIN
             AU.[Email],
             OU.[Type] AS [OrganizationUserType],
             OU.[Status] AS [OrganizationUserStatus],
-            OU.[Permissions] AS [OrganizationUserPermissionsData]
+            OU.[Permissions] AS [OrganizationUserPermissionsData],
+            OU.[RevocationReason] AS [OrganizationUserRevocationReason]
         FROM [dbo].[OrganizationUserView] OU
             INNER JOIN GivenOrgUsers AU ON AU.[UserId] = OU.[UserId]
         UNION ALL
@@ -44,7 +45,8 @@ BEGIN
             AU.[Email],
             OU.[Type] AS [OrganizationUserType],
             OU.[Status] AS [OrganizationUserStatus],
-            OU.[Permissions] AS [OrganizationUserPermissionsData]
+            OU.[Permissions] AS [OrganizationUserPermissionsData],
+            OU.[RevocationReason] AS [OrganizationUserRevocationReason]
         FROM [dbo].[OrganizationUserView] OU
             INNER JOIN GivenOrgUsers AU ON AU.[Email] = OU.[Email]
     )
@@ -59,6 +61,7 @@ BEGIN
             OU.[OrganizationUserType],
             OU.[OrganizationUserStatus],
             OU.[OrganizationUserPermissionsData],
+            OU.[OrganizationUserRevocationReason],
             -- Check if user is a provider for the organization
             CASE
                 WHEN EXISTS (

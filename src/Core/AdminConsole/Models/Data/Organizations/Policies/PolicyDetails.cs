@@ -30,6 +30,7 @@ public class PolicyDetails
     /// True if the user is also a ProviderUser for the organization, false otherwise.
     /// </summary>
     public bool IsProvider { get; set; }
+    public RevocationReason? OrganizationUserRevocationReason { get; set; }
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
         => CoreHelpers.LoadClassFromJsonData<T>(PolicyData);

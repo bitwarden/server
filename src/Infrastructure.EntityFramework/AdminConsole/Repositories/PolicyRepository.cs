@@ -88,7 +88,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                 gou.UserId,
                 ou.Type,
                 ou.Status,
-                ou.Permissions
+                ou.Permissions,
+                ou.RevocationReason
             };
 
         var orgUsersLinkedByEmail =
@@ -102,7 +103,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                 gou.UserId,
                 ou.Type,
                 ou.Status,
-                ou.Permissions
+                ou.Permissions,
+                ou.RevocationReason
             };
 
         var allAffectedOrgUsers = orgUsersLinkedByEmail.Union(orgUsersLinkedByUserId);
@@ -139,7 +141,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                 OrganizationUserType = ou.Type,
                 OrganizationUserStatus = ou.Status,
                 OrganizationUserPermissionsData = ou.Permissions,
-                IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+                IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId),
+                OrganizationUserRevocationReason = ou.RevocationReason
             };
 
         return await policyWithAffectedUsers.ToListAsync();
@@ -191,7 +194,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                                        OrganizationUserType = ou.Type,
                                        OrganizationUserStatus = ou.Status,
                                        OrganizationUserPermissionsData = ou.Permissions,
-                                       UserId = ou.UserId.Value
+                                       UserId = ou.UserId.Value,
+                                       OrganizationUserRevocationReason = ou.RevocationReason
                                    }).ToListAsync();
 
         // Branch 2: Invited users
@@ -214,7 +218,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                                       OrganizationUserType = ou.Type,
                                       OrganizationUserStatus = ou.Status,
                                       OrganizationUserPermissionsData = ou.Permissions,
-                                      UserId = u.Id
+                                      UserId = u.Id,
+                                      OrganizationUserRevocationReason = ou.RevocationReason
                                   }).ToListAsync();
 
         // Combine results with the provider lookup
@@ -229,7 +234,8 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
                 OrganizationUserStatus = item.OrganizationUserStatus,
                 OrganizationUserPermissionsData = item.OrganizationUserPermissionsData,
                 UserId = item.UserId,
-                IsProvider = providerSet.Contains((item.UserId, item.OrganizationId))
+                IsProvider = providerSet.Contains((item.UserId, item.OrganizationId)),
+                OrganizationUserRevocationReason = item.OrganizationUserRevocationReason
             });
 
         return allResults.ToList();
