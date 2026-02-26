@@ -40,7 +40,7 @@ RUN case "$TARGETPLATFORM" in \
     #     RID=linux-arm && \
     #     ARCH_PACKAGES="gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc6-dev-armhf-cross" \
     #     ;; \
-    # *) \
+    *) \
         echo "Unsupported platform: $TARGETPLATFORM" && exit 1 \
         ;; \
     esac \
