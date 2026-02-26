@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Enums;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -39,17 +41,20 @@ public class CreateOrganizationReportV2Command : ICreateOrganizationReportV2Comm
             throw new BadRequestException(errorMessage);
         }
 
-        var reportFileId = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        var fileData = new OrganizationReportFileData
+        {
+            Id = CoreHelpers.SecureRandomString(32, upper: false, special: false),
+            Validated = false
+        };
 
         var organizationReport = new OrganizationReport
         {
             OrganizationId = request.OrganizationId,
-            ReportData = string.Empty,
+            Type = OrganizationReportType.File,
             CreationDate = DateTime.UtcNow,
             ContentEncryptionKey = request.ContentEncryptionKey ?? string.Empty,
             SummaryData = request.SummaryData,
             ApplicationData = request.ApplicationData,
-            FileId = reportFileId,
             ApplicationCount = request.ReportMetrics?.ApplicationCount,
             ApplicationAtRiskCount = request.ReportMetrics?.ApplicationAtRiskCount,
             CriticalApplicationCount = request.ReportMetrics?.CriticalApplicationCount,
@@ -64,6 +69,7 @@ public class CreateOrganizationReportV2Command : ICreateOrganizationReportV2Comm
             CriticalPasswordAtRiskCount = request.ReportMetrics?.CriticalPasswordAtRiskCount,
             RevisionDate = DateTime.UtcNow
         };
+        organizationReport.SetReportFileData(fileData);
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
 

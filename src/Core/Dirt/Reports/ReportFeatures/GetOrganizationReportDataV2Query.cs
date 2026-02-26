@@ -43,7 +43,13 @@ public class GetOrganizationReportDataV2Query : IGetOrganizationReportDataV2Quer
             throw new NotFoundException("Report not found");
         }
 
-        var downloadUrl = await _storageService.GetReportDataDownloadUrlAsync(report, reportFileId);
+        var fileData = report.GetReportFileData();
+        if (fileData == null)
+        {
+            throw new NotFoundException("Report file data not found");
+        }
+
+        var downloadUrl = await _storageService.GetReportDataDownloadUrlAsync(report, fileData);
 
         return new OrganizationReportDataFileStorageResponse { DownloadUrl = downloadUrl };
     }

@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -18,7 +19,7 @@ public class CreateOrganizationReportV2CommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task CreateAsync_Success_ReturnsReportAndGeneratesFileId(
+    public async Task CreateAsync_Success_ReturnsReportWithSerializedFileData(
         SutProvider<CreateOrganizationReportV2Command> sutProvider)
     {
         // Arrange
@@ -40,12 +41,17 @@ public class CreateOrganizationReportV2CommandTests
 
         // Assert
         Assert.NotNull(report);
-        Assert.NotNull(report.FileId);
-        Assert.NotEmpty(report.FileId);
-        Assert.Equal(32, report.FileId.Length); // SecureRandomString(32)
-        Assert.Matches("^[a-z0-9]+$", report.FileId); // Only lowercase alphanumeric
+        Assert.Equal(OrganizationReportType.File, report.Type);
 
-        Assert.Empty(report.ReportData);
+        // ReportData should contain serialized OrganizationReportFileData
+        Assert.NotEmpty(report.ReportData);
+        var fileData = report.GetReportFileData();
+        Assert.NotNull(fileData);
+        Assert.NotNull(fileData.Id);
+        Assert.Equal(32, fileData.Id.Length);
+        Assert.Matches("^[a-z0-9]+$", fileData.Id);
+        Assert.False(fileData.Validated);
+
         Assert.Equal(request.SummaryData, report.SummaryData);
         Assert.Equal(request.ApplicationData, report.ApplicationData);
 
@@ -53,10 +59,9 @@ public class CreateOrganizationReportV2CommandTests
             .Received(1)
             .CreateAsync(Arg.Is<OrganizationReport>(r =>
                 r.OrganizationId == request.OrganizationId &&
-                r.ReportData == string.Empty &&
+                r.Type == OrganizationReportType.File &&
                 r.SummaryData == request.SummaryData &&
                 r.ApplicationData == request.ApplicationData &&
-                r.FileId != null && r.FileId.Length == 32 &&
                 r.ContentEncryptionKey == "test-encryption-key"));
     }
 

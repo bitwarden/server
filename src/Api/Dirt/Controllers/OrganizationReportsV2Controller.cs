@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Services;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -25,6 +26,7 @@ public class OrganizationReportsV2Controller : Controller
     private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
     private readonly IGetOrganizationReportDataV2Query _getDataQuery;
     private readonly IUpdateOrganizationReportCommand _updateOrganizationReportCommand;
+    private readonly IOrganizationReportRepository _organizationReportRepo;
 
     public OrganizationReportsV2Controller(
         ICurrentContext currentContext,
@@ -34,7 +36,8 @@ public class OrganizationReportsV2Controller : Controller
         IUpdateOrganizationReportDataV2Command updateDataCommand,
         IGetOrganizationReportQuery getOrganizationReportQuery,
         IGetOrganizationReportDataV2Query getDataQuery,
-        IUpdateOrganizationReportCommand updateOrganizationReportCommand)
+        IUpdateOrganizationReportCommand updateOrganizationReportCommand,
+        IOrganizationReportRepository organizationReportRepo)
     {
         _currentContext = currentContext;
         _applicationCacheService = applicationCacheService;
@@ -44,6 +47,7 @@ public class OrganizationReportsV2Controller : Controller
         _getOrganizationReportQuery = getOrganizationReportQuery;
         _getDataQuery = getDataQuery;
         _updateOrganizationReportCommand = updateOrganizationReportCommand;
+        _organizationReportRepo = organizationReportRepo;
     }
 
     private async Task AuthorizeAsync(Guid organizationId)
@@ -79,10 +83,13 @@ public class OrganizationReportsV2Controller : Controller
 
         var report = await _createCommand.CreateAsync(request);
 
+        var fileData = report.GetReportFileData()!;
+
         return new OrganizationReportV2ResponseModel
         {
-            ReportDataUploadUrl = await _storageService.GetReportDataUploadUrlAsync(report, report.FileId!),
-            ReportResponse = new OrganizationReportResponseModel(report)
+            ReportDataUploadUrl = await _storageService.GetReportDataUploadUrlAsync(report, fileData),
+            ReportResponse = new OrganizationReportResponseModel(report),
+            FileUploadType = _storageService.FileUploadType
         };
     }
 
@@ -129,7 +136,8 @@ public class OrganizationReportsV2Controller : Controller
         return new OrganizationReportV2ResponseModel
         {
             ReportDataUploadUrl = uploadUrl,
-            ReportResponse = new OrganizationReportResponseModel(report)
+            ReportResponse = new OrganizationReportResponseModel(report),
+            FileUploadType = _storageService.FileUploadType
         };
     }
 
@@ -157,14 +165,27 @@ public class OrganizationReportsV2Controller : Controller
             throw new BadRequestException("Invalid report ID");
         }
 
-        if (report.FileId != reportFileId)
+        var fileData = report.GetReportFileData();
+        if (fileData == null || fileData.Id != reportFileId)
         {
             throw new NotFoundException();
         }
 
         await Request.GetFileAsync(async (stream) =>
         {
-            await _storageService.UploadReportDataAsync(report, reportFileId, stream);
+            await _storageService.UploadReportDataAsync(report, fileData, stream);
         });
+
+        var (valid, length) = await _storageService.ValidateFileAsync(report, fileData, 0, Constants.FileSize501mb);
+        if (!valid)
+        {
+            throw new BadRequestException("File received does not match expected constraints.");
+        }
+
+        fileData.Validated = true;
+        fileData.Size = length;
+        report.SetReportFileData(fileData);
+        report.RevisionDate = DateTime.UtcNow;
+        await _organizationReportRepo.ReplaceAsync(report);
     }
 }
