@@ -50,6 +50,12 @@ public class PatchUserCommand : IPatchUserCommand
                     {
                         operationHandled = handled;
                     }
+                    // Re-fetch to pick up status changes persisted by restore/revoke
+                    if (handled)
+                    {
+                        orgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id)
+                            ?? throw new NotFoundException("User not found.");
+                    }
                 }
                 // ExternalId from path
                 else if (operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId)
@@ -67,6 +73,12 @@ public class PatchUserCommand : IPatchUserCommand
                         if (!operationHandled)
                         {
                             operationHandled = handled;
+                        }
+                        // Re-fetch to pick up status changes persisted by restore/revoke
+                        if (handled)
+                        {
+                            orgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id)
+                                ?? throw new NotFoundException("User not found.");
                         }
                     }
                     if (operation.Value.TryGetProperty("externalId", out var externalIdProperty))

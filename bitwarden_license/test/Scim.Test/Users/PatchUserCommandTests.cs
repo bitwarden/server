@@ -419,4 +419,50 @@ public class PatchUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<OrganizationUser>(ou => ou.ExternalId == newExternalId));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_RestoreAndExternalIdFromValue_DoesNotRevertRestore(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        var newExternalId = "combined-restore-id";
+        organizationUser.Status = OrganizationUserStatusType.Revoked;
+        organizationUser.ExternalId = "old-id";
+
+        // Simulate the re-fetch after restore returning a user with a non-revoked status
+        var restoredOrgUser = new OrganizationUser
+        {
+            Id = organizationUser.Id,
+            OrganizationId = organizationUser.OrganizationId,
+            Status = OrganizationUserStatusType.Confirmed,
+            ExternalId = organizationUser.ExternalId,
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser, restoredOrgUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>());
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"active\":true,\"externalId\":\"{newExternalId}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
+
+        await sutProvider.GetDependency<IRestoreOrganizationUserCommand>().Received(1).RestoreUserAsync(organizationUser, EventSystemUser.SCIM);
+        // ReplaceAsync must use the re-fetched (restored) user, not the stale revoked state
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalId == newExternalId && ou.Status != OrganizationUserStatusType.Revoked));
+    }
 }
