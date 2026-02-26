@@ -381,7 +381,7 @@ public class PatchUserCommandTests
         // Verify no restore or revoke operations were called
         await sutProvider.GetDependency<IRestoreOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RestoreUserAsync(default, EventSystemUser.SCIM);
         await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RevokeUserAsync(default, EventSystemUser.SCIM);
-}
+    }
 
     [Theory]
     [BitAutoData]
