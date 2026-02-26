@@ -1,9 +1,10 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +13,13 @@ namespace Bit.Api.Utilities;
 
 public static class ApiHelpers
 {
+    private class UserLicenseFileWrapper
+    {
+        public UserLicense License { get; set; }
+        public DateTime? Expiration { get; set; }
+        public string Object { get; set; }
+    }
+
     public static string EventGridKey { get; set; }
     public async static Task<T> ReadJsonFileFromBody<T>(HttpContext httpContext, IFormFile file, long maxSize = 51200)
     {
@@ -27,6 +35,17 @@ public static class ApiHelpers
         }
 
         return obj;
+    }
+
+    public async static Task<UserLicense> ReadUserLicenseFromBody(HttpContext httpContext, IFormFile file, long maxSize = 51200)
+    {
+        var wrappedLicense = await ReadJsonFileFromBody<UserLicenseFileWrapper>(httpContext, file, maxSize);
+        if (wrappedLicense?.License != null)
+        {
+            return wrappedLicense.License;
+        }
+
+        return await ReadJsonFileFromBody<UserLicense>(httpContext, file, maxSize);
     }
 
     /// <summary>

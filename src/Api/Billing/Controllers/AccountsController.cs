@@ -1,4 +1,4 @@
-﻿using Bit.Api.Models.Request;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
@@ -91,7 +91,7 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
+        var license = await ApiHelpers.ReadUserLicenseFromBody(HttpContext, model.License);
         if (license == null)
         {
             throw new BadRequestException("Invalid license");

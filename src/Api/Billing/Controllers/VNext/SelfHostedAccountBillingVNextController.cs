@@ -1,4 +1,4 @@
-﻿using Bit.Api.Billing.Attributes;
+using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Utilities;
 using Bit.Core.Billing.Models.Business;
@@ -24,7 +24,7 @@ public class SelfHostedAccountBillingVNextController(
         [BindNever] User user,
         PremiumSelfHostedSubscriptionRequest request)
     {
-        var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, request.License);
+        var license = await ApiHelpers.ReadUserLicenseFromBody(HttpContext, request.License);
         if (license == null)
         {
             throw new BadRequestException("Invalid license.");
