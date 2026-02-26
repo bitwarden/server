@@ -480,16 +480,18 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         try
         {
             var efOrganization = await dbContext.Organizations.FindAsync(organization.Id);
-            if (efOrganization != null)
+            if (efOrganization is null)
             {
-                efOrganization.Enabled = organization.Enabled;
-                efOrganization.Status = organization.Status;
-                efOrganization.PublicKey = organization.PublicKey;
-                efOrganization.PrivateKey = organization.PrivateKey;
-                efOrganization.RevisionDate = organization.RevisionDate;
-
-                await dbContext.SaveChangesAsync();
+                throw new InvalidOperationException($"Organization {organization.Id} was not found during initialization.");
             }
+
+            efOrganization.Enabled = organization.Enabled;
+            efOrganization.Status = organization.Status;
+            efOrganization.PublicKey = organization.PublicKey;
+            efOrganization.PrivateKey = organization.PrivateKey;
+            efOrganization.RevisionDate = organization.RevisionDate;
+
+            await dbContext.SaveChangesAsync();
 
             await confirmOwnerAction(connection, transaction);
 

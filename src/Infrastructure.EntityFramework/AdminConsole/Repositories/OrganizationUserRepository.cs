@@ -990,15 +990,17 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             await dbContext.Database.UseTransactionAsync(transaction);
 
             var efOrganizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUser.Id);
-            if (efOrganizationUser != null)
+            if (efOrganizationUser is null)
             {
-                efOrganizationUser.Status = organizationUser.Status;
-                efOrganizationUser.UserId = organizationUser.UserId;
-                efOrganizationUser.Key = organizationUser.Key;
-                efOrganizationUser.Email = organizationUser.Email;
-
-                await dbContext.SaveChangesAsync();
+                throw new InvalidOperationException($"OrganizationUser {organizationUser.Id} was not found during owner confirmation.");
             }
+
+            efOrganizationUser.Status = organizationUser.Status;
+            efOrganizationUser.UserId = organizationUser.UserId;
+            efOrganizationUser.Key = organizationUser.Key;
+            efOrganizationUser.Email = organizationUser.Email;
+
+            await dbContext.SaveChangesAsync();
         };
     }
 #nullable disable
