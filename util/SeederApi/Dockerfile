@@ -97,7 +97,7 @@ RUN . /etc/environment \
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-bookworm-slim AS app
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-azurelinux3.0-distroless-extra AS app
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -107,12 +107,14 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
-HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y curl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# Set up health check wrapper
+# Get the executable and copy it to any path you want
+COPY --from=ghcr.io/alexaka1/distroless-dotnet-healthchecks:1 / /healthcheck
+# Setup your healthcheck endpoints via environment variable in Dockerfile, or at runtime via `docker run -e DISTROLESS_HEALTHCHECKS_URIS__0="http://localhost/healthz" -e DISTROLESS_HEALTHCHECKS_URIS__1="http://localhost/some/other/endpoint"`
+ENV DISTROLESS_HEALTHCHECKS_URI="http://localhost:5000/alive"
+# Setup the healthcheck using the EXEC array syntax
+HEALTHCHECK CMD ["/healthcheck/Distroless.HealthChecks"]
 
 # Copy app from the build stage
 WORKDIR /app
