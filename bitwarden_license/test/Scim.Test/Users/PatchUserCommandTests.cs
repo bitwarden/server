@@ -381,5 +381,42 @@ public class PatchUserCommandTests
         // Verify no restore or revoke operations were called
         await sutProvider.GetDependency<IRestoreOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RestoreUserAsync(default, EventSystemUser.SCIM);
         await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RevokeUserAsync(default, EventSystemUser.SCIM);
+}
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchUser_ActiveAndExternalIdFromValue_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
+    {
+        var newExternalId = "combined-test-id";
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.ExternalId = "old-id";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationUser.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>());
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"active\":false,\"externalId\":\"{newExternalId}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
+
+        // Verify both operations were processed
+        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.ExternalId == newExternalId));
     }
 }
