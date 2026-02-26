@@ -4,6 +4,7 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -90,7 +91,7 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        var license = await ApiHelpers.ReadUserLicenseFromBody(HttpContext, model.License);
+        var license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
         if (license == null)
         {
             throw new BadRequestException("Invalid license");
