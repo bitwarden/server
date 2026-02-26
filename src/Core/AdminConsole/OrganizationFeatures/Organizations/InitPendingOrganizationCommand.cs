@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
@@ -37,6 +38,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly IDeviceRepository _deviceRepository;
     private readonly IInitPendingOrganizationValidator _validator;
     private readonly TimeProvider _timeProvider;
+    private readonly ISendOrganizationConfirmationCommand _sendOrganizationConfirmationCommand;
 
     public InitPendingOrganizationCommand(
             IOrganizationService organizationService,
@@ -54,7 +56,8 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             IPushRegistrationService pushRegistrationService,
             IDeviceRepository deviceRepository,
             IInitPendingOrganizationValidator validator,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
     {
         _organizationService = organizationService;
         _collectionRepository = collectionRepository;
@@ -72,6 +75,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _deviceRepository = deviceRepository;
         _validator = validator;
         _timeProvider = timeProvider;
+        _sendOrganizationConfirmationCommand = sendOrganizationConfirmationCommand;
     }
 
     public async Task InitPendingOrganizationAsync(User user, Guid organizationId, Guid organizationUserId, string publicKey, string privateKey, string collectionName, string emailToken)
@@ -268,7 +272,16 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private async Task SendNotificationsAsync(Organization org, OrganizationUser orgUser, User user)
     {
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await _mailService.SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
+        {
+            await _sendOrganizationConfirmationCommand.SendConfirmationAsync(org, user.Email, orgUser.AccessSecretsManager);
+        }
+        else
+        {
+            await _mailService.SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+        }
+
         await _pushNotificationService.PushSyncOrgKeysAsync(user.Id);
 
         var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);

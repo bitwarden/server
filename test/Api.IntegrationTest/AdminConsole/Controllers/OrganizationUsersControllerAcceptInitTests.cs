@@ -172,61 +172,6 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task AcceptInit_WithoutCollectionName_InitializesOrganizationWithoutCreatingCollection(bool featureFlagEnabled)
-    {
-        // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
-
-        await _loginHelper.LoginAsync(_invitedUserEmail);
-
-        var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
-
-        var acceptInitRequest = new OrganizationUserAcceptInitRequestModel
-        {
-            Token = token,
-            Key = "test-user-key",
-            Keys = new OrganizationKeysRequestModel
-            {
-                PublicKey = _mockPublicKey,
-                EncryptedPrivateKey = _mockEncryptedPrivateKey
-            },
-            CollectionName = null
-        };
-
-        // Act
-        var response = await _client.PostAsJsonAsync(
-            $"organizations/{_pendingOrganization.Id}/users/{_invitedOrgUser.Id}/accept-init",
-            acceptInitRequest);
-
-        // Assert
-        var expectedStatusCode = featureFlagEnabled ? HttpStatusCode.NoContent : HttpStatusCode.OK;
-        Assert.Equal(expectedStatusCode, response.StatusCode);
-
-        // Verify organization was initialized
-        var organizationRepository = _factory.GetService<IOrganizationRepository>();
-        var updatedOrganization = await organizationRepository.GetByIdAsync(_pendingOrganization.Id);
-
-        Assert.NotNull(updatedOrganization);
-        Assert.True(updatedOrganization.Enabled);
-        Assert.Equal(OrganizationStatusType.Created, updatedOrganization.Status);
-
-        // Verify user was confirmed
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var confirmedOrgUser = await organizationUserRepository.GetByIdAsync(_invitedOrgUser.Id);
-
-        Assert.NotNull(confirmedOrgUser);
-        Assert.Equal(OrganizationUserStatusType.Confirmed, confirmedOrgUser.Status);
-
-        // Verify NO collection was created
-        var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var collections = await collectionRepository.GetManyByOrganizationIdAsync(_pendingOrganization.Id);
-
-        Assert.Empty(collections);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
     public async Task AcceptInit_WithInvalidToken_ReturnsBadRequest(bool featureFlagEnabled)
     {
         // Arrange

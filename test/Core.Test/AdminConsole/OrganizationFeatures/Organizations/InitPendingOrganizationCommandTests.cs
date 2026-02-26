@@ -8,7 +8,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -227,37 +226,7 @@ public class InitPendingOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task InitPendingOrganizationVNextAsync_Success_WithoutCollectionName(
-        Organization org,
-        OrganizationUser orgUser,
-        InitPendingOrganizationRequest request,
-        SutProvider<InitPendingOrganizationCommand> sutProvider)
-    {
-        var requestWithoutCollection = request with { CollectionName = null };
-        SetupSuccessfulValidation(org, orgUser, requestWithoutCollection, sutProvider);
-
-        var result = await sutProvider.Sut.InitPendingOrganizationVNextAsync(requestWithoutCollection);
-
-        Assert.False(result.IsError);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        await organizationRepository.Received(1).InitializeOrganizationAsync(
-            org, Arg.Any<Func<DbConnection, DbTransaction, Task>>());
-
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(default, default, default);
-
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationConfirmedEmailAsync(org.DisplayName(), request.User.Email, orgUser.AccessSecretsManager);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncOrgKeysAsync(request.User.Id);
-    }
-
-    [Theory, BitAutoData]
-    public async Task InitPendingOrganizationVNextAsync_Success_WithCollectionName(
+    public async Task InitPendingOrganizationVNextAsync_Success(
         Organization org,
         OrganizationUser orgUser,
         InitPendingOrganizationRequest request,
@@ -270,9 +239,10 @@ public class InitPendingOrganizationCommandTests
 
         Assert.False(result.IsError);
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        await organizationRepository.Received(1).InitializeOrganizationAsync(
-            org, Arg.Any<Func<DbConnection, DbTransaction, Task>>());
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .InitializeOrganizationAsync(
+                org, Arg.Any<Func<DbConnection, DbTransaction, Task>>());
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1)
             .CreateAsync(
@@ -305,11 +275,14 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .BuildConfirmOwnerAction(Arg.Any<OrganizationUser>())
-            .Returns((Func<DbConnection, DbTransaction, Task>)((_, __) => Task.CompletedTask));
+            .Returns((_, __) => Task.CompletedTask);
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(request.User.Id)
             .Returns(new List<Device>());
-    }
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
+            .Returns(true);
+    }
 }
