@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Bit.Api.Utilities;
 using Bit.Core.Billing.Models.Business;
