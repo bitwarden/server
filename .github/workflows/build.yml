@@ -54,64 +54,48 @@ jobs:
             base_path: ./src
             dotnet: true
             node: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Api
             base_path: ./src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Attachments
             base_path: ./util
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Billing
             base_path: ./src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Events
             base_path: ./src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: EventsProcessor
             base_path: ./src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Icons
             base_path: ./src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Identity
             base_path: ./src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: MsSql
             base_path: ./util
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: MsSqlMigratorUtility
             base_path: ./util
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Nginx
             base_path: ./util
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Notifications
             base_path: ./src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: SeederApi
             base_path: ./util
             dotnet: true
-            platforms: linux/amd64
           - project_name: Setup
             base_path: ./util
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
           - project_name: Sso
             base_path: ./bitwarden_license/src
             dotnet: true
-            platforms: linux/amd64,linux/arm/v7,linux/arm64
     steps:
       - name: Check secrets
         id: check-secrets
@@ -255,7 +239,10 @@ jobs:
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: ${{ matrix.platforms }}
+          platforms: |
+            linux/amd64,
+            linux/arm/v7,
+            linux/arm64
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 
