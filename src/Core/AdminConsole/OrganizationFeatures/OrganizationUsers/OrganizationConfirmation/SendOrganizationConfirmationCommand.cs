@@ -59,7 +59,7 @@ public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings 
             }
         };
 
-        await mailer.SendEmail(mail);
+        await mailer.EnqueueEmail(mail);
     }
 
     private async Task SendFamilyFreeConfirmEmailsAsync(List<string> userEmailsList, string organizationName, bool accessSecretsManager)
@@ -78,7 +78,7 @@ public class SendOrganizationConfirmationCommand(IMailer mailer, GlobalSettings 
             }
         };
 
-        await mailer.SendEmail(mail);
+        await mailer.EnqueueEmail(mail);
     }
 
 

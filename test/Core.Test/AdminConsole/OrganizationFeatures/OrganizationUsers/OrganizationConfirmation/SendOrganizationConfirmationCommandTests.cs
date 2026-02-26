@@ -30,7 +30,7 @@ public class SendOrganizationConfirmationCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
@@ -53,7 +53,7 @@ public class SendOrganizationConfirmationCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
@@ -76,7 +76,7 @@ public class SendOrganizationConfirmationCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationConfirmationFamilyFree>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationConfirmationFamilyFree>(mail =>
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
@@ -99,7 +99,7 @@ public class SendOrganizationConfirmationCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationConfirmationFamilyFree>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationConfirmationFamilyFree>(mail =>
                 mail.ToEmails.Contains(userEmail) &&
                 mail.ToEmails.Count() == 1 &&
                 mail.View.OrganizationName == organization.Name &&
@@ -122,7 +122,7 @@ public class SendOrganizationConfirmationCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
                 mail.ToEmails.SequenceEqual(userEmails) &&
                 mail.View.OrganizationName == organization.Name));
     }
@@ -142,9 +142,9 @@ public class SendOrganizationConfirmationCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().DidNotReceive()
-            .SendEmail(Arg.Any<OrganizationConfirmationEnterpriseTeams>());
+            .EnqueueEmail(Arg.Any<OrganizationConfirmationEnterpriseTeams>());
         await sutProvider.GetDependency<IMailer>().DidNotReceive()
-            .SendEmail(Arg.Any<OrganizationConfirmationFamilyFree>());
+            .EnqueueEmail(Arg.Any<OrganizationConfirmationFamilyFree>());
     }
 
     [Theory]
@@ -164,7 +164,7 @@ public class SendOrganizationConfirmationCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationConfirmationEnterpriseTeams>(mail =>
                 mail.View.OrganizationName == expectedDecodedName));
     }
 
@@ -201,9 +201,9 @@ public class SendOrganizationConfirmationCommandTests
 
             // Assert
             await sutProvider.GetDependency<IMailer>().Received(1)
-                .SendEmail(Arg.Any<OrganizationConfirmationEnterpriseTeams>());
+                .EnqueueEmail(Arg.Any<OrganizationConfirmationEnterpriseTeams>());
             await sutProvider.GetDependency<IMailer>().DidNotReceive()
-                .SendEmail(Arg.Any<OrganizationConfirmationFamilyFree>());
+                .EnqueueEmail(Arg.Any<OrganizationConfirmationFamilyFree>());
         }
     }
 
@@ -234,9 +234,9 @@ public class SendOrganizationConfirmationCommandTests
 
             // Assert
             await sutProvider.GetDependency<IMailer>().Received(1)
-                .SendEmail(Arg.Any<OrganizationConfirmationFamilyFree>());
+                .EnqueueEmail(Arg.Any<OrganizationConfirmationFamilyFree>());
             await sutProvider.GetDependency<IMailer>().DidNotReceive()
-                .SendEmail(Arg.Any<OrganizationConfirmationEnterpriseTeams>());
+                .EnqueueEmail(Arg.Any<OrganizationConfirmationEnterpriseTeams>());
         }
     }
 
