@@ -51,16 +51,6 @@ public class PatchUserCommand : IPatchUserCommand
                         operationHandled = handled;
                     }
                 }
-                // Active from value object
-                else if (string.IsNullOrWhiteSpace(operation.Path) &&
-                    operation.Value.TryGetProperty("active", out var activeProperty))
-                {
-                    var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
-                    if (!operationHandled)
-                    {
-                        operationHandled = handled;
-                    }
-                }
                 // ExternalId from path
                 else if (operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId)
                 {
@@ -68,13 +58,23 @@ public class PatchUserCommand : IPatchUserCommand
                     await HandleExternalIdOperationAsync(orgUser, newExternalId);
                     operationHandled = true;
                 }
-                // ExternalId from value object
-                else if (string.IsNullOrWhiteSpace(operation.Path) &&
-                    operation.Value.TryGetProperty("externalId", out var externalIdProperty))
+                // Value object with no path — check for each supported property independently
+                else if (string.IsNullOrWhiteSpace(operation.Path))
                 {
-                    var newExternalId = externalIdProperty.GetString();
-                    await HandleExternalIdOperationAsync(orgUser, newExternalId);
-                    operationHandled = true;
+                    if (operation.Value.TryGetProperty("active", out var activeProperty))
+                    {
+                        var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
+                        if (!operationHandled)
+                        {
+                            operationHandled = handled;
+                        }
+                    }
+                    if (operation.Value.TryGetProperty("externalId", out var externalIdProperty))
+                    {
+                        var newExternalId = externalIdProperty.GetString();
+                        await HandleExternalIdOperationAsync(orgUser, newExternalId);
+                        operationHandled = true;
+                    }
                 }
             }
         }
