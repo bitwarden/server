@@ -1,73 +1,3 @@
-IF COL_LENGTH('[dbo].[User]', 'MasterPasswordSalt') IS NULL
-BEGIN
-    ALTER TABLE [dbo].[User] ADD [MasterPasswordSalt] NVARCHAR(256) NULL;
-END
-GO
-
--- Update UserView to include MasterPasswordSalt
-CREATE OR ALTER VIEW [dbo].[UserView]
-AS
-    SELECT
-        [Id],
-        [Name],
-        [Email],
-        [EmailVerified],
-        [MasterPassword],
-        [MasterPasswordHint],
-        [Culture],
-        [SecurityStamp],
-        [TwoFactorProviders],
-        [TwoFactorRecoveryCode],
-        [EquivalentDomains],
-        [ExcludedGlobalEquivalentDomains],
-        [AccountRevisionDate],
-        [Key],
-        [PublicKey],
-        [PrivateKey],
-        [Premium],
-        [PremiumExpirationDate],
-        [RenewalReminderDate],
-        [Storage],
-        COALESCE([MaxStorageGbIncreased], [MaxStorageGb]) AS [MaxStorageGb],
-        [Gateway],
-        [GatewayCustomerId],
-        [GatewaySubscriptionId],
-        [ReferenceData],
-        [LicenseKey],
-        [ApiKey],
-        [Kdf],
-        [KdfIterations],
-        [KdfMemory],
-        [KdfParallelism],
-        [CreationDate],
-        [RevisionDate],
-        [ForcePasswordReset],
-        [UsesKeyConnector],
-        [FailedLoginCount],
-        [LastFailedLoginDate],
-        [AvatarColor],
-        [LastPasswordChangeDate],
-        [LastKdfChangeDate],
-        [LastKeyRotationDate],
-        [LastEmailChangeDate],
-        [VerifyDevices],
-        [SecurityState],
-        [SecurityVersion],
-        [SignedPublicKey],
-        [V2UpgradeToken],
-        [MasterPasswordSalt]
-    FROM
-        [dbo].[User]
-GO
-
--- Refresh views that depend on UserView to ensure they include the new MasterPasswordSalt column
-EXEC sp_refreshview N'[dbo].[EmergencyAccessDetailsView]';
-EXEC sp_refreshview N'[dbo].[OrganizationUserUserDetailsView]';
-EXEC sp_refreshview N'[dbo].[ProviderUserUserDetailsView]';
-EXEC sp_refreshview N'[dbo].[UserEmailDomainView]';
-EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
-GO
-
 CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
@@ -120,12 +50,6 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
 AS
 BEGIN
     SET NOCOUNT ON
-
-    /*
-     If the user doesn't have a master password, we can allow the MasterPasswordSalt to be null.
-     We will set it to the email until we are ready to separate the two.
-    */
-    SET @MasterPasswordSalt = CASE WHEN @MasterPassword IS NULL THEN NULL ELSE LOWER(LTRIM(RTRIM(@Email))) END
 
     INSERT INTO [dbo].[User]
         (
@@ -287,12 +211,6 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    /*
-     If the user doesn't have a master password, we can allow the MasterPasswordSalt to be null.
-     We will set it to the email until we are ready to separate the two.
-    */
-    SET @MasterPasswordSalt = CASE WHEN @MasterPassword IS NULL THEN NULL ELSE LOWER(LTRIM(RTRIM(@Email))) END
-
     UPDATE
         [dbo].[User]
     SET
@@ -360,7 +278,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_UpdateMasterPassword]
     @KdfParallelism INT = NULL,
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7),
-    @MasterPasswordSalt NVARCHAR(256) = NULL
+    @MasterPasswordSalt NVARCHAR(256) = NULL -- NULL for backwards compat.;
 AS
 BEGIN
     SET NOCOUNT ON
@@ -377,7 +295,7 @@ BEGIN
         [KdfParallelism] = @KdfParallelism,
         [RevisionDate] = @RevisionDate,
         [AccountRevisionDate] = @AccountRevisionDate,
-        [MasterPasswordSalt] = LOWER(LTRIM(RTRIM([User].[Email])))
+        [MasterPasswordSalt] = @MasterPasswordSalt
     WHERE
         [Id] = @Id
 END
