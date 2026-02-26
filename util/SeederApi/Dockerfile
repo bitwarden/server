@@ -35,12 +35,12 @@ RUN case "$TARGETPLATFORM" in \
         RID=linux-arm64 && \
         ARCH_PACKAGES="gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross" \
         ;; \
-    "linux/arm/v7") \
-        RUST_TARGET=armv7-unknown-linux-gnueabihf && \
-        RID=linux-arm && \
-        ARCH_PACKAGES="gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc6-dev-armhf-cross" \
-        ;; \
-    *) \
+    # "linux/arm/v7") \
+    #     RUST_TARGET=armv7-unknown-linux-gnueabihf && \
+    #     RID=linux-arm && \
+    #     ARCH_PACKAGES="gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc6-dev-armhf-cross" \
+    #     ;; \
+    # *) \
         echo "Unsupported platform: $TARGETPLATFORM" && exit 1 \
         ;; \
     esac \
@@ -65,10 +65,10 @@ RUN . /etc/environment \
         echo "[target.aarch64-unknown-linux-gnu]" >> /root/.cargo/config.toml \
         && echo "linker = \"aarch64-linux-gnu-gcc\"" >> /root/.cargo/config.toml \
         ;; \
-    "linux/arm/v7") \
-        echo "[target.armv7-unknown-linux-gnueabihf]" >> /root/.cargo/config.toml \
-        && echo "linker = \"arm-linux-gnueabihf-gcc\"" >> /root/.cargo/config.toml \
-        ;; \
+    # "linux/arm/v7") \
+    #     echo "[target.armv7-unknown-linux-gnueabihf]" >> /root/.cargo/config.toml \
+    #     && echo "linker = \"arm-linux-gnueabihf-gcc\"" >> /root/.cargo/config.toml \
+    #     ;; \
     esac
 
 # Copy project files
