@@ -1,56 +1,103 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.21 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
 
-# Docker buildx supplies the value for this arg
+# Docker buildx supplies these values
 ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
-# Determine proper runtime value for .NET
-# We put the value in a file to be read by later layers.
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    RID=linux-x64 ; \
-    RUST_TARGET=x86_64-unknown-linux-gnu ; \
-    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    RID=linux-arm64 ; \
-    RUST_TARGET=aarch64-unknown-linux-gnu ; \
-    elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    RID=linux-arm ; \
-    RUST_TARGET=armv7-unknown-linux-gnueabihf ; \
-    fi \
-    && echo "RID=$RID" > /tmp/env.txt \
-    && echo "CARGO_BUILD_TARGET=$RUST_TARGET" >> /tmp/env.txt \
-    && echo "$RUST_TARGET" > /tmp/rust_target.txt
+# Install base build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Rust
-RUN apk add --no-cache build-base curl
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | /bin/sh -s -- -y --default-toolchain stable --profile minimal \
-     && . $HOME/.cargo/env \
-     && rustup target add $(cat /tmp/rust_target.txt)
+# Install Rust toolchain on build platform
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    --default-toolchain stable \
+    --profile minimal \
+    --no-modify-path
+
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Copy required project files
+# Determine target architecture and install cross-compilation tools
+RUN case "$TARGETPLATFORM" in \
+    "linux/amd64") \
+        RUST_TARGET=x86_64-unknown-linux-gnu && \
+        RID=linux-x64 && \
+        ARCH_PACKAGES="" \
+        ;; \
+    "linux/arm64") \
+        RUST_TARGET=aarch64-unknown-linux-gnu && \
+        RID=linux-arm64 && \
+        ARCH_PACKAGES="gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross" \
+        ;; \
+    "linux/arm/v7") \
+        RUST_TARGET=armv7-unknown-linux-gnueabihf && \
+        RID=linux-arm && \
+        ARCH_PACKAGES="gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf libc6-dev-armhf-cross" \
+        ;; \
+    *) \
+        echo "Unsupported platform: $TARGETPLATFORM" && exit 1 \
+        ;; \
+    esac \
+    && if [ -n "$ARCH_PACKAGES" ]; then \
+        apt-get update && apt-get install -y $ARCH_PACKAGES && rm -rf /var/lib/apt/lists/* ; \
+    fi \
+    && echo "RUST_TARGET=${RUST_TARGET}" >> /etc/environment \
+    && echo "RID=${RID}" >> /etc/environment \
+    && . /etc/environment \
+    && rustup target add ${RUST_TARGET} \
+    && echo "Rust target: ${RUST_TARGET}, .NET RID: ${RID}"
+
+# Configure Rust for cross-compilation with proper linkers
+RUN . /etc/environment \
+    && mkdir -p /root/.cargo \
+    && case "$TARGETPLATFORM" in \
+    "linux/amd64") \
+        echo "[target.x86_64-unknown-linux-gnu]" >> /root/.cargo/config.toml \
+        && echo "linker = \"gcc\"" >> /root/.cargo/config.toml \
+        ;; \
+    "linux/arm64") \
+        echo "[target.aarch64-unknown-linux-gnu]" >> /root/.cargo/config.toml \
+        && echo "linker = \"aarch64-linux-gnu-gcc\"" >> /root/.cargo/config.toml \
+        ;; \
+    "linux/arm/v7") \
+        echo "[target.armv7-unknown-linux-gnueabihf]" >> /root/.cargo/config.toml \
+        && echo "linker = \"arm-linux-gnueabihf-gcc\"" >> /root/.cargo/config.toml \
+        ;; \
+    esac
+
+# Copy project files
 WORKDIR /source
 COPY . ./
 
-# Restore project dependencies and tools
+# Restore .NET dependencies
 WORKDIR /source/util/SeederApi
-RUN . /tmp/env.txt && dotnet restore -r $RID
+RUN . /etc/environment && dotnet restore -r ${RID}
 
-# Build project
+# Build the project with Rust support
 WORKDIR /source/util/SeederApi
-RUN . /tmp/env.txt && dotnet publish SeederApi.csproj \
-    -c release \
+RUN . /etc/environment \
+    && export CARGO_TARGET_DIR=/tmp/cargo_target \
+    && rustc --version \
+    && cargo --version \
+    && echo "Building for Rust target: ${RUST_TARGET}, .NET RID: ${RID}" \
+    && dotnet publish SeederApi.csproj \
+    -c Release \
     --no-restore \
     --self-contained \
     /p:PublishSingleFile=true \
-    -r $RID \
-    -o out
+    -r ${RID} \
+    -o /app/out
 
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.21 AS app
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-azurelinux3.0-distroless-extra AS app
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
@@ -60,12 +107,17 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
-HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
+
+# Set up health check wrapper
+# Get the executable and copy it to any path you want
+COPY --from=ghcr.io/alexaka1/distroless-dotnet-healthchecks:1 / /healthcheck
+# Setup your healthcheck endpoints via environment variable in Dockerfile, or at runtime via `docker run -e DISTROLESS_HEALTHCHECKS_URIS__0="http://localhost/healthz" -e DISTROLESS_HEALTHCHECKS_URIS__1="http://localhost/some/other/endpoint"`
+ENV DISTROLESS_HEALTHCHECKS_URI="http://localhost:5000/alive"
+# Setup the healthcheck using the EXEC array syntax
+HEALTHCHECK CMD ["/healthcheck/Distroless.HealthChecks"]
 
 # Copy app from the build stage
 WORKDIR /app
-COPY --from=build /source/util/SeederApi/out /app
-
-RUN apk add --no-cache curl icu-libs 
+COPY --from=build /app/out /app
 
 ENTRYPOINT ["/app/SeederApi"]
