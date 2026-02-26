@@ -6,7 +6,6 @@ using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
 
 namespace Bit.Core.Platform.Push;
 
