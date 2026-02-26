@@ -20,7 +20,7 @@ public static class Registrations
 
         // Discount services
         services.AddTransient<ISubscriptionDiscountService, SubscriptionDiscountService>();
-        services.AddTransient<IDiscountAudienceFilterFactory, DiscountAudienceFilterFactory>();
+        services.AddSingleton<IDiscountAudienceFilterFactory, DiscountAudienceFilterFactory>();
 
         // Queries
         services.AddTransient<IGetApplicableDiscountsQuery, GetApplicableDiscountsQuery>();
