@@ -168,6 +168,7 @@ public static class FeatureFlagKeys
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
     public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
+    public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
 
     /* Autofill Team */
@@ -225,6 +226,7 @@ public static class FeatureFlagKeys
     public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
+    public const string DeviceAuthKey = "pm-27581-device-auth-key";
 
     /* Platform Team */
     public const string WebPush = "web-push";
