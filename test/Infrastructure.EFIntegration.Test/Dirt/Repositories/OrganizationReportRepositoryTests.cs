@@ -535,7 +535,10 @@ public class OrganizationReportRepositoryTests
     [CiSkippedTheory, EfOrganizationReportAutoData]
     public async Task GetMetricsAsync_ShouldReturnMetricsForGivenOrganizationAndMinDate(
         List<EntityFramework.Dirt.Repositories.OrganizationReportRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrganizationRepos)
+        List<EfRepo.OrganizationRepository> efOrganizationRepos,
+        OrganizationReportRepository sqlOrganizationReportRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo
+        )
     {
         // Arrange
         var baseDate = new DateTime(2024, 6, 1); // june 1, 2024
@@ -546,12 +549,14 @@ public class OrganizationReportRepositoryTests
         var fixture = new Fixture();
         var organization = fixture.Create<Organization>();
 
+        // for entity framework repositories
         foreach (var sut in suts)
         {
             var indx = suts.IndexOf(sut);
 
             // create a new organization for each repository
             var org = await efOrganizationRepos[indx].CreateAsync(organization);
+            sut.ClearChangeTracking();
 
             // Create reports with different revision dates
             var report1 = fixture.Build<OrganizationReport>()
@@ -560,6 +565,7 @@ public class OrganizationReportRepositoryTests
                 .With(x => x.ApplicationCount, 10)
                 .Create();
             await sut.CreateAsync(report1);
+            sut.ClearChangeTracking();
 
             var report2 = fixture.Build<OrganizationReport>()
                 .With(x => x.OrganizationId, org.Id)
@@ -567,6 +573,7 @@ public class OrganizationReportRepositoryTests
                 .With(x => x.ApplicationCount, 20)
                 .Create();
             await sut.CreateAsync(report2);
+            sut.ClearChangeTracking();
 
             var report3 = fixture.Build<OrganizationReport>()
                 .With(x => x.OrganizationId, org.Id)
@@ -574,11 +581,43 @@ public class OrganizationReportRepositoryTests
                 .With(x => x.ApplicationCount, 30)
                 .Create();
             await sut.CreateAsync(report3);
+            sut.ClearChangeTracking();
 
             // Act
+            // get data with minDate set to march 10, 2024 - should exclude report3
             var metricsResults = await sut.GetMetricsAsync(org.Id, DateOnly.FromDateTime(minDate));
             results.Add(metricsResults);
         }
+
+        // for SQL repository
+        var sqlOrg = await sqlOrganizationRepo.CreateAsync(organization);
+
+        // Create reports with different revision dates
+        var sqlReport1 = fixture.Build<OrganizationReport>()
+            .With(x => x.OrganizationId, sqlOrg.Id)
+            .With(x => x.RevisionDate, baseDate.AddMonths(-1)) //may 1, 2024 
+            .With(x => x.ApplicationCount, 10)
+            .Create();
+        await sqlOrganizationReportRepo.CreateAsync(sqlReport1);
+
+        var sqlReport2 = fixture.Build<OrganizationReport>()
+            .With(x => x.OrganizationId, sqlOrg.Id)
+            .With(x => x.RevisionDate, baseDate.AddMonths(-2)) // april 1, 2024
+            .With(x => x.ApplicationCount, 20)
+            .Create();
+        await sqlOrganizationReportRepo.CreateAsync(sqlReport2);
+
+        var sqlReport3 = fixture.Build<OrganizationReport>()
+            .With(x => x.OrganizationId, sqlOrg.Id)
+            .With(x => x.RevisionDate, baseDate.AddMonths(-3)) // march 1, 2024
+            .With(x => x.ApplicationCount, 30)
+            .Create();
+        await sqlOrganizationReportRepo.CreateAsync(sqlReport3);
+
+        // Act
+        // get data with minDate set to march 10, 2024 - should exclude report3
+        var sqlMetricsResults = await sqlOrganizationReportRepo.GetMetricsAsync(sqlOrg.Id, DateOnly.FromDateTime(minDate));
+        results.Add(sqlMetricsResults);
 
 
         // Assert
@@ -586,7 +625,7 @@ public class OrganizationReportRepositoryTests
         Assert.All(results, metricsResults =>
         {
             var metricsList = metricsResults.ToList();
-            Assert.True(metricsList.Count >= 2, $"Expected 1 result, but got {metricsList.Count}");
+            Assert.True(metricsList.Count == 2, $"Expected 2 results, but got {metricsList.Count}");
             Assert.All(metricsList, m => Assert.True(m.RevisionDate >= minDate));
         });
     }
