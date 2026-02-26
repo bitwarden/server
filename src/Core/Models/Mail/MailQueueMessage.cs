@@ -19,6 +19,7 @@ public class MailQueueMessage : IMailQueueMessage
 
     public string HtmlContent { get; set; }
     public string TextContent { get; set; }
+    public bool IgnoreSuppressList { get; set; }
 
     public MailQueueMessage() { }
 

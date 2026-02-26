@@ -45,6 +45,7 @@ public class Mailer(
             Category = message.Category,
             HtmlContent = content.html,
             TextContent = content.txt,
+            IgnoreSuppressList = message.IgnoreSuppressList,
         };
 
         await mailEnqueuingService.EnqueueAsync(queueMessage, SendPreRenderedFallbackAsync);
@@ -52,6 +53,12 @@ public class Mailer(
 
     private async Task SendPreRenderedFallbackAsync(IMailQueueMessage queueMessage)
     {
+        var metadata = new Dictionary<string, object>();
+        if (queueMessage.IgnoreSuppressList)
+        {
+            metadata.Add("SendGridBypassListManagement", true);
+        }
+
         var mailMessage = new MailMessage
         {
             Subject = queueMessage.Subject,
@@ -60,6 +67,7 @@ public class Mailer(
             Category = queueMessage.Category,
             HtmlContent = queueMessage.HtmlContent,
             TextContent = queueMessage.TextContent,
+            MetaData = metadata,
         };
         await mailDeliveryService.SendEmailAsync(mailMessage);
     }

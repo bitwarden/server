@@ -10,4 +10,5 @@ public interface IMailQueueMessage
     object Model { get; set; }
     string? HtmlContent { get; set; }
     string? TextContent { get; set; }
+    bool IgnoreSuppressList { get; set; }
 }

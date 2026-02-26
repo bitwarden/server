@@ -707,6 +707,12 @@ public class HandlebarsMailService : IMailService
         {
             message.HtmlContent = queueMessage.HtmlContent;
             message.TextContent = queueMessage.TextContent;
+
+            if (queueMessage.IgnoreSuppressList)
+            {
+                message.MetaData ??= new Dictionary<string, object>();
+                message.MetaData["SendGridBypassListManagement"] = true;
+            }
         }
         else
         {
