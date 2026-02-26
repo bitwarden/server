@@ -218,6 +218,7 @@ jobs:
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "platforms: ${{ matrix.platforms }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate image tags(s)
         id: image-tags
