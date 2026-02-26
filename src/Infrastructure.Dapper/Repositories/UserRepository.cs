@@ -182,12 +182,16 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public override async Task<User> CreateAsync(User user)
     {
+        // Todo: PM-30355: once MasterPasswordSalt is fully detached from Email, MasterPasswordSalt should not be overwritten
+        user.MasterPasswordSalt = user.MasterPassword != null ? user.Email.ToLowerInvariant().Trim() : null;
         await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
         return user;
     }
 
     public override async Task ReplaceAsync(User user)
     {
+        // Todo: PM-30355: once MasterPasswordSalt is fully detached from Email, MasterPasswordSalt should not be overwritten
+        user.MasterPasswordSalt = user.MasterPassword != null ? user.Email.ToLowerInvariant().Trim() : null;
         await ProtectDataAndSaveAsync(user, async () => await base.ReplaceAsync(user));
     }
 
@@ -486,7 +490,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     KdfMemory = masterPasswordUnlockData.Kdf.Memory,
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
                     RevisionDate = timestamp,
-                    AccountRevisionDate = timestamp
+                    AccountRevisionDate = timestamp,
+                    MasterPasswordSalt = masterPasswordUnlockData.Salt
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);

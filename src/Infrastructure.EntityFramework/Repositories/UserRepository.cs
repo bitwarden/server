@@ -561,7 +561,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
-            //TODO- PM-30355: Update MasterPasswordSalt to the MasterPasswordUnlockData.Salt instead of matching Email.
+            //TODO- PM-30355: Setting to the Salt here would be safe since the call sites for calling this method use the email as the salt,
+            // but this is an implicit contract that should be revisited. So we set to email defensively.
             userEntity.MasterPasswordSalt = userEntity.Email.ToLowerInvariant().Trim();
 
             await dbContext.SaveChangesAsync();
