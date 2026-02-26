@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Settings;
 using Bit.Core.Test.Platform.Mailer.TestMail;
@@ -17,8 +18,9 @@ public class MailerTest
         var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();
         var globalSettings = new GlobalSettings { SelfHosted = false };
         var deliveryService = Substitute.For<IMailDeliveryService>();
+        var enqueuingService = Substitute.For<IMailEnqueuingService>();
 
-        var mailer = new Core.Platform.Mail.Mailer.Mailer(new HandlebarMailRenderer(logger, globalSettings), deliveryService);
+        var mailer = new Core.Platform.Mail.Mailer.Mailer(new HandlebarMailRenderer(logger, globalSettings), deliveryService, enqueuingService);
 
         var mail = new TestMail.TestMail()
         {

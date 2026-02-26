@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.UserFeatures.EmergencyAccess.Mail;
 using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
@@ -32,9 +33,11 @@ public class EmergencyAccessMailTests
         var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();
         var globalSettings = new GlobalSettings { SelfHosted = false };
         var deliveryService = Substitute.For<IMailDeliveryService>();
+        var enqueuingService = Substitute.For<IMailEnqueuingService>();
         var mailer = new Mailer(
             new HandlebarMailRenderer(logger, globalSettings),
-            deliveryService);
+            deliveryService,
+            enqueuingService);
 
         var mail = new EmergencyAccessRemoveGranteesMail
         {
@@ -73,9 +76,11 @@ public class EmergencyAccessMailTests
         var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();
         var globalSettings = new GlobalSettings { SelfHosted = false };
         var deliveryService = Substitute.For<IMailDeliveryService>();
+        var enqueuingService = Substitute.For<IMailEnqueuingService>();
         var mailer = new Mailer(
             new HandlebarMailRenderer(logger, globalSettings),
-            deliveryService);
+            deliveryService,
+            enqueuingService);
 
         var granteeEmails = new[] { "Alice@test.dev", "Bob@test.dev", "Carol@test.dev" };
 

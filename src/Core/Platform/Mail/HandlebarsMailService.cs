@@ -702,7 +702,17 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage(queueMessage.Subject, queueMessage.ToEmails);
         message.BccEmails = queueMessage.BccEmails;
         message.Category = queueMessage.Category;
-        await AddMessageContentAsync(message, queueMessage.TemplateName, queueMessage.Model);
+
+        if (!string.IsNullOrEmpty(queueMessage.HtmlContent))
+        {
+            message.HtmlContent = queueMessage.HtmlContent;
+            message.TextContent = queueMessage.TextContent;
+        }
+        else
+        {
+            await AddMessageContentAsync(message, queueMessage.TemplateName, queueMessage.Model);
+        }
+
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

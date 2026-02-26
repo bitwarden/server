@@ -163,12 +163,12 @@ public class SendOrganizationInvitesCommandTests
         if (userExists)
         {
             await sutProvider.GetDependency<IMailer>().Received(1)
-                .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsExistingUser>());
+                .EnqueueEmail(Arg.Any<OrganizationInviteEnterpriseTeamsExistingUser>());
         }
         else
         {
             await sutProvider.GetDependency<IMailer>().Received(1)
-                .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsNewUser>());
+                .EnqueueEmail(Arg.Any<OrganizationInviteEnterpriseTeamsNewUser>());
         }
     }
 
@@ -216,12 +216,12 @@ public class SendOrganizationInvitesCommandTests
         if (userExists)
         {
             await sutProvider.GetDependency<IMailer>().Received(1)
-                .SendEmail(Arg.Any<OrganizationInviteFamiliesExistingUser>());
+                .EnqueueEmail(Arg.Any<OrganizationInviteFamiliesExistingUser>());
         }
         else
         {
             await sutProvider.GetDependency<IMailer>().Received(1)
-                .SendEmail(Arg.Any<OrganizationInviteFamiliesNewUser>());
+                .EnqueueEmail(Arg.Any<OrganizationInviteFamiliesNewUser>());
         }
     }
 
@@ -262,7 +262,7 @@ public class SendOrganizationInvitesCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Any<OrganizationInviteFree>());
+            .EnqueueEmail(Arg.Any<OrganizationInviteFree>());
     }
 
     [Theory, BitAutoData]
@@ -302,7 +302,7 @@ public class SendOrganizationInvitesCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsNewUser>());
+            .EnqueueEmail(Arg.Any<OrganizationInviteEnterpriseTeamsNewUser>());
     }
 
     [Theory, BitAutoData]
@@ -341,7 +341,7 @@ public class SendOrganizationInvitesCommandTests
         // Assert - verify new mailer is called, not legacy mail service
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
-            .SendEmail(Arg.Any<OrganizationInviteEnterpriseTeamsExistingUser>());
+            .EnqueueEmail(Arg.Any<OrganizationInviteEnterpriseTeamsExistingUser>());
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
@@ -380,7 +380,7 @@ public class SendOrganizationInvitesCommandTests
 
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceive()
-            .SendEmail(Arg.Any<BaseMail<OrganizationInviteBaseView>>());
+            .EnqueueEmail(Arg.Any<BaseMail<OrganizationInviteBaseView>>());
     }
 
     [Theory, BitAutoData]
@@ -418,7 +418,7 @@ public class SendOrganizationInvitesCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
                 mail.View.InviterEmail == invitingUser.Email));
     }
 
@@ -452,7 +452,7 @@ public class SendOrganizationInvitesCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
                 mail.View.InviterEmail == null));
     }
 
@@ -492,7 +492,7 @@ public class SendOrganizationInvitesCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailer>().Received(1)
-            .SendEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
+            .EnqueueEmail(Arg.Is<OrganizationInviteEnterpriseTeamsNewUser>(mail =>
                 mail.View.InviterEmail == null));
     }
 

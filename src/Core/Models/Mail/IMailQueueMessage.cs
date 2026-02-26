@@ -8,4 +8,6 @@ public interface IMailQueueMessage
     string Category { get; set; }
     string TemplateName { get; set; }
     object Model { get; set; }
+    string? HtmlContent { get; set; }
+    string? TextContent { get; set; }
 }

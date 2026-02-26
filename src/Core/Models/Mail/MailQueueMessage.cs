@@ -17,6 +17,9 @@ public class MailQueueMessage : IMailQueueMessage
     [JsonConverter(typeof(HandlebarsObjectJsonConverter))]
     public object Model { get; set; }
 
+    public string HtmlContent { get; set; }
+    public string TextContent { get; set; }
+
     public MailQueueMessage() { }
 
     public MailQueueMessage(MailMessage message, string templateName, object model)

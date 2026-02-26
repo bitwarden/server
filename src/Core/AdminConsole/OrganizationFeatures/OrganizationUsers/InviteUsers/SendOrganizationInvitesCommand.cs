@@ -179,7 +179,7 @@ public class SendOrganizationInvitesCommand(
             Subject = $"{organizationName} {_newUserSubject}",
             View = CreateEnterpriseTeamsNewUserView(orgInvitesInfo, orgUser, token, inviterEmail)
         };
-        await mailer.SendEmail(mail);
+        await mailer.EnqueueEmail(mail);
     }
 
     private async Task SendEnterpriseTeamsExistingUserInviteAsync(
@@ -192,7 +192,7 @@ public class SendOrganizationInvitesCommand(
             Subject = $"{organizationName} {_existingUserSubject}",
             View = CreateEnterpriseTeamsExistingUserView(orgInvitesInfo, orgUser, token, inviterEmail)
         };
-        await mailer.SendEmail(mail);
+        await mailer.EnqueueEmail(mail);
     }
 
     private async Task SendFamiliesNewUserInviteAsync(
@@ -205,7 +205,7 @@ public class SendOrganizationInvitesCommand(
             Subject = $"{organizationName} {_newUserSubject}",
             View = CreateFamiliesNewUserView(orgInvitesInfo, orgUser, token, inviterEmail)
         };
-        await mailer.SendEmail(mail);
+        await mailer.EnqueueEmail(mail);
     }
 
     private async Task SendFamiliesExistingUserInviteAsync(
@@ -218,7 +218,7 @@ public class SendOrganizationInvitesCommand(
             Subject = $"{organizationName} {_existingUserSubject}",
             View = CreateFamiliesExistingUserView(orgInvitesInfo, orgUser, token, inviterEmail)
         };
-        await mailer.SendEmail(mail);
+        await mailer.EnqueueEmail(mail);
     }
 
     private async Task SendFreeOrganizationInviteAsync(
@@ -230,7 +230,7 @@ public class SendOrganizationInvitesCommand(
             Subject = userHasExistingUser ? _freeOrgExistingUserSubject : _freeOrgNewUserSubject,
             View = CreateFreeView(orgInvitesInfo, orgUser, token, inviterEmail)
         };
-        await mailer.SendEmail(mail);
+        await mailer.EnqueueEmail(mail);
     }
 
     private OrganizationInviteEnterpriseTeamsNewUserView CreateEnterpriseTeamsNewUserView(
