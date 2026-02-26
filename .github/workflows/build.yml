@@ -89,6 +89,7 @@ jobs:
             dotnet: true
           - project_name: SeederApi
             base_path: ./util
+            platforms: linux/amd64,linux/arm64
             dotnet: true
           - project_name: Setup
             base_path: ./util
@@ -239,10 +240,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: |
-            linux/amd64,
-            linux/arm/v7,
-            linux/arm64
+          platforms: ${{ matrix.platforms || 'linux/amd64,linux/arm/v7,linux/arm64' }}
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 
