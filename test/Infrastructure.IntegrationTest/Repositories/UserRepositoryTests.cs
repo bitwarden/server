@@ -1,12 +1,12 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Microsoft.Data.SqlClient;
 using Xunit;
