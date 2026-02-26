@@ -37,4 +37,29 @@ public class DiscountAudienceFilterFactoryTests
         // Assert
         Assert.Null(filter);
     }
+
+    [Fact]
+    public void GetFilter_AllDefinedAudienceTypes_ReturnsExpectedFilter()
+    {
+        // Arrange
+        var allAudienceTypes = Enum.GetValues<DiscountAudienceType>();
+
+        // Act & Assert: Cycle through each audience type
+        foreach (var audienceType in allAudienceTypes)
+        {
+            var filter = _sut.GetFilter(audienceType);
+
+            if (audienceType == DiscountAudienceType.AllUsers)
+            {
+                // AllUsers should not return a filter
+                Assert.Null(filter);
+            }
+            else
+            {
+                // All other audience types must return a filter
+                Assert.NotNull(filter);
+            }
+        }
+    }
+
 }
