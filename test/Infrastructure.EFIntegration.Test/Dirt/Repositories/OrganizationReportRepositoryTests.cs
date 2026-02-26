@@ -532,6 +532,65 @@ public class OrganizationReportRepositoryTests
         Assert.Equal(metrics.CriticalPasswordAtRiskCount, updatedReport.CriticalPasswordAtRiskCount);
     }
 
+    [CiSkippedTheory, EfOrganizationReportAutoData]
+    public async Task GetMetricsAsync_ShouldReturnMetricsForGivenOrganizationAndMinDate(
+        List<EntityFramework.Dirt.Repositories.OrganizationReportRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrganizationRepos)
+    {
+        // Arrange
+        var baseDate = new DateTime(2024, 6, 1); // june 1, 2024
+        var minDate = baseDate.AddMonths(-3).AddDays(10); // march 10, 2024 - should exclude report3
+        var results = new List<IEnumerable<OrganizationReportMetricsData>>();
+
+        // Create organization first
+        var fixture = new Fixture();
+        var organization = fixture.Create<Organization>();
+
+        foreach (var sut in suts)
+        {
+            var indx = suts.IndexOf(sut);
+
+            // create a new organization for each repository
+            var org = await efOrganizationRepos[indx].CreateAsync(organization);
+
+            // Create reports with different revision dates
+            var report1 = fixture.Build<OrganizationReport>()
+                .With(x => x.OrganizationId, org.Id)
+                .With(x => x.RevisionDate, baseDate.AddMonths(-1)) //may 1, 2024 
+                .With(x => x.ApplicationCount, 10)
+                .Create();
+            await sut.CreateAsync(report1);
+
+            var report2 = fixture.Build<OrganizationReport>()
+                .With(x => x.OrganizationId, org.Id)
+                .With(x => x.RevisionDate, baseDate.AddMonths(-2)) // april 1, 2024
+                .With(x => x.ApplicationCount, 20)
+                .Create();
+            await sut.CreateAsync(report2);
+
+            var report3 = fixture.Build<OrganizationReport>()
+                .With(x => x.OrganizationId, org.Id)
+                .With(x => x.RevisionDate, baseDate.AddMonths(-3)) // march 1, 2024
+                .With(x => x.ApplicationCount, 30)
+                .Create();
+            await sut.CreateAsync(report3);
+
+            // Act
+            var metricsResults = await sut.GetMetricsAsync(org.Id, DateOnly.FromDateTime(minDate));
+            results.Add(metricsResults);
+        }
+
+
+        // Assert
+        Assert.NotNull(results);
+        Assert.All(results, metricsResults =>
+        {
+            var metricsList = metricsResults.ToList();
+            Assert.True(metricsList.Count >= 2, $"Expected 1 result, but got {metricsList.Count}");
+            Assert.All(metricsList, m => Assert.True(m.RevisionDate >= minDate));
+        });
+    }
+
 
     private async Task<(Organization, OrganizationReport)> CreateOrganizationAndReportAsync(
         IOrganizationRepository orgRepo,

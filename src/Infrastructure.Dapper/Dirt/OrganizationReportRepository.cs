@@ -201,4 +201,21 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
             parameters,
             commandType: CommandType.StoredProcedure);
     }
+
+    public Task<IEnumerable<OrganizationReportMetricsData>> GetMetricsAsync(Guid orgId, DateOnly minDate = default)
+    {
+        using var connection = new SqlConnection(ReadOnlyConnectionString);
+        var until = minDate == default ? DateTime.UnixEpoch : minDate.ToDateTime(TimeOnly.MaxValue);
+
+        var parameters = new
+        {
+            OrganizationId = orgId,
+            minDate = until
+        };
+
+        return connection.QueryAsync<OrganizationReportMetricsData>(
+            $"[{Schema}].[OrganizationReport_GetMetrics]",
+            parameters,
+            commandType: CommandType.StoredProcedure);
+    }
 }

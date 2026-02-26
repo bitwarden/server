@@ -5,6 +5,7 @@ namespace Bit.Core.Dirt.Reports.Models.Data;
 public class OrganizationReportMetricsData
 {
     public Guid OrganizationId { get; set; }
+    public DateTime? RevisionDate { get; set; }
     public int? ApplicationCount { get; set; }
     public int? ApplicationAtRiskCount { get; set; }
     public int? CriticalApplicationCount { get; set; }

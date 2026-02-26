@@ -25,5 +25,6 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
 
     // Metrics methods
     Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics);
+    Task<IEnumerable<OrganizationReportMetricsData>> GetMetricsAsync(Guid orgId, DateOnly minDate = default);
 }
 

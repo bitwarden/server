@@ -212,4 +212,35 @@ public class OrganizationReportRepository :
                 });
         }
     }
+
+    public async Task<IEnumerable<OrganizationReportMetricsData>> GetMetricsAsync(Guid orgId, DateOnly minDate = default)
+    {
+        var until = minDate == default ? DateTime.UnixEpoch : minDate.ToDateTime(TimeOnly.MinValue);
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var results = await dbContext.OrganizationReports
+            .Where(p => p.OrganizationId == orgId && p.RevisionDate >= until)
+            .Select(p => new OrganizationReportMetricsData
+            {
+                OrganizationId = p.OrganizationId,
+                RevisionDate = p.RevisionDate,
+                ApplicationCount = p.ApplicationCount,
+                ApplicationAtRiskCount = p.ApplicationAtRiskCount,
+                CriticalApplicationCount = p.CriticalApplicationCount,
+                CriticalApplicationAtRiskCount = p.CriticalApplicationAtRiskCount,
+                MemberCount = p.MemberCount,
+                MemberAtRiskCount = p.MemberAtRiskCount,
+                CriticalMemberCount = p.CriticalMemberCount,
+                CriticalMemberAtRiskCount = p.CriticalMemberAtRiskCount,
+                PasswordCount = p.PasswordCount,
+                PasswordAtRiskCount = p.PasswordAtRiskCount,
+                CriticalPasswordCount = p.CriticalPasswordCount,
+                CriticalPasswordAtRiskCount = p.CriticalPasswordAtRiskCount
+            })
+            .ToListAsync();
+
+        return results;
+    }
 }
