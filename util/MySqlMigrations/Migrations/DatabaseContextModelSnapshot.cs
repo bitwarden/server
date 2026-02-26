@@ -1130,9 +1130,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int?>("CriticalPasswordCount")
                         .HasColumnType("int");
 
-                    b.Property<string>("FileId")
-                        .HasColumnType("longtext");
-
                     b.Property<int?>("MemberAtRiskCount")
                         .HasColumnType("int");
 
@@ -1157,6 +1154,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("SummaryData")
                         .HasColumnType("longtext");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint unsigned");
 
                     b.HasKey("Id");
 

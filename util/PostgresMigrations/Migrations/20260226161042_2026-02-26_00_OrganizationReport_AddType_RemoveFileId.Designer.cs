@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260225210217_2026-02-25_00_OrganizationReport_AddFileId.sql")]
-    partial class _20260225_00_OrganizationReport_AddFileIdsql
+    [Migration("20260226161042_2026-02-26_00_OrganizationReport_AddType_RemoveFileId")]
+    partial class _20260226_00_OrganizationReport_AddType_RemoveFileId
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1138,9 +1138,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int?>("CriticalPasswordCount")
                         .HasColumnType("integer");
 
-                    b.Property<string>("FileId")
-                        .HasColumnType("text");
-
                     b.Property<int?>("MemberAtRiskCount")
                         .HasColumnType("integer");
 
@@ -1165,6 +1162,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("SummaryData")
                         .HasColumnType("text");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("smallint");
 
                     b.HasKey("Id");
 

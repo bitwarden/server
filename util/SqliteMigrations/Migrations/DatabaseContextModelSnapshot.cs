@@ -1119,9 +1119,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int?>("CriticalPasswordCount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("FileId")
-                        .HasColumnType("TEXT");
-
                     b.Property<int?>("MemberAtRiskCount")
                         .HasColumnType("INTEGER");
 
@@ -1146,6 +1143,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("SummaryData")
                         .HasColumnType("TEXT");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

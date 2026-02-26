@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -27,7 +28,7 @@ public class OrganizationReport : ITableObject<Guid>
     public int? PasswordAtRiskCount { get; set; }
     public int? CriticalPasswordCount { get; set; }
     public int? CriticalPasswordAtRiskCount { get; set; }
-    public string? FileId { get; set; }
+    public OrganizationReportType Type { get; set; }
 
     public void SetNewId()
     {

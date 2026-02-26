@@ -19,7 +19,7 @@ CREATE TABLE [dbo].[OrganizationReport] (
     [PasswordAtRiskCount]               INT              NULL,
     [CriticalPasswordCount]             INT              NULL,
     [CriticalPasswordAtRiskCount]       INT              NULL,
-    [FileId]                            VARCHAR(100)     NULL,
+    [Type]                              TINYINT          NOT NULL DEFAULT 0,
     CONSTRAINT [PK_OrganizationReport] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationReport_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
     );

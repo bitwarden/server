@@ -1,11 +1,24 @@
-IF NOT EXISTS (
+-- Drop FileId column if it exists (from previous migration)
+IF EXISTS (
     SELECT 1 FROM sys.columns
     WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport]')
     AND name = 'FileId'
 )
 BEGIN
     ALTER TABLE [dbo].[OrganizationReport]
-    ADD [FileId] VARCHAR(100) NULL;
+    DROP COLUMN [FileId];
+END
+GO
+
+-- Add Type column if it does not exist
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport]')
+    AND name = 'Type'
+)
+BEGIN
+    ALTER TABLE [dbo].[OrganizationReport]
+    ADD [Type] TINYINT NOT NULL DEFAULT 0;
 END
 GO
 
@@ -13,7 +26,7 @@ GO
 EXEC sp_refreshview N'[dbo].[OrganizationReportView]';
 GO
 
--- Update OrganizationReport_Create to include FileId
+-- Update OrganizationReport_Create to include Type
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
    @Id UNIQUEIDENTIFIER OUTPUT,
    @OrganizationId UNIQUEIDENTIFIER,
@@ -35,7 +48,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
    @PasswordAtRiskCount INT = NULL,
    @CriticalPasswordCount INT = NULL,
    @CriticalPasswordAtRiskCount INT = NULL,
-   @FileId VARCHAR(100) = NULL
+   @Type TINYINT = 0
 AS
 BEGIN
    SET NOCOUNT ON;
@@ -61,7 +74,7 @@ INSERT INTO [dbo].[OrganizationReport](
     [PasswordAtRiskCount],
     [CriticalPasswordCount],
     [CriticalPasswordAtRiskCount],
-    [FileId]
+    [Type]
 )
 VALUES (
     @Id,
@@ -84,12 +97,12 @@ VALUES (
     @PasswordAtRiskCount,
     @CriticalPasswordCount,
     @CriticalPasswordAtRiskCount,
-    @FileId
+    @Type
     );
 END
 GO
 
--- Update OrganizationReport_Update to include FileId
+-- Update OrganizationReport_Update to include Type
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Update]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -111,7 +124,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Update]
     @PasswordAtRiskCount INT = NULL,
     @CriticalPasswordCount INT = NULL,
     @CriticalPasswordAtRiskCount INT = NULL,
-    @FileId VARCHAR(100) = NULL
+    @Type TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -136,14 +149,7 @@ BEGIN
         [PasswordAtRiskCount] = @PasswordAtRiskCount,
         [CriticalPasswordCount] = @CriticalPasswordCount,
         [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount,
-        [FileId] = @FileId
+        [Type] = @Type
     WHERE [Id] = @Id;
 END;
-GO
-
--- Set FileId to 'Legacy' for all existing v1 reports (data stored in DB, not blob storage)
--- This sentinel value makes it easy to distinguish v1 (DB-stored) from v2 (blob-stored) reports
-UPDATE [dbo].[OrganizationReport]
-SET [FileId] = 'Legacy'
-WHERE [FileId] IS NULL;
 GO
