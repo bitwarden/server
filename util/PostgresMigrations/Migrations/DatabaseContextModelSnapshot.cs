@@ -993,7 +993,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
-                        .HasAnnotation("SqlServer:Clustered", false);
+                        .HasAnnotation("SqlServer:Clustered", false)
+                        .HasAnnotation("SqlServer:Include", new[] { "StripeProductIds", "AudienceType" });
 
                     b.ToTable("SubscriptionDiscount", (string)null);
                 });
@@ -2005,9 +2006,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("MasterPasswordHint")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
-
-                    b.Property<string>("MasterPasswordSalt")
-                        .HasColumnType("text");
 
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
