@@ -3,6 +3,10 @@
 All hooks are Stop hooks — they fire when Claude finishes responding and check
 whether documentation or references need updating based on what was changed.
 
+## Configuration
+
+Register hooks in `.claude/settings.local.json` — not `settings.json`. Local settings are gitignored, keeping your personal hook configuration out of source control.
+
 ## Requirements
 
 - `jq` must be installed (`brew install jq`)
