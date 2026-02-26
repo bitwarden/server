@@ -82,6 +82,7 @@ public class CloudOrganizationSignUpCommand(
             MaxCollections = plan.PasswordManager.MaxCollections,
             MaxStorageGb = (short)(plan.PasswordManager.BaseStorageGb + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
+            UseMyItems = plan.HasPolicies, // TODO: use the plan property when added (PM-32366)
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
@@ -99,8 +100,8 @@ public class CloudOrganizationSignUpCommand(
             ReferenceData = signup.Owner.ReferenceData,
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
+            PublicKey = signup.Keys?.PublicKey,
+            PrivateKey = signup.Keys?.WrappedPrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,

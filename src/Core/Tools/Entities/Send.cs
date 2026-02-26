@@ -38,6 +38,12 @@ public class Send : ITableObject<Guid>
     public SendType Type { get; set; }
 
     /// <summary>
+    /// Specifies the authentication method required to access this Send.
+    /// </summary>
+    /// <seealso cref="Tools.Enums.AuthType"/>
+    public AuthType? AuthType { get; set; }
+
+    /// <summary>
     /// Stores data containing or pointing to the transmitted secret. JSON.
     /// </summary>
     /// <note>
@@ -72,7 +78,7 @@ public class Send : ITableObject<Guid>
     /// <remarks>
     /// This field is mutually exclusive with <see cref="Password" />
     /// </remarks>
-    [MaxLength(1024)]
+    [MaxLength(4000)]
     public string? Emails { get; set; }
 
     /// <summary>

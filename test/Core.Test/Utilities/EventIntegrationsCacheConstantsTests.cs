@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Dirt.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;

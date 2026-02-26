@@ -57,8 +57,7 @@ public class ProviderClientsController(
             Owner = user,
             BillingEmail = provider.BillingEmail,
             OwnerKey = requestBody.Key,
-            PublicKey = requestBody.KeyPair.PublicKey,
-            PrivateKey = requestBody.KeyPair.EncryptedPrivateKey,
+            Keys = requestBody.KeyPair.ToPublicKeyEncryptionKeyPairData(),
             CollectionName = requestBody.CollectionName,
             IsFromProvider = true
         };

@@ -150,7 +150,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await SendAdditionalEmailsAsync(validatedRequest, organization);
 
-            await SendInvitesAsync(organizationUserToInviteEntities, organization);
+            await SendInvitesAsync(organizationUserToInviteEntities, organization, request.PerformedBy);
         }
         catch (Exception ex)
         {
@@ -212,11 +212,13 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
-    private async Task SendInvitesAsync(IEnumerable<CreateOrganizationUser> users, Organization organization) =>
+    private async Task SendInvitesAsync(IEnumerable<CreateOrganizationUser> users, Organization organization, Guid invitingUserId) =>
         await sendOrganizationInvitesCommand.SendInvitesAsync(
             new SendInvitesRequest(
                 users.Select(x => x.OrganizationUser),
-                organization));
+                organization,
+                initOrganization: false,
+                invitingUserId: invitingUserId));
 
     private async Task SendAdditionalEmailsAsync(Valid<InviteOrganizationUsersValidationRequest> validatedResult, Organization organization)
     {

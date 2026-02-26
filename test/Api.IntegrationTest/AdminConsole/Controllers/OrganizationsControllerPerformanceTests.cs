@@ -1,14 +1,18 @@
 ﻿using System.Net;
 using System.Text;
 using System.Text.Json;
+using AutoMapper;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Bit.Seeder.Recipes;
+using Bit.Seeder.Services;
+using Microsoft.AspNetCore.Identity;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +33,10 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var manglerService = new NoOpManglerService();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -37,8 +44,8 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
-        groupsSeeder.AddToOrganization(orgId, groupCount, orgUserIds, 0);
+        collectionsSeeder.Seed(orgId, collectionCount, orgUserIds, 0);
+        groupsSeeder.Seed(orgId, groupCount, orgUserIds, 0);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 
@@ -77,7 +84,10 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var client = factory.CreateClient();
 
         var db = factory.GetDatabaseContext();
-        var orgSeeder = new OrganizationWithUsersRecipe(db);
+        var mapper = factory.GetService<IMapper>();
+        var passwordHasher = factory.GetService<IPasswordHasher<User>>();
+        var manglerService = new NoOpManglerService();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 
@@ -85,8 +95,8 @@ public class OrganizationsControllerPerformanceTests(ITestOutputHelper testOutpu
         var orgId = orgSeeder.Seed(name: "Org", domain: domain, users: userCount);
 
         var orgUserIds = db.OrganizationUsers.Where(ou => ou.OrganizationId == orgId).Select(ou => ou.Id).ToList();
-        collectionsSeeder.AddToOrganization(orgId, collectionCount, orgUserIds, 0);
-        groupsSeeder.AddToOrganization(orgId, groupCount, orgUserIds, 0);
+        collectionsSeeder.Seed(orgId, collectionCount, orgUserIds, 0);
+        groupsSeeder.Seed(orgId, groupCount, orgUserIds, 0);
 
         await PerformanceTestHelpers.AuthenticateClientAsync(factory, client, $"owner@{domain}");
 

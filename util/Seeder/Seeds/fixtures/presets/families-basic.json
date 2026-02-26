@@ -1,0 +1,19 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "adams-family",
+    "planType": "families-annually",
+    "seats": 6
+  },
+  "roster": {
+    "fixture": "family"
+  },
+  "folders": true,
+  "ciphers": {
+    "count": 150,
+    "assignFolders": true
+  },
+  "personalCiphers": {
+    "countPerUser": 65
+  }
+}

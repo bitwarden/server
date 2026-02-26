@@ -43,7 +43,7 @@ public class PayPalIPNTransactionModel
         var merchantGross = Extract(data, "mc_gross");
         if (!string.IsNullOrEmpty(merchantGross))
         {
-            MerchantGross = decimal.Parse(merchantGross);
+            MerchantGross = decimal.Parse(merchantGross, CultureInfo.InvariantCulture);
         }
 
         MerchantCurrency = Extract(data, "mc_currency");

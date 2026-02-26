@@ -48,7 +48,7 @@ public class OrganizationsController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
@@ -74,7 +74,7 @@ public class OrganizationsController : Controller
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
@@ -99,7 +99,7 @@ public class OrganizationsController : Controller
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
@@ -183,15 +183,14 @@ public class OrganizationsController : Controller
             return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id));
         }
 
-        var resetPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
         {
             return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
         }
 
         var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
         return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
-
     }
 
     [HttpPost("")]

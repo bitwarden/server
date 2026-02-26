@@ -110,3 +110,21 @@ public class SyncPolicyPushNotification
     public Guid OrganizationId { get; set; }
     public required Policy Policy { get; set; }
 }
+
+public class AutoConfirmPushNotification
+{
+    /// <summary>
+    /// The admin/owner receiving this notification
+    /// </summary>
+    public Guid UserId { get; set; }
+
+    /// <summary>
+    /// The organization the user accepted an invite to
+    /// </summary>
+    public Guid OrganizationId { get; set; }
+
+    /// <summary>
+    /// The user who accepted the organization invite (will be auto-confirmed)
+    /// </summary>
+    public Guid TargetUserId { get; set; }
+}

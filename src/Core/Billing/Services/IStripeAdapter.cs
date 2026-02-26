@@ -24,6 +24,7 @@ public interface IStripeAdapter
     Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null);
     Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options);
     Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options);
+    Task<Invoice> CreateInvoiceAsync(InvoiceCreateOptions options);
     Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options);
     Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options);
     Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options);
@@ -46,5 +47,8 @@ public interface IStripeAdapter
     Task<List<SetupIntent>> ListSetupIntentsAsync(SetupIntentListOptions options);
     Task CancelSetupIntentAsync(string id, SetupIntentCancelOptions options = null);
     Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null);
+    Task<SetupIntent> UpdateSetupIntentAsync(string id, SetupIntentUpdateOptions options = null);
     Task<Price> GetPriceAsync(string id, PriceGetOptions options = null);
+    Task<Coupon> GetCouponAsync(string couponId, CouponGetOptions options = null);
+    Task<List<Product>> ListProductsAsync(ProductListOptions options = null);
 }

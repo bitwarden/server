@@ -1,0 +1,45 @@
+﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
+using Bit.Core.Dirt.Repositories;
+using Bit.Core.Exceptions;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
+using ZiggyCreatures.Caching.Fusion;
+
+namespace Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations;
+
+/// <summary>
+/// Command implementation for updating organization integrations with cache invalidation support.
+/// </summary>
+public class UpdateOrganizationIntegrationCommand(
+    IOrganizationIntegrationRepository integrationRepository,
+    [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]
+    IFusionCache cache)
+    : IUpdateOrganizationIntegrationCommand
+{
+    public async Task<OrganizationIntegration> UpdateAsync(
+        Guid organizationId,
+        Guid integrationId,
+        OrganizationIntegration updatedIntegration)
+    {
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration is null ||
+            integration.OrganizationId != organizationId ||
+            integration.Type != updatedIntegration.Type)
+        {
+            throw new NotFoundException();
+        }
+
+        updatedIntegration.Id = integration.Id;
+        updatedIntegration.OrganizationId = integration.OrganizationId;
+        updatedIntegration.CreationDate = integration.CreationDate;
+        await integrationRepository.ReplaceAsync(updatedIntegration);
+        await cache.RemoveByTagAsync(
+            EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+                organizationId: organizationId,
+                integrationType: integration.Type
+            ));
+
+        return updatedIntegration;
+    }
+}

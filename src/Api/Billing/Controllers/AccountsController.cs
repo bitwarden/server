@@ -3,13 +3,10 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Queries.Interfaces;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -22,60 +19,10 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class AccountsController(
     IUserService userService,
-    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IUserAccountKeysQuery userAccountKeysQuery,
     IFeatureService featureService,
     ILicensingService licensingService) : Controller
 {
-    // TODO: Remove when pm-24996-implement-upgrade-from-free-dialog is removed
-    [HttpPost("premium")]
-    public async Task<PaymentResponseModel> PostPremiumAsync(
-        PremiumRequestModel model,
-        [FromServices] GlobalSettings globalSettings)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var valid = model.Validate(globalSettings);
-        UserLicense? license = null;
-        if (valid && globalSettings.SelfHosted)
-        {
-            license = await ApiHelpers.ReadJsonFileFromBody<UserLicense>(HttpContext, model.License);
-        }
-
-        if (!valid && !globalSettings.SelfHosted && string.IsNullOrWhiteSpace(model.Country))
-        {
-            throw new BadRequestException("Country is required.");
-        }
-
-        if (!valid || (globalSettings.SelfHosted && license == null))
-        {
-            throw new BadRequestException("Invalid license.");
-        }
-
-        var result = await userService.SignUpPremiumAsync(user, model.PaymentToken,
-            model.PaymentMethodType!.Value, model.AdditionalStorageGb.GetValueOrDefault(0), license,
-            new TaxInfo { BillingAddressCountry = model.Country, BillingAddressPostalCode = model.PostalCode });
-
-        var userTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        var userHasPremiumFromOrganization = await userService.HasPremiumFromOrganization(user);
-        var organizationIdsClaimingActiveUser = await GetOrganizationIdsClaimingUserAsync(user.Id);
-        var accountKeys = await userAccountKeysQuery.Run(user);
-
-        var profile = new ProfileResponseModel(user, accountKeys, null, null, null, userTwoFactorEnabled,
-            userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
-        return new PaymentResponseModel
-        {
-            UserProfile = profile,
-            PaymentIntentClientSecret = result.Item2,
-            Success = result.Item1
-        };
-    }
-
-    // TODO: Migrate to Query / AccountBillingVNextController as part of Premium -> Organization upgrade work.
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpGet("subscription")]
     public async Task<SubscriptionResponseModel> GetSubscriptionAsync(
         [FromServices] GlobalSettings globalSettings,
@@ -114,7 +61,7 @@ public class AccountsController(
         }
     }
 
-    // TODO: Migrate to Command / AccountBillingVNextController as PUT /account/billing/vnext/subscription
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpPost("storage")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostStorageAsync([FromBody] StorageRequestModel model)
@@ -171,7 +118,7 @@ public class AccountsController(
             user.IsExpired());
     }
 
-    // TODO: Migrate to Command / AccountBillingVNextController as POST /account/billing/vnext/subscription/reinstate
+    // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpPost("reinstate-premium")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PostReinstateAsync()
@@ -183,11 +130,5 @@ public class AccountsController(
         }
 
         await userService.ReinstatePremiumAsync(user);
-    }
-
-    private async Task<IEnumerable<Guid>> GetOrganizationIdsClaimingUserAsync(Guid userId)
-    {
-        var organizationsClaimingUser = await userService.GetOrganizationsClaimingUserAsync(userId);
-        return organizationsClaimingUser.Select(o => o.Id);
     }
 }

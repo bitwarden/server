@@ -7,6 +7,7 @@ using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -47,7 +48,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </remarks>
     public bool ManagesDatabase { get; set; } = true;
 
-    private readonly List<Action<IServiceCollection>> _configureTestServices = new();
+    protected readonly List<Action<IServiceCollection>> _configureTestServices = new();
     private readonly List<Action<IConfigurationBuilder>> _configureAppConfiguration = new();
 
     public void SubstituteService<TService>(Action<TService> mockService)
@@ -154,6 +155,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Web push notifications
             { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
+            { "globalSettings:launchDarkly:flagValues:web-push", "true" },
         };
 
         // Some database drivers modify the connection string
@@ -188,6 +190,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             {
                 TestDatabase.Migrate(services);
             }
+
+            // Register NoOpManglerService for test data seeding (no mangling in tests)
+            services.TryAddSingleton<IManglerService, NoOpManglerService>();
 
             // QUESTION: The normal licensing service should run fine on developer machines but not in CI
             // should we have a fork here to leave the normal service for developers?

@@ -20,7 +20,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,
@@ -29,6 +29,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         : base(serviceScopeFactory, mapper, context => context.Organizations)
     {
         _logger = logger;
+    }
+
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewayCustomerId == gatewayCustomerId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
+    }
+
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewaySubscriptionId == gatewaySubscriptionId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
     }
 
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
@@ -114,7 +138,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseOrganizationDomains = e.UseOrganizationDomains,
                 UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
                 UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
-                UsePhishingBlocker = e.UsePhishingBlocker
+                UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
+                UsePhishingBlocker = e.UsePhishingBlocker,
+                UseMyItems = e.UseMyItems
             }).ToListAsync();
         }
     }
@@ -324,7 +350,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     where ou.UserId == userWithDomain.UserId &&
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
-                          o.Enabled == true
+                          o.Enabled == true &&
+                          ou.Status != OrganizationUserStatusType.Invited
                     select o;
 
         return await query.ToArrayAsync();

@@ -35,6 +35,34 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         return user;
     }
 
+    public async Task<User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewayCustomerId]",
+                new { GatewayCustomerId = gatewayCustomerId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                "[dbo].[User_ReadByGatewaySubscriptionId]",
+                new { GatewaySubscriptionId = gatewaySubscriptionId },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<User?> GetByEmailAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -404,6 +432,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
     {
+        var protectedKeyConnectorWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(keyConnectorWrappedUserKey));
+
         return async (connection, transaction) =>
         {
             var timestamp = DateTime.UtcNow;
@@ -413,7 +444,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new
                 {
                     Id = userId,
-                    Key = keyConnectorWrappedUserKey,
+                    Key = protectedKeyConnectorWrappedUserKey,
                     // Key Connector does not use KDF, so we set some defaults
                     Kdf = KdfType.Argon2id,
                     KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
@@ -426,6 +457,62 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
         };
+    }
+
+    public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
+        string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
+    {
+        var protectedMasterKeyWrappedUserKey = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(masterPasswordUnlockData.MasterKeyWrappedUserKey));
+
+        var protectedServerSideHashedMasterPasswordAuthenticationHash = string.Concat(
+            Constants.DatabaseFieldProtectedPrefix,
+            _dataProtector.Protect(serverSideHashedMasterPasswordAuthenticationHash));
+
+        return async (connection, transaction) =>
+        {
+            var timestamp = DateTime.UtcNow;
+
+            await connection!.ExecuteAsync(
+                "[dbo].[User_UpdateMasterPassword]",
+                new
+                {
+                    Id = userId,
+                    MasterPassword = protectedServerSideHashedMasterPasswordAuthenticationHash,
+                    MasterPasswordHint = masterPasswordHint,
+                    Key = protectedMasterKeyWrappedUserKey,
+                    Kdf = masterPasswordUnlockData.Kdf.KdfType,
+                    KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
+                    KdfMemory = masterPasswordUnlockData.Kdf.Memory,
+                    KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
+                    RevisionDate = timestamp,
+                    AccountRevisionDate = timestamp
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    public async Task UpdateUserDataAsync(IEnumerable<UpdateUserData> updateUserDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            foreach (var action in updateUserDataActions)
+            {
+                await action(connection, transaction);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 
     private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)

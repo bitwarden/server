@@ -75,6 +75,7 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             MaxCollections = plan.PasswordManager.MaxCollections,
             MaxStorageGb = plan.PasswordManager.BaseStorageGb,
             UsePolicies = plan.HasPolicies,
+            UseMyItems = plan.HasPolicies, // TODO: use the plan property when added (PM-32366)
             UseSso = plan.HasSso,
             UseOrganizationDomains = plan.HasOrganizationDomains,
             UseGroups = plan.HasGroups,
@@ -93,8 +94,8 @@ public class ProviderClientOrganizationSignUpCommand : IProviderClientOrganizati
             ReferenceData = signup.Owner.ReferenceData,
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
+            PublicKey = signup.Keys?.PublicKey,
+            PrivateKey = signup.Keys?.WrappedPrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,

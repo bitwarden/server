@@ -1,0 +1,78 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "CollPerms", "lastName": "Owner", "role": "owner" },
+    { "firstName": "CollPerms", "lastName": "Admin", "role": "admin" },
+    { "firstName": "CollPerms", "lastName": "User", "role": "user" },
+    { "firstName": "CollPerms", "lastName": "Custom", "role": "custom" }
+  ],
+  "collections": [
+    {
+      "name": "View-Items-Collection",
+      "externalId": "view",
+      "users": [
+        { "user": "collperms.admin", "readOnly": true },
+        { "user": "collperms.user", "readOnly": true },
+        { "user": "collperms.custom", "readOnly": true }
+      ]
+    },
+    {
+      "name": "View-Items-Hidden-Passwords-Collection",
+      "externalId": "viewhidden",
+      "users": [
+        { "user": "collperms.admin", "readOnly": true, "hidePasswords": true },
+        { "user": "collperms.user", "readOnly": true, "hidePasswords": true },
+        { "user": "collperms.custom", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Edit-Items-Collection",
+      "externalId": "edit",
+      "users": [
+        { "user": "collperms.admin" },
+        { "user": "collperms.user" },
+        { "user": "collperms.custom" }
+      ]
+    },
+    {
+      "name": "Edit-Items-Hidden-Passwords-Collection",
+      "externalId": "edithidden",
+      "users": [
+        { "user": "collperms.admin", "hidePasswords": true },
+        { "user": "collperms.user", "hidePasswords": true },
+        { "user": "collperms.custom", "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Manage-Collection",
+      "externalId": "manage",
+      "users": [
+        { "user": "collperms.admin", "manage": true },
+        { "user": "collperms.user", "manage": true },
+        { "user": "collperms.custom", "manage": true }
+      ]
+    },
+    {
+      "name": "Collection-21891",
+      "externalId": "manage",
+      "users": [
+        { "user": "collperms.admin", "manage": true },
+        { "user": "collperms.user", "manage": true },
+        { "user": "collperms.custom", "manage": true }
+      ]
+    },
+    { "name": "Collection-19712" },
+    { "name": "Collection-19713" },
+    { "name": "Collection-19714" },
+    { "name": "Collection-19716-1" },
+    { "name": "Collection-19716-2" },
+    {
+      "name": "Collection-842048-not-assigned",
+      "externalId": "Collection-842048-not-assigned"
+    },
+    {
+      "name": "Collection-842048-assigned",
+      "externalId": "Collection-842048-assigned"
+    }
+  ]
+}

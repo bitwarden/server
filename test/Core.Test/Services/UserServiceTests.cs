@@ -12,6 +12,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,6 +22,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -113,11 +115,11 @@ public class UserServiceTests
     {
         orgUser.OrganizationId = organization.Id;
         organization.Enabled = true;
-        organization.UsersGetPremium = true;
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
@@ -593,6 +595,41 @@ public class UserServiceTests
         {
             user.MasterPassword = null;
         }
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    [BitAutoData("\t")]
+    public async Task AdminResetPasswordAsync_EmptyOrWhitespaceResetPasswordKey_ThrowsBadRequest(
+        string resetPasswordKey,
+        SutProvider<UserService> sutProvider,
+        Organization organization,
+        OrganizationUser orgUser,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy)
+    {
+        // Arrange
+        organization.UseResetPassword = true;
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+        orgUser.OrganizationId = organization.Id;
+        orgUser.ResetPasswordKey = resetPasswordKey;
+        orgUser.UserId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(policy);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(orgUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AdminResetPasswordAsync(
+                OrganizationUserType.Owner, organization.Id, orgUser.Id, "newPassword", "key"));
+        Assert.Equal("Organization User not valid", exception.Message);
     }
 }
 

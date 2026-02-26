@@ -234,6 +234,18 @@ public class HubHelpers
             case PushType.PolicyChanged:
                 await policyChangedNotificationHandler(notificationJson, cancellationToken);
                 break;
+            case PushType.AutoConfirm:
+                var autoConfirmNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<AutoConfirmPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                if (autoConfirmNotification is null)
+                {
+                    break;
+                }
+
+                await _hubContext.Clients.User(autoConfirmNotification.Payload.UserId.ToString())
+                    .SendAsync(_receiveMessageMethod, autoConfirmNotification, cancellationToken);
+                break;
             default:
                 _logger.LogWarning("Notification type '{NotificationType}' has not been registered in HubHelpers and will not be pushed as as result", notification.Type);
                 break;

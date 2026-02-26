@@ -86,7 +86,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, withOrganizations: false);
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
