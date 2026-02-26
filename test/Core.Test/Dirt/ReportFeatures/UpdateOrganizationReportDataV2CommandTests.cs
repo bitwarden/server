@@ -1,5 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Enums;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -14,6 +16,24 @@ namespace Bit.Core.Test.Dirt.ReportFeatures;
 [SutProviderCustomize]
 public class UpdateOrganizationReportDataV2CommandTests
 {
+    private static OrganizationReport CreateReportWithFileData(Guid reportId, Guid organizationId, string fileId)
+    {
+        var fileData = new OrganizationReportFileData
+        {
+            Id = fileId,
+            Validated = false
+        };
+
+        var report = new OrganizationReport
+        {
+            Id = reportId,
+            OrganizationId = organizationId,
+            Type = OrganizationReportType.File
+        };
+        report.SetReportFileData(fileData);
+        return report;
+    }
+
     [Theory]
     [BitAutoData]
     public async Task GetUploadUrlAsync_WithMismatchedFileId_ShouldThrowNotFoundException(
@@ -22,11 +42,7 @@ public class UpdateOrganizationReportDataV2CommandTests
         // Arrange
         var fixture = new Fixture();
         var request = fixture.Create<UpdateOrganizationReportDataRequest>();
-        var existingReport = fixture.Build<OrganizationReport>()
-            .With(x => x.Id, request.ReportId)
-            .With(x => x.OrganizationId, request.OrganizationId)
-            .With(x => x.FileId, "stored-file-id")
-            .Create();
+        var existingReport = CreateReportWithFileData(request.ReportId, request.OrganizationId, "stored-file-id");
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
             .GetByIdAsync(request.ReportId)
@@ -67,10 +83,7 @@ public class UpdateOrganizationReportDataV2CommandTests
         // Arrange
         var fixture = new Fixture();
         var request = fixture.Create<UpdateOrganizationReportDataRequest>();
-        var existingReport = fixture.Build<OrganizationReport>()
-            .With(x => x.Id, request.ReportId)
-            .With(x => x.OrganizationId, Guid.NewGuid()) // Different org ID
-            .Create();
+        var existingReport = CreateReportWithFileData(request.ReportId, Guid.NewGuid(), "file-id");
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
             .GetByIdAsync(request.ReportId)

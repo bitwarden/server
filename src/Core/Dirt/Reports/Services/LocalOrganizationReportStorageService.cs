@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 
@@ -17,17 +18,31 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
         _baseUrl = globalSettings.OrganizationReport.BaseUrl;
     }
 
-    public Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, string reportFileId)
+    public Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, OrganizationReportFileData fileData)
         => Task.FromResult($"/reports/v2/organizations/{report.OrganizationId}/{report.Id}/file/report-data");
 
-    public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, string reportFileId)
+    public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, OrganizationReportFileData fileData)
     {
         InitDir();
-        return Task.FromResult($"{_baseUrl}/{RelativePath(report, reportFileId, "report-data.json")}");
+        return Task.FromResult($"{_baseUrl}/{RelativePath(report, fileData.Id!, fileData.FileName)}");
     }
 
-    public async Task UploadReportDataAsync(OrganizationReport report, string reportFileId, Stream stream)
-        => await WriteFileAsync(report, reportFileId, "report-data.json", stream);
+    public async Task UploadReportDataAsync(OrganizationReport report, OrganizationReportFileData fileData, Stream stream)
+        => await WriteFileAsync(report, fileData.Id!, fileData.FileName, stream);
+
+    public Task<(bool valid, long length)> ValidateFileAsync(
+        OrganizationReport report, OrganizationReportFileData fileData, long minimum, long maximum)
+    {
+        var path = Path.Combine(_baseDirPath, RelativePath(report, fileData.Id!, fileData.FileName));
+        if (!File.Exists(path))
+        {
+            return Task.FromResult((false, -1L));
+        }
+
+        var length = new FileInfo(path).Length;
+        var valid = minimum <= length && length <= maximum;
+        return Task.FromResult((valid, length));
+    }
 
     public Task DeleteReportFilesAsync(OrganizationReport report, string reportFileId)
     {
@@ -40,21 +55,21 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
         return Task.CompletedTask;
     }
 
-    private async Task WriteFileAsync(OrganizationReport report, string reportFileId, string fileName, Stream stream)
+    private async Task WriteFileAsync(OrganizationReport report, string fileId, string fileName, Stream stream)
     {
         InitDir();
-        var path = Path.Combine(_baseDirPath, RelativePath(report, reportFileId, fileName));
+        var path = Path.Combine(_baseDirPath, RelativePath(report, fileId, fileName));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using var fs = File.Create(path);
         stream.Seek(0, SeekOrigin.Begin);
         await stream.CopyToAsync(fs);
     }
 
-    private static string RelativePath(OrganizationReport report, string reportFileId, string fileName)
+    private static string RelativePath(OrganizationReport report, string fileId, string fileName)
     {
         var date = report.CreationDate.ToString("MM-dd-yyyy");
         return Path.Combine(report.OrganizationId.ToString(), date, report.Id.ToString(),
-            reportFileId, fileName);
+            fileId, fileName);
     }
 
     private void InitDir()

@@ -1,5 +1,6 @@
 ﻿using AutoFixture;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -16,6 +17,15 @@ public class LocalOrganizationReportStorageServiceTests
         globalSettings.OrganizationReport.BaseDirectory = "/tmp/bitwarden-test/reports";
         globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
         return globalSettings;
+    }
+
+    private static OrganizationReportFileData CreateFileData(string fileId = "test-file-id")
+    {
+        return new OrganizationReportFileData
+        {
+            Id = fileId,
+            Validated = false
+        };
     }
 
     [Fact]
@@ -42,12 +52,13 @@ public class LocalOrganizationReportStorageServiceTests
         var report = fixture.Build<OrganizationReport>()
             .With(r => r.OrganizationId, orgId)
             .With(r => r.Id, reportId)
+            .With(r => r.ReportData, string.Empty)
             .Create();
 
-        var reportFileId = "test-file-id";
+        var fileData = CreateFileData();
 
         // Act
-        var url = await sut.GetReportDataUploadUrlAsync(report, reportFileId);
+        var url = await sut.GetReportDataUploadUrlAsync(report, fileData);
 
         // Assert
         Assert.Equal($"/reports/v2/organizations/{orgId}/{reportId}/file/report-data", url);
@@ -64,23 +75,24 @@ public class LocalOrganizationReportStorageServiceTests
         var orgId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var reportId = Guid.Parse("22222222-2222-2222-2222-222222222222");
         var creationDate = new DateTime(2026, 2, 17);
-        var reportFileId = "abc123";
+        var fileData = CreateFileData("abc123");
 
         var report = fixture.Build<OrganizationReport>()
             .With(r => r.OrganizationId, orgId)
             .With(r => r.Id, reportId)
             .With(r => r.CreationDate, creationDate)
+            .With(r => r.ReportData, string.Empty)
             .Create();
 
         // Act
-        var url = await sut.GetReportDataDownloadUrlAsync(report, reportFileId);
+        var url = await sut.GetReportDataDownloadUrlAsync(report, fileData);
 
         // Assert
         Assert.StartsWith("https://localhost/reports/", url);
         Assert.Contains($"{orgId}", url);
         Assert.Contains("02-17-2026", url); // Date format
         Assert.Contains($"{reportId}", url);
-        Assert.Contains(reportFileId, url);
+        Assert.Contains(fileData.Id, url);
         Assert.EndsWith("report-data.json", url);
     }
 
@@ -90,7 +102,7 @@ public class LocalOrganizationReportStorageServiceTests
     public async Task UploadReportDataAsync_WithPathTraversalPayload_WritesOutsideBaseDirectory(string maliciousFileId)
     {
         // Arrange - demonstrates the path traversal vulnerability that is mitigated
-        // by validating reportFileId matches report.FileId at the controller/command layer
+        // by validating reportFileId matches report's file data at the controller/command layer
         var fixture = new Fixture();
         var tempDir = Path.Combine(Path.GetTempPath(), "bitwarden-test-" + Guid.NewGuid());
 
@@ -104,7 +116,14 @@ public class LocalOrganizationReportStorageServiceTests
             .With(r => r.OrganizationId, Guid.NewGuid())
             .With(r => r.Id, Guid.NewGuid())
             .With(r => r.CreationDate, DateTime.UtcNow)
+            .With(r => r.ReportData, string.Empty)
             .Create();
+
+        var maliciousFileData = new OrganizationReportFileData
+        {
+            Id = maliciousFileId,
+            Validated = false
+        };
 
         var testData = "malicious content";
         var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testData));
@@ -112,7 +131,7 @@ public class LocalOrganizationReportStorageServiceTests
         try
         {
             // Act
-            await sut.UploadReportDataAsync(report, maliciousFileId, stream);
+            await sut.UploadReportDataAsync(report, maliciousFileData, stream);
 
             // Assert - the file is written at a path that escapes the intended report directory
             var intendedBaseDir = Path.Combine(tempDir, report.OrganizationId.ToString(),
@@ -150,20 +169,21 @@ public class LocalOrganizationReportStorageServiceTests
             .With(r => r.OrganizationId, Guid.NewGuid())
             .With(r => r.Id, Guid.NewGuid())
             .With(r => r.CreationDate, DateTime.UtcNow)
+            .With(r => r.ReportData, string.Empty)
             .Create();
 
-        var reportFileId = "test-file-123";
+        var fileData = CreateFileData("test-file-123");
         var testData = "test report data content";
         var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testData));
 
         try
         {
             // Act
-            await sut.UploadReportDataAsync(report, reportFileId, stream);
+            await sut.UploadReportDataAsync(report, fileData, stream);
 
             // Assert
             var expectedDir = Path.Combine(tempDir, report.OrganizationId.ToString(),
-                report.CreationDate.ToString("MM-dd-yyyy"), report.Id.ToString(), reportFileId);
+                report.CreationDate.ToString("MM-dd-yyyy"), report.Id.ToString(), fileData.Id);
             Assert.True(Directory.Exists(expectedDir));
 
             var expectedFile = Path.Combine(expectedDir, "report-data.json");
@@ -180,5 +200,80 @@ public class LocalOrganizationReportStorageServiceTests
                 Directory.Delete(tempDir, true);
             }
         }
+    }
+
+    [Fact]
+    public async Task ValidateFileAsync_FileExists_ReturnsValidAndLength()
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var tempDir = Path.Combine(Path.GetTempPath(), "bitwarden-test-" + Guid.NewGuid());
+
+        var globalSettings = new Core.Settings.GlobalSettings();
+        globalSettings.OrganizationReport.BaseDirectory = tempDir;
+        globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+
+        var sut = new LocalOrganizationReportStorageService(globalSettings);
+
+        var report = fixture.Build<OrganizationReport>()
+            .With(r => r.OrganizationId, Guid.NewGuid())
+            .With(r => r.Id, Guid.NewGuid())
+            .With(r => r.CreationDate, DateTime.UtcNow)
+            .With(r => r.ReportData, string.Empty)
+            .Create();
+
+        var fileData = CreateFileData("validate-test-file");
+        var testData = "test content for validation";
+        var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testData));
+
+        try
+        {
+            // First upload a file
+            await sut.UploadReportDataAsync(report, fileData, stream);
+
+            // Act
+            var (valid, length) = await sut.ValidateFileAsync(report, fileData, 0, 1000);
+
+            // Assert
+            Assert.True(valid);
+            Assert.Equal(testData.Length, length);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ValidateFileAsync_FileDoesNotExist_ReturnsInvalid()
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var tempDir = Path.Combine(Path.GetTempPath(), "bitwarden-test-" + Guid.NewGuid());
+
+        var globalSettings = new Core.Settings.GlobalSettings();
+        globalSettings.OrganizationReport.BaseDirectory = tempDir;
+        globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+
+        var sut = new LocalOrganizationReportStorageService(globalSettings);
+
+        var report = fixture.Build<OrganizationReport>()
+            .With(r => r.OrganizationId, Guid.NewGuid())
+            .With(r => r.Id, Guid.NewGuid())
+            .With(r => r.CreationDate, DateTime.UtcNow)
+            .With(r => r.ReportData, string.Empty)
+            .Create();
+
+        var fileData = CreateFileData("nonexistent-file");
+
+        // Act
+        var (valid, length) = await sut.ValidateFileAsync(report, fileData, 0, 1000);
+
+        // Assert
+        Assert.False(valid);
+        Assert.Equal(-1, length);
     }
 }

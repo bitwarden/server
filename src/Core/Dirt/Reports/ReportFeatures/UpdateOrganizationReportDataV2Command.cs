@@ -35,7 +35,8 @@ public class UpdateOrganizationReportDataV2Command : IUpdateOrganizationReportDa
             throw new NotFoundException("Report not found");
         }
 
-        if (existingReport.FileId != reportFileId)
+        var fileData = existingReport.GetReportFileData();
+        if (fileData == null || fileData.Id != reportFileId)
         {
             throw new NotFoundException("Report not found");
         }
@@ -44,6 +45,6 @@ public class UpdateOrganizationReportDataV2Command : IUpdateOrganizationReportDa
         existingReport.RevisionDate = DateTime.UtcNow;
         await _organizationReportRepo.ReplaceAsync(existingReport);
 
-        return await _storageService.GetReportDataUploadUrlAsync(existingReport, reportFileId);
+        return await _storageService.GetReportDataUploadUrlAsync(existingReport, fileData);
     }
 }

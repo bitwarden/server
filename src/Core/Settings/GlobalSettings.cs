@@ -15,7 +15,7 @@ public class GlobalSettings : IGlobalSettings
         BaseServiceUri = new BaseServiceUriSettings(this);
         Attachment = new FileStorageSettings(this, "attachments", "attachments");
         Send = new FileStorageSettings(this, "attachments/send", "attachments/send");
-        OrganizationReport = new FileStorageSettings(this, "reports/organization-reports", "reports/organization-reports");
+        OrganizationReport = new FileStorageSettings(this, "attachments/reports", "attachments/reports");
         DataProtection = new DataProtectionSettings(this);
     }
 

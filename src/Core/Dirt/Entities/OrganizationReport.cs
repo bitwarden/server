@@ -1,5 +1,8 @@
 ﻿#nullable enable
 
+using System.Text.Json;
+using Bit.Core.Dirt.Enums;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -27,7 +30,22 @@ public class OrganizationReport : ITableObject<Guid>
     public int? PasswordAtRiskCount { get; set; }
     public int? CriticalPasswordCount { get; set; }
     public int? CriticalPasswordAtRiskCount { get; set; }
-    public string? FileId { get; set; }
+    public OrganizationReportType Type { get; set; }
+
+    public OrganizationReportFileData? GetReportFileData()
+    {
+        if (string.IsNullOrWhiteSpace(ReportData))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<OrganizationReportFileData>(ReportData);
+    }
+
+    public void SetReportFileData(OrganizationReportFileData data)
+    {
+        ReportData = JsonSerializer.Serialize(data, JsonHelpers.IgnoreWritingNull);
+    }
 
     public void SetNewId()
     {

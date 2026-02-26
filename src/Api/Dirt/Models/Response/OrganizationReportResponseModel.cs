@@ -13,7 +13,6 @@ public class OrganizationReportResponseModel
     public int? PasswordCount { get; set; }
     public int? PasswordAtRiskCount { get; set; }
     public int? MemberCount { get; set; }
-    public string? FileId { get; set; }
     public DateTime? CreationDate { get; set; } = null;
     public DateTime? RevisionDate { get; set; } = null;
 
@@ -33,7 +32,6 @@ public class OrganizationReportResponseModel
         PasswordCount = organizationReport.PasswordCount;
         PasswordAtRiskCount = organizationReport.PasswordAtRiskCount;
         MemberCount = organizationReport.MemberCount;
-        FileId = organizationReport.FileId;
         CreationDate = organizationReport.CreationDate;
         RevisionDate = organizationReport.RevisionDate;
     }
