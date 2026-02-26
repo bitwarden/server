@@ -96,7 +96,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     {
         var organizationUsers = (await _organizationUserRepository
             .GetManyDetailsByOrganizationAsync_vNext(request.OrganizationId, request.IncludeGroups, request.IncludeCollections))
-            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
+            .Where(o => o.ActiveStatus.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
             .ToArray();
 
         var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
