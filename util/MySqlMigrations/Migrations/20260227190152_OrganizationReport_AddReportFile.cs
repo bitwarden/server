@@ -5,7 +5,7 @@
 namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class _20260227_00_OrganizationReport_AddReportFile : Migration
+public partial class OrganizationReport_AddReportFile : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)

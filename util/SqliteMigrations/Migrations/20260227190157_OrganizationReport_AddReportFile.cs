@@ -2,10 +2,10 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class _20260227_00_OrganizationReport_AddReportFile : Migration
+public partial class OrganizationReport_AddReportFile : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
@@ -13,7 +13,7 @@ public partial class _20260227_00_OrganizationReport_AddReportFile : Migration
         migrationBuilder.AddColumn<string>(
             name: "ReportFile",
             table: "OrganizationReport",
-            type: "text",
+            type: "TEXT",
             nullable: false,
             defaultValue: "");
     }
