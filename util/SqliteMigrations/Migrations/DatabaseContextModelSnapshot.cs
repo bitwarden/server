@@ -1138,14 +1138,15 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ReportFile")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SummaryData")
                         .HasColumnType("TEXT");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

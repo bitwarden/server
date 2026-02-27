@@ -1154,14 +1154,15 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ReportFile")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SummaryData")
                         .HasColumnType("text");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("smallint");
 
                     b.HasKey("Id");
 

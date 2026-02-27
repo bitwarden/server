@@ -19,7 +19,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Update]
     @PasswordAtRiskCount INT = NULL,
     @CriticalPasswordCount INT = NULL,
     @CriticalPasswordAtRiskCount INT = NULL,
-    @Type TINYINT = 0
+    @ReportFile NVARCHAR(MAX) = ''
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -44,6 +44,6 @@ BEGIN
         [PasswordAtRiskCount] = @PasswordAtRiskCount,
         [CriticalPasswordCount] = @CriticalPasswordCount,
         [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount,
-        [Type] = @Type
+        [ReportFile] = @ReportFile
     WHERE [Id] = @Id;
 END;

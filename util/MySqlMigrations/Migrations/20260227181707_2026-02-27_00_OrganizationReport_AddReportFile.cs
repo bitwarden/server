@@ -5,24 +5,24 @@
 namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class _20260226_00_OrganizationReport_AddType : Migration
+public partial class _20260227_00_OrganizationReport_AddReportFile : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<byte>(
-            name: "Type",
+        migrationBuilder.AddColumn<string>(
+            name: "ReportFile",
             table: "OrganizationReport",
-            type: "tinyint unsigned",
-            nullable: false,
-            defaultValue: (byte)0);
+            type: "longtext",
+            nullable: false)
+            .Annotation("MySql:CharSet", "utf8mb4");
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "Type",
+            name: "ReportFile",
             table: "OrganizationReport");
     }
 }

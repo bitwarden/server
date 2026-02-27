@@ -1,12 +1,48 @@
--- Add Type column if it does not exist
-IF NOT EXISTS (
+-- Remove old Type migration entry if it was previously applied
+IF EXISTS (
+    SELECT 1 FROM [dbo].[Migration]
+    WHERE [Filename] = '2026-02-27_00_OrganizationReport_AddType'
+)
+BEGIN
+    DELETE FROM [dbo].[Migration]
+    WHERE [Filename] = '2026-02-27_00_OrganizationReport_AddType';
+END
+GO
+
+-- Drop Type column if it exists
+IF EXISTS (
     SELECT 1 FROM sys.columns
     WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport]')
     AND name = 'Type'
 )
 BEGIN
+    -- Drop the default constraint first
+    DECLARE @ConstraintName NVARCHAR(256);
+    SELECT @ConstraintName = dc.name
+    FROM sys.default_constraints dc
+    JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+    WHERE c.object_id = OBJECT_ID(N'[dbo].[OrganizationReport]')
+    AND c.name = 'Type';
+
+    IF @ConstraintName IS NOT NULL
+    BEGIN
+        EXEC('ALTER TABLE [dbo].[OrganizationReport] DROP CONSTRAINT [' + @ConstraintName + ']');
+    END
+
     ALTER TABLE [dbo].[OrganizationReport]
-    ADD [Type] TINYINT NOT NULL DEFAULT 0;
+    DROP COLUMN [Type];
+END
+GO
+
+-- Add ReportFile column if it does not exist
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport]')
+    AND name = 'ReportFile'
+)
+BEGIN
+    ALTER TABLE [dbo].[OrganizationReport]
+    ADD [ReportFile] NVARCHAR(MAX) NOT NULL DEFAULT '';
 END
 GO
 
@@ -14,7 +50,7 @@ GO
 EXEC sp_refreshview N'[dbo].[OrganizationReportView]';
 GO
 
--- Update OrganizationReport_Create to include Type
+-- Update OrganizationReport_Create to include ReportFile
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
    @Id UNIQUEIDENTIFIER OUTPUT,
    @OrganizationId UNIQUEIDENTIFIER,
@@ -36,7 +72,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Create]
    @PasswordAtRiskCount INT = NULL,
    @CriticalPasswordCount INT = NULL,
    @CriticalPasswordAtRiskCount INT = NULL,
-   @Type TINYINT = 0
+   @ReportFile NVARCHAR(MAX) = ''
 AS
 BEGIN
    SET NOCOUNT ON;
@@ -62,7 +98,7 @@ INSERT INTO [dbo].[OrganizationReport](
     [PasswordAtRiskCount],
     [CriticalPasswordCount],
     [CriticalPasswordAtRiskCount],
-    [Type]
+    [ReportFile]
 )
 VALUES (
     @Id,
@@ -85,12 +121,12 @@ VALUES (
     @PasswordAtRiskCount,
     @CriticalPasswordCount,
     @CriticalPasswordAtRiskCount,
-    @Type
+    @ReportFile
     );
 END
 GO
 
--- Update OrganizationReport_Update to include Type
+-- Update OrganizationReport_Update to include ReportFile
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Update]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
@@ -112,7 +148,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_Update]
     @PasswordAtRiskCount INT = NULL,
     @CriticalPasswordCount INT = NULL,
     @CriticalPasswordAtRiskCount INT = NULL,
-    @Type TINYINT = 0
+    @ReportFile NVARCHAR(MAX) = ''
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -137,7 +173,7 @@ BEGIN
         [PasswordAtRiskCount] = @PasswordAtRiskCount,
         [CriticalPasswordCount] = @CriticalPasswordCount,
         [CriticalPasswordAtRiskCount] = @CriticalPasswordAtRiskCount,
-        [Type] = @Type
+        [ReportFile] = @ReportFile
     WHERE [Id] = @Id;
 END;
 GO

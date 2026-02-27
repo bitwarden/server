@@ -19,7 +19,7 @@ CREATE PROCEDURE [dbo].[OrganizationReport_Create]
    @PasswordAtRiskCount INT = NULL,
    @CriticalPasswordCount INT = NULL,
    @CriticalPasswordAtRiskCount INT = NULL,
-   @Type TINYINT = 0
+   @ReportFile NVARCHAR(MAX) = ''
 AS
 BEGIN
    SET NOCOUNT ON;
@@ -46,7 +46,7 @@ INSERT INTO [dbo].[OrganizationReport](
     [PasswordAtRiskCount],
     [CriticalPasswordCount],
     [CriticalPasswordAtRiskCount],
-    [Type]
+    [ReportFile]
 )
 VALUES (
     @Id,
@@ -69,6 +69,6 @@ VALUES (
     @PasswordAtRiskCount,
     @CriticalPasswordCount,
     @CriticalPasswordAtRiskCount,
-    @Type
+    @ReportFile
     );
 END

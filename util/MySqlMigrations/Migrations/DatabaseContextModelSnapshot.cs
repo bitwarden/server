@@ -1149,14 +1149,15 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("ReportFile")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("SummaryData")
                         .HasColumnType("longtext");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("tinyint unsigned");
 
                     b.HasKey("Id");
 

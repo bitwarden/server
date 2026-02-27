@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260227140422_2026-02-26_00_OrganizationReport_AddType")]
-    partial class _20260226_00_OrganizationReport_AddType
+    [Migration("20260227181715_2026-02-27_00_OrganizationReport_AddReportFile")]
+    partial class _20260227_00_OrganizationReport_AddReportFile
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1141,14 +1141,15 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ReportFile")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SummaryData")
                         .HasColumnType("TEXT");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
