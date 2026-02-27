@@ -247,7 +247,6 @@ public static class FeatureFlagKeys
     public const string SendEmailOTP = "pm-19051-send-email-verification";
 
     /* Vault Team */
-    public const string VaultBankAccount = "vault-bank-account";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
     public const string PhishingDetection = "phishing-detection";
@@ -264,6 +263,7 @@ public static class FeatureFlagKeys
     public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
+    public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
