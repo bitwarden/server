@@ -23,7 +23,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
     {
         try
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report summary data by date range for organization {OrganizationId}, from {StartDate} to {EndDate}",
                 organizationId, startDate, endDate);
 
             var (isValid, errorMessage) = ValidateRequest(organizationId, startDate, endDate);
@@ -38,20 +38,20 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
 
             var resultList = summaryDataList.ToList();
 
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetched {count} organization report summary data entries for organization {organizationId}, from {startDate} to {endDate}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetched {Count} organization report summary data entries for organization {OrganizationId}, from {StartDate} to {EndDate}",
                 resultList.Count, organizationId, startDate, endDate);
 
             return resultList;
         }
         catch (Exception ex) when (!(ex is BadRequestException))
         {
-            _logger.LogError(ex, "Error fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
+            _logger.LogError(ex, "Error fetching organization report summary data by date range for organization {OrganizationId}, from {StartDate} to {EndDate}",
                 organizationId, startDate, endDate);
             throw;
         }
     }
 
-    private (bool IsValid, string errorMessage) ValidateRequest(Guid organizationId, DateTime startDate, DateTime endDate)
+    private static (bool IsValid, string errorMessage) ValidateRequest(Guid organizationId, DateTime startDate, DateTime endDate)
     {
         if (organizationId == Guid.Empty)
         {
