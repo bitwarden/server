@@ -63,6 +63,12 @@ public static class StripeConstants
         ];
     }
 
+    public static class Intervals
+    {
+        public const string Month = "month";
+        public const string Year = "year";
+    }
+
     public static class InvoiceStatus
     {
         public const string Draft = "draft";
@@ -87,6 +93,7 @@ public static class StripeConstants
     public static class PaymentBehavior
     {
         public const string DefaultIncomplete = "default_incomplete";
+        public const string PendingIfIncomplete = "pending_if_incomplete";
     }
 
     public static class PaymentMethodTypes
