@@ -148,7 +148,7 @@ public class UpgradePremiumToOrganizationCommand(
             MaxCollections = targetPlan.PasswordManager.MaxCollections,
             MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
-            UseMyItems = targetPlan.HasPolicies, // TODO: use the plan property when added (PM-32366)
+            UseMyItems = targetPlan.HasMyItems,
             UseSso = targetPlan.HasSso,
             UseGroups = targetPlan.HasGroups,
             UseEvents = targetPlan.HasEvents,
