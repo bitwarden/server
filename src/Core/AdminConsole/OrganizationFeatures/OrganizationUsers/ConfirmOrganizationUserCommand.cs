@@ -72,10 +72,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, string defaultUserCollectionName = null)
     {
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
         var result = await SaveChangesToDatabaseAsync(
             organizationId,
             new Dictionary<Guid, string>() { { organizationUserId, key } },
-            confirmingUserId);
+            confirmingUserId,
+            organization);
 
         if (!result.Any())
         {
@@ -88,7 +91,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             throw new BadRequestException(error);
         }
 
-        await CreateDefaultCollectionAsync(orgUser, defaultUserCollectionName);
+        await CreateDefaultCollectionAsync(orgUser, organization, defaultUserCollectionName);
 
         return orgUser;
     }
@@ -96,7 +99,9 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     public async Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId, string defaultUserCollectionName = null)
     {
-        var result = await SaveChangesToDatabaseAsync(organizationId, keys, confirmingUserId);
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+        var result = await SaveChangesToDatabaseAsync(organizationId, keys, confirmingUserId, organization);
 
         var confirmedOrganizationUsers = result
             .Where(r => string.IsNullOrEmpty(r.Item2))
@@ -105,18 +110,18 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         if (confirmedOrganizationUsers.Count == 1)
         {
-            await CreateDefaultCollectionAsync(confirmedOrganizationUsers.Single(), defaultUserCollectionName);
+            await CreateDefaultCollectionAsync(confirmedOrganizationUsers.Single(), organization, defaultUserCollectionName);
         }
         else if (confirmedOrganizationUsers.Count > 1)
         {
-            await CreateManyDefaultCollectionsAsync(organizationId, confirmedOrganizationUsers, defaultUserCollectionName);
+            await CreateManyDefaultCollectionsAsync(organization, confirmedOrganizationUsers, defaultUserCollectionName);
         }
 
         return result;
     }
 
     private async Task<List<Tuple<OrganizationUser, string>>> SaveChangesToDatabaseAsync(Guid organizationId, Dictionary<Guid, string> keys,
-        Guid confirmingUserId)
+        Guid confirmingUserId, Organization organization)
     {
         var selectedOrganizationUsers = await _organizationUserRepository.GetManyAsync(keys.Keys);
         var validSelectedOrganizationUsers = selectedOrganizationUsers
@@ -129,8 +134,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         }
 
         var validSelectedUserIds = validSelectedOrganizationUsers.Select(u => u.UserId.Value).ToList();
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var allUsersOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(validSelectedUserIds);
 
         var users = await _userRepository.GetManyAsync(validSelectedUserIds);
@@ -278,11 +281,18 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     /// Creates a default collection for a single user if required by the Organization Data Ownership policy.
     /// </summary>
     /// <param name="organizationUser">The organization user who has just been confirmed.</param>
+    /// <param name="organization">The organization.</param>
     /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
-    private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, string defaultUserCollectionName)
+    private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, Organization organization, string defaultUserCollectionName)
     {
         // Skip if no collection name provided (backwards compatibility)
         if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
+        {
+            return;
+        }
+
+        // Skip if organization has disabled My Items
+        if (!organization.UseMyItems)
         {
             return;
         }
@@ -302,10 +312,10 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     /// <summary>
     /// Creates default collections for multiple users if required by the Organization Data Ownership policy.
     /// </summary>
-    /// <param name="organizationId">The organization ID.</param>
+    /// <param name="organization">The organization.</param>
     /// <param name="confirmedOrganizationUsers">The confirmed organization users.</param>
     /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
-    private async Task CreateManyDefaultCollectionsAsync(Guid organizationId,
+    private async Task CreateManyDefaultCollectionsAsync(Organization organization,
         IEnumerable<OrganizationUser> confirmedOrganizationUsers, string defaultUserCollectionName)
     {
         // Skip if no collection name provided (backwards compatibility)
@@ -314,8 +324,14 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
+        // Skip if organization has disabled My Items
+        if (!organization.UseMyItems)
+        {
+            return;
+        }
+
         var policyEligibleOrganizationUserIds = await _policyRequirementQuery
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId);
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id);
 
         var eligibleOrganizationUserIds = confirmedOrganizationUsers
             .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
@@ -327,7 +343,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        await _collectionRepository.CreateDefaultCollectionsAsync(organizationId, eligibleOrganizationUserIds, defaultUserCollectionName);
+        await _collectionRepository.CreateDefaultCollectionsAsync(organization.Id, eligibleOrganizationUserIds, defaultUserCollectionName);
     }
 
     /// <summary>
