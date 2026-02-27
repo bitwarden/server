@@ -90,7 +90,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(user, subscriptionPurchase.Coupon.Trim(), DiscountAudienceType.UserHasNoPreviousSubscriptions);
             if (!isValid)
             {
-                return new BadRequest("The discount code is no longer valid. Please remove it or use a different code to proceed with checkout.");
+                return new BadRequest("Discount expired. Please review your cart total and try again");
             }
             validatedCoupon = subscriptionPurchase.Coupon.Trim();
         }
