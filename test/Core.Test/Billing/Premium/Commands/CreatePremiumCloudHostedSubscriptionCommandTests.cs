@@ -1178,7 +1178,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("The discount code is no longer valid. Please remove it or use a different code to proceed with checkout.", badRequest.Response);
+        Assert.Equal("Discount expired. Please review your cart and try again.", badRequest.Response);
         await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
@@ -1211,7 +1211,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
-        Assert.Equal("The discount code is no longer valid. Please remove it or use a different code to proceed with checkout.", badRequest.Response);
+        Assert.Equal("Discount expired. Please review your cart and try again.", badRequest.Response);
         await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
