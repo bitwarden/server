@@ -200,7 +200,8 @@ public class EventService : IEventService
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
         // Batch lookup provider IDs for all unique organization IDs upfront
-        var uniqueOrgIds = events
+        var materializedEvents = events.ToList();
+        var uniqueOrgIds = materializedEvents
             .Select(e => e.group.OrganizationId)
             .Distinct()
             .Where(orgId => CanUseEvents(orgAbilities, orgId))
@@ -213,7 +214,7 @@ public class EventService : IEventService
         }
 
         var eventMessages = new List<IEvent>();
-        foreach (var (group, type, systemUser, date) in events)
+        foreach (var (group, type, systemUser, date) in materializedEvents)
         {
             if (!CanUseEvents(orgAbilities, group.OrganizationId))
             {
