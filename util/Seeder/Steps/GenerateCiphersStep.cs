@@ -52,7 +52,7 @@ internal sealed class GenerateCiphersStep(
 
         var ciphers = new List<Cipher>(count);
         var cipherIds = new List<Guid>(count);
-        var collectionCiphers = new List<CollectionCipher>();
+        var collectionCiphers = new List<CollectionCipher>(count + count / 3);
 
         for (var i = 0; i < count; i++)
         {
@@ -67,27 +67,48 @@ internal sealed class GenerateCiphersStep(
 
             ciphers.Add(cipher);
             cipherIds.Add(cipher.Id);
+        }
 
-            // Collection assignment
-            if (collectionIds.Count == 0)
+        if (collectionIds.Count > 0)
+        {
+            if (_density == null)
             {
-                continue;
-            }
-
-            collectionCiphers.Add(new CollectionCipher
-            {
-                CipherId = cipher.Id,
-                CollectionId = collectionIds[i % collectionIds.Count]
-            });
-
-            // Every 3rd cipher gets assigned to an additional collection
-            if (i % 3 == 0 && collectionIds.Count > 1)
-            {
-                collectionCiphers.Add(new CollectionCipher
+                for (var i = 0; i < ciphers.Count; i++)
                 {
-                    CipherId = cipher.Id,
-                    CollectionId = collectionIds[(i + 1) % collectionIds.Count]
-                });
+                    collectionCiphers.Add(new CollectionCipher
+                    {
+                        CipherId = ciphers[i].Id,
+                        CollectionId = collectionIds[i % collectionIds.Count]
+                    });
+
+                    if (i % 3 == 0 && collectionIds.Count > 1)
+                    {
+                        collectionCiphers.Add(new CollectionCipher
+                        {
+                            CipherId = ciphers[i].Id,
+                            CollectionId = collectionIds[(i + 1) % collectionIds.Count]
+                        });
+                    }
+                }
+            }
+            else
+            {
+                var orphanCount = (int)(count * _density.OrphanCipherRate);
+                var nonOrphanCount = count - orphanCount;
+
+                for (var i = 0; i < nonOrphanCount; i++)
+                {
+                    // Sqrt curve: later collections accumulate more ciphers (right-heavy skew)
+                    var collectionId = _density.CipherSkew == CipherCollectionSkew.HeavyRight
+                        ? collectionIds[Math.Min((int)(Math.Pow((double)i / nonOrphanCount, 0.5) * collectionIds.Count), collectionIds.Count - 1)]
+                        : collectionIds[i % collectionIds.Count];
+
+                    collectionCiphers.Add(new CollectionCipher
+                    {
+                        CipherId = ciphers[i].Id,
+                        CollectionId = collectionId
+                    });
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
@@ -48,27 +49,152 @@ internal sealed class CreateCollectionsStep : IStep
         }
 
         var collectionIds = collections.Select(c => c.Id).ToList();
-        var collectionUsers = new List<CollectionUser>();
-
-        // User assignment: cycling 1-3 collections per user
-        if (collections.Count > 0 && hardenedOrgUserIds.Count > 0)
-        {
-            foreach (var (orgUserId, userIndex) in hardenedOrgUserIds.Select((id, i) => (id, i)))
-            {
-                var maxAssignments = Math.Min((userIndex % 3) + 1, collections.Count);
-                for (var j = 0; j < maxAssignments; j++)
-                {
-                    collectionUsers.Add(CollectionUserSeeder.Create(
-                        collections[(userIndex + j) % collections.Count].Id,
-                        orgUserId,
-                        readOnly: j > 0,
-                        manage: j == 0));
-                }
-            }
-        }
 
         context.Collections.AddRange(collections);
         context.Registry.CollectionIds.AddRange(collectionIds);
-        context.CollectionUsers.AddRange(collectionUsers);
+
+        if (collections.Count == 0)
+        {
+            return;
+        }
+
+        if (_density == null)
+        {
+            var collectionUsers = new List<CollectionUser>();
+            if (hardenedOrgUserIds.Count > 0)
+            {
+                foreach (var (orgUserId, userIndex) in hardenedOrgUserIds.Select((id, i) => (id, i)))
+                {
+                    var maxAssignments = Math.Min((userIndex % 3) + 1, collections.Count);
+                    for (var j = 0; j < maxAssignments; j++)
+                    {
+                        collectionUsers.Add(CollectionUserSeeder.Create(
+                            collections[(userIndex + j) % collections.Count].Id,
+                            orgUserId,
+                            readOnly: j > 0,
+                            manage: j == 0));
+                    }
+                }
+            }
+            context.CollectionUsers.AddRange(collectionUsers);
+            return;
+        }
+
+        var groupIds = context.Registry.GroupIds;
+
+        if (_density.DirectAccessRatio < 1.0 && groupIds.Count > 0)
+        {
+            var collectionGroups = BuildCollectionGroups(collectionIds, groupIds);
+            ApplyGroupPermissions(collectionGroups, _density.PermissionDistribution);
+            context.CollectionGroups.AddRange(collectionGroups);
+        }
+
+        var directUserCount = (int)(hardenedOrgUserIds.Count * _density.DirectAccessRatio);
+        if (directUserCount > 0)
+        {
+            var directUsers = BuildCollectionUsers(collectionIds, hardenedOrgUserIds, directUserCount);
+            ApplyUserPermissions(directUsers, _density.PermissionDistribution);
+            context.CollectionUsers.AddRange(directUsers);
+        }
+    }
+
+    private List<CollectionGroup> BuildCollectionGroups(List<Guid> collectionIds, List<Guid> groupIds)
+    {
+        var min = _density!.CollectionFanOutMin;
+        var max = _density.CollectionFanOutMax;
+        var result = new List<CollectionGroup>(collectionIds.Count * (min + max) / 2);
+
+        for (var c = 0; c < collectionIds.Count; c++)
+        {
+            var fanOut = ComputeFanOut(c, collectionIds.Count, min, max);
+            fanOut = Math.Min(fanOut, groupIds.Count);
+
+            for (var g = 0; g < fanOut; g++)
+            {
+                result.Add(CollectionGroupSeeder.Create(
+                    collectionIds[c],
+                    groupIds[(c + g) % groupIds.Count]));
+            }
+        }
+
+        return result;
+    }
+
+    private int ComputeFanOut(int collectionIndex, int collectionCount, int min, int max)
+    {
+        var range = max - min + 1;
+        if (range <= 1)
+        {
+            return min;
+        }
+
+        switch (_density!.FanOutShape)
+        {
+            case CollectionFanOutShape.PowerLaw:
+                // Zipf weight normalized against index 0 (where weight = 1.0), scaled to [min, max]
+                var weight = 1.0 / Math.Pow(collectionIndex + 1, 0.8);
+                return min + (int)(weight * (range - 1) + 0.5);
+
+            case CollectionFanOutShape.FrontLoaded:
+                // First 10% of collections get max fan-out, rest get min
+                var topCount = Math.Max(1, collectionCount / 10);
+                return collectionIndex < topCount ? max : min;
+
+            default: // Uniform
+                return min + (collectionIndex % range);
+        }
+    }
+
+    private static List<CollectionUser> BuildCollectionUsers(
+        List<Guid> collectionIds, List<Guid> userIds, int directUserCount)
+    {
+        var result = new List<CollectionUser>(directUserCount * 2);
+        for (var i = 0; i < directUserCount; i++)
+        {
+            var maxAssignments = Math.Min((i % 3) + 1, collectionIds.Count);
+            for (var j = 0; j < maxAssignments; j++)
+            {
+                result.Add(CollectionUserSeeder.Create(
+                    collectionIds[(i + j) % collectionIds.Count],
+                    userIds[i]));
+            }
+        }
+        return result;
+    }
+
+    private static (bool ReadOnly, bool HidePasswords, bool Manage) ResolvePermission(
+        Distribution<PermissionWeight> distribution, int index, int total)
+    {
+        return distribution.Select(index, total) switch
+        {
+            PermissionWeight.ReadOnly => (true, false, false),
+            PermissionWeight.HidePasswords => (false, true, false),
+            PermissionWeight.Manage => (false, false, true),
+            _ => (false, false, false)
+        };
+    }
+
+    private static void ApplyGroupPermissions(
+        List<CollectionGroup> assignments, Distribution<PermissionWeight> distribution)
+    {
+        for (var i = 0; i < assignments.Count; i++)
+        {
+            var (readOnly, hidePasswords, manage) = ResolvePermission(distribution, i, assignments.Count);
+            assignments[i].ReadOnly = readOnly;
+            assignments[i].HidePasswords = hidePasswords;
+            assignments[i].Manage = manage;
+        }
+    }
+
+    private static void ApplyUserPermissions(
+        List<CollectionUser> assignments, Distribution<PermissionWeight> distribution)
+    {
+        for (var i = 0; i < assignments.Count; i++)
+        {
+            var (readOnly, hidePasswords, manage) = ResolvePermission(distribution, i, assignments.Count);
+            assignments[i].ReadOnly = readOnly;
+            assignments[i].HidePasswords = hidePasswords;
+            assignments[i].Manage = manage;
+        }
     }
 }

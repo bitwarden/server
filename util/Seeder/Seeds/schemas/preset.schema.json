@@ -217,8 +217,8 @@
             },
             "shape": {
               "type": "string",
-              "enum": ["uniform", "powerLaw", "heavyTail"],
-              "description": "How collections spread across groups. 'uniform' = equal counts, 'powerLaw' = few groups get many collections, 'heavyTail' = extreme skew with most groups getting very few."
+              "enum": ["uniform", "powerLaw", "frontLoaded"],
+              "description": "How collections spread across groups. 'uniform' = equal counts, 'powerLaw' = few groups get many collections, 'frontLoaded' = first 10% of collections get max fan-out, rest get min."
             },
             "emptyGroupRate": {
               "type": "number",

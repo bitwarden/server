@@ -3,4 +3,4 @@
 /// <summary>
 /// Distribution shape for group-to-collection fan-out.
 /// </summary>
-public enum CollectionFanOutShape { Uniform, PowerLaw, HeavyTail }
+public enum CollectionFanOutShape { Uniform, PowerLaw, FrontLoaded }
