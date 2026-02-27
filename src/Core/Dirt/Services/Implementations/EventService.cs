@@ -154,7 +154,8 @@ public class EventService : IEventService
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
         // Batch lookup provider IDs for all unique organization IDs upfront
-        var uniqueOrgIds = events
+        var materializedEvents = events.ToList();
+        var uniqueOrgIds = materializedEvents
             .Select(e => e.collection.OrganizationId)
             .Distinct()
             .Where(orgId => CanUseEvents(orgAbilities, orgId))
