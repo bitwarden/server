@@ -51,7 +51,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
         ICollectionRepository collectionRepository,
-        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator, ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+        ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
