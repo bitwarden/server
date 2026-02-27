@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260227202114_OrganizationReport_AddReportFile")]
-    partial class OrganizationReport_AddReportFile
+    [Migration("20260227203558_2026-02-27_00_OrganizationReport_AddReportFile")]
+    partial class _20260227_00_OrganizationReport_AddReportFile
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
