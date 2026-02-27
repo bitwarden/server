@@ -19,5 +19,10 @@ public interface IAttachmentStorageService
     Task DeleteAttachmentsForUserAsync(Guid userId);
     Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData);
     Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData);
+    /// <summary>
+    /// Opens a read stream for a locally stored attachment file.
+    /// Returns null if the storage implementation does not support direct streaming (e.g. cloud storage).
+    /// </summary>
+    Task<Stream?> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData);
     Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway);
 }

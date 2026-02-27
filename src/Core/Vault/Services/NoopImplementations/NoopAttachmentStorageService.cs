@@ -62,6 +62,11 @@ public class NoopAttachmentStorageService : IAttachmentStorageService
         return Task.FromResult((string)null);
     }
 
+    public Task<Stream> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    {
+        return Task.FromResult<Stream>(null);
+    }
+
     public Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         return Task.FromResult(default(string));

@@ -193,6 +193,12 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
         await InitAsync(_defaultContainerName);
     }
 
+    public Task<Stream> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    {
+        // Azure storage uses SAS URLs for downloads; direct streaming is not supported.
+        return Task.FromResult<Stream>(null);
+    }
+
     public async Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway)
     {
         await InitAsync(attachmentData.ContainerName);

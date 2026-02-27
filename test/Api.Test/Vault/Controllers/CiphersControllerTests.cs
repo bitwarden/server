@@ -18,6 +18,7 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -2151,5 +2152,115 @@ public class CiphersControllerTests
 
         Assert.Equal(newFolderId, result.FolderId);
         Assert.True(result.Favorite);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentData_CipherNotFound_ThrowsNotFoundException(
+        Guid cipherId, string attachmentId, Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs((Guid?)userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentData(cipherId, attachmentId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentData_CipherFound_ReturnsAttachmentResponse(
+        Guid cipherId, string attachmentId, Guid userId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs((Guid?)userId);
+
+        var cipherDetails = new CipherDetails { Id = cipherId, UserId = userId, Type = CipherType.Login, Data = "{}" };
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId)
+            .Returns(Task.FromResult(cipherDetails));
+
+        var responseData = new AttachmentResponseData
+        {
+            Id = attachmentId,
+            Url = "https://example.com/download",
+            Data = new CipherAttachment.MetaData { FileName = "test.txt" },
+            Cipher = cipherDetails,
+        };
+        sutProvider.GetDependency<ICipherService>()
+            .GetAttachmentDownloadDataAsync(cipherDetails, attachmentId)
+            .Returns(Task.FromResult(responseData));
+
+        var result = await sutProvider.Sut.GetAttachmentData(cipherId, attachmentId);
+
+        Assert.NotNull(result);
+        Assert.Equal(attachmentId, result.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DownloadAttachmentAsync_EmptyToken_ThrowsNotFoundException(
+        SutProvider<CiphersController> sutProvider)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DownloadAttachmentAsync(string.Empty));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DownloadAttachmentAsync_InvalidToken_ThrowsNotFoundException(
+        SutProvider<CiphersController> sutProvider)
+    {
+        // Use a real ephemeral data protector - any invalid token will fail to unprotect
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protector = dataProtectionProvider
+            .CreateProtector("AttachmentDownload")
+            .ToTimeLimitedDataProtector();
+
+        sutProvider.GetDependency<ICipherService>()
+            .CreateAttachmentDownloadProtector()
+            .Returns(protector);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DownloadAttachmentAsync("invalid-token"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DownloadAttachmentAsync_ValidToken_CipherNotFound_ThrowsNotFoundException(
+        Guid cipherId, string attachmentId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        // Create a real token using ephemeral data protection
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protector = dataProtectionProvider
+            .CreateProtector("AttachmentDownload")
+            .ToTimeLimitedDataProtector();
+        var token = protector.Protect($"{cipherId}|{attachmentId}", TimeSpan.FromMinutes(1));
+
+        sutProvider.GetDependency<ICipherService>()
+            .CreateAttachmentDownloadProtector()
+            .Returns(protector);
+
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DownloadAttachmentAsync(token));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DownloadAttachmentAsync_ValidToken_NoAttachments_ThrowsNotFoundException(
+        Guid cipherId, string attachmentId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        var protector = dataProtectionProvider
+            .CreateProtector("AttachmentDownload")
+            .ToTimeLimitedDataProtector();
+        var token = protector.Protect($"{cipherId}|{attachmentId}", TimeSpan.FromMinutes(1));
+
+        sutProvider.GetDependency<ICipherService>()
+            .CreateAttachmentDownloadProtector()
+            .Returns(protector);
+
+        var cipher = new Cipher { Id = cipherId, Attachments = null };
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId).Returns(cipher);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DownloadAttachmentAsync(token));
     }
 }

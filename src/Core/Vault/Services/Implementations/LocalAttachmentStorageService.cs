@@ -174,6 +174,17 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         organizationId.HasValue ?
         AttachmentFilePath(OrganizationDirectoryPath(cipherId, organizationId.Value, temp), attachmentId) :
         AttachmentFilePath(CipherDirectoryPath(cipherId, temp), attachmentId);
+    public Task<Stream?> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    {
+        var path = AttachmentFilePath(attachmentData.AttachmentId, cipher.Id, temp: false);
+        if (!File.Exists(path))
+        {
+            return Task.FromResult<Stream?>(null);
+        }
+
+        return Task.FromResult<Stream?>(File.OpenRead(path));
+    }
+
     public Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
         => Task.FromResult($"{cipher.Id}/attachment/{attachmentData.AttachmentId}");
 
