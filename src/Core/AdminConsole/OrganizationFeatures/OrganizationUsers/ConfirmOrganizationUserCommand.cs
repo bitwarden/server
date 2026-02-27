@@ -108,14 +108,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             .Select(r => r.Item1)
             .ToList();
 
-        if (confirmedOrganizationUsers.Count == 1)
-        {
-            await CreateDefaultCollectionAsync(confirmedOrganizationUsers.Single(), organization, defaultUserCollectionName);
-        }
-        else if (confirmedOrganizationUsers.Count > 1)
-        {
-            await CreateManyDefaultCollectionsAsync(organization, confirmedOrganizationUsers, defaultUserCollectionName);
-        }
+        await CreateManyDefaultCollectionsAsync(organization, confirmedOrganizationUsers, defaultUserCollectionName);
 
         return result;
     }
@@ -306,7 +299,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(confirmedUserIds);
 
         var eligibleOrganizationUserIds = policiesForUsers
-            .Select(x => x.Requirement.GetDefaultCollectionRequestOnConfirm(organizationId))
+            .Select(x => x.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
             .Where(w => w.ShouldCreateDefaultCollection)
             .Select(s => s.OrganizationUserId)
             .ToList();
