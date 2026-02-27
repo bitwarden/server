@@ -98,7 +98,7 @@ public class StripeAdapter : IStripeAdapter
     /*************
      ** INVOICE **
      *************/
-    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options) =>
+    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options = null) =>
         _invoiceService.GetAsync(id, options);
 
     public async Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options)
@@ -132,10 +132,10 @@ public class StripeAdapter : IStripeAdapter
     public Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options) =>
         _invoiceService.UpdateAsync(id, options);
 
-    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options) =>
+    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options = null) =>
         _invoiceService.FinalizeInvoiceAsync(id, options);
 
-    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options) =>
+    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options = null) =>
         _invoiceService.SendInvoiceAsync(id, options);
 
     public Task<Invoice> PayInvoiceAsync(string id, InvoicePayOptions options = null) =>

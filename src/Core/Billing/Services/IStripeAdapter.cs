@@ -22,14 +22,14 @@ public interface IStripeAdapter
     Task DeleteCustomerDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
     Task<Subscription> UpdateSubscriptionAsync(string id, SubscriptionUpdateOptions options = null);
     Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null);
-    Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options);
+    Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options = null);
     Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options);
     Task<Invoice> CreateInvoiceAsync(InvoiceCreateOptions options);
     Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options);
     Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options);
     Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options);
-    Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options);
-    Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options);
+    Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options = null);
+    Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options = null);
     Task<Invoice> PayInvoiceAsync(string id, InvoicePayOptions options = null);
     Task<Invoice> DeleteInvoiceAsync(string id, InvoiceDeleteOptions options = null);
     Task<Invoice> VoidInvoiceAsync(string id, InvoiceVoidOptions options = null);
