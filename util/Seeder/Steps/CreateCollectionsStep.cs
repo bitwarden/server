@@ -2,6 +2,7 @@
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
@@ -11,13 +12,16 @@ internal sealed class CreateCollectionsStep : IStep
     private readonly int _count;
     private readonly OrgStructureModel? _structure;
 
-    private CreateCollectionsStep(int count, OrgStructureModel? structure)
+    private readonly DensityProfile? _density;
+
+    private CreateCollectionsStep(int count, OrgStructureModel? structure, DensityProfile? density = null)
     {
         _count = count;
         _structure = structure;
+        _density = density;
     }
 
-    internal static CreateCollectionsStep FromCount(int count) => new(count, null);
+    internal static CreateCollectionsStep FromCount(int count, DensityProfile? density = null) => new(count, null, density);
 
     internal static CreateCollectionsStep FromStructure(OrgStructureModel structure) => new(0, structure);
 

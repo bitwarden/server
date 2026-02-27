@@ -1,11 +1,14 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
 
-internal sealed class CreateGroupsStep(int count) : IStep
+internal sealed class CreateGroupsStep(int count, DensityProfile? density = null) : IStep
 {
+    private readonly DensityProfile? _density = density;
+
     public void Execute(SeederContext context)
     {
         var orgId = context.RequireOrgId();

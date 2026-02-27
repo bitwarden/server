@@ -6,6 +6,7 @@ using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
@@ -25,8 +26,11 @@ internal sealed class GenerateCiphersStep(
     int count,
     Distribution<CipherType>? typeDist = null,
     Distribution<PasswordStrength>? pwDist = null,
-    bool assignFolders = false) : IStep
+    bool assignFolders = false,
+    DensityProfile? density = null) : IStep
 {
+    private readonly DensityProfile? _density = density;
+
     public void Execute(SeederContext context)
     {
         if (count == 0)
