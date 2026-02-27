@@ -14,13 +14,22 @@ namespace Bit.Core.KeyManagement.UserKey;
 public interface IRotateUserAccountKeysCommand
 {
     /// <summary>
-    /// Sets a new user key and updates all encrypted data.
+    /// Sets a new user key and updates all encrypted data. This is when a user changes their password along with a user key rotation.
     /// </summary>
     /// <param name="model">All necessary information for rotation. If data is not included, this will lead to the change being rejected.</param>
     /// <returns>An IdentityResult for verification of the master password hash</returns>
     /// <exception cref="ArgumentNullException">User must be provided.</exception>
     /// <exception cref="InvalidOperationException">User KDF settings and email must match the model provided settings.</exception>
-    Task<IdentityResult> RotateUserAccountKeysAsync(User user, RotateUserAccountKeysData model);
+    Task<IdentityResult> RotateUserAccountKeysPasswordChangeAsync(User user, RotateUserAccountKeysAndChangePasswordData model);
+
+    /// <summary>
+    /// Sets a new user key and updates all encrypted data. The user's password hasn't been changed.
+    /// </summary>
+    /// <param name="model">All necessary information for rotation. If data is not included, this will lead to the change being rejected.</param>
+    /// <returns>An IdentityResult for verification of the master password hash</returns>
+    /// <exception cref="ArgumentNullException">User must be provided.</exception>
+    /// <exception cref="InvalidOperationException">User KDF settings and email must match the model provided settings.</exception>
+    Task<IdentityResult> RotateUserAccountKeysMpUserAsync(User user, RotateUserAccountKeysMpUserData model);
 }
 
 /// <summary>

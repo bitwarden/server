@@ -100,6 +100,73 @@ public class AccountsKeyManagementController : Controller
             usersOrganizationAccounts, designatedEmergencyAccess);
     }
 
+    // Preforms a user key rotation without changing the user's password.
+    [HttpPost("key-management/rotate-user-account-keys-no-pwd-change")]
+    public async Task RotateUserAccountKeysNoPasswordChangeAsync([FromBody] RotateAccountKeysAndDataNoPwdChangeRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        switch (model.AccountUnlockData.GetRequestType())
+        {
+            case UnlockDataNoPwdChangeRequestModel.RequestType.MasterPassword:
+                await HandleMasterPasswordKeyRotationAsync(model, user);
+                break;
+            case UnlockDataNoPwdChangeRequestModel.RequestType.Tde:
+                //Call correct rotation command
+                throw new NotImplementedException("TDE not implemented");
+            case UnlockDataNoPwdChangeRequestModel.RequestType.KeyConnector:
+                //Call correct rotation command
+                throw new NotImplementedException("Key connector not implemented");
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private async Task HandleMasterPasswordKeyRotationAsync(RotateAccountKeysAndDataNoPwdChangeRequestModel model, User user)
+    {
+        var dataModel = new RotateUserAccountKeysMpUserData
+        {
+            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData!.ToData(),
+            BaseData = await ToBaseDataModelAsync(model, user),
+        };
+
+        var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysMpUserAsync(user, dataModel);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
+    }
+
+    private async Task<RotateUserAccountKeysBaseData> ToBaseDataModelAsync(RotateAccountKeysAndDataNoPwdChangeRequestModel model, User user)
+    {
+        return new RotateUserAccountKeysBaseData
+        {
+            AccountKeys = model.AccountKeys.ToAccountKeysData(),
+            EmergencyAccesses =
+                await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),
+            OrganizationUsers =
+                await _organizationUserValidator.ValidateAsync(user,
+                    model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
+            DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
+            V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
+            Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
+            Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
+            Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+        };
+    }
+
 
     [HttpPost("key-management/rotate-user-account-keys")]
     public async Task RotateUserAccountKeysAsync([FromBody] RotateUserAccountKeysAndDataRequestModel model)
@@ -110,25 +177,28 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var dataModel = new RotateUserAccountKeysData
+        var dataModel = new RotateUserAccountKeysAndChangePasswordData
         {
             OldMasterKeyAuthenticationHash = model.OldMasterKeyAuthenticationHash,
+            MasterPasswordHint = model.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordHint,
+            MasterPasswordAuthenticationData = model.AccountUnlockData.MasterPasswordUnlockData.ToAuthenticationData(),
+            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToMasterPasswordUnlockData(),
+            BaseData = new RotateUserAccountKeysBaseData
+            {
+                AccountKeys = model.AccountKeys.ToAccountKeysData(),
+                EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),
+                OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
+                WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
+                DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
+                V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
 
-            AccountKeys = model.AccountKeys.ToAccountKeysData(),
-
-            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToUnlockData(),
-            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
-            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
-            DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
-            V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
-
-            Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
-            Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
-            Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+                Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
+                Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
+                Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+            }
         };
 
-        var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysAsync(user, dataModel);
+        var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysPasswordChangeAsync(user, dataModel);
         if (result.Succeeded)
         {
             return;

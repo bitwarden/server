@@ -63,4 +63,36 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
         return data;
     }
 
+    public MasterPasswordAuthenticationData ToAuthenticationData()
+    {
+        return new MasterPasswordAuthenticationData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType,
+                Iterations = KdfIterations,
+                Memory = KdfMemory,
+                Parallelism = KdfParallelism,
+            },
+            Salt = Email,
+            MasterPasswordAuthenticationHash = MasterKeyAuthenticationHash,
+        };
+    }
+
+    public MasterPasswordUnlockData ToMasterPasswordUnlockData()
+    {
+        return new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType,
+                Iterations = KdfIterations,
+                Memory = KdfMemory,
+                Parallelism = KdfParallelism,
+            },
+            Salt = Email,
+            MasterKeyWrappedUserKey = MasterKeyEncryptedUserKey,
+        };
+    }
+
 }

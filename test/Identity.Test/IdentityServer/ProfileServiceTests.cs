@@ -7,6 +7,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
@@ -468,7 +469,7 @@ public class ProfileServiceTests
     /// this service should expose the stamp as invalid.
     /// See also examples for stamp invalidation (non-exhaustive):
     /// </summary>
-    /// <seealso cref="Bit.Core.KeyManagement.UserKey.Implementations.RotateUserAccountKeysCommand.RotateUserAccountKeysAsync"/>
+    /// <seealso cref="RotateUserAccountKeysCommand.RotateUserAccountKeysPasswordChangeAsync"/>
     /// <seealso cref="Bit.Core.Services.UserService.ChangePasswordAsync"/>
     /// <seealso cref="Bit.Core.Services.UserService.UpdatePasswordHash"/>
     [Theory]

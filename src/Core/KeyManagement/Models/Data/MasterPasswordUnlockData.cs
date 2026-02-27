@@ -21,4 +21,10 @@ public class MasterPasswordUnlockData
             throw new BadRequestException("Invalid master password salt.");
         }
     }
+
+    public void ValidateForKeyRotation(User user)
+    {
+        ValidateSaltUnchangedForUser(user);
+        Kdf.ValidateUnchangedForUser(user);
+    }
 }
