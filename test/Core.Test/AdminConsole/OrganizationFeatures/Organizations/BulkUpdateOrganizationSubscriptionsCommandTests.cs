@@ -15,18 +15,18 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 
 [SutProviderCustomize]
-public class UpdateOrganizationSubscriptionCommandTests
+public class BulkUpdateOrganizationSubscriptionsCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task UpdateOrganizationSubscriptionAsync_WhenNoSubscriptionsNeedToBeUpdated_ThenNoSyncsOccur(
-        SutProvider<UpdateOrganizationSubscriptionCommand> sutProvider)
+    public async Task BulkUpdateOrganizationSubscriptionsAsync_WhenNoSubscriptionsNeedToBeUpdated_ThenNoSyncsOccur(
+        SutProvider<BulkUpdateOrganizationSubscriptionsCommand> sutProvider)
     {
         // Arrange
         OrganizationSubscriptionUpdate[] subscriptionsToUpdate = [];
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationSubscriptionAsync(subscriptionsToUpdate);
+        await sutProvider.Sut.BulkUpdateOrganizationSubscriptionsAsync(subscriptionsToUpdate);
 
         await sutProvider.GetDependency<IStripePaymentService>()
             .DidNotReceive()
@@ -39,9 +39,9 @@ public class UpdateOrganizationSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateOrganizationSubscriptionAsync_WhenOrgUpdatePassedIn_ThenSyncedThroughPaymentService(
+    public async Task BulkUpdateOrganizationSubscriptionsAsync_WhenOrgUpdatePassedIn_ThenSyncedThroughPaymentService(
         Organization organization,
-        SutProvider<UpdateOrganizationSubscriptionCommand> sutProvider)
+        SutProvider<BulkUpdateOrganizationSubscriptionsCommand> sutProvider)
     {
         // Arrange
         organization.PlanType = PlanType.EnterpriseAnnually2023;
@@ -51,7 +51,7 @@ public class UpdateOrganizationSubscriptionCommandTests
             [new() { Organization = organization, Plan = new Enterprise2023Plan(true) }];
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationSubscriptionAsync(subscriptionsToUpdate);
+        await sutProvider.Sut.BulkUpdateOrganizationSubscriptionsAsync(subscriptionsToUpdate);
 
         await sutProvider.GetDependency<IStripePaymentService>()
             .Received(1)
@@ -69,10 +69,10 @@ public class UpdateOrganizationSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateOrganizationSubscriptionAsync_WhenOrgUpdateFails_ThenSyncDoesNotOccur(
+    public async Task BulkUpdateOrganizationSubscriptionsAsync_WhenOrgUpdateFails_ThenSyncDoesNotOccur(
         Organization organization,
         Exception exception,
-        SutProvider<UpdateOrganizationSubscriptionCommand> sutProvider)
+        SutProvider<BulkUpdateOrganizationSubscriptionsCommand> sutProvider)
     {
         // Arrange
         organization.PlanType = PlanType.EnterpriseAnnually2023;
@@ -88,7 +88,7 @@ public class UpdateOrganizationSubscriptionCommandTests
                 organization.Seats!.Value).ThrowsAsync(exception);
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationSubscriptionAsync(subscriptionsToUpdate);
+        await sutProvider.Sut.BulkUpdateOrganizationSubscriptionsAsync(subscriptionsToUpdate);
 
         await sutProvider.GetDependency<IOrganizationRepository>()
             .DidNotReceive()
@@ -97,11 +97,11 @@ public class UpdateOrganizationSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateOrganizationSubscriptionAsync_WhenOneOrgUpdateFailsAndAnotherSucceeds_ThenSyncOccursForTheSuccessfulOrg(
+    public async Task BulkUpdateOrganizationSubscriptionsAsync_WhenOneOrgUpdateFailsAndAnotherSucceeds_ThenSyncOccursForTheSuccessfulOrg(
             Organization successfulOrganization,
             Organization failedOrganization,
             Exception exception,
-            SutProvider<UpdateOrganizationSubscriptionCommand> sutProvider)
+            SutProvider<BulkUpdateOrganizationSubscriptionsCommand> sutProvider)
     {
         // Arrange
         successfulOrganization.PlanType = PlanType.EnterpriseAnnually2023;
@@ -122,7 +122,7 @@ public class UpdateOrganizationSubscriptionCommandTests
                 failedOrganization.Seats!.Value).ThrowsAsync(exception);
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationSubscriptionAsync(subscriptionsToUpdate);
+        await sutProvider.Sut.BulkUpdateOrganizationSubscriptionsAsync(subscriptionsToUpdate);
 
         await sutProvider.GetDependency<IStripePaymentService>()
             .Received(1)

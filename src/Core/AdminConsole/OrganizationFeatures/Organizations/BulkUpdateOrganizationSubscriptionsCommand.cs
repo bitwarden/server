@@ -6,12 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
-public class UpdateOrganizationSubscriptionCommand(IStripePaymentService paymentService,
+public class BulkUpdateOrganizationSubscriptionsCommand(IStripePaymentService paymentService,
     IOrganizationRepository repository,
     TimeProvider timeProvider,
-    ILogger<UpdateOrganizationSubscriptionCommand> logger) : IUpdateOrganizationSubscriptionCommand
+    ILogger<BulkUpdateOrganizationSubscriptionsCommand> logger) : IBulkUpdateOrganizationSubscriptionsCommand
 {
-    public async Task UpdateOrganizationSubscriptionAsync(IEnumerable<OrganizationSubscriptionUpdate> subscriptionsToUpdate)
+    public async Task BulkUpdateOrganizationSubscriptionsAsync(IEnumerable<OrganizationSubscriptionUpdate> subscriptionsToUpdate)
     {
         var successfulSyncs = new List<Guid>();
 
