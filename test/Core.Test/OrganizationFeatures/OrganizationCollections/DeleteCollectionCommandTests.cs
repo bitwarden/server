@@ -117,7 +117,7 @@ public class DeleteCollectionCommandTests
         }
 
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(collectionIds)
+            .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)))
             .Returns(collections);
 
         // Act
