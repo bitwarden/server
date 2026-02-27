@@ -1,8 +1,8 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -27,7 +27,6 @@ public class UpdatePaymentMethodCommand(
     IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
     ILogger<UpdatePaymentMethodCommand> logger,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : BaseBillingCommand<UpdatePaymentMethodCommand>(logger), IUpdatePaymentMethodCommand
 {
@@ -94,9 +93,10 @@ public class UpdatePaymentMethodCommand(
 
         var setupIntent = setupIntents.First();
 
-        await setupIntentCache.Set(subscriber.Id, setupIntent.Id);
+        await stripeAdapter.UpdateSetupIntentAsync(setupIntent.Id,
+            new SetupIntentUpdateOptions { Customer = customer.Id });
 
-        _logger.LogInformation("{Command}: Successfully cached Setup Intent ({SetupIntentId}) for subscriber ({SubscriberID})", CommandName, setupIntent.Id, subscriber.Id);
+        _logger.LogInformation("{Command}: Successfully linked Setup Intent ({SetupIntentId}) to customer ({CustomerId}) for subscriber ({SubscriberID})", CommandName, setupIntent.Id, customer.Id, subscriber.Id);
 
         await UnlinkBraintreeCustomerAsync(customer);
 
@@ -141,6 +141,24 @@ public class UpdatePaymentMethodCommand(
             };
 
             await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
+        }
+
+        // If the subscriber has an incomplete subscription, pay the invoice with the new PayPal payment method
+        if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
+
+            if (subscription.Status == StripeConstants.SubscriptionStatus.Incomplete)
+            {
+                var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId,
+                    new InvoiceUpdateOptions
+                    {
+                        AutoAdvance = false,
+                        Expand = ["customer"]
+                    });
+
+                await braintreeService.PayInvoice(new UserId(subscriber.Id), invoice);
+            }
         }
 
         var payPalAccount = braintreeCustomer.DefaultPaymentMethod as PayPalAccount;

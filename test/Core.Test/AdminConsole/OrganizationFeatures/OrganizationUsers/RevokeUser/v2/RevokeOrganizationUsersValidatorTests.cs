@@ -238,6 +238,35 @@ public class RevokeOrganizationUsersValidatorTests
 
     [Theory]
     [BitAutoData]
+    public async Task ValidateAsync_WithSystemUser_RevokingOwner_ReturnsSuccess(
+        SutProvider<RevokeOrganizationUsersValidator> sutProvider,
+        Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser ownerUser)
+    {
+        // Arrange
+        ownerUser.OrganizationId = organizationId;
+        ownerUser.UserId = Guid.NewGuid();
+
+        var actingUser = CreateActingUser(null, false, EventSystemUser.SCIM);
+        var request = CreateValidationRequest(
+            organizationId,
+            [ownerUser],
+            actingUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var results = (await sutProvider.Sut.ValidateAsync(request)).ToList();
+
+        // Assert
+        Assert.Single(results);
+        Assert.True(results.First().IsValid);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task ValidateAsync_WhenRevokingLastOwner_ReturnsErrorForThatUser(
         SutProvider<RevokeOrganizationUsersValidator> sutProvider,
         Guid organizationId,

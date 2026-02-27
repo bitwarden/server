@@ -1,0 +1,17 @@
+<mj-attributes>
+  <mj-all font-family="'Helvetica Neue','Inter',Helvetica,Arial,sans-serif" />
+  <mj-class
+    name="ac-text"
+    font-size="16px"
+    font-weight="400"
+    line-height="24px"
+  />
+</mj-attributes>
+
+<mj-style>
+  @media only screen and (max-width: 480px) {
+    .hide-mobile {
+      display: none !important;
+    }
+  }
+</mj-style>
