@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "redwood-analytics",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "enterprise-basic"
+  },
+  "ciphers": {
+    "fixture": "enterprise-basic"
+  }
+}

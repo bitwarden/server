@@ -14,4 +14,5 @@ public static class HandledStripeWebhook
     public const string CustomerUpdated = "customer.updated";
     public const string InvoiceFinalized = "invoice.finalized";
     public const string SetupIntentSucceeded = "setup_intent.succeeded";
+    public const string CouponDeleted = "coupon.deleted";
 }

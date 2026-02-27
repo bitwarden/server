@@ -38,12 +38,14 @@ public interface IEmergencyAccessService
     /// <returns>void</returns>
     Task<Entities.EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User granteeUser, string token, IUserService userService);
     /// <summary>
-    /// The creator of the emergency access request can delete the request.
+    /// Either the grantor OR the grantee can delete the emergency access.
     /// </summary>
     /// <param name="emergencyAccessId">Id of the emergency access being acted on</param>
-    /// <param name="grantorId">Id of the owner trying to delete the emergency access request</param>
+    /// <param name="userId">Id of the user (needs to be the grantor or grantee) trying to delete the emergency access</param>
     /// <returns>void</returns>
-    Task DeleteAsync(Guid emergencyAccessId, Guid grantorId);
+    /// TODO: Remove this deprecated method with PM-31327
+    [Obsolete("Use IDeleteEmergencyAccessCommand.DeleteByIdAndUserIdAsync instead.")]
+    Task DeleteAsync(Guid emergencyAccessId, Guid userId);
     /// <summary>
     /// The grantor user confirms the acceptance of the emergency contact request. This stores the encrypted key allowing the grantee
     /// access based on the emergency access type.

@@ -150,6 +150,15 @@ public class AdminRecoverAccountCommandTests
         };
         yield return [emptyResetPasswordKey, organization];
 
+        var whitespaceResetPasswordKey = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Confirmed,
+            OrganizationId = organization.Id,
+            ResetPasswordKey = " ",
+            UserId = Guid.NewGuid(),
+        };
+        yield return [whitespaceResetPasswordKey, organization];
+
         var nullUserId = new OrganizationUser
         {
             Status = OrganizationUserStatusType.Confirmed,

@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "verdant-health",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "starter-team"
+  },
+  "ciphers": {
+    "fixture": "sso-vault"
+  },
+  "policies": {
+    "enable": ["requireSso"]
+  },
+  "sso": {
+    "identifier": "verdant-health",
+    "encryptionType": "masterPassword",
+    "provider": "oidc"
+  }
+}
