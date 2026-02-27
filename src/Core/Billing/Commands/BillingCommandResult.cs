@@ -27,6 +27,8 @@ public class BillingCommandResult<T>(OneOf<T, BadRequest, Conflict, Unhandled> i
     public static implicit operator BillingCommandResult<T>(Conflict conflict) => new(conflict);
     public static implicit operator BillingCommandResult<T>(Unhandled unhandled) => new(unhandled);
 
+    public bool Success => IsT0;
+
     public BillingCommandResult<TResult> Map<TResult>(Func<T, TResult> f)
         => Match(
             value => new BillingCommandResult<TResult>(f(value)),
