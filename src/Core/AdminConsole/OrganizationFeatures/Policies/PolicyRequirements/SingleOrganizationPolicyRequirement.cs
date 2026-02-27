@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,16 +9,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 
 public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> policyDetails) : IPolicyRequirement
 {
-    public record UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy() : BadRequestError(
-        "Member cannot join the organization because they are in another organization which forbids it.");
-
-    public record UserIsAMemberOfAnotherOrganization()
-        : BadRequestError("Member cannot join the organization until they leave or remove all other organizations.");
-
-    public record UserCannotCreateOrg()
-        : BadRequestError(
-            "Cannot create organization because single organization policy is enabled for another organization.");
-
     /// <summary>
     /// Returns an error if the user cannot create an organization due to being a part of another organization.
     /// </summary>
@@ -38,14 +29,14 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
     /// </returns>
     public Error? CanJoinOrganization(Guid organizationId, ICollection<OrganizationUser> allOrgUsers) =>
         IsCompliantWithTargetOrganization(organizationId, allOrgUsers)
-        ?? IsEnabledForOtherOrganizationsUserIsAPartOf(organizationId);
+        ?? IsEnforcedForOtherOrganizationsUserIsAPartOf(organizationId);
 
     /// <summary>
     /// Returns true if the policy is enabled for the target organization.
     /// </summary>
     /// <param name="targetOrganizationId">Organization Id the user is attempting to join</param>
     /// <returns></returns>
-    public bool IsEnabledForTargetOrganization(Guid targetOrganizationId) =>
+    private bool IsEnabledForTargetOrganization(Guid targetOrganizationId) =>
         policyDetails.Any(p => p.OrganizationId == targetOrganizationId);
 
     /// <summary>
@@ -57,7 +48,7 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
     /// <returns>
     /// UserIsAMemberOfAnotherOrganization if the user cannot join the target organization, otherwise null.
     /// </returns>
-    public Error? IsCompliantWithTargetOrganization(Guid targetOrganizationId,
+    private Error? IsCompliantWithTargetOrganization(Guid targetOrganizationId,
         ICollection<OrganizationUser> allOrgUsers) =>
         IsEnabledForTargetOrganization(targetOrganizationId)
         && allOrgUsers.Any(ou => ou.OrganizationId != targetOrganizationId)
@@ -72,7 +63,7 @@ public class SingleOrganizationPolicyRequirement(IEnumerable<PolicyDetails> poli
     /// UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy if the user is a member of another organization that has
     /// enabled the Single Organization policy, otherwise null.
     /// </returns>
-    public Error? IsEnabledForOtherOrganizationsUserIsAPartOf(Guid targetOrganizationId) =>
+    private Error? IsEnforcedForOtherOrganizationsUserIsAPartOf(Guid targetOrganizationId) =>
         policyDetails.Any(p => p.OrganizationId != targetOrganizationId
             && p.HasStatus([OrganizationUserStatusType.Accepted, OrganizationUserStatusType.Confirmed]))
             ? new UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy()
