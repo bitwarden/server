@@ -179,4 +179,33 @@ public class PolicyDataValidatorTests
 
         Assert.Contains("Invalid data for MasterPassword policy", exception.Message);
     }
+
+    [Fact]
+    public void ValidateAndSerialize_OrganizationDataOwnership_ValidData_ReturnsSerializedJson()
+    {
+        var data = new Dictionary<string, object>
+        {
+            { "enableIndividualItemsTransfer", true }
+        };
+
+        var result = PolicyDataValidator.ValidateAndSerialize(data, PolicyType.OrganizationDataOwnership);
+
+        Assert.NotNull(result);
+        Assert.Contains("\"enableIndividualItemsTransfer\":true", result);
+    }
+
+    [Fact]
+    public void ValidateAndSerialize_OrganizationDataOwnership_InvalidDataType_ThrowsBadRequestException()
+    {
+        var data = new Dictionary<string, object>
+        {
+            { "enableIndividualItemsTransfer", "not a boolean" }
+        };
+
+        var exception = Assert.Throws<BadRequestException>(() =>
+            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.OrganizationDataOwnership));
+
+        Assert.Contains("Invalid data for OrganizationDataOwnership policy", exception.Message);
+        Assert.Contains("enableIndividualItemsTransfer", exception.Message);
+    }
 }
