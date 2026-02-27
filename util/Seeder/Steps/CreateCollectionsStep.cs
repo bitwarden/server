@@ -168,12 +168,15 @@ internal sealed class CreateCollectionsStep : IStep
     private static (bool ReadOnly, bool HidePasswords, bool Manage) ResolvePermission(
         Distribution<PermissionWeight> distribution, int index, int total)
     {
-        return distribution.Select(index, total) switch
+        var weight = distribution.Select(index, total);
+        return weight switch
         {
             PermissionWeight.ReadOnly => (true, false, false),
             PermissionWeight.HidePasswords => (false, true, false),
             PermissionWeight.Manage => (false, false, true),
-            _ => (false, false, false)
+            PermissionWeight.ReadWrite => (false, false, false),
+            _ => throw new InvalidOperationException(
+                $"Unhandled PermissionWeight: {weight}")
         };
     }
 
