@@ -168,7 +168,7 @@ public class EventService : IEventService
         }
 
         var eventMessages = new List<IEvent>();
-        foreach (var (collection, type, date) in events)
+        foreach (var (collection, type, date) in materializedEvents)
         {
             if (!CanUseEvents(orgAbilities, collection.OrganizationId))
             {
