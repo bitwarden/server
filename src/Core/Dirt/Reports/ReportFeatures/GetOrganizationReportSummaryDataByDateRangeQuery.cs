@@ -33,24 +33,13 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
                 throw new BadRequestException(errorMessage);
             }
 
-            IEnumerable<OrganizationReportSummaryDataResponse> summaryDataList = (await _organizationReportRepo
-                    .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)) ??
-                Enumerable.Empty<OrganizationReportSummaryDataResponse>();
+            var summaryDataList = await _organizationReportRepo.GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+            summaryDataList = summaryDataList ?? Enumerable.Empty<OrganizationReportSummaryDataResponse>();
 
             var resultList = summaryDataList.ToList();
 
-            if (!resultList.Any())
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "No summary data found for organization {organizationId} in date range {startDate} to {endDate}",
-                    organizationId, startDate, endDate);
-                return Enumerable.Empty<OrganizationReportSummaryDataResponse>();
-            }
-            else
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved {count} organization report summary data records for organization {organizationId} in date range {startDate} to {endDate}",
-                    resultList.Count, organizationId, startDate, endDate);
-
-            }
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetched {count} organization report summary data entries for organization {organizationId}, from {startDate} to {endDate}",
+                resultList.Count, organizationId, startDate, endDate);
 
             return resultList;
         }
@@ -62,7 +51,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
         }
     }
 
-    private static (bool IsValid, string errorMessage) ValidateRequest(Guid organizationId, DateTime startDate, DateTime endDate)
+    private (bool IsValid, string errorMessage) ValidateRequest(Guid organizationId, DateTime startDate, DateTime endDate)
     {
         if (organizationId == Guid.Empty)
         {
