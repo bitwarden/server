@@ -7,6 +7,8 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections;
 
