@@ -106,6 +106,7 @@ public class RestoreOrganizationUserCommand(
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
         if (organizationUser.UserId.HasValue
+           && organization.UseMyItems
            && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled
            && status == OrganizationUserStatusType.Confirmed
            && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
@@ -253,17 +254,22 @@ public class RestoreOrganizationUserCommand(
 
         if (featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore))
         {
-            await CreateDefaultCollectionsForConfirmedUsersAsync(organizationId, defaultCollectionName,
+            await CreateDefaultCollectionsForConfirmedUsersAsync(organization, defaultCollectionName,
                 result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
         }
 
         return result;
     }
 
-    private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Guid organizationId, string defaultCollectionName,
+    private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Organization organization, string defaultCollectionName,
         ICollection<OrganizationUser> restoredUsers)
     {
         if (string.IsNullOrWhiteSpace(defaultCollectionName))
+        {
+            return;
+        }
+
+        if (!organization.UseMyItems)
         {
             return;
         }
@@ -283,14 +289,14 @@ public class RestoreOrganizationUserCommand(
             policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredConfirmedUsers);
 
         var orgUserIdsToCreateDefaultCollectionsFor = restoredUserPolicyRequirements
-            .Select(s => s.Requirement.GetDefaultCollectionRequestOnConfirm(organizationId))
+            .Select(s => s.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
             .Where(w => w.ShouldCreateDefaultCollection)
             .Select(s => s.OrganizationUserId)
             .ToList();
 
         if (orgUserIdsToCreateDefaultCollectionsFor.Count != 0)
         {
-            await collectionRepository.CreateDefaultCollectionsAsync(organizationId,
+            await collectionRepository.CreateDefaultCollectionsAsync(organization.Id,
                 orgUserIdsToCreateDefaultCollectionsFor,
                 defaultCollectionName);
         }

@@ -46,7 +46,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **RecipeBuilder**: Fluent API with dependency validation
 - **IStep**: Isolated unit of work (CreateOrganizationStep, CreateUsersStep, etc.)
 - **RecipeExecutor**: Executes steps, captures statistics, commits
-- **PresetExecutor**: Orchestrates preset loading and execution
+- **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
 - **SeederContext**: Shared mutable state (NOT thread-safe)
 
 **Why this architecture wins**:
@@ -56,7 +56,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **Extensible**: Add entity types via new IStep implementations
 - **Future-ready**: Supports custom DSLs on top of RecipeBuilder
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Ciphers
+**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
 
 **Naming**: `{Purpose}Step` classes implementing `IStep`
 
@@ -200,7 +200,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 **Configuration:**
 
 - SeederApi: Enabled when `GlobalSettings.TestPlayIdTrackingEnabled` is true
-- DbSeederUtility: Enabled with `--mangle` CLI flag
+- SeederUtility: Enabled with `--mangle` CLI flag
 
 ---
 

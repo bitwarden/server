@@ -34,14 +34,23 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
                     "Each user must have a unique FirstName.LastName combination.");
             }
 
+
             var email = $"{emailPrefix}@{domain}";
             var mangledEmail = context.GetMangler().Mangle(email);
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, UserSeeder.DefaultPassword);
-            var user = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys);
+            var password = context.GetPassword();
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password);
+            var (user, _) = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password);
             var userOrgKey = RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey);
             var orgUserType = ParseRole(rosterUser.Role);
             var orgUser = org.CreateOrganizationUserWithKey(
                 user, orgUserType, OrganizationUserStatusType.Confirmed, userOrgKey);
+
+            // Promote the first owner-role user to pipeline owner
+            if (orgUserType == OrganizationUserType.Owner && context.Owner is null)
+            {
+                context.Owner = user;
+                context.OwnerOrgUser = orgUser;
+            }
 
             userLookup[emailPrefix] = orgUser.Id;
 

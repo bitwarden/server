@@ -19,12 +19,6 @@
       "type": "string",
       "minLength": 1,
       "description": "Domain used for billing email and identifier generation."
-    },
-    "seats": {
-      "type": "integer",
-      "minimum": 1,
-      "default": 10,
-      "description": "Number of seats (user slots) in the organization."
     }
   }
 }

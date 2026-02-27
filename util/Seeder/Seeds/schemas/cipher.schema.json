@@ -26,11 +26,10 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["login", "card", "identity", "secureNote"]
+          "enum": ["login", "card", "identity", "secureNote", "sshKey"]
         },
         "name": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "notes": {
           "type": "string"
@@ -44,10 +43,30 @@
         "identity": {
           "$ref": "#/$defs/identity"
         },
+        "sshKey": {
+          "$ref": "#/$defs/sshKey"
+        },
+        "reprompt": {
+          "type": "integer",
+          "enum": [0, 1],
+          "default": 0,
+          "description": "Master password re-prompt. 0=None, 1=Password."
+        },
+        "favorite": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the item is marked as a favorite."
+        },
         "fields": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/field"
+          }
+        },
+        "passwordHistory": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/passwordHistory"
           }
         }
       },
@@ -63,6 +82,10 @@
         {
           "if": { "properties": { "type": { "const": "identity" } } },
           "then": { "required": ["identity"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "sshKey" } } },
+          "then": { "required": ["sshKey"] }
         }
       ]
     },
@@ -73,10 +96,18 @@
         "username": { "type": "string" },
         "password": { "type": "string" },
         "totp": { "type": "string" },
+        "passwordRevisionDate": { "type": "string", "description": "ISO date when the password was last changed." },
+        "autofillOnPageLoad": { "type": "boolean", "description": "Auto-populate credential on page load." },
         "uris": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/loginUri"
+          }
+        },
+        "fido2Credentials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fido2Credential"
           }
         }
       }
@@ -142,7 +173,46 @@
           "type": "string",
           "enum": ["text", "hidden", "boolean", "linked"],
           "default": "text"
+        },
+        "linkedId": {
+          "type": "integer",
+          "description": "Links to cipher property. Only valid when type='linked'. Login: Username=100, Password=101. Card: CardholderName=300, ExpMonth=301, ExpYear=302, Code=303, Brand=304, Number=305. Identity: Title=400 through FullName=418."
         }
+      }
+    },
+    "sshKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "privateKey": { "type": "string" },
+        "publicKey": { "type": "string" },
+        "keyFingerprint": { "type": "string" }
+      }
+    },
+    "passwordHistory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "password": { "type": "string" },
+        "lastUsedDate": { "type": "string", "description": "ISO date when password was last used." }
+      }
+    },
+    "fido2Credential": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "credentialId": { "type": "string" },
+        "keyType": { "type": "string", "default": "public-key" },
+        "keyAlgorithm": { "type": "string", "default": "ECDSA" },
+        "keyCurve": { "type": "string", "default": "P-256" },
+        "keyValue": { "type": "string" },
+        "rpId": { "type": "string" },
+        "rpName": { "type": "string" },
+        "userHandle": { "type": "string" },
+        "userName": { "type": "string" },
+        "userDisplayName": { "type": "string" },
+        "counter": { "type": "integer" },
+        "discoverable": { "type": "boolean", "default": false }
       }
     }
   }

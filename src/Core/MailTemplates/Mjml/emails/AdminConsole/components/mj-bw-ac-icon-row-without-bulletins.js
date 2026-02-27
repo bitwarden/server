@@ -8,26 +8,26 @@ const BODY_TEXT_STYLES = `
 `;
 
 class MjBwAcIconRowWithoutBulletins extends BodyComponent {
-    static dependencies = {
-        "mj-column": ["mj-bw-ac-icon-row-without-bulletins"],
-        "mj-wrapper": ["mj-bw-ac-icon-row-without-bulletins"],
-        "mj-bw-ac-icon-row-without-bulletins": [],
-    };
+  static dependencies = {
+    "mj-column": ["mj-bw-ac-icon-row-without-bulletins"],
+    "mj-wrapper": ["mj-bw-ac-icon-row-without-bulletins"],
+    "mj-bw-ac-icon-row-without-bulletins": [],
+  };
 
-    static allowedAttributes = {
-        "icon-src": "string",
-        "icon-alt": "string",
-        "head-url-text": "string",
-        "head-url": "string",
-        text: "string",
-        "foot-url-text": "string",
-        "foot-url": "string",
-    };
+  static allowedAttributes = {
+    "icon-src": "string",
+    "icon-alt": "string",
+    "head-url-text": "string",
+    "head-url": "string",
+    text: "string",
+    "foot-url-text": "string",
+    "foot-url": "string",
+  };
 
-    static defaultAttributes = {};
+  static defaultAttributes = {};
 
-    headStyle = (breakpoint) => {
-        return `
+  headStyle = (breakpoint) => {
+    return `
       @media only screen and (max-width:${breakpoint}) {
         .mj-bw-ac-icon-row-text {
           padding-left: 15px !important;
@@ -44,12 +44,12 @@ class MjBwAcIconRowWithoutBulletins extends BodyComponent {
         }
       }
     `;
-    };
+  };
 
-    render() {
-        const headAnchorElement =
-            this.getAttribute("head-url-text") && this.getAttribute("head-url")
-                ? `
+  render() {
+    const headAnchorElement =
+      this.getAttribute("head-url-text") && this.getAttribute("head-url")
+        ? `
             <mj-text css-class="mj-bw-ac-icon-row-text" padding="5px 10px 0px 10px" ${BODY_TEXT_STYLES}>
                 <a href="${this.getAttribute("head-url")}" class="link">
                     ${this.getAttribute("head-url-text")}
@@ -62,19 +62,19 @@ class MjBwAcIconRowWithoutBulletins extends BodyComponent {
                     </span>
                   </a>
             </mj-text>`
-                : "";
+        : "";
 
-        const footAnchorElement =
-            this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
-                ? `<mj-text css-class="mj-bw-ac-icon-row-text" padding="0px" ${BODY_TEXT_STYLES}>
+    const footAnchorElement =
+      this.getAttribute("foot-url-text") && this.getAttribute("foot-url")
+        ? `<mj-text css-class="mj-bw-ac-icon-row-text" padding="0px" ${BODY_TEXT_STYLES}>
                 <a href="${this.getAttribute("foot-url")}" class="link">
                     ${this.getAttribute("foot-url-text")}
               </a>
           </mj-text>`
-                : "";
+        : "";
 
-        return this.renderMJML(
-            `
+    return this.renderMJML(
+      `
       <mj-section background-color="#fff" padding="0px 10px 24px 10px">
         <mj-group css-class="mj-bw-ac-icon-row">
           <mj-column width="15%" vertical-align="middle" css-class="mj-bw-ac-icon-row-icon">
@@ -96,8 +96,8 @@ class MjBwAcIconRowWithoutBulletins extends BodyComponent {
         </mj-group>
       </mj-section>
     `,
-        );
-    }
+    );
+  }
 }
 
 module.exports = MjBwAcIconRowWithoutBulletins;
