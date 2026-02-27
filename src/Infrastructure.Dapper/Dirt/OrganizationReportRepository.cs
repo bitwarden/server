@@ -211,11 +211,11 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         var parameters = new
         {
             OrganizationId = orgId,
-            minDate = until
+            MinRevisionDate = until
         };
 
         var results = await connection.QueryAsync<OrganizationReportMetricsData>(
-            $"[{Schema}].[OrganizationReport_GetMetrics]",
+            $"[{Schema}].[OrganizationReport_ReadByOrganizationIdAndRevisionDate]",
             parameters,
             commandType: CommandType.StoredProcedure);
 
