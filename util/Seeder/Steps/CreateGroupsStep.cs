@@ -111,9 +111,8 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
                 break;
 
             default:
-                throw new ArgumentOutOfRangeException(
-                    nameof(_density.MembershipShape), _density.MembershipShape,
-                    "Unhandled MembershipDistributionShape value.");
+                throw new InvalidOperationException(
+                    $"Unhandled MembershipDistributionShape: {_density.MembershipShape}");
 
             case Data.Enums.MembershipDistributionShape.MegaGroup:
                 // Maps MembershipSkew [0,1] to mega group share [50%, 95%]

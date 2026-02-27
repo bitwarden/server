@@ -71,7 +71,7 @@
     },
     "groups": {
       "type": "object",
-      "description": "Generate random groups with round-robin user assignment.",
+      "description": "Generate random groups with user assignment. Distribution shape is configurable via the density block.",
       "additionalProperties": false,
       "properties": {
         "count": {
@@ -84,7 +84,7 @@
     },
     "collections": {
       "type": "object",
-      "description": "Generate random collections with user assignments.",
+      "description": "Generate random collections with user and group assignments. Access patterns are configurable via the density block.",
       "additionalProperties": false,
       "properties": {
         "count": {

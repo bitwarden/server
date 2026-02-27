@@ -17,7 +17,7 @@ namespace Bit.Seeder.Steps;
 /// <remarks>
 /// Requires <see cref="InitGeneratorStep"/> to have run first. Picks cipher types (login, card,
 /// identity, secureNote, sshKey) from a configurable distribution, delegates to the existing
-/// cipher factories, and assigns each cipher to collections round-robin. Designed for load
+/// cipher factories, and assigns ciphers to collections (configurable via density profile). Designed for load
 /// testing scenarios where you need thousands of realistic vault items.
 /// </remarks>
 /// <seealso cref="InitGeneratorStep"/>
