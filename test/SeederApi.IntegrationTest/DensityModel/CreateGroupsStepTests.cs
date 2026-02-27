@@ -1,4 +1,4 @@
-using Bit.Seeder.Data.Enums;
+﻿using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 using Bit.Seeder.Steps;
 using Xunit;
