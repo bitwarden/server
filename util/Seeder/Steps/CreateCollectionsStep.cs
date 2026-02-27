@@ -12,7 +12,6 @@ internal sealed class CreateCollectionsStep : IStep
 {
     private readonly int _count;
     private readonly OrgStructureModel? _structure;
-
     private readonly DensityProfile? _density;
 
     private CreateCollectionsStep(int count, OrgStructureModel? structure, DensityProfile? density = null)
@@ -98,11 +97,11 @@ internal sealed class CreateCollectionsStep : IStep
         }
     }
 
-    private List<CollectionGroup> BuildCollectionGroups(List<Guid> collectionIds, List<Guid> groupIds)
+    internal List<CollectionGroup> BuildCollectionGroups(List<Guid> collectionIds, List<Guid> groupIds)
     {
         var min = _density!.CollectionFanOutMin;
         var max = _density.CollectionFanOutMax;
-        var result = new List<CollectionGroup>(collectionIds.Count * (min + max) / 2);
+        var result = new List<CollectionGroup>(collectionIds.Count * (min + max + 1) / 2);
 
         for (var c = 0; c < collectionIds.Count; c++)
         {
@@ -120,7 +119,7 @@ internal sealed class CreateCollectionsStep : IStep
         return result;
     }
 
-    private int ComputeFanOut(int collectionIndex, int collectionCount, int min, int max)
+    internal int ComputeFanOut(int collectionIndex, int collectionCount, int min, int max)
     {
         var range = max - min + 1;
         if (range <= 1)
@@ -140,12 +139,16 @@ internal sealed class CreateCollectionsStep : IStep
                 var topCount = Math.Max(1, collectionCount / 10);
                 return collectionIndex < topCount ? max : min;
 
-            default: // Uniform
+            case CollectionFanOutShape.Uniform:
                 return min + (collectionIndex % range);
+
+            default:
+                throw new InvalidOperationException(
+                    $"Unhandled CollectionFanOutShape: {_density.FanOutShape}");
         }
     }
 
-    private static List<CollectionUser> BuildCollectionUsers(
+    internal static List<CollectionUser> BuildCollectionUsers(
         List<Guid> collectionIds, List<Guid> userIds, int directUserCount)
     {
         var result = new List<CollectionUser>(directUserCount * 2);
@@ -174,7 +177,7 @@ internal sealed class CreateCollectionsStep : IStep
         };
     }
 
-    private static void ApplyGroupPermissions(
+    internal static void ApplyGroupPermissions(
         List<CollectionGroup> assignments, Distribution<PermissionWeight> distribution)
     {
         for (var i = 0; i < assignments.Count; i++)
@@ -186,7 +189,7 @@ internal sealed class CreateCollectionsStep : IStep
         }
     }
 
-    private static void ApplyUserPermissions(
+    internal static void ApplyUserPermissions(
         List<CollectionUser> assignments, Distribution<PermissionWeight> distribution)
     {
         for (var i = 0; i < assignments.Count; i++)

@@ -64,7 +64,7 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
         context.GroupUsers.AddRange(groupUsers);
     }
 
-    private int[] ComputeUsersPerGroup(int groupCount, int userCount)
+    internal int[] ComputeUsersPerGroup(int groupCount, int userCount)
     {
         var allocations = new int[groupCount];
 
@@ -110,10 +110,6 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
                 }
                 break;
 
-            default:
-                throw new InvalidOperationException(
-                    $"Unhandled MembershipDistributionShape: {_density.MembershipShape}");
-
             case Data.Enums.MembershipDistributionShape.MegaGroup:
                 // Maps MembershipSkew [0,1] to mega group share [50%, 95%]
                 var megaFraction = 0.5 + _density.MembershipSkew * 0.45;
@@ -132,6 +128,10 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
                     allocations[0] += remaining;
                 }
                 break;
+
+            default:
+                throw new InvalidOperationException(
+                    $"Unhandled MembershipDistributionShape: {_density.MembershipShape}");
         }
 
         return allocations;

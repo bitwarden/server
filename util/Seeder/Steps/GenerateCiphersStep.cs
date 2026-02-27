@@ -98,10 +98,19 @@ internal sealed class GenerateCiphersStep(
 
                 for (var i = 0; i < nonOrphanCount; i++)
                 {
-                    // Sqrt curve: later collections accumulate more ciphers (right-heavy skew)
-                    var collectionId = _density.CipherSkew == CipherCollectionSkew.HeavyRight
-                        ? collectionIds[Math.Min((int)(Math.Pow((double)i / nonOrphanCount, 0.5) * collectionIds.Count), collectionIds.Count - 1)]
-                        : collectionIds[i % collectionIds.Count];
+                    int collectionIndex;
+                    if (_density.CipherSkew == CipherCollectionSkew.HeavyRight)
+                    {
+                        // Sqrt curve: later collections accumulate more ciphers (right-heavy skew)
+                        var normalized = Math.Pow((double)i / nonOrphanCount, 0.5);
+                        collectionIndex = Math.Min((int)(normalized * collectionIds.Count), collectionIds.Count - 1);
+                    }
+                    else
+                    {
+                        collectionIndex = i % collectionIds.Count;
+                    }
+
+                    var collectionId = collectionIds[collectionIndex];
 
                     collectionCiphers.Add(new CollectionCipher
                     {
