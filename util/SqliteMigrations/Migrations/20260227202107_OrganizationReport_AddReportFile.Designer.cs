@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260227190157_OrganizationReport_AddReportFile")]
+    [Migration("20260227202107_OrganizationReport_AddReportFile")]
     partial class OrganizationReport_AddReportFile
     {
         /// <inheritdoc />

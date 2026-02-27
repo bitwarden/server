@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260227190147_OrganizationReport_AddReportFile")]
+    [Migration("20260227202114_OrganizationReport_AddReportFile")]
     partial class OrganizationReport_AddReportFile
     {
         /// <inheritdoc />
