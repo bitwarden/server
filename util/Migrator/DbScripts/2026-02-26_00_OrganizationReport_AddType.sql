@@ -1,15 +1,3 @@
--- Drop FileId column if it exists (from previous migration)
-IF EXISTS (
-    SELECT 1 FROM sys.columns
-    WHERE object_id = OBJECT_ID(N'[dbo].[OrganizationReport]')
-    AND name = 'FileId'
-)
-BEGIN
-    ALTER TABLE [dbo].[OrganizationReport]
-    DROP COLUMN [FileId];
-END
-GO
-
 -- Add Type column if it does not exist
 IF NOT EXISTS (
     SELECT 1 FROM sys.columns

@@ -2,22 +2,18 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
 /// <inheritdoc />
-public partial class _20260226_00_OrganizationReport_AddType_RemoveFileId : Migration
+public partial class _20260226_00_OrganizationReport_AddType : Migration
 {
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "FileId",
-            table: "OrganizationReport");
-
         migrationBuilder.AddColumn<byte>(
             name: "Type",
             table: "OrganizationReport",
-            type: "smallint",
+            type: "tinyint unsigned",
             nullable: false,
             defaultValue: (byte)0);
     }
@@ -28,11 +24,5 @@ public partial class _20260226_00_OrganizationReport_AddType_RemoveFileId : Migr
         migrationBuilder.DropColumn(
             name: "Type",
             table: "OrganizationReport");
-
-        migrationBuilder.AddColumn<string>(
-            name: "FileId",
-            table: "OrganizationReport",
-            type: "text",
-            nullable: true);
     }
 }
