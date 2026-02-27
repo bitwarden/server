@@ -101,6 +101,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     /// <returns>The result is a boolean value indicating whether a default collection should be created.</returns>
     private async Task<bool> ShouldCreateDefaultCollectionAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
         !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
+        && request.Organization!.UseMyItems
         && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.OrganizationUser!.UserId!.Value))
             .RequiresDefaultCollectionOnConfirm(request.Organization!.Id);
 
