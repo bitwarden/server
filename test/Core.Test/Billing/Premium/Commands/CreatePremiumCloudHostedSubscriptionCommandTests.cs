@@ -1155,7 +1155,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_InvalidCoupon_IgnoresCouponAndProceeds(
+    public async Task Run_InvalidCoupon_ReturnsBadRequest(
         User user,
         TokenizedPaymentMethod paymentMethod,
         BillingAddress billingAddress)
@@ -1168,30 +1168,25 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         paymentMethod.Token = "card_token_123";
 
         var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "INVALID_COUPON");
-        var mockCustomer = CreateMockCustomer();
-        var mockSubscription = CreateMockActiveSubscription();
 
         _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(false);
-        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
-        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
         var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal("The discount code is no longer valid. Please remove it or use a different code to proceed with checkout.", badRequest.Response);
         await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
-        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
-            opts.Discounts == null || opts.Discounts.Count == 0));
-        await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
+        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
-    public async Task Run_UserNotEligibleForCoupon_IgnoresCouponAndProceeds(
+    public async Task Run_UserNotEligibleForCoupon_ReturnsBadRequest(
         User user,
         TokenizedPaymentMethod paymentMethod,
         BillingAddress billingAddress)
@@ -1205,26 +1200,22 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         paymentMethod.Token = "card_token_123";
 
         var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "NEW_USER_ONLY_COUPON");
-        var mockCustomer = CreateMockCustomer();
-        var mockSubscription = CreateMockActiveSubscription();
 
         // User has previous subscriptions, so they're not eligible
         _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(false);
-        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
-        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
-        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
 
         // Act
         var result = await _command.Run(user, subscriptionPurchase);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.IsT1);
+        var badRequest = result.AsT1;
+        Assert.Equal("The discount code is no longer valid. Please remove it or use a different code to proceed with checkout.", badRequest.Response);
         await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
-        await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
-            opts.Discounts == null || opts.Discounts.Count == 0));
-        await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+        await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
+        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]

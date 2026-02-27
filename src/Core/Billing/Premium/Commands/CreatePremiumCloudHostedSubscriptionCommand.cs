@@ -83,15 +83,16 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
-        // Validate coupon and only apply if valid. If invalid, proceed without the discount.
+        // Validate coupon if provided. Return error if invalid to prevent charging more than expected.
         string? validatedCoupon = null;
         if (!string.IsNullOrWhiteSpace(subscriptionPurchase.Coupon))
         {
             var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(user, subscriptionPurchase.Coupon.Trim(), DiscountAudienceType.UserHasNoPreviousSubscriptions);
-            if (isValid)
+            if (!isValid)
             {
-                validatedCoupon = subscriptionPurchase.Coupon.Trim();
+                return new BadRequest("The discount code is no longer valid. Please remove it or use a different code to proceed with checkout.");
             }
+            validatedCoupon = subscriptionPurchase.Coupon.Trim();
         }
 
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
