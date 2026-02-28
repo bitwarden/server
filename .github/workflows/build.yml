@@ -50,53 +50,53 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - project_name: Admin
-          #   base_path: ./src
-          #   dotnet: true
-          #   node: true
-          # - project_name: Api
-          #   base_path: ./src
-          #   dotnet: true
-          # - project_name: Attachments
-          #   base_path: ./util
-          # - project_name: Billing
-          #   base_path: ./src
-          #   dotnet: true
-          # - project_name: Events
-          #   base_path: ./src
-          #   dotnet: true
-          # - project_name: EventsProcessor
-          #   base_path: ./src
-          #   dotnet: true
-          # - project_name: Icons
-          #   base_path: ./src
-          #   dotnet: true
-          # - project_name: Identity
-          #   base_path: ./src
-          #   dotnet: true
-          # - project_name: MsSql
-          #   base_path: ./util
-          # - project_name: MsSqlMigratorUtility
-          #   base_path: ./util
-          #   dotnet: true
-          # - project_name: Nginx
-          #   base_path: ./util
-          # - project_name: Notifications
-          #   base_path: ./src
-          #   dotnet: true
-          # - project_name: Scim
-          #   base_path: ./bitwarden_license/src
-          #   dotnet: true
+          - project_name: Admin
+            base_path: ./src
+            dotnet: true
+            node: true
+          - project_name: Api
+            base_path: ./src
+            dotnet: true
+          - project_name: Attachments
+            base_path: ./util
+          - project_name: Billing
+            base_path: ./src
+            dotnet: true
+          - project_name: Events
+            base_path: ./src
+            dotnet: true
+          - project_name: EventsProcessor
+            base_path: ./src
+            dotnet: true
+          - project_name: Icons
+            base_path: ./src
+            dotnet: true
+          - project_name: Identity
+            base_path: ./src
+            dotnet: true
+          - project_name: MsSql
+            base_path: ./util
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
+          - project_name: Nginx
+            base_path: ./util
+          - project_name: Notifications
+            base_path: ./src
+            dotnet: true
+          - project_name: Scim
+            base_path: ./bitwarden_license/src
+            dotnet: true
           - project_name: SeederApi
             base_path: ./util
             platforms: linux/amd64,linux/arm64
             dotnet: true
-          # - project_name: Setup
-          #   base_path: ./util
-          #   dotnet: true
-          # - project_name: Sso
-          #   base_path: ./bitwarden_license/src
-          #   dotnet: true
+          - project_name: Setup
+            base_path: ./util
+            dotnet: true
+          - project_name: Sso
+            base_path: ./bitwarden_license/src
+            dotnet: true
     steps:
       - name: Check secrets
         id: check-secrets
