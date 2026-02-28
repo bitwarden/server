@@ -437,7 +437,7 @@ public class SyncControllerTests
             .ClientVersion.Returns(new Version(Constants.BankAccountCipherMinimumVersion));
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(true);
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(user).Returns(false);
@@ -478,7 +478,7 @@ public class SyncControllerTests
             .ClientVersion.Returns(new Version(Constants.BankAccountCipherMinimumVersion));
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(false);
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(user).Returns(false);
@@ -519,7 +519,7 @@ public class SyncControllerTests
             .ClientVersion.Returns(new Version("2025.1.0"));
 
         sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.VaultBankAccount).Returns(true);
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(user).Returns(false);
