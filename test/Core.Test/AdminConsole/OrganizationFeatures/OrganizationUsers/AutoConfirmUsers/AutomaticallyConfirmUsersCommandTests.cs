@@ -390,7 +390,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
         var emailException = new Exception("Email sending failed");
         sutProvider.GetDependency<IMailService>()
-            .SendOrganizationConfirmedEmailAsync(organization.Name, user.Email, organizationUser.AccessSecretsManager)
+            .SendOrganizationConfirmedEmailAsync(organization.DisplayName(), user.Email, organizationUser.AccessSecretsManager)
             .ThrowsAsync(emailException);
 
         // Act
@@ -705,7 +705,7 @@ public class AutomaticallyConfirmUsersCommandTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendOrganizationConfirmedEmailAsync(
-                organization.Name,
+                organization.DisplayName(),
                 user.Email,
                 organizationUser.AccessSecretsManager);
 
@@ -722,7 +722,7 @@ public class AutomaticallyConfirmUsersCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_UsesNewMailer(
+    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_CallsSendOrganizationConfirmationCommand(
         Organization organization,
         string userEmail,
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
@@ -741,8 +741,8 @@ public class AutomaticallyConfirmUsersCommandTests
             .Received(1)
             .SendConfirmationAsync(organization, userEmail, accessSecretsManager);
         await sutProvider.GetDependency<IMailService>()
-            .DidNotReceive()
-            .SendOrganizationConfirmedEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+            .DidNotReceiveWithAnyArgs()
+            .SendOrganizationConfirmedEmailAsync(default, default, default);
     }
 
     [Theory]
@@ -764,9 +764,9 @@ public class AutomaticallyConfirmUsersCommandTests
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationConfirmedEmailAsync(organization.Name, userEmail, accessSecretsManager);
+            .SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
         await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
-            .DidNotReceive()
-            .SendConfirmationAsync(Arg.Any<Organization>(), Arg.Any<string>(), Arg.Any<bool>());
+            .DidNotReceiveWithAnyArgs()
+            .SendConfirmationAsync(default, default, default);
     }
 }

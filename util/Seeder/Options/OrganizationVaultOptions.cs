@@ -79,6 +79,12 @@ public class OrganizationVaultOptions
     public Distribution<CipherType> CipherTypeDistribution { get; init; } = CipherTypeDistributions.Realistic;
 
     /// <summary>
+    /// Density profile controlling entity relationship patterns.
+    /// When null, steps use default round-robin behavior.
+    /// </summary>
+    public DensityProfile? Density { get; init; }
+
+    /// <summary>
     /// Seed for deterministic data generation. When null, derived from Domain hash.
     /// </summary>
     public int? Seed { get; init; }
