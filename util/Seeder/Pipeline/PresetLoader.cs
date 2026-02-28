@@ -1,5 +1,8 @@
-﻿using Bit.Seeder.Factories;
+﻿using Bit.Seeder.Data.Distributions;
+using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -83,14 +86,16 @@ internal static class PresetLoader
             builder.AddUsers(preset.Users.Count, preset.Users.RealisticStatusMix);
         }
 
+        var density = ParseDensity(preset.Density);
+
         if (preset.Groups is not null)
         {
-            builder.AddGroups(preset.Groups.Count);
+            builder.AddGroups(preset.Groups.Count, density);
         }
 
         if (preset.Collections is not null)
         {
-            builder.AddCollections(preset.Collections.Count);
+            builder.AddCollections(preset.Collections.Count, density);
         }
 
         if (preset.Folders == true)
@@ -104,7 +109,7 @@ internal static class PresetLoader
         }
         else if (preset.Ciphers is not null && preset.Ciphers.Count > 0)
         {
-            builder.AddCiphers(preset.Ciphers.Count, assignFolders: preset.Ciphers.AssignFolders);
+            builder.AddCiphers(preset.Ciphers.Count, assignFolders: preset.Ciphers.AssignFolders, density: density);
         }
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
@@ -114,4 +119,54 @@ internal static class PresetLoader
 
         builder.Validate();
     }
+
+    private static DensityProfile? ParseDensity(SeedPresetDensity? preset)
+    {
+        if (preset is null)
+        {
+            return null;
+        }
+
+        return new DensityProfile
+        {
+            MembershipShape = ParseEnum(preset.Membership?.Shape, MembershipDistributionShape.Uniform),
+            MembershipSkew = preset.Membership?.Skew ?? 0,
+            CollectionFanOutMin = preset.CollectionFanOut?.Min ?? 1,
+            CollectionFanOutMax = preset.CollectionFanOut?.Max ?? 3,
+            FanOutShape = ParseEnum(preset.CollectionFanOut?.Shape, CollectionFanOutShape.Uniform),
+            EmptyGroupRate = preset.CollectionFanOut?.EmptyGroupRate ?? 0,
+            DirectAccessRatio = preset.DirectAccessRatio ?? 1.0,
+            PermissionDistribution = ParsePermissions(preset.Permissions),
+            CipherSkew = ParseEnum(preset.CipherAssignment?.Skew, CipherCollectionSkew.Uniform),
+            OrphanCipherRate = preset.CipherAssignment?.OrphanRate ?? 0,
+        };
+    }
+
+    private static Distribution<PermissionWeight> ParsePermissions(SeedPresetPermissions? permissions)
+    {
+        if (permissions is null)
+        {
+            return PermissionDistributions.Enterprise;
+        }
+
+        var readOnly = permissions.ReadOnly ?? 0;
+        var readWrite = permissions.ReadWrite ?? 0;
+        var manage = permissions.Manage ?? 0;
+        var hidePasswords = permissions.HidePasswords ?? 0;
+
+        // Empty permissions block (all nulls → zeros) — fall back to Enterprise defaults
+        if (readOnly + readWrite + manage + hidePasswords < 0.001)
+        {
+            return PermissionDistributions.Enterprise;
+        }
+
+        return new Distribution<PermissionWeight>(
+            (PermissionWeight.ReadOnly, readOnly),
+            (PermissionWeight.ReadWrite, readWrite),
+            (PermissionWeight.Manage, manage),
+            (PermissionWeight.HidePasswords, hidePasswords));
+    }
+
+    private static T ParseEnum<T>(string? value, T defaultValue) where T : struct, Enum =>
+        value is not null && Enum.TryParse<T>(value, ignoreCase: true, out var result) ? result : defaultValue;
 }
