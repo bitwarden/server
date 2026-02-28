@@ -83,6 +83,7 @@ RUN . /etc/environment && dotnet restore -r ${RID}
 WORKDIR /source/util/SeederApi
 RUN . /etc/environment \
     && export CARGO_TARGET_DIR=/tmp/cargo_target \
+    && export NoWarn="CA1305;CS1591" \
     && rustc --version \
     && cargo --version \
     && echo "Building for Rust target: ${RUST_TARGET}, .NET RID: ${RID}" \
@@ -91,7 +92,6 @@ RUN . /etc/environment \
     --no-restore \
     --self-contained \
     /p:PublishSingleFile=true \
-    '/p:NoWarn=CA1305;CS1591' \
     -r ${RID} \
     -o /app/out
 
