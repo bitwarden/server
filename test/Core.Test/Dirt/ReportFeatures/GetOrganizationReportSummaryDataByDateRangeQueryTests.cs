@@ -33,13 +33,14 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
             .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Returns(summaryDataList);
 
-        var cache = sutProvider.GetDependency<IFusionCache>();
-        cache.GetOrSetAsync(
-            key: Arg.Any<string?>(),
-            factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
-            options: Arg.Any<FusionCacheEntryOptions>(),
-            tags: Arg.Any<IEnumerable<string>>()
-            ).Returns(callInfo =>
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
             {
                 var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
                 return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
@@ -87,13 +88,14 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
             .GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>())
             .Returns(summaryDataList);
 
-        var cache = sutProvider.GetDependency<IFusionCache>();
-        cache.GetOrSetAsync(
-            key: Arg.Any<string?>(),
-            factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
-            options: Arg.Any<FusionCacheEntryOptions>(),
-            tags: Arg.Any<IEnumerable<string>>()
-            ).Returns(callInfo =>
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
             {
                 var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
                 return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
@@ -169,13 +171,14 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
             .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Returns(new List<OrganizationReportSummaryDataResponse>());
 
-        var cache = sutProvider.GetDependency<IFusionCache>();
-        cache.GetOrSetAsync(
-            key: Arg.Any<string?>(),
-            factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
-            options: Arg.Any<FusionCacheEntryOptions>(),
-            tags: Arg.Any<IEnumerable<string>>()
-            ).Returns(callInfo =>
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
             {
                 var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
                 return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
@@ -206,13 +209,14 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
             .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Throws(new InvalidOperationException(expectedMessage));
 
-        var cache = sutProvider.GetDependency<IFusionCache>();
-        cache.GetOrSetAsync(
-            key: Arg.Any<string?>(),
-            factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
-            options: Arg.Any<FusionCacheEntryOptions>(),
-            tags: Arg.Any<IEnumerable<string>>()
-            ).Returns(callInfo =>
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
             {
                 var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
                 return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
