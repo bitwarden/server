@@ -41,6 +41,12 @@ public class BillingCommandResult<T>(OneOf<T, BadRequest, Conflict, Unhandled> i
         _ => Task.CompletedTask,
         _ => Task.CompletedTask,
         _ => Task.CompletedTask);
+
+    public T GetValueOrThrow() => Match(
+        value => value,
+        badRequest => throw new BillingException(badRequest.Response),
+        conflict => throw new BillingException(message: conflict.Response),
+        unhandled => throw new BillingException(message: unhandled.Response, innerException: unhandled.Exception));
 }
 
 public static class BillingCommandResultExtensions
