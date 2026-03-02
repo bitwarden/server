@@ -258,6 +258,7 @@ public class StripePaymentService : IStripePaymentService
                 }), true);
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated OrganizationService.AdjustSeatsAsync
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
