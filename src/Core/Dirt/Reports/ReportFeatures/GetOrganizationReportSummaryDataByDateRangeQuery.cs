@@ -11,6 +11,7 @@ namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganizationReportSummaryDataByDateRangeQuery
 {
+    private const int MaxRecordsForWidget = 6;
     private readonly IOrganizationReportRepository _organizationReportRepo;
     private readonly ILogger<GetOrganizationReportSummaryDataByDateRangeQuery> _logger;
     private readonly IFusionCache _cache;
@@ -39,6 +40,10 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
                 throw new BadRequestException(errorMessage);
             }
 
+            // update start and end date to include the entire day
+            startDate = startDate.Date;
+            endDate = endDate.Date.AddDays(1).AddTicks(-1);
+
             // cache key and tag
             var cacheKey = OrganizationReportCacheConstants.BuildCacheKeyForSummaryDataByDateRange(organizationId, startDate, endDate);
             var cacheTag = OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId);
@@ -46,7 +51,10 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
             var summaryDataList = await _cache.GetOrSetAsync(
                 key: cacheKey,
                 factory: async _ =>
-                    await _organizationReportRepo.GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate),
+                    {
+                        var data = await _organizationReportRepo.GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+                        return GetMostRecentEntries(data);
+                    },
                 options: new FusionCacheEntryOptions(duration: OrganizationReportCacheConstants.DurationForSummaryData),
                 tags: [cacheTag]
             );
@@ -89,5 +97,28 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
         }
 
         return (true, string.Empty);
+    }
+
+    private static IEnumerable<OrganizationReportSummaryDataResponse> GetMostRecentEntries(IEnumerable<OrganizationReportSummaryDataResponse> data, int maxEntries = MaxRecordsForWidget)
+    {
+        if (data.Count() <= maxEntries)
+        {
+            return data;
+        }
+
+        // here we need to take 10 records, evenly spaced by RevisionDate, 
+        // to cover the entire date range, 
+        // and ensure we include the most recent record as well
+        var sortedData = data.OrderByDescending(d => d.RevisionDate).ToList();
+        var totalRecords = sortedData.Count;
+        var interval = (double)(totalRecords - 1) / (maxEntries - 1); // -1 the most recent record will be included by default
+        var result = new List<OrganizationReportSummaryDataResponse>();
+
+        for (int i = 0; i < maxEntries - 1; i++)
+        {
+            result.Add(sortedData[(int)Math.Round(i * interval)]);
+        }
+
+        return result;
     }
 }

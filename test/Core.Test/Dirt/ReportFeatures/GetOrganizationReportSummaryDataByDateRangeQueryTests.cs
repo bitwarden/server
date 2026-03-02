@@ -58,6 +58,59 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetOrganizationReportSummaryDataByDateRangeAsync_ShouldReturnTopSixResults(
+        SutProvider<GetOrganizationReportSummaryDataByDateRangeQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = fixture.Create<Guid>();
+        var reportId = fixture.Create<Guid>();
+        var startDate = DateTime.UtcNow.AddDays(-30);
+        var endDate = DateTime.UtcNow;
+        var summaryDataList = fixture.Build<OrganizationReportSummaryDataResponse>()
+            .CreateMany(10)
+            .ToList();
+        summaryDataList[0].RevisionDate = DateTime.UtcNow; // most recent
+        summaryDataList[1].RevisionDate = DateTime.UtcNow.AddDays(-1);
+        summaryDataList[2].RevisionDate = DateTime.UtcNow.AddDays(-2);
+        summaryDataList[3].RevisionDate = DateTime.UtcNow.AddDays(-3);
+        summaryDataList[4].RevisionDate = DateTime.UtcNow.AddDays(-4);
+        summaryDataList[5].RevisionDate = DateTime.UtcNow.AddDays(-5);
+        summaryDataList[6].RevisionDate = DateTime.UtcNow.AddDays(-6);
+        summaryDataList[7].RevisionDate = DateTime.UtcNow.AddDays(-7);
+        summaryDataList[8].RevisionDate = DateTime.UtcNow.AddDays(-8);
+        summaryDataList[9].RevisionDate = DateTime.UtcNow.AddDays(-9);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>())
+            .Returns(summaryDataList);
+
+        var cache = sutProvider.GetDependency<IFusionCache>();
+        cache.GetOrSetAsync(
+            key: Arg.Any<string?>(),
+            factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+            options: Arg.Any<FusionCacheEntryOptions>(),
+            tags: Arg.Any<IEnumerable<string>>()
+            ).Returns(callInfo =>
+            {
+                var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
+                return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
+            });
+
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(6, result.Count());
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .Received(1).GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+    }
+
+
+    [Theory]
+    [BitAutoData]
     public async Task GetOrganizationReportSummaryDataByDateRangeAsync_WithEmptyOrganizationId_ShouldThrowBadRequestException(
         SutProvider<GetOrganizationReportSummaryDataByDateRangeQuery> sutProvider)
     {
