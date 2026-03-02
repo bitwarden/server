@@ -20,7 +20,9 @@ public class GetApplicableDiscountsQuery(
 {
     public async Task<BillingCommandResult<SubscriptionDiscountResponseModel[]>> Run(User user)
     {
-        var discounts = await subscriptionDiscountService.GetEligibleDiscountsAsync(user);
-        return discounts.Select(SubscriptionDiscountResponseModel.From).ToArray();
+        var eligibleDiscounts = await subscriptionDiscountService.GetEligibleDiscountsAsync(user);
+        return eligibleDiscounts
+            .Select(e => SubscriptionDiscountResponseModel.From(e.Discount, e.TierEligibility))
+            .ToArray();
     }
 }
