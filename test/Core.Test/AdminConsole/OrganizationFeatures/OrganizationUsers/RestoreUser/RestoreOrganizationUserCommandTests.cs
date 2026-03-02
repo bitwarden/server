@@ -1521,10 +1521,6 @@ public class RestoreOrganizationUserCommandTests
         RestoreUser_Setup(organization, owner, orgUser, sutProvider);
         organization.UseMyItems = false;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
-
         // User will restore to Confirmed
         orgUser.Email = null;
         orgUser.OrganizationId = organization.Id;
@@ -1553,10 +1549,6 @@ public class RestoreOrganizationUserCommandTests
         // Arrange
         RestoreUser_Setup(organization, owner, orgUser, sutProvider);
         organization.UseMyItems = true;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
 
         // User will restore to Confirmed
         orgUser.Email = null;
@@ -1593,10 +1585,6 @@ public class RestoreOrganizationUserCommandTests
 
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var userService = Substitute.For<IUserService>();
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
 
         // Both users will restore to Confirmed
         orgUser1.Email = null;
@@ -1650,10 +1638,6 @@ public class RestoreOrganizationUserCommandTests
 
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var userService = Substitute.For<IUserService>();
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
 
         // Both users will restore to Confirmed
         orgUser1.Email = null;
