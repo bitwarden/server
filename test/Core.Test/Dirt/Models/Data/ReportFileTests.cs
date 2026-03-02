@@ -23,7 +23,7 @@ public class ReportFileTests
         var original = new ReportFile
         {
             Id = "file-123",
-            FileName = "report.csv",
+            FileName = "report.json",
             Size = 1048576,
             Validated = false
         };
@@ -44,7 +44,7 @@ public class ReportFileTests
         var data = new ReportFile
         {
             Id = "file-456",
-            FileName = "report.csv",
+            FileName = "report.json",
             Size = 9876543210
         };
 
@@ -56,7 +56,7 @@ public class ReportFileTests
     [Fact]
     public void Deserialize_SizeCanBeReadFromString()
     {
-        var json = """{"Id":"file-789","FileName":"test.csv","Size":"5000","Validated":true}""";
+        var json = """{"Id":"file-789","FileName":"test.json","Size":"5000","Validated":true}""";
 
         var data = JsonSerializer.Deserialize<ReportFile>(json);
 
