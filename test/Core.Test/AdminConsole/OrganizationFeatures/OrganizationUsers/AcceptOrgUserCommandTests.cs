@@ -439,7 +439,7 @@ public class AcceptOrgUserCommandTests
             ExpirationDate = DateTime.UtcNow.AddDays(1),
         });
 
-        var newToken = CreateNewToken(orgUser);
+        var newToken = CreateToken(orgUser);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
