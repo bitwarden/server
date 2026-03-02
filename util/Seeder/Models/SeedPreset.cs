@@ -10,6 +10,7 @@ internal record SeedPreset
     public bool? Folders { get; init; }
     public SeedPresetCiphers? Ciphers { get; init; }
     public SeedPresetPersonalCiphers? PersonalCiphers { get; init; }
+    public SeedPresetDensity? Density { get; init; }
 }
 
 internal record SeedPresetOrganization

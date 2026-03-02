@@ -1188,10 +1188,6 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.Email = null; // This causes user to restore to Confirmed status
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
-
         SetupOrganizationDataOwnershipPolicy(
             sutProvider,
             organizationUser.UserId!.Value,
@@ -1223,10 +1219,6 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.Email = null; // This causes user to restore to Confirmed status
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
-
         SetupOrganizationDataOwnershipPolicy(
             sutProvider,
             organizationUser.UserId!.Value,
@@ -1253,10 +1245,6 @@ public class RestoreOrganizationUserCommandTests
         // Arrange
         organizationUser.Email = null; // This causes user to restore to Confirmed status
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
 
         SetupOrganizationDataOwnershipPolicy(
             sutProvider,
@@ -1287,10 +1275,6 @@ public class RestoreOrganizationUserCommandTests
         // Arrange
         organizationUser.Email = null; // This causes user to restore to Confirmed status
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
 
         SetupOrganizationDataOwnershipPolicy(
             sutProvider,
@@ -1323,10 +1307,6 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.Key = null;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
-
         // Act
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, defaultCollectionName);
 
@@ -1350,10 +1330,6 @@ public class RestoreOrganizationUserCommandTests
         organizationUser.Email = "test@example.com";
         organizationUser.Key = null;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
 
         // Act
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, defaultCollectionName);
@@ -1381,10 +1357,6 @@ public class RestoreOrganizationUserCommandTests
         RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var userService = Substitute.For<IUserService>();
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
 
         // orgUser1: Will restore to Confirmed (Email = null)
         orgUser1.Email = null;
@@ -1443,10 +1415,6 @@ public class RestoreOrganizationUserCommandTests
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var userService = Substitute.For<IUserService>();
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
-
         // Both users will restore to Confirmed
         orgUser1.Email = null;
         orgUser1.OrganizationId = organization.Id;
@@ -1500,10 +1468,6 @@ public class RestoreOrganizationUserCommandTests
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var userService = Substitute.For<IUserService>();
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
-            .Returns(true);
-
         // Both users will restore to Confirmed
         orgUser1.Email = null;
         orgUser1.OrganizationId = organization.Id;
@@ -1539,6 +1503,180 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceive()
             .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    #endregion
+
+    #region UseMyItems Tests
+
+    [Theory, BitAutoData]
+    public async Task RestoreUserAsync_UseMyItemsDisabled_DoesNotCreateCollection(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser,
+        string collectionName,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, owner, orgUser, sutProvider);
+        organization.UseMyItems = false;
+
+        // User will restore to Confirmed
+        orgUser.Email = null;
+        orgUser.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, []));
+
+        // Act
+        await sutProvider.Sut.RestoreUserAsync(orgUser, owner.Id, collectionName);
+
+        // Assert - No collection should be created
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUserAsync_UseMyItemsEnabled_CreatesCollection(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser,
+        string collectionName,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, owner, orgUser, sutProvider);
+        organization.UseMyItems = true;
+
+        // User will restore to Confirmed
+        orgUser.Email = null;
+        orgUser.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, []));
+
+        // Act
+        await sutProvider.Sut.RestoreUserAsync(orgUser, owner.Id, collectionName);
+
+        // Assert - Collection should be created
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == orgUser.Id),
+                collectionName);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsersAsync_UseMyItemsDisabled_DoesNotCreateCollections(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
+        string collectionName,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        organization.UseMyItems = false;
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userService = Substitute.For<IUserService>();
+
+        // Both users will restore to Confirmed
+        orgUser1.Email = null;
+        orgUser1.OrganizationId = organization.Id;
+        orgUser2.Email = null;
+        orgUser2.OrganizationId = organization.Id;
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
+            .Returns([orgUser1, orgUser2]);
+
+        // Setup bulk policy query - both users have policy enabled
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns([orgUser1.Id, orgUser2.Id]);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
+            {
+                (orgUser1.UserId!.Value, true),
+                (orgUser2.UserId!.Value, true)
+            });
+
+        // Act
+        var result = await sutProvider.Sut.RestoreUsersAsync(
+            organization.Id,
+            [orgUser1.Id, orgUser2.Id],
+            owner.Id,
+            userService,
+            collectionName);
+
+        // Assert - No collections should be created
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceive()
+            .CreateDefaultCollectionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsersAsync_UseMyItemsEnabled_CreatesCollections(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        [OrganizationUser(status: OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
+        string collectionName,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        organization.UseMyItems = true;
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userService = Substitute.For<IUserService>();
+
+        // Both users will restore to Confirmed
+        orgUser1.Email = null;
+        orgUser1.OrganizationId = organization.Id;
+        orgUser2.Email = null;
+        orgUser2.OrganizationId = organization.Id;
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
+            .Returns([orgUser1, orgUser2]);
+
+        // Setup bulk policy query - both users have policy enabled
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
+            .Returns([orgUser1.Id, orgUser2.Id]);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
+            {
+                (orgUser1.UserId!.Value, true),
+                (orgUser2.UserId!.Value, true)
+            });
+
+        // Act
+        var result = await sutProvider.Sut.RestoreUsersAsync(
+            organization.Id,
+            [orgUser1.Id, orgUser2.Id],
+            owner.Id,
+            userService,
+            collectionName);
+
+        // Assert - Collections should be created for both confirmed users
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .CreateDefaultCollectionsAsync(
+                organization.Id,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 2 && ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)),
+                collectionName);
     }
 
     #endregion

@@ -1,7 +1,8 @@
-﻿using Bit.Api.Billing.Controllers.VNext;
+using Bit.Api.Billing.Controllers.VNext;
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Models.Api.Response;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
@@ -50,10 +51,10 @@ public class AccountBillingVNextControllerTests
     [Theory, BitAutoData]
     public async Task GetLicenseAsync_ValidUser_ReturnsLicenseResponse(
         User user,
-        Core.Billing.Licenses.Models.Api.Response.LicenseResponseModel licenseResponse)
+        UserLicense license)
     {
         // Arrange
-        _getUserLicenseQuery.Run(user).Returns(licenseResponse);
+        _getUserLicenseQuery.Run(user).Returns(license);
         // Act
         var result = await _sut.GetLicenseAsync(user);
         // Assert
