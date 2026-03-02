@@ -1,10 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
@@ -20,6 +23,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser;
 
@@ -746,6 +750,114 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
             .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithAutoConfirmPolicyEnabled_DeletesEmergencyAccess(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.Email = null;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
+
+        // Act
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        // Assert
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .Received(1)
+            .DeleteAllByUserIdAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithAutoConfirmPolicyNotEnabled_DoesNotDeleteEmergencyAccess(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.Email = null;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
+
+        // Act
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        // Assert
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithAutoConfirmNonCompliant_DoesNotDeleteEmergencyAccess(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.Email = null;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Invalid(
+                new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user),
+                new UserCannotBelongToAnotherOrganization()));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Contains("is not compliant with the automatic user confirmation policy", exception.Message);
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]

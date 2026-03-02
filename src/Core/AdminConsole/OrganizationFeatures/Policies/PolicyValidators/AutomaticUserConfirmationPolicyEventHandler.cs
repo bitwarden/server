@@ -3,6 +3,8 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
@@ -16,7 +18,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 ///     <li>No provider users exist</li>
 /// </ul>
 /// </summary>
-public class AutomaticUserConfirmationPolicyEventHandler(IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator)
+public class AutomaticUserConfirmationPolicyEventHandler(
+    IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator,
+    IOrganizationUserRepository organizationUserRepository,
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
@@ -42,6 +47,11 @@ public class AutomaticUserConfirmationPolicyEventHandler(IAutomaticUserConfirmat
     public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
         await ValidateAsync(savePolicyModel.PolicyUpdate, currentPolicy);
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) =>
-        Task.CompletedTask;
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    {
+        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(policyUpdate.OrganizationId, null);
+        var orgUserIds = orgUsers.Where(w => w.UserId != null).Select(s => s.UserId!.Value).ToList();
+
+        await deleteEmergencyAccessCommand.DeleteAllByUserIdsAsync(orgUserIds);
+    }
 }
