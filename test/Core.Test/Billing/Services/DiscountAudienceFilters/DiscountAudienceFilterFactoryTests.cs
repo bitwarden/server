@@ -1,12 +1,23 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.DiscountAudienceFilters;
+using Bit.Core.Repositories;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.Billing.Services.DiscountAudienceFilters;
 
 public class DiscountAudienceFilterFactoryTests
 {
-    private readonly DiscountAudienceFilterFactory _sut = new();
+    private readonly DiscountAudienceFilterFactory _sut = new(
+    [
+        new AllUsersFilter(),
+        new UserHasNoPreviousSubscriptionsFilter(
+            Substitute.For<IStripeAdapter>(),
+            Substitute.For<IOrganizationUserRepository>(),
+            Substitute.For<IPricingClient>())
+    ]);
 
     [Fact]
     public void GetFilter_UserHasNoPreviousSubscriptions_ReturnsCorrectFilter()
@@ -19,13 +30,13 @@ public class DiscountAudienceFilterFactoryTests
     }
 
     [Fact]
-    public void GetFilter_AllUsers_ReturnsNull()
+    public void GetFilter_AllUsers_ReturnsCorrectFilter()
     {
         // Act
         var filter = _sut.GetFilter(DiscountAudienceType.AllUsers);
 
         // Assert
-        Assert.Null(filter);
+        Assert.IsType<AllUsersFilter>(filter);
     }
 
     [Fact]
@@ -44,22 +55,11 @@ public class DiscountAudienceFilterFactoryTests
         // Arrange
         var allAudienceTypes = Enum.GetValues<DiscountAudienceType>();
 
-        // Act & Assert: Cycle through each audience type
+        // Act & Assert: All defined audience types must return a non-null filter
         foreach (var audienceType in allAudienceTypes)
         {
             var filter = _sut.GetFilter(audienceType);
-
-            if (audienceType == DiscountAudienceType.AllUsers)
-            {
-                // AllUsers should not return a filter
-                Assert.Null(filter);
-            }
-            else
-            {
-                // All other audience types must return a filter
-                Assert.NotNull(filter);
-            }
+            Assert.NotNull(filter);
         }
     }
-
 }

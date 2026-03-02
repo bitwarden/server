@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Subscriptions.Entities;
@@ -15,6 +15,9 @@ namespace Bit.Core.Test.Billing.Services;
 [SutProviderCustomize]
 public class SubscriptionDiscountServiceTests
 {
+    private static IDictionary<DiscountTierType, bool> DiscountDictionary(bool eligibilitySetting)
+        => Enum.GetValues<DiscountTierType>().ToDictionary(t => t, _ => eligibilitySetting);
+
     [Theory, BitAutoData]
     public async Task GetEligibleDiscountsAsync_NoActiveDiscounts_ReturnsEmpty(
         User user,
@@ -45,14 +48,17 @@ public class SubscriptionDiscountServiceTests
             .GetActiveDiscountsAsync()
             .Returns([discount]);
 
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(filter);
+
         // Act
         var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
 
         // Assert
-        Assert.Contains(discount, result);
-        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
-            .DidNotReceive()
-            .GetFilter(Arg.Any<DiscountAudienceType>());
+        Assert.Contains(result, e => e.Discount == discount);
     }
 
     [Theory, BitAutoData]
@@ -69,7 +75,7 @@ public class SubscriptionDiscountServiceTests
             .Returns([discount]);
 
         var filter = Substitute.For<IDiscountAudienceFilter>();
-        filter.IsUserEligible(user, discount).Returns(true);
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(true));
         sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
             .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(filter);
@@ -78,7 +84,7 @@ public class SubscriptionDiscountServiceTests
         var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
 
         // Assert
-        Assert.Contains(discount, result);
+        Assert.Contains(result, e => e.Discount == discount);
     }
 
     [Theory, BitAutoData]
@@ -95,7 +101,7 @@ public class SubscriptionDiscountServiceTests
             .Returns([discount]);
 
         var filter = Substitute.For<IDiscountAudienceFilter>();
-        filter.IsUserEligible(user, discount).Returns(false);
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(false));
         sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
             .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(filter);
@@ -104,7 +110,7 @@ public class SubscriptionDiscountServiceTests
         var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
 
         // Assert
-        Assert.DoesNotContain(discount, result);
+        Assert.DoesNotContain(result, e => e.Discount == discount);
     }
 
     [Theory, BitAutoData]
@@ -128,7 +134,7 @@ public class SubscriptionDiscountServiceTests
         var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
 
         // Assert
-        Assert.DoesNotContain(discount, result);
+        Assert.DoesNotContain(result, e => e.Discount == discount);
     }
 
     [Theory, BitAutoData]
@@ -148,9 +154,15 @@ public class SubscriptionDiscountServiceTests
             .GetActiveDiscountsAsync()
             .Returns([allUsersDiscount, eligibleDiscount, ineligibleDiscount]);
 
+        var allUsersFilter = Substitute.For<IDiscountAudienceFilter>();
+        allUsersFilter.IsUserEligible(user, allUsersDiscount).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(allUsersFilter);
+
         var filter = Substitute.For<IDiscountAudienceFilter>();
-        filter.IsUserEligible(user, eligibleDiscount).Returns(true);
-        filter.IsUserEligible(user, ineligibleDiscount).Returns(false);
+        filter.IsUserEligible(user, eligibleDiscount).Returns(DiscountDictionary(true));
+        filter.IsUserEligible(user, ineligibleDiscount).Returns(DiscountDictionary(false));
         sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
             .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(filter);
@@ -159,9 +171,9 @@ public class SubscriptionDiscountServiceTests
         var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
 
         // Assert
-        Assert.Contains(allUsersDiscount, result);
-        Assert.Contains(eligibleDiscount, result);
-        Assert.DoesNotContain(ineligibleDiscount, result);
+        Assert.Contains(result, e => e.Discount == allUsersDiscount);
+        Assert.Contains(result, e => e.Discount == eligibleDiscount);
+        Assert.DoesNotContain(result, e => e.Discount == ineligibleDiscount);
     }
 
     [Theory, BitAutoData]
@@ -175,7 +187,7 @@ public class SubscriptionDiscountServiceTests
             .ReturnsNull();
 
         // Act
-        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, "invalid");
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, "invalid", DiscountTierType.Premium);
 
         // Assert
         Assert.False(result);
@@ -189,13 +201,21 @@ public class SubscriptionDiscountServiceTests
     {
         // Arrange
         discount.AudienceType = DiscountAudienceType.AllUsers;
+        discount.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount.EndDate = DateTime.UtcNow.AddDays(30);
 
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
             .GetByStripeCouponIdAsync(discount.StripeCouponId)
             .Returns(discount);
 
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(filter);
+
         // Act
-        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId);
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Premium);
 
         // Assert
         Assert.True(result);
@@ -209,19 +229,21 @@ public class SubscriptionDiscountServiceTests
     {
         // Arrange
         discount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+        discount.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount.EndDate = DateTime.UtcNow.AddDays(30);
 
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
             .GetByStripeCouponIdAsync(discount.StripeCouponId)
             .Returns(discount);
 
         var filter = Substitute.For<IDiscountAudienceFilter>();
-        filter.IsUserEligible(user, discount).Returns(false);
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(false));
         sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
             .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(filter);
 
         // Act
-        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId);
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Families);
 
         // Assert
         Assert.False(result);

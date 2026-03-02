@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Entities;
@@ -12,6 +13,9 @@ namespace Bit.Core.Test.Billing.Payment.Queries;
 [SutProviderCustomize]
 public class GetApplicableDiscountsQueryTests
 {
+    private static IDictionary<DiscountTierType, bool> DiscountDictionary(bool eligibilitySetting)
+        => Enum.GetValues<DiscountTierType>().ToDictionary(t => t, _ => eligibilitySetting);
+
     [Theory, BitAutoData]
     public async Task Run_NoEligibleDiscounts_ReturnsEmptyArray(
         User user,
@@ -39,7 +43,7 @@ public class GetApplicableDiscountsQueryTests
         // Arrange
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
-            .Returns([discount]);
+            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(true)) });
 
         // Act
         var result = await sutProvider.Sut.Run(user);
@@ -70,7 +74,7 @@ public class GetApplicableDiscountsQueryTests
 
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
-            .Returns([discount]);
+            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(true)) });
 
         // Act
         var result = await sutProvider.Sut.Run(user);
@@ -92,7 +96,7 @@ public class GetApplicableDiscountsQueryTests
 
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
-            .Returns([discount]);
+            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(false)) });
 
         // Act
         var result = await sutProvider.Sut.Run(user);
@@ -112,7 +116,11 @@ public class GetApplicableDiscountsQueryTests
         // Arrange
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
-            .Returns([firstDiscount, secondDiscount]);
+            .Returns(new List<DiscountEligibility>
+            {
+                new(firstDiscount, DiscountDictionary(true)),
+                new(secondDiscount, DiscountDictionary(true))
+            });
 
         // Act
         var result = await sutProvider.Sut.Run(user);
