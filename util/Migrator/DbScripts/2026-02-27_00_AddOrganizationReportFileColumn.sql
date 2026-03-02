@@ -133,3 +133,6 @@ BEGIN
     WHERE [Id] = @Id;
 END;
 GO
+
+EXECUTE sp_refreshview N'[dbo].[OrganizationReportView]';
+GO
