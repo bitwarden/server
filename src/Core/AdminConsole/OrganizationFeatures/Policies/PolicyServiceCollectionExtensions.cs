@@ -63,6 +63,9 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, BlockClaimedDomainAccountCreationPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, DisableSendSyncPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, SendOptionsSyncPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, SendControlsSyncPolicyValidator>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
@@ -76,5 +79,6 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, MasterPasswordPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SingleOrganizationPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, AutomaticUserConfirmationPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendControlsPolicyRequirementFactory>();
     }
 }

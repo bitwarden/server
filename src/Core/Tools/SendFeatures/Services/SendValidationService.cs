@@ -56,6 +56,12 @@ public class SendValidationService : ISendValidationService
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendControls))
+        {
+            await ValidateUserCanSaveAsync_SendControls(userId, send);
+            return;
+        }
+
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             await ValidateUserCanSaveAsync_vNext(userId, send);
@@ -78,6 +84,32 @@ public class SendValidationService : ISendValidationService
         {
             var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
             if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
+            {
+                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+            }
+        }
+    }
+
+    private async Task ValidateUserCanSaveAsync_SendControls(Guid? userId, Send send)
+    {
+        if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
+        {
+            return;
+        }
+
+        var sendControlsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(
+            userId.Value, PolicyType.SendControls);
+
+        if (sendControlsPolicies.Any(p =>
+            CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.PolicyData)?.DisableSend ?? false))
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+        }
+
+        if (send.HideEmail.GetValueOrDefault())
+        {
+            if (sendControlsPolicies.Any(p =>
+                CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
             }
