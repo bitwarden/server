@@ -68,7 +68,7 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
 
         if (options.Groups > 0)
         {
-            builder.AddGroups(options.Groups);
+            builder.AddGroups(options.Groups, options.Density);
         }
 
         if (options.StructureModel.HasValue)
@@ -77,13 +77,13 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
         }
         else if (options.Ciphers > 0)
         {
-            builder.AddCollections(1);
+            builder.AddCollections(1, options.Density);
         }
 
         if (options.Ciphers > 0)
         {
             builder.AddFolders();
-            builder.AddCiphers(options.Ciphers, options.CipherTypeDistribution, options.PasswordDistribution);
+            builder.AddCiphers(options.Ciphers, options.CipherTypeDistribution, options.PasswordDistribution, density: options.Density);
         }
 
         builder.Validate();
