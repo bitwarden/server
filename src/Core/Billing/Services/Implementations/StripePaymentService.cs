@@ -262,11 +262,13 @@ public class StripePaymentService : IStripePaymentService
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustServiceAccountsAsync(
         Organization organization,
         StaticStore.Plan plan,
