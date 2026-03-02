@@ -242,7 +242,21 @@ public class InitPendingOrganizationCommandTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
             .InitializeOrganizationAsync(
-                org, Arg.Any<Func<DbConnection, DbTransaction, Task>>());
+                Arg.Is<Organization>(o =>
+                    o.Enabled == true &&
+                    o.Status == OrganizationStatusType.Created &&
+                    o.PublicKey == requestWithCollection.OrganizationKeys.PublicKey &&
+                    o.PrivateKey == requestWithCollection.OrganizationKeys.WrappedPrivateKey),
+                Arg.Any<Func<DbConnection, DbTransaction, Task>>());
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .BuildConfirmOwnerAction(
+                Arg.Is<OrganizationUser>(ou =>
+                    ou.Status == OrganizationUserStatusType.Confirmed &&
+                    ou.UserId == requestWithCollection.User.Id &&
+                    ou.Key == requestWithCollection.EncryptedOrganizationSymmetricKey &&
+                    ou.Email == null));
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1)
             .CreateAsync(
