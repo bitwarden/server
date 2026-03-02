@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Api.Tools.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -102,16 +101,8 @@ public class SendRequestModel
     /// Comma-separated list of emails that may access the send using OTP
     /// authentication. Mutually exclusive with <see cref="Password"/>.
     /// </summary>
-    [EncryptedString]
-    [EncryptedStringLength(4000)]
-    public string Emails { get; set; }
-
-    /// <summary>
-    /// Comma-separated list of email **hashes**  that may access the send using OTP
-    /// authentication. Mutually exclusive with <see cref="Password"/>.
-    /// </summary>
     [StringLength(4000)]
-    public string EmailHashes { get; set; }
+    public string Emails { get; set; }
 
     /// <summary>
     /// When <see langword="true"/>, send access is disabled.
@@ -261,7 +252,6 @@ public class SendRequestModel
             // normalize encoding
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
             existingSend.Emails = string.Join(",", emails);
-            existingSend.EmailHashes = EmailHashes;
             existingSend.Password = null;
             existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
         }
@@ -273,8 +263,9 @@ public class SendRequestModel
         }
         else
         {
-            // Neither Password nor Emails provided - preserve existing values and infer AuthType
-            existingSend.AuthType = SendUtilities.InferAuthType(existingSend);
+            existingSend.Emails = null;
+            existingSend.Password = null;
+            existingSend.AuthType = Core.Tools.Enums.AuthType.None;
         }
 
         existingSend.Disabled = Disabled.GetValueOrDefault();

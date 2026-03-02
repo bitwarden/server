@@ -12,6 +12,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 public class OrganizationDataOwnershipPolicyValidator(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
+    IOrganizationRepository organizationRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect, IOnPolicyPostUpdateEvent
 {
@@ -52,6 +53,20 @@ public class OrganizationDataOwnershipPolicyValidator(
 
     private async Task UpsertDefaultCollectionsForUsersAsync(PolicyUpdate policyUpdate, string defaultCollectionName)
     {
+        // FIXME: we should use the organizationAbility cache here, but it is currently flaky
+        // and it's not obvious how to handle a cache failure.
+        // https://bitwarden.atlassian.net/browse/PM-32699
+        var organization = await organizationRepository.GetByIdAsync(policyUpdate.OrganizationId);
+        if (organization == null)
+        {
+            throw new InvalidOperationException($"Organization with ID {policyUpdate.OrganizationId} not found.");
+        }
+
+        if (!organization.UseMyItems)
+        {
+            return;
+        }
+
         var requirements = await GetUserPolicyRequirementsByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(policyUpdate.OrganizationId, policyUpdate.Type);
 
         var userOrgIds = requirements

@@ -83,6 +83,33 @@ We host assets that are included in emails at `assets.bitwarden.com`, at the `/e
 
 ## Adding an asset
 
-When you are creating an email that needs a new asset, you should first check to see if that asset already exists. The easiest way to do this is check at the corresponding `https://assets.bitwarden.com/email/v1/` URL (e.g. https://assets.bitwarden.com/email/v1/my_new_image.png). 
+The process for adding an asset uses the typical git workflow for submitting a pull request. You can use the steps below to add, remove, or edit assets being hosted in the repo.
 
-If the asset you are adding is not there, enter a ticket for the SRE team to add the asset to the email asset container. The preferred format for assets is a `.png` file, and the file(s) should be attached to the ticket.
+Clone the assets repo:
+```bash
+git clone git@github.com:bitwarden/assets.git
+```
+
+Create a new branch to make and stage the changes you need:
+```bash
+git checkout -b name-of-your-branch
+```
+
+Add and commit your changes:
+```bash
+git add path/to/your-asset.png
+git commit -m "commit message"
+```
+
+Push the changes to remote repo:
+```bash
+git push origin <branch>
+```
+
+Open a PR for review.
+
+Once the changes have been approved, you can merge the PR, which will build and deploy the `assets.bitwarden.com` Github Pages site. 
+
+> [!NOTE]
+>
+> The changes following the merge may take some time to propagate.

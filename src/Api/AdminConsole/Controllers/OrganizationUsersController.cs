@@ -28,6 +28,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
@@ -227,7 +228,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, Guid id)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
-        if (organizationUser is null || organizationUser.UserId is null)
+        if (organizationUser is null || organizationUser.OrganizationId != orgId || organizationUser.UserId is null)
         {
             throw new NotFoundException();
         }
@@ -334,7 +335,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ? (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id)).AutoEnrollEnabled(orgId)
         : await ShouldHandleResetPasswordAsync(orgId);
 
-        if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+        if (useMasterPasswordPolicy && !OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey))
         {
             throw new BadRequestException("Master Password reset is required, but not provided.");
         }
@@ -487,7 +488,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
         var isTdeEnrollment = ssoConfig != null && ssoConfig.Enabled && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption;
-        if (!isTdeEnrollment && !string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
+        if (!isTdeEnrollment && OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
         {
             throw new BadRequestException("Incorrect password");
         }
@@ -693,6 +694,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore")]
     [Authorize<ManageUsersRequirement>]
+    [Obsolete("This endpoint is deprecated. Use _vNext endpoint instead. This will be removed in a future release.")]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, null));
@@ -701,7 +703,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore/vnext")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.DefaultUserCollectionRestore)]
     public async Task RestoreAsync_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserRestoreRequest request)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, request.DefaultUserCollectionName));

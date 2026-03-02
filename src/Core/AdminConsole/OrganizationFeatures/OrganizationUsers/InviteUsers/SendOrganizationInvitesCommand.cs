@@ -22,17 +22,28 @@ public class SendOrganizationInvitesCommand(
     IPolicyQuery policyQuery,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
-    IMailService mailService) : ISendOrganizationInvitesCommand
+    IMailService mailService,
+    IFeatureService featureService) : ISendOrganizationInvitesCommand
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
-        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(request.Users, request.Organization, request.InitOrganization);
-
-        await mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
+        if (featureService.IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate))
+        {
+            var inviterEmail = await GetInviterEmailAsync(request.InvitingUserId);
+            var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(
+                request.Users, request.Organization, request.InitOrganization, inviterEmail);
+            await mailService.SendUpdatedOrganizationInviteEmailsAsync(orgInvitesInfo);
+        }
+        else
+        {
+            var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(
+                request.Users, request.Organization, request.InitOrganization);
+            await mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
+        }
     }
 
     private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(IEnumerable<OrganizationUser> orgUsers,
-        Organization organization, bool initOrganization = false)
+        Organization organization, bool initOrganization = false, string inviterEmail = null)
     {
         // Materialize the sequence into a list to avoid multiple enumeration warnings
         var orgUsersList = orgUsers.ToList();
@@ -77,7 +88,19 @@ public class SendOrganizationInvitesCommand(
             orgSsoLoginRequiredPolicyEnabled,
             orgUsersWithExpTokens,
             orgUserHasExistingUserDict,
-            initOrganization
+            initOrganization,
+            inviterEmail
         );
+    }
+
+    private async Task<string> GetInviterEmailAsync(Guid? invitingUserId)
+    {
+        if (!invitingUserId.HasValue)
+        {
+            return null;
+        }
+
+        var invitingUser = await userRepository.GetByIdAsync(invitingUserId.Value);
+        return invitingUser?.Email;
     }
 }

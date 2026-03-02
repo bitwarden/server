@@ -6,6 +6,7 @@ using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -30,7 +31,7 @@ public static class UserServiceCollectionExtensions
         services.AddUserRegistrationCommands();
         services.AddWebAuthnLoginCommands();
         services.AddTdeOffboardingPasswordCommands();
-        services.AddTwoFactorQueries();
+        services.AddTwoFactorCommandsQueries();
         services.AddSsoQueries();
     }
 
@@ -75,8 +76,14 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IAssertWebAuthnLoginCredentialCommand, AssertWebAuthnLoginCredentialCommand>();
     }
 
-    private static void AddTwoFactorQueries(this IServiceCollection services)
+    private static void AddTwoFactorCommandsQueries(this IServiceCollection services)
     {
+        services
+            .AddScoped<ICompleteTwoFactorWebAuthnRegistrationCommand, CompleteTwoFactorWebAuthnRegistrationCommand>();
+        services
+            .AddScoped<IStartTwoFactorWebAuthnRegistrationCommand,
+                StartTwoFactorWebAuthnRegistrationCommand>();
+        services.AddScoped<IDeleteTwoFactorWebAuthnCredentialCommand, DeleteTwoFactorWebAuthnCredentialCommand>();
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
     }
 

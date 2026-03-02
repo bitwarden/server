@@ -299,6 +299,27 @@ public class UserDecryptionOptionsBuilderTests
         Assert.True(result.TrustedDeviceOption?.HasAdminApproval);
     }
 
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    [BitAutoData((string)null)]
+    public async Task Build_EmptyOrWhitespaceResetPasswordKey_ShouldReturnHasAdminApprovalFalse(
+        string resetPasswordKey,
+        SsoConfig ssoConfig,
+        SsoConfigurationData configurationData,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
+        User user)
+    {
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        organizationUser.ResetPasswordKey = resetPasswordKey;
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
+
+        Assert.False(result.TrustedDeviceOption?.HasAdminApproval);
+    }
+
     [Theory, BitAutoData]
     public async Task Build_WhenUserHasNoMasterPassword_ShouldReturnNoMasterPasswordUnlock(User user)
     {

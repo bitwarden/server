@@ -1,11 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
@@ -19,18 +16,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 ///     <li>No provider users exist</li>
 /// </ul>
 /// </summary>
-public class AutomaticUserConfirmationPolicyEventHandler(
-    IOrganizationUserRepository organizationUserRepository,
-    IProviderUserRepository providerUserRepository)
+public class AutomaticUserConfirmationPolicyEventHandler(IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator)
     : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
-
-    private const string _usersNotCompliantWithSingleOrgErrorMessage =
-        "All organization users must be compliant with the Single organization policy before enabling the Automatically confirm invited users policy. Please remove users who are members of multiple organizations.";
-
-    private const string _providerUsersExistErrorMessage =
-        "The organization has users with the Provider user type. Please remove provider users before enabling the Automatically confirm invited users policy.";
 
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
@@ -43,7 +32,11 @@ public class AutomaticUserConfirmationPolicyEventHandler(
             return string.Empty;
         }
 
-        return await ValidateEnablingPolicyAsync(policyUpdate.OrganizationId);
+        return (await validator.IsOrganizationCompliantAsync(
+            new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId)))
+            .Match(
+                error => error.Message,
+                _ => string.Empty);
     }
 
     public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
@@ -51,48 +44,4 @@ public class AutomaticUserConfirmationPolicyEventHandler(
 
     public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) =>
         Task.CompletedTask;
-
-    private async Task<string> ValidateEnablingPolicyAsync(Guid organizationId)
-    {
-        var organizationUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-
-        var singleOrgValidationError = await ValidateUserComplianceWithSingleOrgAsync(organizationId, organizationUsers);
-        if (!string.IsNullOrWhiteSpace(singleOrgValidationError))
-        {
-            return singleOrgValidationError;
-        }
-
-        var providerValidationError = await ValidateNoProviderUsersAsync(organizationUsers);
-        if (!string.IsNullOrWhiteSpace(providerValidationError))
-        {
-            return providerValidationError;
-        }
-
-        return string.Empty;
-    }
-
-    private async Task<string> ValidateUserComplianceWithSingleOrgAsync(Guid organizationId,
-        ICollection<OrganizationUserUserDetails> organizationUsers)
-    {
-        var userIds = organizationUsers.Where(
-                u => u.UserId is not null &&
-                u.Status != OrganizationUserStatusType.Invited)
-            .Select(u => u.UserId!.Value);
-
-        var hasNonCompliantUser = (await organizationUserRepository.GetManyByManyUsersAsync(userIds))
-            .Any(uo => uo.OrganizationId != organizationId
-                       && uo.Status != OrganizationUserStatusType.Invited);
-
-        return hasNonCompliantUser ? _usersNotCompliantWithSingleOrgErrorMessage : string.Empty;
-    }
-
-    private async Task<string> ValidateNoProviderUsersAsync(ICollection<OrganizationUserUserDetails> organizationUsers)
-    {
-        var userIds = organizationUsers.Where(x => x.UserId is not null)
-            .Select(x => x.UserId!.Value);
-
-        return (await providerUserRepository.GetManyByManyUsersAsync(userIds)).Count != 0
-            ? _providerUsersExistErrorMessage
-            : string.Empty;
-    }
 }
