@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using Bit.Core.Billing.Enums;
 
@@ -6,14 +6,15 @@ namespace Bit.Core.Billing.Services.DiscountAudienceFilters;
 
 /// <inheritdoc />
 /// <remarks>
-/// To add support for a new audience type: add an enum value, create a filter class, and add a case here.
+/// To add support for a new audience type: add an enum value, create a filter class,
+/// implement <see cref="IDiscountAudienceFilter.SupportedType"/>, and register it in DI.
 /// </remarks>
-public class DiscountAudienceFilterFactory : IDiscountAudienceFilterFactory
+public class DiscountAudienceFilterFactory(
+    IEnumerable<IDiscountAudienceFilter> filters) : IDiscountAudienceFilterFactory
 {
-    public IDiscountAudienceFilter? GetFilter(DiscountAudienceType audienceType) =>
-        audienceType switch
-        {
-            DiscountAudienceType.UserHasNoPreviousSubscriptions => new UserHasNoPreviousSubscriptionsFilter(),
-            _ => null
-        };
+    private readonly Dictionary<DiscountAudienceType, IDiscountAudienceFilter> _filters =
+        filters.ToDictionary(f => f.SupportedType);
+
+    public IDiscountAudienceFilter? GetFilter(DiscountAudienceType audienceType)
+        => _filters.GetValueOrDefault(audienceType);
 }
