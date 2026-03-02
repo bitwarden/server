@@ -94,8 +94,5 @@ public class Program
     public OrganizationCommand Organization { get; set; } = null!;
 
     [Subcommand]
-    public VaultOrganizationCommand VaultOrganization { get; set; } = null!;
-
-    [Subcommand]
     public SeedCommand Seed { get; set; } = null!;
 }

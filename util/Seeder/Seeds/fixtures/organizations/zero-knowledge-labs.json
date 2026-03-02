@@ -1,0 +1,5 @@
+{
+  "$schema": "../../schemas/organization.schema.json",
+  "name": "Zero Knowledge Labs",
+  "domain": "zero-knowledge.example"
+}

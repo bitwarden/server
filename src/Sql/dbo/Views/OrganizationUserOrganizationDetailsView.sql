@@ -57,7 +57,8 @@ SELECT
     OS.[IsAdminInitiated],
     O.[UseAutomaticUserConfirmation],
     O.[UsePhishingBlocker],
-    O.[UseDisableSmAdsForUsers]
+    O.[UseDisableSmAdsForUsers],
+    O.[UseMyItems]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

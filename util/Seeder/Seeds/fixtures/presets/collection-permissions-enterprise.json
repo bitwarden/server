@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/preset.schema.json",
   "organization": {
-    "fixture": "qa-collection-permissions",
+    "fixture": "cobalt-logistics",
     "planType": "enterprise-annually",
     "seats": 10
   },

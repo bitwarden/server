@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/preset.schema.json",
   "organization": {
-    "fixture": "qa-enterprise",
+    "fixture": "redwood-analytics",
     "planType": "enterprise-annually",
     "seats": 10
   },
