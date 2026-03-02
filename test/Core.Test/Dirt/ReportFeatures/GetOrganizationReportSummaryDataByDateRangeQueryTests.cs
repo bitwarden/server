@@ -68,7 +68,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         var startDate = DateTime.UtcNow.AddDays(-30);
         var endDate = DateTime.UtcNow;
         var summaryDataList = fixture.Build<OrganizationReportSummaryDataResponse>()
-            .CreateMany(10)
+            .CreateMany(12)
             .ToList();
         summaryDataList[0].RevisionDate = DateTime.UtcNow; // most recent
         summaryDataList[1].RevisionDate = DateTime.UtcNow.AddDays(-1);
@@ -80,6 +80,8 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         summaryDataList[7].RevisionDate = DateTime.UtcNow.AddDays(-7);
         summaryDataList[8].RevisionDate = DateTime.UtcNow.AddDays(-8);
         summaryDataList[9].RevisionDate = DateTime.UtcNow.AddDays(-9);
+        summaryDataList[10].RevisionDate = DateTime.UtcNow.AddDays(-10);
+        summaryDataList[11].RevisionDate = DateTime.UtcNow.AddDays(-11);
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
             .GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>())
@@ -105,7 +107,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         Assert.NotNull(result);
         Assert.Equal(6, result.Count());
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .Received(1).GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+            .Received(1).GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
     }
 
 

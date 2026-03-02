@@ -114,7 +114,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
         var interval = (double)(totalRecords - 1) / (maxEntries - 1); // -1 the most recent record will be included by default
         var result = new List<OrganizationReportSummaryDataResponse>();
 
-        for (int i = 0; i < maxEntries - 1; i++)
+        for (int i = 0; i <= maxEntries - 1; i++)
         {
             result.Add(sortedData[(int)Math.Round(i * interval)]);
         }
