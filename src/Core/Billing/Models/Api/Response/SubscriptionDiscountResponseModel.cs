@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Subscriptions.Entities;
 
 namespace Bit.Core.Billing.Models.Api.Response;
@@ -16,8 +17,11 @@ public class SubscriptionDiscountResponseModel
     public string? Name { get; init; }
     public DateTime StartDate { get; init; }
     public DateTime EndDate { get; init; }
+    public IDictionary<DiscountTierType, bool>? TierEligibility { get; init; }
 
-    public static SubscriptionDiscountResponseModel From(SubscriptionDiscount discount) => new()
+    public static SubscriptionDiscountResponseModel From(
+        SubscriptionDiscount discount,
+        IDictionary<DiscountTierType, bool> tierEligibility) => new()
     {
         StripeCouponId = discount.StripeCouponId,
         StripeProductIds = discount.StripeProductIds,
@@ -28,6 +32,7 @@ public class SubscriptionDiscountResponseModel
         DurationInMonths = discount.DurationInMonths,
         Name = discount.Name,
         StartDate = discount.StartDate,
-        EndDate = discount.EndDate
+        EndDate = discount.EndDate,
+        TierEligibility = tierEligibility
     };
 }
