@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -12,31 +12,58 @@ public class SubscriptionDiscountService(
     IDiscountAudienceFilterFactory discountAudienceFilterFactory) : ISubscriptionDiscountService
 {
     /// <inheritdoc />
-    public async Task<IEnumerable<SubscriptionDiscount>> GetEligibleDiscountsAsync(User user)
+    public async Task<IEnumerable<DiscountEligibility>> GetEligibleDiscountsAsync(User user)
     {
         var activeDiscounts = await subscriptionDiscountRepository.GetActiveDiscountsAsync();
-        return activeDiscounts.Where(discount => IsEligible(user, discount)).ToList();
+        var eligibleDiscounts = new List<DiscountEligibility>();
+
+        foreach (var discount in activeDiscounts)
+        {
+            var tierEligibility = await GetTierEligibilityAsync(user, discount);
+            // If tierEligibility is null, it means no filter is configured for the discount's audience type,
+            // so we skip it since we can't determine eligibility. If it's not null, we check
+            // if the user is eligible for at least one tier before adding it to the results.
+            if (tierEligibility is not null && tierEligibility.Values.Any(isEligible => isEligible))
+            {
+                eligibleDiscounts.Add(new DiscountEligibility(discount, tierEligibility));
+            }
+        }
+
+        return eligibleDiscounts;
     }
 
     /// <inheritdoc />
-    public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon)
+    public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType)
     {
         var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(coupon);
-        return discount != null && IsEligible(user, discount);
+        if (discount == null || !IsDiscountActive(discount))
+        {
+            return false;
+        }
+
+        var tierEligibility = await GetTierEligibilityAsync(user, discount);
+        return tierEligibility is not null && tierEligibility[tierType];
     }
 
     /// <summary>
-    /// Checks whether the <paramref name="user"/> meets the audience criteria for the given <paramref name="discount"/>
-    /// by delegating to the appropriate <see cref="IDiscountAudienceFilter"/> via the factory.
+    /// Returns the per-tier eligibility matrix for the given <paramref name="user"/> and <paramref name="discount"/>,
+    /// or <see langword="null"/> if no filter is configured for the discount's audience type.
     /// </summary>
-    private bool IsEligible(User user, SubscriptionDiscount discount)
+    private async Task<IDictionary<DiscountTierType, bool>?> GetTierEligibilityAsync(
+        User user, SubscriptionDiscount discount)
     {
-        if (discount.AudienceType == DiscountAudienceType.AllUsers)
-        {
-            return true;
-        }
-
         var filter = discountAudienceFilterFactory.GetFilter(discount.AudienceType);
-        return filter?.IsUserEligible(user, discount) ?? false;
+        return filter is not null ? await filter.IsUserEligible(user, discount) : null;
+    }
+
+    /// <summary>
+    /// Checks if a discount is currently active based on its start and end dates.
+    /// </summary>
+    /// <param name="discount">The discount to check.</param>
+    /// <returns><see langword="true"/> if the current time is within the discount's valid date range; otherwise, <see langword="false"/>.</returns>
+    private static bool IsDiscountActive(SubscriptionDiscount discount)
+    {
+        var now = DateTime.UtcNow;
+        return now >= discount.StartDate && now <= discount.EndDate;
     }
 }
