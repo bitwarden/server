@@ -1,18 +1,13 @@
 name: Publish
-run-name: Publish ${{ inputs.publish_type }}
+run-name: Publish ${{ inputs.dry_run && '(Dry Run)' || '' }}
 
 on:
   workflow_dispatch:
     inputs:
-      publish_type:
-        description: "Publish Options"
-        required: true
-        default: "Initial Publish"
-        type: choice
-        options:
-          - Initial Publish
-          - Redeploy
-          - Dry Run
+      dry_run:
+        description: "Dry Run"
+        type: boolean
+        default: false
       version:
         description: 'Version to publish (default: latest release)'
         required: true
@@ -27,7 +22,6 @@ jobs:
     name: Setup
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
       deployments: write
     outputs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
@@ -40,12 +34,13 @@ jobs:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [[ "${INPUT_VERSION}" == "latest" || "${INPUT_VERSION}" == "" ]]; then
-            VERSION=$(curl  "https://api.github.com/repos/bitwarden/server/releases" | jq -c '.[] | select(.tag_name) | .tag_name' | head -1 | grep -ohE '20[0-9]{2}\.([1-9]|1[0-2])\.[0-9]+')
+            VERSION=$(gh api repos/bitwarden/server/releases/latest --jq '.tag_name | ltrimstr("v")')
             echo "Latest Released Version: $VERSION"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           else
-            echo "Release Version: ${INPUT_VERSION}"
-            echo "version=${INPUT_VERSION}" >> "$GITHUB_OUTPUT"
+            VERSION="${INPUT_VERSION#v}"
+            echo "Release Version: ${VERSION}"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get branch name
@@ -55,6 +50,7 @@ jobs:
           echo "branch-name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub deployment
+        if: ${{ !inputs.dry_run }}
         uses: chrnorm/deployment-action@55729fcebec3d284f60f5bcabbd8376437d696b1 # v2.0.7
         id: deployment
         with:
@@ -95,20 +91,11 @@ jobs:
           - project_name: Sso
     steps:
       - name: Print environment
-        env:
-          RELEASE_OPTION: ${{ inputs.publish_type }}
         run: |
           whoami
-          docker --version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-          echo "Github Release Option: $RELEASE_OPTION"
-
-      - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+          echo "Dry Run: ${{ inputs.dry_run }}"
 
       - name: Set up project name
         id: setup
@@ -133,7 +120,7 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ inputs.publish_type }}" == "Dry Run" ]]; then
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             skopeo copy --all \
               "docker://$_AZ_REGISTRY/$PROJECT_NAME:latest" \
               "docker://$_AZ_REGISTRY/$PROJECT_NAME:dryrun"
@@ -157,14 +144,14 @@ jobs:
       - publish-docker
     permissions:
       deployments: write
-    if: ${{ always() && inputs.publish_type != 'Dry Run' }}
+    if: ${{ always() && !inputs.dry_run }}
     steps:
       - name: Check if any job failed
         if: contains(needs.*.result, 'failure')
         run: exit 1
 
       - name: Update deployment status to Success
-        if: ${{ inputs.publish_type != 'Dry Run' && success() }}
+        if: success()
         uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
@@ -172,7 +159,7 @@ jobs:
           deployment-id: ${{ needs.setup.outputs.deployment-id }}
 
       - name: Update deployment status to Failure
-        if: ${{ inputs.publish_type != 'Dry Run' && failure() }}
+        if: failure()
         uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
