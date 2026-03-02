@@ -799,7 +799,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_UsesNewMailer(
+    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_CallsSendOrganizationConfirmationCommand(
         Organization org,
         string userEmail,
         SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -818,8 +818,8 @@ public class ConfirmOrganizationUserCommandTests
             .Received(1)
             .SendConfirmationAsync(org, userEmail, accessSecretsManager);
         await sutProvider.GetDependency<IMailService>()
-            .DidNotReceive()
-            .SendOrganizationConfirmedEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+            .DidNotReceiveWithAnyArgs()
+            .SendOrganizationConfirmedEmailAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -842,8 +842,8 @@ public class ConfirmOrganizationUserCommandTests
             .Received(1)
             .SendOrganizationConfirmedEmailAsync(org.DisplayName(), userEmail, accessSecretsManager);
         await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
-            .DidNotReceive()
-            .SendConfirmationAsync(Arg.Any<Organization>(), Arg.Any<string>(), Arg.Any<bool>());
+            .DidNotReceiveWithAnyArgs()
+            .SendConfirmationAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
