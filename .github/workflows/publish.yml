@@ -4,15 +4,15 @@ run-name: Publish ${{ inputs.dry_run && '(Dry Run)' || '' }}
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: "Dry Run"
-        type: boolean
-        default: false
       version:
         description: 'Version to publish (default: latest release)'
         required: true
         type: string
         default: latest
+      dry_run:
+        description: "Dry Run"
+        type: boolean
+        default: false
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
@@ -32,6 +32,7 @@ jobs:
         id: version-output
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ "${INPUT_VERSION}" == "latest" || "${INPUT_VERSION}" == "" ]]; then
             VERSION=$(gh api repos/bitwarden/server/releases/latest --jq '.tag_name | ltrimstr("v")')
