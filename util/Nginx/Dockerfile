@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM nginx:stable-alpine3.21
+FROM --platform=$BUILDPLATFORM nginx:stable-alpine3.23
 
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
