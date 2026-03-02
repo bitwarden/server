@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Enums;
+
+namespace Bit.Core.Billing.Constants;
 
 public static class StripeConstants
 {
@@ -160,4 +162,31 @@ public static class StripeConstants
         public const string Cancel = "cancel";
         public const string Pause = "pause";
     }
+    /// <summary>
+    /// Product Ids in Stripe that are used to identify password manager products in subscriptions
+    /// These should be kept up to date with the products created in Stripe dashboard.
+    /// </summary>
+    public static class ProductIDs
+    {
+        public const string Premium = "prod_BUqgYr48VzDuCg";
+        public const string Families = "prod_HgOroKDcpTzJgn";
+        public const string Teams = "prod_HgOooYXDr2DDAA";
+        public const string Enterprise = "prod_HgSOgzUlYDFOzf";
+
+        /// <summary>
+        /// Gets the product tier for a given Stripe product ID.
+        /// </summary>
+        /// <param name="productId">The Stripe product ID.</param>
+        /// <returns>The corresponding <see cref="DiscountTierType"/>, or <see langword="null"/> if not found.</returns>
+        public static DiscountTierType? GetProductTier(string productId) => productId switch
+        {
+            Premium => DiscountTierType.Premium,
+            Families => DiscountTierType.Families,
+            Teams => DiscountTierType.Teams,
+            Enterprise => DiscountTierType.Enterprise,
+            _ => null
+        };
+    }
+
+
 }
