@@ -2,7 +2,10 @@
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -10,12 +13,15 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
 {
     private readonly IOrganizationReportRepository _organizationReportRepo;
     private readonly ILogger<GetOrganizationReportSummaryDataByDateRangeQuery> _logger;
+    private readonly IFusionCache _cache;
 
     public GetOrganizationReportSummaryDataByDateRangeQuery(
         IOrganizationReportRepository organizationReportRepo,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache,
         ILogger<GetOrganizationReportSummaryDataByDateRangeQuery> logger)
     {
         _organizationReportRepo = organizationReportRepo;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -33,10 +39,19 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
                 throw new BadRequestException(errorMessage);
             }
 
-            var summaryDataList = await _organizationReportRepo.GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
-            summaryDataList = summaryDataList ?? Enumerable.Empty<OrganizationReportSummaryDataResponse>();
+            // cache key and tag
+            var cacheKey = OrganizationReportCacheConstants.BuildCacheKeyForSummaryDataByDateRange(organizationId, startDate, endDate);
+            var cacheTag = OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId);
 
-            var resultList = summaryDataList.ToList();
+            var summaryDataList = await _cache.GetOrSetAsync(
+                key: cacheKey,
+                factory: async _ =>
+                    await _organizationReportRepo.GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate),
+                options: new FusionCacheEntryOptions(duration: OrganizationReportCacheConstants.DurationForSummaryData),
+                tags: [cacheTag]
+            );
+
+            var resultList = summaryDataList?.ToList() ?? Enumerable.Empty<OrganizationReportSummaryDataResponse>().ToList();
 
             _logger.LogInformation(Constants.BypassFiltersEventId, "Fetched {Count} organization report summary data entries for organization {OrganizationId}, from {StartDate} to {EndDate}",
                 resultList.Count, organizationId, startDate, endDate);
