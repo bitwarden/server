@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Enums;
+﻿namespace Bit.Core.Billing.Enums;
 
 /// <summary>
 /// Represents the product tiers that a subscription discount can target,

@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Subscriptions.Entities;

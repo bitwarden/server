@@ -22,17 +22,17 @@ public class SubscriptionDiscountResponseModel
     public static SubscriptionDiscountResponseModel From(
         SubscriptionDiscount discount,
         IDictionary<DiscountTierType, bool> tierEligibility) => new()
-    {
-        StripeCouponId = discount.StripeCouponId,
-        StripeProductIds = discount.StripeProductIds,
-        PercentOff = discount.PercentOff,
-        AmountOff = discount.AmountOff,
-        Currency = discount.Currency,
-        Duration = discount.Duration,
-        DurationInMonths = discount.DurationInMonths,
-        Name = discount.Name,
-        StartDate = discount.StartDate,
-        EndDate = discount.EndDate,
-        TierEligibility = tierEligibility
-    };
+        {
+            StripeCouponId = discount.StripeCouponId,
+            StripeProductIds = discount.StripeProductIds,
+            PercentOff = discount.PercentOff,
+            AmountOff = discount.AmountOff,
+            Currency = discount.Currency,
+            Duration = discount.Duration,
+            DurationInMonths = discount.DurationInMonths,
+            Name = discount.Name,
+            StartDate = discount.StartDate,
+            EndDate = discount.EndDate,
+            TierEligibility = tierEligibility
+        };
 }
