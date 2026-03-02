@@ -230,6 +230,7 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpgradeOrganizationPlanCommand
     public async Task<string> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,

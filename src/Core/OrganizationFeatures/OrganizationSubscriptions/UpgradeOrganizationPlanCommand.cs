@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
@@ -40,6 +41,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IFeatureService _featureService;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IPricingClient _pricingClient;
+    private readonly IUpgradeOrganizationPlanVNextCommand _upgradeOrganizationPlanVNextCommand;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -55,7 +57,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IOrganizationService organizationService,
         IFeatureService featureService,
         IOrganizationBillingService organizationBillingService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IUpgradeOrganizationPlanVNextCommand upgradeOrganizationPlanVNextCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -71,14 +74,31 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _featureService = featureService;
         _organizationBillingService = organizationBillingService;
         _pricingClient = pricingClient;
+        _upgradeOrganizationPlanVNextCommand = upgradeOrganizationPlanVNextCommand;
     }
 
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
     {
         var organization = await GetOrgById(organizationId);
+
         if (organization == null)
         {
             throw new NotFoundException();
+        }
+
+        /*
+         * Billing is going to take over this entire command as part of our refactoring work around the
+         * organization subscription upgrade process.
+         */
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
+        {
+            var plan = await _pricingClient.GetPlanOrThrow(upgrade.Plan);
+            var result = await _upgradeOrganizationPlanVNextCommand.Run(
+                organization,
+                plan,
+                upgrade.Keys);
+            result.GetValueOrThrow();
+            return new Tuple<bool, string>(true, null);
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
