@@ -2,6 +2,7 @@
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
+using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
@@ -44,10 +45,10 @@ public class AccountBillingVNextControllerTests
     [Theory, BitAutoData]
     public async Task GetLicenseAsync_ValidUser_ReturnsLicenseResponse(
         User user,
-        Core.Billing.Licenses.Models.Api.Response.LicenseResponseModel licenseResponse)
+        UserLicense license)
     {
         // Arrange
-        _getUserLicenseQuery.Run(user).Returns(licenseResponse);
+        _getUserLicenseQuery.Run(user).Returns(license);
         // Act
         var result = await _sut.GetLicenseAsync(user);
         // Assert

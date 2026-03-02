@@ -191,7 +191,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
         else
         {
-            await mailService.SendOrganizationConfirmedEmailAsync(organization.Name, userEmail, accessSecretsManager);
+            await mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
         }
     }
 }
