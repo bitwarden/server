@@ -129,40 +129,22 @@ jobs:
       - name: Log in to Azure ACR
         run: az acr login -n "$_AZ_REGISTRY" --only-show-errors
 
-      - name: Pull latest project image
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          if [[ "${{ inputs.publish_type }}" == "Dry Run" ]]; then
-            docker pull "$_AZ_REGISTRY/$PROJECT_NAME:latest"
-          else
-            docker pull "$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME"
-          fi
-
-      - name: Tag version and latest
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          if [[ "${{ inputs.publish_type }}" == "Dry Run" ]]; then
-            docker tag "$_AZ_REGISTRY/$PROJECT_NAME:latest" "$_AZ_REGISTRY/$PROJECT_NAME:dryrun"
-          else
-            docker tag "$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" "$_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION"
-            docker tag "$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" "$_AZ_REGISTRY/$PROJECT_NAME:latest"
-          fi
-
       - name: Push version and latest image
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
           if [[ "${{ inputs.publish_type }}" == "Dry Run" ]]; then
-            docker push "$_AZ_REGISTRY/$PROJECT_NAME:dryrun"
+            skopeo copy --all \
+              "docker://$_AZ_REGISTRY/$PROJECT_NAME:latest" \
+              "docker://$_AZ_REGISTRY/$PROJECT_NAME:dryrun"
           else
-            docker push "$_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION"
-            docker push "$_AZ_REGISTRY/$PROJECT_NAME:latest"
+            skopeo copy --all \
+              "docker://$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" \
+              "docker://$_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION"
+            skopeo copy --all \
+              "docker://$_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME" \
+              "docker://$_AZ_REGISTRY/$PROJECT_NAME:latest"
           fi
-
-      - name: Log out of Docker
-        run: docker logout
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
