@@ -22,7 +22,7 @@ public class AutomaticUserConfirmationPolicyEventHandler(
     IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator,
     IOrganizationUserRepository organizationUserRepository,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
-    : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
+    : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
 
@@ -47,11 +47,20 @@ public class AutomaticUserConfirmationPolicyEventHandler(
     public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
         await ValidateAsync(savePolicyModel.PolicyUpdate, currentPolicy);
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(policyUpdate.OrganizationId, null);
+        var isNotEnablingPolicy = policyRequest.PolicyUpdate is not { Enabled: true };
+        var policyAlreadyEnabled = currentPolicy is { Enabled: true };
+        if (isNotEnablingPolicy || policyAlreadyEnabled)
+        {
+            return;
+        }
+
+        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(policyRequest.PolicyUpdate.OrganizationId, null);
         var orgUserIds = orgUsers.Where(w => w.UserId != null).Select(s => s.UserId!.Value).ToList();
 
         await deleteEmergencyAccessCommand.DeleteAllByUserIdsAsync(orgUserIds);
     }
+
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.CompletedTask;
 }
