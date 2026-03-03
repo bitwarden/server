@@ -22,12 +22,12 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
-    public async Task<bool> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
+    public async Task<WebAuthnCredential> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existingCredentials.Count >= MaxCredentialsPerUser)
         {
-            return false;
+            return null;
         }
 
         var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
@@ -51,6 +51,6 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         };
 
         await _webAuthnCredentialRepository.CreateAsync(credential);
-        return true;
+        return credential;
     }
 }
