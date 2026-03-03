@@ -54,57 +54,62 @@ public class GetApplicableDiscountsQueryTests
         var models = result.AsT0;
         var model = Assert.Single(models);
         Assert.Equal(discount.StripeCouponId, model.StripeCouponId);
-        Assert.Equal(discount.StripeProductIds, model.StripeProductIds);
         Assert.Equal(discount.PercentOff, model.PercentOff);
         Assert.Equal(discount.AmountOff, model.AmountOff);
         Assert.Equal(discount.Duration, model.Duration);
         Assert.Equal(discount.Name, model.Name);
         Assert.Equal(discount.StartDate, model.StartDate);
         Assert.Equal(discount.EndDate, model.EndDate);
+        Assert.All(model.TierEligibility!.Values, Assert.True);
     }
 
     [Theory, BitAutoData]
-    public async Task Run_DiscountWithProductIds_MapsAllProductIds(
+    public async Task Run_DiscountWithAllTiersEligible_MapsAllTierEligibilityTrue(
         User user,
         SubscriptionDiscount discount,
         SutProvider<GetApplicableDiscountsQuery> sutProvider)
     {
         // Arrange
-        var productIds = new List<string> { "prod_123", "prod_456", "prod_789" };
-        discount.StripeProductIds = productIds;
+        var tierEligibility = DiscountDictionary(true);
 
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
-            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(true)) });
+            .Returns(new List<DiscountEligibility> { new(discount, tierEligibility) });
 
         // Act
         var result = await sutProvider.Sut.Run(user);
 
         // Assert
         var model = Assert.Single(result.AsT0);
-        Assert.NotNull(model.StripeProductIds);
-        Assert.Equal(productIds, model.StripeProductIds);
+        Assert.NotNull(model.TierEligibility);
+        Assert.All(model.TierEligibility.Values, Assert.True);
     }
 
     [Theory, BitAutoData]
-    public async Task Run_DiscountWithNoProductIds_MapsNullProductIds(
+    public async Task Run_DiscountWithPartialTierEligibility_MapsSpecificTierEligibility(
         User user,
         SubscriptionDiscount discount,
         SutProvider<GetApplicableDiscountsQuery> sutProvider)
     {
         // Arrange
-        discount.StripeProductIds = null;
+        var tierEligibility = new Dictionary<DiscountTierType, bool>
+        {
+            { DiscountTierType.Premium, true },
+            { DiscountTierType.Families, false }
+        };
 
         sutProvider.GetDependency<ISubscriptionDiscountService>()
             .GetEligibleDiscountsAsync(user)
-            .Returns(new List<DiscountEligibility> { new(discount, DiscountDictionary(false)) });
+            .Returns(new List<DiscountEligibility> { new(discount, tierEligibility) });
 
         // Act
         var result = await sutProvider.Sut.Run(user);
 
         // Assert
         var model = Assert.Single(result.AsT0);
-        Assert.Null(model.StripeProductIds);
+        Assert.NotNull(model.TierEligibility);
+        Assert.True(model.TierEligibility[DiscountTierType.Premium]);
+        Assert.False(model.TierEligibility[DiscountTierType.Families]);
     }
 
     [Theory, BitAutoData]
