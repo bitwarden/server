@@ -10,7 +10,6 @@ namespace Bit.Core.Vault.Services;
 
 public class LocalAttachmentStorageService : IAttachmentStorageService
 {
-    private readonly string _baseAttachmentUrl;
     private readonly string _baseDirPath;
     private readonly string _baseTempDirPath;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -27,7 +26,6 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     {
         _baseDirPath = globalSettings.Attachment.BaseDirectory;
         _baseTempDirPath = $"{_baseDirPath}/temp";
-        _baseAttachmentUrl = globalSettings.Attachment.BaseUrl;
         _dataProtectionProvider = dataProtectionProvider;
         _apiBaseUrl = globalSettings.BaseServiceUri.Api;
     }

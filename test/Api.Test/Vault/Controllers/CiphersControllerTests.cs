@@ -18,6 +18,7 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
@@ -2243,5 +2244,48 @@ public class CiphersControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.DownloadAttachmentAsync("some-token"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DownloadAttachmentAsync_ValidToken_ReturnsFile(
+        Guid cipherId, string attachmentId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var fileName = "secret-document.txt";
+        var fileContent = new byte[] { 1, 2, 3 };
+        var stream = new MemoryStream(fileContent);
+
+        var metaData = new CipherAttachment.MetaData
+        {
+            AttachmentId = attachmentId,
+            FileName = fileName,
+            Size = fileContent.Length,
+        };
+
+        var cipher = new Cipher
+        {
+            Id = cipherId,
+            Attachments = JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, metaData } }),
+        };
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .ParseAttachmentDownloadToken(Arg.Any<string>())
+            .Returns((cipherId, attachmentId));
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId)
+            .Returns(cipher);
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .GetAttachmentReadStreamAsync(cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(stream);
+
+        var result = await sutProvider.Sut.DownloadAttachmentAsync("valid-token");
+
+        var fileResult = Assert.IsType<FileStreamResult>(result);
+        Assert.Equal("application/octet-stream", fileResult.ContentType);
+        Assert.Equal(fileName, fileResult.FileDownloadName);
+        Assert.Same(stream, fileResult.FileStream);
     }
 }
