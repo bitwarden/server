@@ -19,9 +19,9 @@ public static class Registrations
         services.AddTransient<IUpdatePaymentMethodCommand, UpdatePaymentMethodCommand>();
 
         // Discount services
-        services.AddTransient<IDiscountAudienceFilter, AllUsersFilter>();
-        services.AddTransient<IDiscountAudienceFilter, UserHasNoPreviousSubscriptionsFilter>();
-        services.AddTransient<IDiscountAudienceFilterFactory, DiscountAudienceFilterFactory>();
+        services.AddScoped<IDiscountAudienceFilter, AllUsersFilter>();
+        services.AddScoped<IDiscountAudienceFilter, UserHasNoPreviousSubscriptionsFilter>();
+        services.AddScoped<IDiscountAudienceFilterFactory, DiscountAudienceFilterFactory>();
         services.AddTransient<ISubscriptionDiscountService, SubscriptionDiscountService>();
 
         // Queries
