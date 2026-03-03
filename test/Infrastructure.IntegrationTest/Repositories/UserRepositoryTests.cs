@@ -531,16 +531,46 @@ public class UserRepositoryTests
     }
 
     /// <summary>
-    /// Ensures the creation of a new user sets the MasterPasswordSalt to match the Email regardless of the value provided for the MasterPasswordSalt.
-    /// This will need to be changed when PM-30351 is completed and the MasterPasswordSalt is allowed to deviate from the Email.
+    /// Set MasterPasswordSalt to match email when salt is empty.
     /// </summary>
     [Theory, DatabaseData]
-    public async Task CreateAsync_ShouldSetMasterPasswordSaltToEmail(
+    public async Task CreateAsync_WithMasterPassword_SaltEmpty_ShouldSetMasterPasswordSaltToEmail(
         IUserRepository userRepository)
     {
         // Arrange
         var email = $"TesT+{Guid.NewGuid()}@example.com";
-        var passwordSalt = "NotTrackedSalt";
+        var passwordSalt = "";
+        var user = new User
+        {
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash",
+            MasterPasswordSalt = passwordSalt
+        };
+
+        // Act
+        user = await userRepository.CreateAsync(user);
+
+        // Assert
+        var createdUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(createdUser);
+        Assert.Equal(createdUser.Email.ToLowerInvariant().Trim(), createdUser.MasterPasswordSalt);
+        Assert.NotEqual(createdUser.Email, createdUser.MasterPasswordSalt);
+        Assert.NotEqual(passwordSalt, createdUser.MasterPasswordSalt);
+    }
+
+        /// <summary>
+    /// Set MasterPasswordSalt to match email when salt is null.
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task CreateAsync_WithMasterPassword_SaltNull_ShouldSetMasterPasswordSaltToEmail(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var email = $"TesT+{Guid.NewGuid()}@example.com";
+        string? passwordSalt = null;
         var user = new User
         {
             Name = "Test User",
@@ -563,38 +593,69 @@ public class UserRepositoryTests
     }
 
     /// <summary>
-    /// Check that a user update sets the MasterPasswordSalt to match the Email regardless of the value provided for the MasterPasswordSalt.
-    /// This will need to be changed when PM-30355 is completed and the MasterPasswordSalt is allowed to deviate from the Email.
+    /// Set MasterPasswordSalt to match email when salt is empty.
     /// </summary>
     [Theory, DatabaseData]
-    public async Task ReplaceAsync_ShouldUpdateMasterPasswordSaltToMatchEmail(
+    public async Task ReplaceAsync_WithMasterPassword_SaltEmpty_ShouldUpdateSalt(
         IUserRepository userRepository)
     {
         // Arrange
         var originalEmail = $"original+{Guid.NewGuid()}@example.com";
-        var passwordSalt = "NotTrackedSalt";
+        var passwordSalt = "";
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
             Email = originalEmail,
             ApiKey = "TEST",
             SecurityStamp = "stamp",
-            MasterPassword = "password_hash",
-            MasterPasswordSalt = passwordSalt
+            MasterPassword = "password_hash"
         });
 
         // Act
         var newEmail = $"UpDAted+{Guid.NewGuid()}@example.com";
         user.Email = newEmail;
+        user.MasterPasswordSalt = passwordSalt;
         await userRepository.ReplaceAsync(user);
 
         // Assert
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(updatedUser);
         Assert.Equal(newEmail, updatedUser.Email);
-        Assert.Equal(updatedUser.Email.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
+        Assert.Equal(newEmail.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
         Assert.NotEqual(updatedUser.Email, updatedUser.MasterPasswordSalt);
-        Assert.NotEqual(passwordSalt, updatedUser.MasterPasswordSalt);
+    }
+
+    /// <summary>
+    /// Set MasterPasswordSalt to match email when salt is null.
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task ReplaceAsync_SaltNull_SaltSetToEmail(
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var originalEmail = $"original+{Guid.NewGuid()}@example.com";
+        string? passwordSalt = null;
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = originalEmail,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+            MasterPassword = "password_hash"
+        });
+
+        // Act
+        var newEmail = $"UpDAted+{Guid.NewGuid()}@example.com";
+        user.Email = newEmail;
+        user.MasterPasswordSalt = passwordSalt;
+        await userRepository.ReplaceAsync(user);
+
+        // Assert
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.Equal(newEmail.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
+        Assert.NotEqual(updatedUser.Email, updatedUser.MasterPasswordSalt);
     }
 
     /// <summary>
