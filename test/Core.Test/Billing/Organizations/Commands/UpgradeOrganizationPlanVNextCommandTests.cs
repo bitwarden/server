@@ -1,14 +1,12 @@
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
@@ -360,16 +358,16 @@ public class UpgradeOrganizationPlanVNextCommandTests
         bool useSecretsManager = false,
         int? smSeats = null,
         int? smServiceAccounts = null) => new()
-    {
-        Id = Guid.NewGuid(),
-        PlanType = planType,
-        Plan = MockPlans.Get(planType).Name,
-        GatewayCustomerId = gatewayCustomerId,
-        GatewaySubscriptionId = gatewaySubscriptionId,
-        Seats = seats,
-        MaxStorageGb = maxStorageGb,
-        UseSecretsManager = useSecretsManager,
-        SmSeats = smSeats,
-        SmServiceAccounts = smServiceAccounts
-    };
+        {
+            Id = Guid.NewGuid(),
+            PlanType = planType,
+            Plan = MockPlans.Get(planType).Name,
+            GatewayCustomerId = gatewayCustomerId,
+            GatewaySubscriptionId = gatewaySubscriptionId,
+            Seats = seats,
+            MaxStorageGb = maxStorageGb,
+            UseSecretsManager = useSecretsManager,
+            SmSeats = smSeats,
+            SmServiceAccounts = smServiceAccounts
+        };
 }

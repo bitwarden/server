@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Test.Billing.Mocks;
 using Xunit;

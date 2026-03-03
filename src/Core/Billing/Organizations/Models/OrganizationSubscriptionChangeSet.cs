@@ -1,4 +1,4 @@
-using Bit.Core.Models.StaticStore;
+﻿using Bit.Core.Models.StaticStore;
 using OneOf;
 
 namespace Bit.Core.Billing.Organizations.Models;
