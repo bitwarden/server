@@ -261,27 +261,41 @@ public class RestoreOrganizationUserCommand(
     private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Organization organization, string defaultCollectionName,
         ICollection<OrganizationUser> restoredUsers)
     {
+        if (string.IsNullOrWhiteSpace(defaultCollectionName))
+        {
+            return;
+        }
+
         if (!organization.UseMyItems)
         {
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(defaultCollectionName))
+        var restoredConfirmedUsers = restoredUsers
+            .Where(w => w.Status == OrganizationUserStatusType.Confirmed)
+            .Where(w => w.UserId != null)
+            .Select(s => s.UserId.Value)
+            .ToList();
+
+        if (restoredConfirmedUsers.Count == 0)
         {
-            var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
-                    .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id))
-                .ToList();
+            return;
+        }
 
-            var usersToCreateDefaultCollectionsFor = restoredUsers.Where(x =>
-                organizationUsersDataOwnershipEnabled.Contains(x.Id)
-                && x.Status == OrganizationUserStatusType.Confirmed).ToList();
+        var restoredUserPolicyRequirements = await
+            policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredConfirmedUsers);
 
-            if (usersToCreateDefaultCollectionsFor.Count != 0)
-            {
-                await collectionRepository.CreateDefaultCollectionsAsync(organization.Id,
-                    usersToCreateDefaultCollectionsFor.Select(x => x.Id),
-                    defaultCollectionName);
-            }
+        var orgUserIdsToCreateDefaultCollectionsFor = restoredUserPolicyRequirements
+            .Select(s => s.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
+            .ToList();
+
+        if (orgUserIdsToCreateDefaultCollectionsFor.Count != 0)
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(organization.Id,
+                orgUserIdsToCreateDefaultCollectionsFor,
+                defaultCollectionName);
         }
     }
 

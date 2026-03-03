@@ -9,8 +9,8 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
@@ -93,7 +93,7 @@ public class SavePolicyCommandTests
     {
         var exception = Assert.Throws<Exception>(() =>
             new SavePolicyCommand(
-                Substitute.For<IApplicationCacheService>(),
+                Substitute.For<IOrganizationRepository>(),
                 Substitute.For<IEventService>(),
                 Substitute.For<IPolicyRepository>(),
                 [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
@@ -107,9 +107,9 @@ public class SavePolicyCommandTests
     public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest([PolicyUpdate(PolicyType.ActivateAutofill)] PolicyUpdate policyUpdate)
     {
         var sutProvider = SutProviderFactory();
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
-            .Returns(Task.FromResult<OrganizationAbility?>(null));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(Task.FromResult<Organization?>(null));
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policyUpdate));
@@ -122,9 +122,9 @@ public class SavePolicyCommandTests
     public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([PolicyUpdate(PolicyType.ActivateAutofill)] PolicyUpdate policyUpdate)
     {
         var sutProvider = SutProviderFactory();
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
-            .Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(new Organization
             {
                 Id = policyUpdate.OrganizationId,
                 UsePolicies = false
@@ -475,9 +475,9 @@ public class SavePolicyCommandTests
 
     private static void ArrangeOrganization(SutProvider<SavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
-            .Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(new Organization
             {
                 Id = policyUpdate.OrganizationId,
                 UsePolicies = true

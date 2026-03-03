@@ -1,19 +1,14 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.Tools.Services;
 
@@ -22,102 +17,34 @@ public class SendValidationService : ISendValidationService
 
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPolicyService _policyService;
-    private readonly IFeatureService _featureService;
     private readonly IUserService _userService;
+    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
-    private readonly ICurrentContext _currentContext;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
-
-
 
     public SendValidationService(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IPolicyService policyService,
-        IFeatureService featureService,
         IUserService userService,
+        IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings,
-        IPricingClient pricingClient,
-        ICurrentContext currentContext)
+        IPricingClient pricingClient)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _policyService = policyService;
-        _featureService = featureService;
         _userService = userService;
+        _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
-        _currentContext = currentContext;
     }
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            await ValidateUserCanSaveAsync_vNext(userId, send);
-            return;
-        }
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendControls))
-        {
-            await ValidateUserCanSaveAsync_SendControls(userId, send);
-            return;
-        }
-
-        if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
-        {
-            return;
-        }
-
-        var anyDisableSendPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value,
-            PolicyType.DisableSend);
-        if (anyDisableSendPolicies)
-        {
-            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
-        }
-
-        if (send.HideEmail.GetValueOrDefault())
-        {
-            var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
-            if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
-            {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-            }
-        }
-    }
-
-    private async Task ValidateUserCanSaveAsync_SendControls(Guid? userId, Send send)
-    {
-        if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
-        {
-            return;
-        }
-
-        var sendControlsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(
-            userId.Value, PolicyType.SendControls);
-
-        if (sendControlsPolicies.Any(p =>
-            CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.PolicyData)?.DisableSend ?? false))
-        {
-            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
-        }
-
-        if (send.HideEmail.GetValueOrDefault())
-        {
-            if (sendControlsPolicies.Any(p =>
-                CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
-            {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-            }
-        }
-    }
-
-    public async Task ValidateUserCanSaveAsync_vNext(Guid? userId, Send send)
-    {
+        // The nullable userId is intended to support organization-owned Sends (never implemented).
+        // If it's null, we can't enforce policies, because policies are only enforced against a specific user.
         if (!userId.HasValue)
         {
             return;
