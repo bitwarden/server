@@ -6,7 +6,6 @@ public class SendControlsPolicyData : IPolicyDataModel
 {
     [Display(Name = "DisableSend")]
     public bool DisableSend { get; set; }
-
     [Display(Name = "DisableHideEmail")]
     public bool DisableHideEmail { get; set; }
 }

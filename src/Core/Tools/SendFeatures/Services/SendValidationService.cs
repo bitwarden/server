@@ -56,15 +56,15 @@ public class SendValidationService : ISendValidationService
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.SendControls))
-        {
-            await ValidateUserCanSaveAsync_SendControls(userId, send);
-            return;
-        }
-
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             await ValidateUserCanSaveAsync_vNext(userId, send);
+            return;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendControls))
+        {
+            await ValidateUserCanSaveAsync_SendControls(userId, send);
             return;
         }
 
@@ -120,6 +120,23 @@ public class SendValidationService : ISendValidationService
     {
         if (!userId.HasValue)
         {
+            return;
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SendControls))
+        {
+            var sendControlsRequirement = await _policyRequirementQuery.GetAsync<SendControlsPolicyRequirement>(userId.Value);
+
+            if (sendControlsRequirement.DisableSend)
+            {
+                throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+            }
+
+            if (sendControlsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
+            {
+                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+            }
+
             return;
         }
 
