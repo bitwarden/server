@@ -1,9 +1,7 @@
-﻿#nullable enable
-
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Subscriptions.Entities;
 
-namespace Bit.Core.Billing.Services;
+namespace Bit.Core.Billing.Models;
 
 /// <summary>
 /// Pairs a <see cref="SubscriptionDiscount"/> with its per-tier eligibility matrix.

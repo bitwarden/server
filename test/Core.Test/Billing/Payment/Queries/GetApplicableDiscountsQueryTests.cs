@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Entities;

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;

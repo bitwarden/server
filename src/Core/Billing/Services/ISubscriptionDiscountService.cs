@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Billing.Services;
