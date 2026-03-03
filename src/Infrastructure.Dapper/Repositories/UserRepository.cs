@@ -183,7 +183,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public override async Task<User> CreateAsync(User user)
     {
         // Todo: PM-30355: once MasterPasswordSalt is fully detached from Email, MasterPasswordSalt should not be overwritten
-        if(user.MasterPassword != null && string.IsNullOrEmpty(user.MasterPasswordSalt))
+        if (user.MasterPassword != null && string.IsNullOrEmpty(user.MasterPasswordSalt))
         {
             user.MasterPasswordSalt = user.Email.ToLowerInvariant().Trim();
         }
@@ -194,7 +194,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public override async Task ReplaceAsync(User user)
     {
         // Todo: PM-30355: once MasterPasswordSalt is fully detached from Email, MasterPasswordSalt should not be overwritten
-        if(user.MasterPassword != null && string.IsNullOrEmpty(user.MasterPasswordSalt))
+        if (user.MasterPassword != null && string.IsNullOrEmpty(user.MasterPasswordSalt))
         {
             user.MasterPasswordSalt = user.Email.ToLowerInvariant().Trim();
         }

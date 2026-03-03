@@ -561,7 +561,7 @@ public class UserRepositoryTests
         Assert.NotEqual(passwordSalt, createdUser.MasterPasswordSalt);
     }
 
-        /// <summary>
+    /// <summary>
     /// Set MasterPasswordSalt to match email when salt is null.
     /// </summary>
     [Theory, DatabaseData]
