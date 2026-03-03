@@ -19,6 +19,10 @@ public class UserHasNoPreviousSubscriptionsFilter : IDiscountAudienceFilter
     private readonly IStripeAdapter stripeAdapter;
     private readonly IPricingClient pricingClient;
 
+    // Caches to avoid redundant checks for users during the same request.
+    private readonly Dictionary<Guid, bool> _premiumEligibilityByUser = new();
+    private readonly Dictionary<Guid, bool> _familiesOrgOwnershipByUser = new();
+
     public UserHasNoPreviousSubscriptionsFilter(
         IStripeAdapter stripeAdapter,
         IOrganizationUserRepository organizationUserRepository,
@@ -35,20 +39,12 @@ public class UserHasNoPreviousSubscriptionsFilter : IDiscountAudienceFilter
     {
         var eligibleTiers = Utilities.GetTierEligibilityDictionary();
 
-        if (!DiscountContainsProductIds(discount))
-        {
-            // If no product IDs are specified, the discount applies to all tiers, so we check both eligibility conditions
-            eligibleTiers[DiscountTierType.Premium] = await IsUserEligibleForPremiumDiscount(user);
-            eligibleTiers[DiscountTierType.Families] = !await IsUserOwnerOfFamiliesOrgAsync(user);
-            return eligibleTiers;
-        }
-
-        if (IsApplicableToPremiumProduct(discount))
+        if (IsApplicableToProduct(discount, StripeProductIDs.Premium))
         {
             eligibleTiers[DiscountTierType.Premium] = await IsUserEligibleForPremiumDiscount(user);
         }
 
-        if (IsApplicableToFamiliesProduct(discount))
+        if (IsApplicableToProduct(discount, StripeProductIDs.Families))
         {
             eligibleTiers[DiscountTierType.Families] = !await IsUserOwnerOfFamiliesOrgAsync(user);
         }
@@ -56,28 +52,36 @@ public class UserHasNoPreviousSubscriptionsFilter : IDiscountAudienceFilter
         return eligibleTiers;
     }
 
-    private bool DiscountContainsProductIds(SubscriptionDiscount discount) =>
-        discount.StripeProductIds?.Any() ?? false;
-
-    private bool IsApplicableToFamiliesProduct(SubscriptionDiscount discount) =>
-        discount.StripeProductIds?.Contains(StripeProductIDs.Families) ?? false;
-
-    private bool IsApplicableToPremiumProduct(SubscriptionDiscount discount) =>
-        discount.StripeProductIds?.Contains(StripeProductIDs.Premium) ?? false;
+    /**
+     * Determines if the discount is applicable to the given product based on the discount's configured Stripe product IDs.
+     * If the discount does not specify any product IDs, it is considered applicable to all products.
+     */
+    private bool IsApplicableToProduct(SubscriptionDiscount discount, string productId) =>
+        discount.StripeProductIds?.Contains(productId) ?? true;
 
     private async Task<bool> IsUserEligibleForPremiumDiscount(User user)
     {
+        if (_premiumEligibilityByUser.TryGetValue(user.Id, out var cached))
+        {
+            return cached;
+        }
+
+        bool result;
+
         if (user.Premium)
         {
-            return false;
+            result = false;
         }
-
-        if (string.IsNullOrWhiteSpace(user.GatewayCustomerId))
+        else if (string.IsNullOrWhiteSpace(user.GatewayCustomerId))
         {
-            return true;
+            result = true;
+        }
+        else
+        {
+            result = !await UserHasPreviousPremiumSubscriptionAsync(user);
         }
 
-        return !await UserHasPreviousPremiumSubscriptionAsync(user);
+        return _premiumEligibilityByUser[user.Id] = result;
     }
 
     private async Task<bool> UserHasPreviousPremiumSubscriptionAsync(User user)
@@ -103,13 +107,20 @@ public class UserHasNoPreviousSubscriptionsFilter : IDiscountAudienceFilter
 
     private async Task<bool> IsUserOwnerOfFamiliesOrgAsync(User user)
     {
+        if (_familiesOrgOwnershipByUser.TryGetValue(user.Id, out var cached))
+        {
+            return cached;
+        }
+
         var orgDetails = await organizationUserRepository.GetManyDetailsByUserAsync(
             user.Id,
             OrganizationUserStatusType.Confirmed);
 
-        return orgDetails.Any(o =>
+        var result = orgDetails.Any(o =>
             o.Type == OrganizationUserType.Owner &&
             IsFamiliesPlanType(o.PlanType));
+
+        return _familiesOrgOwnershipByUser[user.Id] = result;
     }
 
     private static bool IsFamiliesPlanType(PlanType planType) =>

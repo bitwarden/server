@@ -243,6 +243,53 @@ public class UserHasNoPreviousSubscriptionsFilterTests
     }
 
     [Theory, BitAutoData]
+    public async Task IsUserEligible_SameUser_MultiplePremiumDiscounts_OnlyCallsStripeOnce(
+        User user,
+        SubscriptionDiscount discount1,
+        SubscriptionDiscount discount2)
+    {
+        user.Premium = false;
+        user.GatewayCustomerId = "cus_123";
+        discount1.StripeProductIds = [StripeConstants.ProductIDs.Premium];
+        discount2.StripeProductIds = [StripeConstants.ProductIDs.Premium];
+        const string premiumPriceId = "price_premium";
+
+        _pricingClient
+            .ListPremiumPlans()
+            .Returns([new PremiumPlan { Seat = new Purchasable { StripePriceId = premiumPriceId } }]);
+
+        _stripeAdapter
+            .ListSubscriptionsAsync(Arg.Any<SubscriptionListOptions>())
+            .Returns(new StripeList<Subscription> { Data = [] });
+
+        await _sut.IsUserEligible(user, discount1);
+        await _sut.IsUserEligible(user, discount2);
+
+        await _pricingClient.Received(1).ListPremiumPlans();
+        await _stripeAdapter.Received(1).ListSubscriptionsAsync(Arg.Any<SubscriptionListOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsUserEligible_SameUser_MultipleFamiliesDiscounts_OnlyCallsOrgRepoOnce(
+        User user,
+        SubscriptionDiscount discount1,
+        SubscriptionDiscount discount2)
+    {
+        discount1.StripeProductIds = [StripeConstants.ProductIDs.Families];
+        discount2.StripeProductIds = [StripeConstants.ProductIDs.Families];
+
+        _organizationUserRepository
+            .GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed)
+            .Returns(new List<OrganizationUserOrganizationDetails>());
+
+        await _sut.IsUserEligible(user, discount1);
+        await _sut.IsUserEligible(user, discount2);
+
+        await _organizationUserRepository.Received(1)
+            .GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed);
+    }
+
+    [Theory, BitAutoData]
     public async Task
         IsUserEligible_NoProductIds_UserHadPastPremiumSubscription_OwnsFamiliesOrg_ReturnsPremiumFalseFamiliesFalse(
             User user,
