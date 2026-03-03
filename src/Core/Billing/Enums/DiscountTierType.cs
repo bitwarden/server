@@ -7,7 +7,5 @@
 public enum DiscountTierType : byte
 {
     Premium = 0,
-    Families = 1,
-    Teams = 2,
-    Enterprise = 3,
+    Families = 1
 }

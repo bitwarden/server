@@ -170,8 +170,6 @@ public static class StripeConstants
     {
         public const string Premium = "prod_BUqgYr48VzDuCg";
         public const string Families = "prod_HgOroKDcpTzJgn";
-        public const string Teams = "prod_HgOooYXDr2DDAA";
-        public const string Enterprise = "prod_HgSOgzUlYDFOzf";
 
         /// <summary>
         /// Gets the product tier for a given Stripe product ID.
@@ -182,8 +180,6 @@ public static class StripeConstants
         {
             Premium => DiscountTierType.Premium,
             Families => DiscountTierType.Families,
-            Teams => DiscountTierType.Teams,
-            Enterprise => DiscountTierType.Enterprise,
             _ => null
         };
     }

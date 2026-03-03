@@ -41,8 +41,6 @@ public class AllUsersFilterTests
 
         Assert.True(result[DiscountTierType.Premium]);
         Assert.False(result[DiscountTierType.Families]);
-        Assert.False(result[DiscountTierType.Teams]);
-        Assert.False(result[DiscountTierType.Enterprise]);
     }
 
     [Fact]
@@ -54,35 +52,9 @@ public class AllUsersFilterTests
 
         Assert.True(result[DiscountTierType.Families]);
         Assert.False(result[DiscountTierType.Premium]);
-        Assert.False(result[DiscountTierType.Teams]);
-        Assert.False(result[DiscountTierType.Enterprise]);
     }
 
-    [Fact]
-    public async Task IsUserEligible_TeamsProductId_ReturnsTeamsTrueOthersFalse()
-    {
-        var discount = new SubscriptionDiscount { StripeProductIds = [StripeConstants.ProductIDs.Teams] };
 
-        var result = await _sut.IsUserEligible(_user, discount);
-
-        Assert.True(result[DiscountTierType.Teams]);
-        Assert.False(result[DiscountTierType.Premium]);
-        Assert.False(result[DiscountTierType.Families]);
-        Assert.False(result[DiscountTierType.Enterprise]);
-    }
-
-    [Fact]
-    public async Task IsUserEligible_EnterpriseProductId_ReturnsEnterpriseTrueOthersFalse()
-    {
-        var discount = new SubscriptionDiscount { StripeProductIds = [StripeConstants.ProductIDs.Enterprise] };
-
-        var result = await _sut.IsUserEligible(_user, discount);
-
-        Assert.True(result[DiscountTierType.Enterprise]);
-        Assert.False(result[DiscountTierType.Premium]);
-        Assert.False(result[DiscountTierType.Families]);
-        Assert.False(result[DiscountTierType.Teams]);
-    }
 
     [Fact]
     public async Task IsUserEligible_UnknownProductId_ReturnsAllFalse()
@@ -106,7 +78,5 @@ public class AllUsersFilterTests
 
         Assert.True(result[DiscountTierType.Premium]);
         Assert.True(result[DiscountTierType.Families]);
-        Assert.False(result[DiscountTierType.Teams]);
-        Assert.False(result[DiscountTierType.Enterprise]);
     }
 }
