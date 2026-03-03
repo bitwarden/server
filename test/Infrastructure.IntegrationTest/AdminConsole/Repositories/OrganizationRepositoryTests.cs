@@ -1,7 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
@@ -282,5 +284,114 @@ public class OrganizationRepositoryTests
 
         // Annul
         await sutRepository.DeleteAsync(organization);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_UpdatesOrgAndOrgUserAtomically(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+
+        var publicKey = "public-key";
+        var privateKey = "private-key";
+        var userKey = "user-key";
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = publicKey;
+        organization.PrivateKey = privateKey;
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = userKey;
+        organizationUser.Email = null;
+
+        var confirmOwnerAction = organizationUserRepository.BuildConfirmOwnerAction(organizationUser);
+        await organizationRepository.InitializeOrganizationAsync(organization, confirmOwnerAction);
+
+        var updatedOrg = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(updatedOrg);
+        Assert.True(updatedOrg.Enabled);
+        Assert.Equal(OrganizationStatusType.Created, updatedOrg.Status);
+        Assert.Equal(publicKey, updatedOrg.PublicKey);
+        Assert.Equal(privateKey, updatedOrg.PrivateKey);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, updatedOrgUser.Status);
+        Assert.Equal(user.Id, updatedOrgUser.UserId);
+        Assert.Equal(userKey, updatedOrgUser.Key);
+        Assert.Null(updatedOrgUser.Email);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_WhenOrgUserActionFails_RollsBackAllChanges(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = "public-key";
+        organization.PrivateKey = "private-key";
+        organization.RevisionDate = DateTime.UtcNow;
+
+        Func<DbConnection, DbTransaction, Task> failingAction =
+            (DbConnection _, DbTransaction __) =>
+            {
+                throw new Exception("Simulated failure to test rollback");
+            };
+
+        await Assert.ThrowsAsync<Exception>(async () =>
+            await organizationRepository.InitializeOrganizationAsync(organization, failingAction));
+
+        var orgAfter = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(orgAfter);
+        Assert.False(orgAfter.Enabled);
+        Assert.Equal(OrganizationStatusType.Pending, orgAfter.Status);
+        Assert.Null(orgAfter.PublicKey);
+        Assert.Null(orgAfter.PrivateKey);
+
+        var orgUserAfter = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(orgUserAfter);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUserAfter.Status);
+        Assert.Null(orgUserAfter.UserId);
+    }
+
+    private static async Task<(User user, Organization organization, OrganizationUser organizationUser)>
+        CreatePendingOrganizationWithUserAsync(
+            IUserRepository userRepository,
+            IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Pending Org {CoreHelpers.GenerateComb()}",
+            BillingEmail = user.Email,
+            Plan = "Teams",
+            Status = OrganizationStatusType.Pending,
+            Enabled = false,
+            PublicKey = null,
+            PrivateKey = null
+        });
+
+        var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Email = user.Email,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Owner
+        });
+
+        return (user, organization, organizationUser);
     }
 }

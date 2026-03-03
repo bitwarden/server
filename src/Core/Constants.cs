@@ -140,10 +140,10 @@ public static class FeatureFlagKeys
     public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
-    public const string DefaultUserCollectionRestore = "pm-30883-my-items-restored-users";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
+    public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
