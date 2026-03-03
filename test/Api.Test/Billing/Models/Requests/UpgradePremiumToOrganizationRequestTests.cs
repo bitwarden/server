@@ -19,7 +19,7 @@ public class UpgradePremiumToOrganizationRequestTests
             OrganizationName = "Test Organization",
             Key = "encrypted-key",
             TargetProductTierType = tierType,
-            BillingAddress = new MinimalBillingAddressRequest
+            BillingAddress = new CheckoutBillingAddressRequest
             {
                 Country = "US",
                 PostalCode = "12345"
@@ -48,7 +48,7 @@ public class UpgradePremiumToOrganizationRequestTests
             OrganizationName = "Test Organization",
             Key = "encrypted-key",
             TargetProductTierType = tierType,
-            BillingAddress = new MinimalBillingAddressRequest
+            BillingAddress = new CheckoutBillingAddressRequest
             {
                 Country = "US",
                 PostalCode = "12345"

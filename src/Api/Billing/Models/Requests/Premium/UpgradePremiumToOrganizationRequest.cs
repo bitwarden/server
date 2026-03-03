@@ -18,7 +18,7 @@ public class UpgradePremiumToOrganizationRequest
     public required ProductTierType TargetProductTierType { get; set; }
 
     [Required]
-    public required MinimalBillingAddressRequest BillingAddress { get; set; }
+    public required CheckoutBillingAddressRequest BillingAddress { get; set; }
 
     private PlanType PlanType
     {
