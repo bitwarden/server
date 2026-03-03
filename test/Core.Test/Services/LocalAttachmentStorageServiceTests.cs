@@ -305,8 +305,6 @@ public class LocalAttachmentStorageServiceTests
                 .ToTimeLimitedDataProtector();
             var token = protector.Protect("invalid-data-without-pipe", TimeSpan.FromMinutes(1));
 
-            // This will fail because the SUT uses its own DataProtection instance
-            // which cannot unprotect tokens from a different provider
             Assert.Throws<NotFoundException>(
                 () => sutProvider.Sut.ParseAttachmentDownloadToken(token));
         }
@@ -319,9 +317,6 @@ public class LocalAttachmentStorageServiceTests
         {
             var sutProvider = GetSutProvider(tempDirectory);
 
-            // We need to use the same DataProtection provider as the SUT
-            // Generate a token via GetAttachmentDownloadUrlAsync with a known cipher,
-            // then tamper with the concept. Instead, just test with a completely invalid token.
             Assert.Throws<NotFoundException>(
                 () => sutProvider.Sut.ParseAttachmentDownloadToken("not-a-real-token"));
         }
