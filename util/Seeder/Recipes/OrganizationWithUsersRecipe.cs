@@ -29,7 +29,7 @@ public class OrganizationWithUsersRecipe(
             name, domain, seats, manglerService, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner with SDK-generated keys
-        var ownerUser = UserSeeder.Create($"owner@{domain}", passwordHasher, manglerService);
+        var (ownerUser, _) = UserSeeder.Create($"owner@{domain}", passwordHasher, manglerService);
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -38,7 +38,7 @@ public class OrganizationWithUsersRecipe(
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.Create($"user{i}@{domain}", passwordHasher, manglerService);
+            var (additionalUser, _) = UserSeeder.Create($"user{i}@{domain}", passwordHasher, manglerService);
             additionalUsers.Add(additionalUser);
 
             // Generate org key for confirmed/revoked users
