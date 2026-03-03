@@ -20,6 +20,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
 using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
@@ -921,6 +922,95 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostEmail_WhenMasterPasswordSaltIsNull_SaltSetToNewEmail()
+    {
+        // Arrange - simulate a pre-migration user with null MasterPasswordSalt
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        // Bypass the repository fallback by setting MasterPasswordSalt to null directly in the DB
+        var db = _factory.GetDatabaseContext();
+        var dbUser = await db.Users.FirstAsync(u => u.Id == user.Id);
+        dbUser.MasterPasswordSalt = null;
+        await db.SaveChangesAsync();
+
+        // Verify MasterPasswordSalt is null before the email change
+        var userBeforeChange = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userBeforeChange);
+        Assert.Null(userBeforeChange.MasterPasswordSalt);
+
+        // Generate a valid change email token
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(userBeforeChange, newEmail);
+
+        // Act
+        var response = await PostEmailAsync(newEmail, token);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        Assert.Equal(newEmail.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
+        Assert.Equal(PasswordVerificationResult.Success,
+            _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword!, _newMasterPasswordHash));
+    }
+
+    [Fact]
+    public async Task PostEmail_WhenMasterPasswordSaltMatchesOldEmail_SaltPreserved()
+    {
+        // Arrange
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        // Verify MasterPasswordSalt was set to original email during registration (via repository fallback)
+        var originalSalt = _ownerEmail.ToLowerInvariant().Trim();
+        Assert.Equal(originalSalt, user.MasterPasswordSalt);
+
+        // Generate a valid change email token
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        // Act
+        var response = await PostEmailAsync(newEmail, token);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+
+        var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(newEmail, updatedUser.Email);
+        // MasterPasswordSalt should be preserved as the original email, not updated to new email
+        Assert.Equal(originalSalt, updatedUser.MasterPasswordSalt);
+        Assert.NotEqual(newEmail.ToLowerInvariant().Trim(), updatedUser.MasterPasswordSalt);
+        Assert.Equal(PasswordVerificationResult.Success,
+            _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword!, _newMasterPasswordHash));
+    }
+
+    private async Task<HttpResponseMessage> PostEmailAsync(string newEmail, string token)
+    {
+        var requestModel = new EmailRequestModel
+        {
+            MasterPasswordHash = _masterPasswordHash,
+            NewEmail = newEmail,
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Token = token,
+            Key = _masterKeyWrappedUserKey
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email");
+        message.Content = JsonContent.Create(requestModel);
+        return await _client.SendAsync(message);
     }
 
     private static string CreateV2SetPasswordRequestJson(
