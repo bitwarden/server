@@ -111,6 +111,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// Allows clients to unlock vault after V1 to V2 key rotation without logout.
     /// </summary>
     public string? V2UpgradeToken { get; set; }
+    [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
 
     public string GetMasterPasswordSalt()
