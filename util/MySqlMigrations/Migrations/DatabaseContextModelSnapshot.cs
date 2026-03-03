@@ -2000,9 +2000,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
-                    b.Property<string>("MasterPasswordSalt")
-                        .HasColumnType("longtext");
-
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
