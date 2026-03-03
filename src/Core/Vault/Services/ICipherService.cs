@@ -3,8 +3,6 @@
 
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
-using Microsoft.AspNetCore.DataProtection;
-
 namespace Bit.Core.Vault.Services;
 
 public interface ICipherService
@@ -37,7 +35,6 @@ public interface ICipherService
     Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId);
     Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
-    ITimeLimitedDataProtector CreateAttachmentDownloadProtector();
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);
     Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId);
 }

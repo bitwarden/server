@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Azure.Storage.Blobs;
+﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
@@ -32,7 +29,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
             attachmentData.AttachmentId
         );
 
-    public static (string cipherId, string organizationId, string attachmentId) IdentifiersFromBlobName(string blobName)
+    public static (string cipherId, string? organizationId, string attachmentId) IdentifiersFromBlobName(string blobName)
     {
         var parts = blobName.Split('/');
         switch (parts.Length)
@@ -71,6 +68,11 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
         return sasUri.ToString();
     }
 
+    public (Guid cipherId, string attachmentId) ParseAttachmentDownloadToken(string token)
+    {
+        throw new NotSupportedException("Token-based downloads are not supported with Azure storage.");
+    }
+
     public async Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         await InitAsync(EventGridEnabledContainerName);
@@ -94,7 +96,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
         }
         else
         {
-            metadata.Add("organizationId", cipher.OrganizationId.Value.ToString());
+            metadata.Add("organizationId", cipher.OrganizationId!.Value.ToString());
         }
 
         var headers = new BlobHttpHeaders
@@ -193,10 +195,10 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
         await InitAsync(_defaultContainerName);
     }
 
-    public Task<Stream> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    public Task<Stream?> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         // Azure storage uses SAS URLs for downloads; direct streaming is not supported.
-        return Task.FromResult<Stream>(null);
+        return Task.FromResult<Stream?>(null);
     }
 
     public async Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway)
@@ -217,7 +219,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
             }
             else
             {
-                metadata["organizationId"] = cipher.OrganizationId.Value.ToString();
+                metadata["organizationId"] = cipher.OrganizationId!.Value.ToString();
             }
             await blobClient.SetMetadataAsync(metadata);
 

@@ -21,8 +21,6 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
-using Microsoft.AspNetCore.DataProtection;
-
 namespace Bit.Core.Vault.Services;
 
 public class CipherService : ICipherService
@@ -49,10 +47,6 @@ public class CipherService : ICipherService
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
-    private readonly IDataProtectionProvider _dataProtectionProvider;
-
-    internal static readonly string AttachmentDownloadProtectorPurpose = "AttachmentDownload";
-    private static readonly TimeSpan _downloadLinkLifetime = TimeSpan.FromMinutes(1);
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -73,8 +67,7 @@ public class CipherService : ICipherService
         IPolicyRequirementQuery policyRequirementQuery,
         IApplicationCacheService applicationCacheService,
         IFeatureService featureService,
-        IPricingClient pricingClient,
-        IDataProtectionProvider dataProtectionProvider)
+        IPricingClient pricingClient)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -95,7 +88,6 @@ public class CipherService : ICipherService
         _applicationCacheService = applicationCacheService;
         _featureService = featureService;
         _pricingClient = pricingClient;
-        _dataProtectionProvider = dataProtectionProvider;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -421,19 +413,6 @@ public class CipherService : ICipherService
 
         var url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data);
 
-        // For local (self-hosted) storage, generate a time-limited signed download URL
-        // to prevent unauthenticated access to predictable attachment file paths.
-        // Cloud storage (Azure) already uses time-limited SAS URLs.
-        if (_attachmentStorageService.FileUploadType == FileUploadType.Direct)
-        {
-            var protector = _dataProtectionProvider.CreateProtector(AttachmentDownloadProtectorPurpose);
-            var timedProtector = protector.ToTimeLimitedDataProtector();
-            var token = timedProtector.Protect(
-                $"{cipher.Id}|{attachmentId}",
-                _downloadLinkLifetime);
-            url = $"{_globalSettings.BaseServiceUri.Api}/ciphers/attachment/download?token={Uri.EscapeDataString(token)}";
-        }
-
         var response = new AttachmentResponseData
         {
             Cipher = cipher,
@@ -443,35 +422,6 @@ public class CipherService : ICipherService
         };
 
         return response;
-    }
-
-    public ITimeLimitedDataProtector CreateAttachmentDownloadProtector()
-    {
-        return _dataProtectionProvider
-            .CreateProtector(AttachmentDownloadProtectorPurpose)
-            .ToTimeLimitedDataProtector();
-    }
-
-    public static (Guid cipherId, string attachmentId) ParseAttachmentDownloadToken(
-        string token, ITimeLimitedDataProtector protector)
-    {
-        string payload;
-        try
-        {
-            payload = protector.Unprotect(token);
-        }
-        catch
-        {
-            throw new NotFoundException();
-        }
-
-        var parts = payload.Split('|');
-        if (parts.Length != 2 || !Guid.TryParse(parts[0], out var cipherId))
-        {
-            throw new NotFoundException();
-        }
-
-        return (cipherId, parts[1]);
     }
 
     public async Task DeleteAsync(CipherDetails cipherDetails, Guid deletingUserId, bool orgAdmin = false)

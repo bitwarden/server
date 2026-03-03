@@ -62,6 +62,11 @@ public class NoopAttachmentStorageService : IAttachmentStorageService
         return Task.FromResult((string)null);
     }
 
+    public (Guid cipherId, string attachmentId) ParseAttachmentDownloadToken(string token)
+    {
+        throw new NotSupportedException("Token-based downloads are not supported with noop storage.");
+    }
+
     public Task<Stream> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         return Task.FromResult<Stream>(null);

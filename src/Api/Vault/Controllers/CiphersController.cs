@@ -1521,8 +1521,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        (Guid cipherId, string attachmentId) = CipherService.ParseAttachmentDownloadToken(token,
-            _cipherService.CreateAttachmentDownloadProtector());
+        (Guid cipherId, string attachmentId) = _attachmentStorageService.ParseAttachmentDownloadToken(token);
 
         var cipher = await _cipherRepository.GetByIdAsync(cipherId);
         if (cipher == null)

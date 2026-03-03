@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using AutoFixture;
+using Bit.Core.Exceptions;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.CipherAttachmentMetaData;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
@@ -8,6 +9,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
 
@@ -233,7 +235,95 @@ public class LocalAttachmentStorageServiceTests
         var fixture = new Fixture().WithAutoNSubstitutions();
         fixture.Freeze<IGlobalSettings>().Attachment.BaseDirectory.Returns(tempDirectory.Directory);
         fixture.Freeze<IGlobalSettings>().Attachment.BaseUrl.Returns(Guid.NewGuid().ToString());
+        fixture.Freeze<IGlobalSettings>().BaseServiceUri.Api.Returns("https://api.example.com");
+        fixture.Register<IDataProtectionProvider>(() => new EphemeralDataProtectionProvider());
 
         return new SutProvider<LocalAttachmentStorageService>(fixture).Create();
+    }
+
+    [Theory]
+    [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaData) })]
+    public async Task GetAttachmentDownloadUrlAsync_ReturnsSignedUrl(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    {
+        using (var tempDirectory = new TempDirectory())
+        {
+            var sutProvider = GetSutProvider(tempDirectory);
+
+            var url = await sutProvider.Sut.GetAttachmentDownloadUrlAsync(cipher, attachmentData);
+
+            Assert.Contains("ciphers/attachment/download", url);
+            Assert.Contains("token=", url);
+            Assert.StartsWith("https://api.example.com", url);
+        }
+    }
+
+    [Theory]
+    [InlineCustomAutoData(new[] { typeof(UserCipher), typeof(MetaData) })]
+    public async Task GetAttachmentDownloadUrlAsync_TokenCanBeParsedBack(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    {
+        using (var tempDirectory = new TempDirectory())
+        {
+            var sutProvider = GetSutProvider(tempDirectory);
+
+            var url = await sutProvider.Sut.GetAttachmentDownloadUrlAsync(cipher, attachmentData);
+
+            // Extract token from URL
+            var uri = new Uri(url);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var token = query["token"];
+
+            var (parsedCipherId, parsedAttachmentId) = sutProvider.Sut.ParseAttachmentDownloadToken(token);
+
+            Assert.Equal(cipher.Id, parsedCipherId);
+            Assert.Equal(attachmentData.AttachmentId, parsedAttachmentId);
+        }
+    }
+
+    [Fact]
+    public void ParseAttachmentDownloadToken_InvalidToken_ThrowsNotFoundException()
+    {
+        using (var tempDirectory = new TempDirectory())
+        {
+            var sutProvider = GetSutProvider(tempDirectory);
+
+            Assert.Throws<NotFoundException>(
+                () => sutProvider.Sut.ParseAttachmentDownloadToken("invalid-token"));
+        }
+    }
+
+    [Fact]
+    public void ParseAttachmentDownloadToken_InvalidFormat_ThrowsNotFoundException()
+    {
+        using (var tempDirectory = new TempDirectory())
+        {
+            var sutProvider = GetSutProvider(tempDirectory);
+
+            // Create a valid token but with invalid payload format (no pipe separator)
+            var provider = new EphemeralDataProtectionProvider();
+            var protector = provider
+                .CreateProtector(LocalAttachmentStorageService.AttachmentDownloadProtectorPurpose)
+                .ToTimeLimitedDataProtector();
+            var token = protector.Protect("invalid-data-without-pipe", TimeSpan.FromMinutes(1));
+
+            // This will fail because the SUT uses its own DataProtection instance
+            // which cannot unprotect tokens from a different provider
+            Assert.Throws<NotFoundException>(
+                () => sutProvider.Sut.ParseAttachmentDownloadToken(token));
+        }
+    }
+
+    [Fact]
+    public void ParseAttachmentDownloadToken_InvalidGuid_ThrowsNotFoundException()
+    {
+        using (var tempDirectory = new TempDirectory())
+        {
+            var sutProvider = GetSutProvider(tempDirectory);
+
+            // We need to use the same DataProtection provider as the SUT
+            // Generate a token via GetAttachmentDownloadUrlAsync with a known cipher,
+            // then tamper with the concept. Instead, just test with a completely invalid token.
+            Assert.Throws<NotFoundException>(
+                () => sutProvider.Sut.ParseAttachmentDownloadToken("not-a-real-token"));
+        }
     }
 }

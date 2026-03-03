@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Vault.Services;
 
@@ -11,21 +13,59 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
     private readonly string _baseAttachmentUrl;
     private readonly string _baseDirPath;
     private readonly string _baseTempDirPath;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly string _apiBaseUrl;
+
+    internal static readonly string AttachmentDownloadProtectorPurpose = "AttachmentDownload";
+    private static readonly TimeSpan _downloadLinkLifetime = TimeSpan.FromMinutes(1);
 
     public FileUploadType FileUploadType => FileUploadType.Direct;
 
     public LocalAttachmentStorageService(
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider)
     {
         _baseDirPath = globalSettings.Attachment.BaseDirectory;
         _baseTempDirPath = $"{_baseDirPath}/temp";
         _baseAttachmentUrl = globalSettings.Attachment.BaseUrl;
+        _dataProtectionProvider = dataProtectionProvider;
+        _apiBaseUrl = globalSettings.BaseServiceUri.Api;
     }
 
     public async Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         await InitAsync();
-        return $"{_baseAttachmentUrl}/{cipher.Id}/{attachmentData.AttachmentId}";
+        var protector = _dataProtectionProvider.CreateProtector(AttachmentDownloadProtectorPurpose);
+        var timedProtector = protector.ToTimeLimitedDataProtector();
+        var token = timedProtector.Protect(
+            $"{cipher.Id}|{attachmentData.AttachmentId}",
+            _downloadLinkLifetime);
+        return $"{_apiBaseUrl}/ciphers/attachment/download?token={Uri.EscapeDataString(token)}";
+    }
+
+    public (Guid cipherId, string attachmentId) ParseAttachmentDownloadToken(string token)
+    {
+        var protector = _dataProtectionProvider
+            .CreateProtector(AttachmentDownloadProtectorPurpose)
+            .ToTimeLimitedDataProtector();
+
+        string payload;
+        try
+        {
+            payload = protector.Unprotect(token);
+        }
+        catch
+        {
+            throw new NotFoundException();
+        }
+
+        var parts = payload.Split('|');
+        if (parts.Length != 2 || !Guid.TryParse(parts[0], out var cipherId))
+        {
+            throw new NotFoundException();
+        }
+
+        return (cipherId, parts[1]);
     }
 
     public async Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentData)

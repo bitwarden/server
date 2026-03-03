@@ -20,6 +20,11 @@ public interface IAttachmentStorageService
     Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData);
     Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData);
     /// <summary>
+    /// Parses and validates a time-limited download token, returning the cipher ID and attachment ID.
+    /// Only supported by storage implementations that use signed URLs (e.g. local/self-hosted storage).
+    /// </summary>
+    (Guid cipherId, string attachmentId) ParseAttachmentDownloadToken(string token);
+    /// <summary>
     /// Opens a read stream for a locally stored attachment file.
     /// Returns null if the storage implementation does not support direct streaming (e.g. cloud storage).
     /// </summary>
