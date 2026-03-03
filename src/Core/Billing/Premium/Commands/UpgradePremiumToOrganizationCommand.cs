@@ -2,8 +2,11 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
+using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -34,7 +37,7 @@ public interface IUpgradePremiumToOrganizationCommand
         string organizationName,
         string key,
         PlanType targetPlanType,
-        Payment.Models.BillingAddress billingAddress);
+        BillingAddress billingAddress);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -53,7 +56,7 @@ public class UpgradePremiumToOrganizationCommand(
         string organizationName,
         string key,
         PlanType targetPlanType,
-        Payment.Models.BillingAddress billingAddress) => HandleAsync<None>(async () =>
+        BillingAddress billingAddress) => HandleAsync<None>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -182,8 +185,15 @@ public class UpgradePremiumToOrganizationCommand(
             {
                 Country = billingAddress.Country,
                 PostalCode = billingAddress.PostalCode
-            }
+            },
+            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
         });
+
+        // Add tax ID to customer for accurate tax calculation if provided
+        if (billingAddress.TaxId != null)
+        {
+            await AddTaxIdToCustomerAsync(user, billingAddress.TaxId);
+        }
 
         // Update the subscription in Stripe
         await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
@@ -228,4 +238,26 @@ public class UpgradePremiumToOrganizationCommand(
 
         return new None();
     });
+
+    /// <summary>
+    /// Adds a tax ID to the Stripe customer for accurate tax calculation.
+    /// If the tax ID is a Spanish NIF, also adds the corresponding EU VAT ID.
+    /// </summary>
+    /// <param name="user"> The user whose Stripe customer will be updated with the tax ID.</param>
+    /// <param name="taxId"> The tax ID to add, including the type and value.</param>
+    private async Task AddTaxIdToCustomerAsync(User user, TaxID taxId)
+    {
+
+        await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
+            new TaxIdCreateOptions { Type = taxId.Code, Value = taxId.Value });
+
+        if (taxId.Code == StripeConstants.TaxIdType.SpanishNIF)
+        {
+            await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
+                new TaxIdCreateOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxId.Value}"
+                });
+        }
+    }
 }
