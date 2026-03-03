@@ -8,7 +8,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -69,10 +68,6 @@ public class SelfRevokeOrganizationUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .RevokeAsync(organizationUser.Id);
-
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_SelfRevoked);
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
@@ -225,9 +220,5 @@ public class SelfRevokeOrganizationUserCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .RevokeAsync(organizationUser.Id);
-
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_SelfRevoked);
     }
 }

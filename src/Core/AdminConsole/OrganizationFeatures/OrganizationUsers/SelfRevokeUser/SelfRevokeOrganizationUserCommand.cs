@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
@@ -14,7 +13,6 @@ public class SelfRevokeOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IPolicyRequirementQuery policyRequirementQuery,
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-    IEventService eventService,
     IPushNotificationService pushNotificationService)
     : ISelfRevokeOrganizationUserCommand
 {
@@ -48,7 +46,6 @@ public class SelfRevokeOrganizationUserCommand(
         }
 
         await organizationUserRepository.RevokeAsync(organizationUser.Id);
-        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_SelfRevoked);
         await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
 
         return new None();
