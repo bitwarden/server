@@ -51,4 +51,5 @@ public interface IStripeAdapter
     Task<Price> GetPriceAsync(string id, PriceGetOptions options = null);
     Task<Coupon> GetCouponAsync(string couponId, CouponGetOptions options = null);
     Task<List<Product>> ListProductsAsync(ProductListOptions options = null);
+    Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null);
 }

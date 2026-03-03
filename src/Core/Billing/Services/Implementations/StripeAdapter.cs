@@ -228,4 +228,10 @@ public class StripeAdapter : IStripeAdapter
      *************/
     public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
         (await _productService.ListAsync(options)).Data;
+
+    /****************
+     ** SUBSCRIPTION **
+     ****************/
+    public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
+        _subscriptionService.ListAsync(options);
 }
