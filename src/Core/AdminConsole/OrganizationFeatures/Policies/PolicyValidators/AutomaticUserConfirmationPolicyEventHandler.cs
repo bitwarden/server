@@ -49,18 +49,21 @@ public class AutomaticUserConfirmationPolicyEventHandler(
 
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        var isNotEnablingPolicy = policyRequest.PolicyUpdate is not { Enabled: true };
+        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
+    }
+
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    {
+        var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
         var policyAlreadyEnabled = currentPolicy is { Enabled: true };
         if (isNotEnablingPolicy || policyAlreadyEnabled)
         {
             return;
         }
 
-        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(policyRequest.PolicyUpdate.OrganizationId, null);
+        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(policyUpdate.OrganizationId, null);
         var orgUserIds = orgUsers.Where(w => w.UserId != null).Select(s => s.UserId!.Value).ToList();
 
         await deleteEmergencyAccessCommand.DeleteAllByUserIdsAsync(orgUserIds);
     }
-
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.CompletedTask;
 }
