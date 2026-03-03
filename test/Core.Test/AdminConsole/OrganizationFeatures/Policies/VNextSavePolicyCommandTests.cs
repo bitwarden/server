@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Int
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
@@ -119,9 +120,9 @@ public class VNextSavePolicyCommandTests
         var sutProvider = SutProviderFactory();
         var savePolicyModel = new SavePolicyModel(policyUpdate);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
-            .Returns(Task.FromResult<OrganizationAbility?>(null));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(Task.FromResult<Organization?>(null));
 
         // Act
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
@@ -139,9 +140,9 @@ public class VNextSavePolicyCommandTests
         var sutProvider = SutProviderFactory();
         var savePolicyModel = new SavePolicyModel(policyUpdate);
 
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
-            .Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(new Organization
             {
                 Id = policyUpdate.OrganizationId,
                 UsePolicies = false
@@ -418,9 +419,9 @@ public class VNextSavePolicyCommandTests
 
     private static void ArrangeOrganization(SutProvider<VNextSavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
     {
-        sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilityAsync(policyUpdate.OrganizationId)
-            .Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(new Organization
             {
                 Id = policyUpdate.OrganizationId,
                 UsePolicies = true
