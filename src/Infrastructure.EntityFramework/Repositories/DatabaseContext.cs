@@ -192,7 +192,7 @@ public class DatabaseContext : DbContext
         {
             converter = new ValueConverter<DateTime, DateTime>(
                 v => v,
-                d => new DateTimeOffset(d).UtcDateTime);
+                d => new DateTime(d.Ticks, DateTimeKind.Utc));
         }
         else
         {
