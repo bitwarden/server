@@ -2,7 +2,7 @@
   "$schema": "../../schemas/preset.schema.json",
   "organization": {
     "name": "Globex Corp",
-    "domain": "globex.com",
+    "domain": "globex.example",
     "seats": 10000
   },
   "users": {
