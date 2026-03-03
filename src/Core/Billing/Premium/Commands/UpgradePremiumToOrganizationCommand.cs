@@ -5,8 +5,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
-using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -15,6 +13,8 @@ using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
+using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 
 namespace Bit.Core.Billing.Premium.Commands;
 /// <summary>
@@ -256,7 +256,8 @@ public class UpgradePremiumToOrganizationCommand(
             await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
                 new TaxIdCreateOptions
                 {
-                    Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxId.Value}"
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{taxId.Value}"
                 });
         }
     }
