@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddMasterPasswordSaltToUserTable : Migration
 {
     /// <inheritdoc />
-    public partial class AddMasterPasswordSaltToUserTable : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "MasterPasswordSalt",
-                table: "User",
-                type: "TEXT",
-                maxLength: 256,
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "MasterPasswordSalt",
+            table: "User",
+            type: "TEXT",
+            maxLength: 256,
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "MasterPasswordSalt",
-                table: "User");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "MasterPasswordSalt",
+            table: "User");
     }
 }
