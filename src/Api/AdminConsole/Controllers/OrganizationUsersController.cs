@@ -715,6 +715,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore")]
     [Authorize<ManageUsersRequirement>]
+    [Obsolete("This endpoint is deprecated. Use _vNext endpoint instead. This will be removed in a future release.")]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, null));
@@ -723,7 +724,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore/vnext")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.DefaultUserCollectionRestore)]
     public async Task RestoreAsync_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserRestoreRequest request)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, request.DefaultUserCollectionName));
