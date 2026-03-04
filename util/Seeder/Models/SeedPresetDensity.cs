@@ -14,6 +14,22 @@ internal record SeedPresetDensity
     public SeedPresetPermissions? Permissions { get; init; }
 
     public SeedPresetCipherAssignment? CipherAssignment { get; init; }
+
+    public SeedPresetUserCollections? UserCollections { get; init; }
+}
+
+/// <summary>
+/// How many direct collections each user receives: range, distribution shape, and skew.
+/// </summary>
+internal record SeedPresetUserCollections
+{
+    public int? Min { get; init; }
+
+    public int? Max { get; init; }
+
+    public string? Shape { get; init; }
+
+    public double? Skew { get; init; }
 }
 
 /// <summary>

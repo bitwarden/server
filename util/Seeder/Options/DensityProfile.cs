@@ -51,6 +51,26 @@ public class DensityProfile
     public Distribution<PermissionWeight> PermissionDistribution { get; init; } = PermissionDistributions.Enterprise;
 
     /// <summary>
+    /// Minimum direct collections per user.
+    /// </summary>
+    public int UserCollectionMin { get; init; } = 1;
+
+    /// <summary>
+    /// Maximum direct collections per user.
+    /// </summary>
+    public int UserCollectionMax { get; init; } = 3;
+
+    /// <summary>
+    /// Distribution shape for user-to-collection direct assignments.
+    /// </summary>
+    public CollectionFanOutShape UserCollectionShape { get; init; } = CollectionFanOutShape.Uniform;
+
+    /// <summary>
+    /// Skew intensity for PowerLaw user-collection shape (0.0-1.0). Ignored for Uniform/FrontLoaded.
+    /// </summary>
+    public double UserCollectionSkew { get; init; }
+
+    /// <summary>
     /// Cipher-to-collection assignment skew shape.
     /// </summary>
     public CipherCollectionSkew CipherSkew { get; init; } = CipherCollectionSkew.Uniform;

@@ -146,6 +146,51 @@ FROM (
 ) T;
 ```
 
+### Q7: Collections-Per-User Distribution
+
+Verifies the `userCollections` distribution parameters. Shows how many direct collections each user has access to via CollectionUser records. The coefficient of variation distinguishes uniform (CV near 0) from power-law (CV > 0.5) user-collection assignment shapes.
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+SELECT
+    COUNT(*) AS UsersWithDirectAccess,
+    MIN(CollectionCount) AS MinCollections,
+    MAX(CollectionCount) AS MaxCollections,
+    AVG(CollectionCount) AS AvgCollections,
+    CASE WHEN AVG(CollectionCount) > 0
+        THEN STDEV(CollectionCount) / AVG(CollectionCount)
+        ELSE 0
+    END AS CoefficientOfVariation
+FROM (
+    SELECT CU.OrganizationUserId, COUNT(DISTINCT CU.CollectionId) AS CollectionCount
+    FROM [dbo].[CollectionUser] CU WITH (NOLOCK)
+    INNER JOIN [dbo].[OrganizationUser] OU WITH (NOLOCK) ON CU.OrganizationUserId = OU.Id
+    WHERE OU.OrganizationId = @OrgId
+    GROUP BY CU.OrganizationUserId
+) T;
+```
+
+### Q8: Multi-Collection Ciphers
+
+Verifies the `cipherAssignment.multiCollectionRate` parameter. Counts how many non-orphan ciphers are assigned to more than one collection, and the maximum number of collections per cipher. The ratio of multi-collection ciphers to total assigned ciphers should approximate the configured `multiCollectionRate`.
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+SELECT
+    COUNT(*) AS TotalAssignedCiphers,
+    SUM(CASE WHEN CollectionCount > 1 THEN 1 ELSE 0 END) AS MultiCollectionCiphers,
+    MAX(CollectionCount) AS MaxCollectionsPerCipher
+FROM (
+    SELECT CC.CipherId, COUNT(DISTINCT CC.CollectionId) AS CollectionCount
+    FROM [dbo].[CollectionCipher] CC WITH (NOLOCK)
+    INNER JOIN [dbo].[Cipher] CI WITH (NOLOCK) ON CC.CipherId = CI.Id
+    WHERE CI.OrganizationId = @OrgId
+    GROUP BY CC.CipherId
+) T;
+```
+
 ---
 
 ## Preset Catalog
@@ -177,11 +222,13 @@ dotnet run -- seed --preset density.density-xs-central-perk --mangle
 
 | Check               | Expected                                                                     |
 | ------------------- | ---------------------------------------------------------------------------- |
-| Membership shape    | Uniform — 2 groups with ~3 members each.                                     |
-| CollectionGroups    | 10-20 records. Uniform fan-out of 1-2 groups per collection across 2 groups. |
-| Permissions         | ~50% Manage, ~40% ReadWrite, ~10% ReadOnly, 0% HidePasswords.                |
-| Orphan ciphers      | 0 of 200 (0% orphan rate).                                                   |
-| Direct access ratio | 0.8 — ~80% of access paths are direct CollectionUser.                        |
+| Membership shape      | Uniform — 2 groups with ~3 members each.                                     |
+| CollectionGroups      | 10-20 records. Uniform fan-out of 1-2 groups per collection across 2 groups. |
+| Permissions           | ~50% Manage, ~40% ReadWrite, ~10% ReadOnly, 0% HidePasswords.                |
+| Orphan ciphers        | 0 of 200 (0% orphan rate).                                                   |
+| Direct access ratio   | 0.8 — ~80% of access paths are direct CollectionUser.                        |
+| Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                            |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                       |
 
 ### 2. Planet Express (S — Small Balanced)
 
@@ -192,11 +239,13 @@ dotnet run -- seed --preset density.density-sm-balanced-planet-express --mangle
 
 | Check               | Expected                                                                       |
 | ------------------- | ------------------------------------------------------------------------------ |
-| Membership shape    | PowerLaw (skew 0.4) — first group largest, gentle decay across 8 groups.       |
-| CollectionGroups    | 200-400 records. Uniform fan-out of 2-4 groups per collection across 8 groups. |
-| Permissions         | ~40% ReadOnly, ~30% ReadWrite, ~25% Manage, ~5% HidePasswords.                 |
-| Orphan ciphers      | ~37 of 750 (5% orphan rate).                                                   |
-| Direct access ratio | 0.7 — ~70% of access paths are direct CollectionUser.                          |
+| Membership shape      | PowerLaw (skew 0.4) — first group largest, gentle decay across 8 groups.       |
+| CollectionGroups      | 200-400 records. Uniform fan-out of 2-4 groups per collection across 8 groups. |
+| Permissions           | ~40% ReadOnly, ~30% ReadWrite, ~25% Manage, ~5% HidePasswords.                 |
+| Orphan ciphers        | ~37 of 750 (5% orphan rate).                                                   |
+| Direct access ratio   | 0.7 — ~70% of access paths are direct CollectionUser.                          |
+| Collections per user  | PowerLaw 1-5 (skew 0.3). First users get up to 5, most get 1-2. CV > 0.3.     |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                         |
 
 ### 3. Bluth Company (S — Small Hierarchical)
 
@@ -207,11 +256,13 @@ dotnet run -- seed --preset density.density-sm-highperm-bluth-company --mangle
 
 | Check               | Expected                                                                       |
 | ------------------- | ------------------------------------------------------------------------------ |
-| Membership shape    | PowerLaw (skew 0.7) — steep decay across 4 groups. First group dominant.       |
-| CollectionGroups    | 25-125 records. PowerLaw fan-out of 1-5 groups per collection across 4 groups. |
-| Permissions         | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                   |
-| Orphan ciphers      | ~75 of 500 (15% orphan rate).                                                  |
-| Direct access ratio | 0.6 — ~60% of access paths are direct CollectionUser.                          |
+| Membership shape      | PowerLaw (skew 0.7) — steep decay across 4 groups. First group dominant.       |
+| CollectionGroups      | 25-125 records. PowerLaw fan-out of 1-5 groups per collection across 4 groups. |
+| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                   |
+| Orphan ciphers        | ~75 of 500 (15% orphan rate).                                                  |
+| Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                          |
+| Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                              |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                         |
 
 ### 4. Sterling Cooper (M — Mid-Market Balanced)
 
@@ -222,12 +273,14 @@ dotnet run -- seed --preset density.density-md-balanced-sterling-cooper --mangle
 
 | Check               | Expected                                                                 |
 | ------------------- | ------------------------------------------------------------------------ |
-| Membership shape    | PowerLaw (skew 0.6) — moderate decay across 50 groups.                   |
-| CollectionGroups    | 500-2,500 records. PowerLaw fan-out of 1-5 active groups per collection. |
-| Permissions         | ~55% ReadOnly, ~20% ReadWrite, ~15% Manage, ~10% HidePasswords.          |
-| Orphan ciphers      | ~400 of 5,000 (8% orphan rate).                                          |
-| Direct access ratio | 0.5 — roughly even split between direct and group-mediated access.       |
-| Empty group rate    | ~26% — ~13 of 50 groups have 0 members due to power-law tail truncation. |
+| Membership shape      | PowerLaw (skew 0.6) — moderate decay across 50 groups.                   |
+| CollectionGroups      | 500-2,500 records. PowerLaw fan-out of 1-5 active groups per collection. |
+| Permissions           | ~55% ReadOnly, ~20% ReadWrite, ~15% Manage, ~10% HidePasswords.          |
+| Orphan ciphers        | ~400 of 5,000 (8% orphan rate).                                          |
+| Direct access ratio   | 0.5 — roughly even split between direct and group-mediated access.       |
+| Empty group rate      | ~26% — ~13 of 50 groups have 0 members due to power-law tail truncation. |
+| Collections per user  | PowerLaw 1-10 (skew 0.5). First users get up to 10, most get 1-2. CV > 0.5. |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                   |
 
 ### 5. Umbrella Corp (M — Collection-Heavy)
 
@@ -238,11 +291,13 @@ dotnet run -- seed --preset density.density-md-highcollection-umbrella-corp --ma
 
 | Check               | Expected                                                                                                |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
-| Membership shape    | MegaGroup (skew 0.5) — group 1 has ~72% of members, remaining 7 split the rest evenly.                  |
-| CollectionGroups    | 800-2,400 records. FrontLoaded fan-out of 1-3 groups per collection. First collections get more groups. |
-| Permissions         | ~50% ReadWrite, ~20% Manage, ~20% ReadOnly, ~10% HidePasswords.                                         |
-| Orphan ciphers      | ~600 of 3,000 (20% orphan rate).                                                                        |
-| Direct access ratio | 0.9 — ~90% of access paths are direct CollectionUser.                                                   |
+| Membership shape      | MegaGroup (skew 0.5) — group 1 has ~72% of members, remaining 7 split the rest evenly.                  |
+| CollectionGroups      | 800-2,400 records. FrontLoaded fan-out of 1-3 groups per collection. First collections get more groups. |
+| Permissions           | ~50% ReadWrite, ~20% Manage, ~20% ReadOnly, ~10% HidePasswords.                                         |
+| Orphan ciphers        | ~600 of 3,000 (20% orphan rate).                                                                        |
+| Direct access ratio   | 0.9 — ~90% of access paths are direct CollectionUser.                                                   |
+| Collections per user  | PowerLaw 1-15 (skew 0.6). First users get up to 15, most get 1-2. CV > 0.5.                             |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                                                   |
 
 ### 6. Wayne Enterprises (L — Large Balanced)
 
@@ -253,12 +308,14 @@ dotnet run -- seed --preset density.density-lg-balanced-wayne-enterprises --mang
 
 | Check               | Expected                                                                       |
 | ------------------- | ------------------------------------------------------------------------------ |
-| Membership shape    | PowerLaw (skew 0.7) — steep decay across 100 groups. First groups much larger. |
-| CollectionGroups    | 2,000-10,000 records. PowerLaw fan-out of 1-5 active groups per collection.    |
-| Permissions         | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                   |
-| Orphan ciphers      | ~1,000 of 10,000 (10% orphan rate).                                            |
-| Direct access ratio | 0.5 — roughly even split between direct and group-mediated access.             |
-| Empty group rate    | ~30% — ~30 of 100 groups have 0 members due to power-law tail truncation.      |
+| Membership shape      | PowerLaw (skew 0.7) — steep decay across 100 groups. First groups much larger. |
+| CollectionGroups      | 2,000-10,000 records. PowerLaw fan-out of 1-5 active groups per collection.    |
+| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                   |
+| Orphan ciphers        | ~1,000 of 10,000 (10% orphan rate).                                            |
+| Direct access ratio   | 0.5 — roughly even split between direct and group-mediated access.             |
+| Empty group rate      | ~30% — ~30 of 100 groups have 0 members due to power-law tail truncation.      |
+| Collections per user  | PowerLaw 1-25 (skew 0.6). First users get up to 25, most get 1-2. CV > 0.5.   |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                         |
 
 ### 7. Tyrell Corp (L — High Permission Density)
 
@@ -269,12 +326,14 @@ dotnet run -- seed --preset density.density-lg-highperm-tyrell-corp --mangle
 
 | Check               | Expected                                                                         |
 | ------------------- | -------------------------------------------------------------------------------- |
-| Membership shape    | PowerLaw (skew 0.8) — very steep decay across 75 groups. First group very large. |
-| CollectionGroups    | 4,600-18,400 records. PowerLaw fan-out of 2-8 active groups per collection.      |
-| Permissions         | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                     |
-| Orphan ciphers      | ~2,550 of 17,000 (15% orphan rate).                                              |
-| Direct access ratio | 0.6 — ~60% of access paths are direct CollectionUser.                            |
-| Empty group rate    | 20% — ~15 of 75 groups have 0 members and are excluded from fan-out.             |
+| Membership shape      | PowerLaw (skew 0.8) — very steep decay across 75 groups. First group very large. |
+| CollectionGroups      | 4,600-18,400 records. PowerLaw fan-out of 2-8 active groups per collection.      |
+| Permissions           | ~82% ReadOnly, ~9% ReadWrite, ~5% Manage, ~4% HidePasswords.                     |
+| Orphan ciphers        | ~2,550 of 17,000 (15% orphan rate).                                              |
+| Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                            |
+| Empty group rate      | 20% — ~15 of 75 groups have 0 members and are excluded from fan-out.             |
+| Collections per user  | PowerLaw 1-30 (skew 0.7). First users get up to 30, most get 1-2. CV > 0.5.     |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                           |
 
 ### 8. Weyland-Yutani (XL — Mega Corp, Many Groups)
 
@@ -285,12 +344,14 @@ dotnet run -- seed --preset density.density-xl-highperm-weyland-yutani --mangle
 
 | Check               | Expected                                                                             |
 | ------------------- | ------------------------------------------------------------------------------------ |
-| Membership shape    | PowerLaw (skew 0.8) — very steep decay across 500 groups. Long tail of small groups. |
-| CollectionGroups    | 1,200-3,600 records. PowerLaw fan-out of 1-3 active groups per collection.           |
-| Permissions         | ~55% ReadWrite, ~25% ReadOnly, ~10% Manage, ~10% HidePasswords.                      |
-| Orphan ciphers      | ~1,500 of 15,000 (10% orphan rate).                                                  |
-| Direct access ratio | 0.4 — majority of access is group-mediated.                                          |
-| Empty group rate    | ~68% — ~341 of 500 groups have 0 members due to power-law tail truncation.           |
+| Membership shape      | PowerLaw (skew 0.8) — very steep decay across 500 groups. Long tail of small groups. |
+| CollectionGroups      | 1,200-3,600 records. PowerLaw fan-out of 1-3 active groups per collection.           |
+| Permissions           | ~55% ReadWrite, ~25% ReadOnly, ~10% Manage, ~10% HidePasswords.                      |
+| Orphan ciphers        | ~1,500 of 15,000 (10% orphan rate).                                                  |
+| Direct access ratio   | 0.4 — majority of access is group-mediated.                                          |
+| Empty group rate      | ~68% — ~341 of 500 groups have 0 members due to power-law tail truncation.           |
+| Collections per user  | PowerLaw 1-50 (skew 0.8). First users get up to 50, most get 1-2. CV > 0.5.         |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                               |
 
 ### 9. Buy n Large (XL — Mega Corp, Many Collections)
 
@@ -301,8 +362,10 @@ dotnet run -- seed --preset density.density-xl-highcollection-buy-n-large --mang
 
 | Check               | Expected                                                                                                    |
 | ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Membership shape    | MegaGroup (skew 0.95) — group 1 has ~93% of members, remaining 4 split the rest evenly.                     |
-| CollectionGroups    | 0 records. DirectAccessRatio is 1.0, so CollectionGroup creation is skipped entirely.                       |
-| Permissions         | ~30% Manage, ~30% ReadWrite, ~30% ReadOnly, ~10% HidePasswords.                                             |
-| Orphan ciphers      | ~12,750 of 15,000 (85% orphan rate).                                                                        |
-| Direct access ratio | 1.0 — 100% of access paths are direct CollectionUser (all users get individual records).                    |
+| Membership shape      | MegaGroup (skew 0.95) — group 1 has ~93% of members, remaining 4 split the rest evenly.                     |
+| CollectionGroups      | 0 records. DirectAccessRatio is 1.0, so CollectionGroup creation is skipped entirely.                       |
+| Permissions           | ~30% Manage, ~30% ReadWrite, ~30% ReadOnly, ~10% HidePasswords.                                             |
+| Orphan ciphers        | ~12,750 of 15,000 (85% orphan rate).                                                                        |
+| Direct access ratio   | 1.0 — 100% of access paths are direct CollectionUser (all users get individual records).                    |
+| Collections per user  | PowerLaw 1-20 (skew 0.5). First users get up to 20, most get 1. CV > 0.2.                                  |
+| Multi-collection rate | 0 — no multiCollectionRate configured.                                                                      |

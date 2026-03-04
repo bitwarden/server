@@ -282,6 +282,34 @@
               "description": "Fraction of org ciphers with no collection assignment."
             }
           }
+        },
+        "userCollections": {
+          "type": "object",
+          "description": "How many direct collections each user receives via CollectionUser records.",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Minimum direct collections per user. Default: 1."
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum direct collections per user. Default: 3."
+            },
+            "shape": {
+              "type": "string",
+              "enum": ["uniform", "powerLaw", "frontLoaded"],
+              "description": "Distribution shape for user-collection assignments. Default: uniform."
+            },
+            "skew": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Skew intensity for powerLaw shape. Ignored for uniform/frontLoaded. Default: 0."
+            }
+          }
         }
       }
     }
