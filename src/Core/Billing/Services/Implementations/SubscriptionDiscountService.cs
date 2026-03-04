@@ -4,13 +4,15 @@ using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
 /// <inheritdoc />
 public class SubscriptionDiscountService(
     ISubscriptionDiscountRepository subscriptionDiscountRepository,
-    IDiscountAudienceFilterFactory discountAudienceFilterFactory) : ISubscriptionDiscountService
+    IDiscountAudienceFilterFactory discountAudienceFilterFactory,
+    ILogger<SubscriptionDiscountService> logger) : ISubscriptionDiscountService
 {
     /// <inheritdoc />
     public async Task<IEnumerable<DiscountEligibility>> GetEligibleDiscountsAsync(User user)
@@ -37,8 +39,16 @@ public class SubscriptionDiscountService(
     public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType)
     {
         var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(coupon);
-        if (discount == null || !IsDiscountActive(discount))
+        if (discount == null)
         {
+            return false;
+        }
+
+        if (!IsDiscountActive(discount))
+        {
+            logger.LogWarning("Deleting expired coupon {CouponId} from our table - discount is no longer active",
+                discount.Id);
+            await subscriptionDiscountRepository.DeleteAsync(discount);
             return false;
         }
 

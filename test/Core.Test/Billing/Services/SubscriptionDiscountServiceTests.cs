@@ -248,4 +248,28 @@ public class SubscriptionDiscountServiceTests
         // Assert
         Assert.False(result);
     }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountEligibilityForUserAsync_InactiveDiscount_DeletesDiscountAndReturnsFalse(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        discount.StartDate = DateTime.UtcNow.AddDays(-30);
+        discount.EndDate = DateTime.UtcNow.AddDays(-1); // Expired discount
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(discount.StripeCouponId)
+            .Returns(discount);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Premium);
+
+        // Assert
+        Assert.False(result);
+        await sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .Received(1)
+            .DeleteAsync(discount);
+    }
 }
