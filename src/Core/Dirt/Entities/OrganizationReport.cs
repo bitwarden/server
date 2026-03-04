@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
@@ -29,6 +27,8 @@ public class OrganizationReport : ITableObject<Guid>
     public int? PasswordAtRiskCount { get; set; }
     public int? CriticalPasswordCount { get; set; }
     public int? CriticalPasswordAtRiskCount { get; set; }
+    public ReportFile? OrganizationReportFile { get; set; }
+
     public ReportFile? GetReportFileData()
     {
         if (string.IsNullOrWhiteSpace(ReportData))

@@ -1149,6 +1149,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("ReportFile")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
