@@ -76,9 +76,6 @@ public class UpgradePremiumToOrganizationCommand(
             return new BadRequest("User does not have an active Premium subscription.");
         }
 
-        // Hardcode seats to 1 for upgrade flow
-        const int seats = 1;
-
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
 
@@ -99,6 +96,11 @@ public class UpgradePremiumToOrganizationCommand(
         // Get the target organization plan
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
 
+        var isNonSeatBasedPmPlan = targetPlan.HasNonSeatBasedPasswordManagerPlan();
+
+        // if the target plan is non-seat-based, set seats to the base seats of the target plan, otherwise set to 1
+        var initialSeats = isNonSeatBasedPmPlan ? targetPlan.PasswordManager.BaseSeats : 1;
+
         // Build the list of subscription item updates
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
 
@@ -116,7 +118,7 @@ public class UpgradePremiumToOrganizationCommand(
         }
 
         // Add new organization subscription items
-        if (targetPlan.HasNonSeatBasedPasswordManagerPlan())
+        if (isNonSeatBasedPmPlan)
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
             {
@@ -131,7 +133,7 @@ public class UpgradePremiumToOrganizationCommand(
             {
                 Id = passwordManagerItem.Id,
                 Price = targetPlan.PasswordManager.StripeSeatPlanId,
-                Quantity = seats
+                Quantity = initialSeats
             });
         }
 
@@ -159,7 +161,7 @@ public class UpgradePremiumToOrganizationCommand(
             Name = organizationName,
             BillingEmail = user.Email,
             PlanType = targetPlan.Type,
-            Seats = seats,
+            Seats = initialSeats,
             MaxCollections = targetPlan.PasswordManager.MaxCollections,
             MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
