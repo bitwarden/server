@@ -1,28 +1,28 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Billing.Services;
 
+/// <summary>
+/// Manages eligibility evaluation for subscription discounts.
+/// </summary>
 public interface ISubscriptionDiscountService
 {
     /// <summary>
-    /// Validates whether a user is eligible for a specific discount coupon with a specific audience type during subscription creation.
+    /// Retrieves all active discounts the user is eligible for.
     /// </summary>
-    /// <param name="user">The user attempting to use the discount.</param>
-    /// <param name="stripeCouponId">The Stripe coupon ID to validate.</param>
-    /// <param name="expectedAudienceType">The expected audience type the discount must target.</param>
-    /// <returns>
-    /// <see langword="true"/> if the discount exists, is currently active, matches the expected audience type, and the user meets eligibility criteria;
-    /// otherwise, <see langword="false"/>.
-    /// </returns>
-    /// <remarks>
-    /// This method performs server-side validation to ensure:
-    /// <list type="bullet">
-    /// <item>The discount exists in the database</item>
-    /// <item>The discount is within its valid date range</item>
-    /// <item>The discount's audience type matches the expected audience type</item>
-    /// <item>The user meets the audience targeting criteria for the discount</item>
-    /// </list>
-    /// </remarks>
-    Task<bool> ValidateDiscountForUserAsync(User user, string stripeCouponId, DiscountAudienceType expectedAudienceType);
+    /// <param name="user">The user to evaluate discount eligibility for.</param>
+    /// <returns>The collection of <see cref="DiscountEligibility"/> records pairing each eligible discount with its tier eligibility matrix.</returns>
+    Task<IEnumerable<DiscountEligibility>> GetEligibleDiscountsAsync(User user);
+
+    /// <summary>
+    /// Performs a server-side eligibility recheck for a specific coupon before subscription creation,
+    /// confirming the coupon exists, is active, and the user still qualifies for it on the specified tier.
+    /// </summary>
+    /// <param name="user">The user to validate eligibility for.</param>
+    /// <param name="coupon">The Stripe coupon ID to validate.</param>
+    /// <param name="tierType">The product tier the user intends to subscribe to.</param>
+    /// <returns><see langword="true"/> if the discount exists and the user is eligible for the given tier; otherwise <see langword="false"/>.</returns>
+    Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType);
 }

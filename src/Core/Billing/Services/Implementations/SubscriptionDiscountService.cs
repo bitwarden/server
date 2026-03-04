@@ -1,84 +1,70 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services.DiscountAudienceFilters;
+using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Entities;
-using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
+/// <inheritdoc />
 public class SubscriptionDiscountService(
     ISubscriptionDiscountRepository subscriptionDiscountRepository,
-    IStripeAdapter stripeAdapter,
-    IPricingClient pricingClient) : ISubscriptionDiscountService
+    IDiscountAudienceFilterFactory discountAudienceFilterFactory) : ISubscriptionDiscountService
 {
-    public async Task<bool> ValidateDiscountForUserAsync(User user, string stripeCouponId, DiscountAudienceType expectedAudienceType)
+    /// <inheritdoc />
+    public async Task<IEnumerable<DiscountEligibility>> GetEligibleDiscountsAsync(User user)
     {
-        var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(stripeCouponId);
+        var activeDiscounts = await subscriptionDiscountRepository.GetActiveDiscountsAsync();
+        var eligibleDiscounts = new List<DiscountEligibility>();
 
-        if (discount == null)
+        foreach (var discount in activeDiscounts)
         {
-            return false;
-        }
-
-        var now = DateTime.UtcNow;
-        if (now < discount.StartDate || now > discount.EndDate)
-        {
-            return false;
-        }
-
-        // AllUsers discounts have no audience restrictions - accept for all users
-        if (discount.AudienceType == DiscountAudienceType.AllUsers)
-        {
-            return true;
-        }
-
-        if (discount.AudienceType != expectedAudienceType)
-        {
-            return false;
-        }
-
-        return discount.AudienceType switch
-        {
-            DiscountAudienceType.UserHasNoPreviousSubscriptions =>
-                await UserHasNoPreviousSubscriptionsAsync(user),
-            _ => false
-        };
-    }
-
-    private async Task<bool> UserHasNoPreviousSubscriptionsAsync(User user)
-    {
-        // Check current premium status
-        if (user.Premium || !string.IsNullOrEmpty(user.GatewaySubscriptionId))
-        {
-            return false;
-        }
-
-        // If user has no Stripe customer, they can't have had past subscriptions
-        if (string.IsNullOrEmpty(user.GatewayCustomerId))
-        {
-            return true;
-        }
-
-        // Get all premium plans (including legacy) from pricing service
-        var premiumPlans = await pricingClient.ListPremiumPlans();
-        var premiumPriceIds = premiumPlans.Select(p => p.Seat.StripePriceId).ToHashSet();
-
-        // Check for any past premium subscriptions in Stripe
-        var subscriptions = await stripeAdapter.ListSubscriptionsAsync(new SubscriptionListOptions
-        {
-            Customer = user.GatewayCustomerId,
-            Expand = ["data.items.data.price"]
-        });
-
-        // Check if any subscription contains premium price IDs
-        foreach (var subscription in subscriptions.Data)
-        {
-            if (subscription.Items.Data.Any(item => premiumPriceIds.Contains(item.Price.Id)))
+            var tierEligibility = await GetTierEligibilityAsync(user, discount);
+            // If tierEligibility is null, it means no filter is configured for the discount's audience type,
+            // so we skip it since we can't determine eligibility. If it's not null, we check
+            // if the user is eligible for at least one tier before adding it to the results.
+            if (tierEligibility is not null && tierEligibility.Values.Any(isEligible => isEligible))
             {
-                return false;
+                eligibleDiscounts.Add(new DiscountEligibility(discount, tierEligibility));
             }
         }
 
-        return true;
+        return eligibleDiscounts;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType)
+    {
+        var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(coupon);
+        if (discount == null || !IsDiscountActive(discount))
+        {
+            return false;
+        }
+
+        var tierEligibility = await GetTierEligibilityAsync(user, discount);
+        return tierEligibility is not null && tierEligibility[tierType];
+    }
+
+    /// <summary>
+    /// Returns the per-tier eligibility matrix for the given <paramref name="user"/> and <paramref name="discount"/>,
+    /// or <see langword="null"/> if no filter is configured for the discount's audience type.
+    /// </summary>
+    private async Task<IDictionary<DiscountTierType, bool>?> GetTierEligibilityAsync(
+        User user, SubscriptionDiscount discount)
+    {
+        var filter = discountAudienceFilterFactory.GetFilter(discount.AudienceType);
+        return filter is not null ? await filter.IsUserEligible(user, discount) : null;
+    }
+
+    /// <summary>
+    /// Checks if a discount is currently active based on its start and end dates.
+    /// </summary>
+    /// <param name="discount">The discount to check.</param>
+    /// <returns><see langword="true"/> if the current time is within the discount's valid date range; otherwise, <see langword="false"/>.</returns>
+    private static bool IsDiscountActive(SubscriptionDiscount discount)
+    {
+        var now = DateTime.UtcNow;
+        return now >= discount.StartDate && now <= discount.EndDate;
     }
 }

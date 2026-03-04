@@ -51,7 +51,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
         ICollectionRepository collectionRepository,
-        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator, ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+        ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -91,7 +92,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             throw new BadRequestException(error);
         }
 
-        await CreateDefaultCollectionAsync(orgUser, organization, defaultUserCollectionName);
+        await CreateManyDefaultCollectionsAsync(organization, [orgUser], defaultUserCollectionName);
 
         return orgUser;
     }
@@ -108,14 +109,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             .Select(r => r.Item1)
             .ToList();
 
-        if (confirmedOrganizationUsers.Count == 1)
-        {
-            await CreateDefaultCollectionAsync(confirmedOrganizationUsers.Single(), organization, defaultUserCollectionName);
-        }
-        else if (confirmedOrganizationUsers.Count > 1)
-        {
-            await CreateManyDefaultCollectionsAsync(organization, confirmedOrganizationUsers, defaultUserCollectionName);
-        }
+        await CreateManyDefaultCollectionsAsync(organization, confirmedOrganizationUsers, defaultUserCollectionName);
 
         return result;
     }
@@ -278,38 +272,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     /// <summary>
-    /// Creates a default collection for a single user if required by the Organization Data Ownership policy.
-    /// </summary>
-    /// <param name="organizationUser">The organization user who has just been confirmed.</param>
-    /// <param name="organization">The organization.</param>
-    /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
-    private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, Organization organization, string defaultUserCollectionName)
-    {
-        // Skip if no collection name provided (backwards compatibility)
-        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
-        {
-            return;
-        }
-
-        // Skip if organization has disabled My Items
-        if (!organization.UseMyItems)
-        {
-            return;
-        }
-
-        var organizationDataOwnershipPolicy = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
-        if (!organizationDataOwnershipPolicy.RequiresDefaultCollectionOnConfirm(organizationUser.OrganizationId))
-        {
-            return;
-        }
-
-        await _collectionRepository.CreateDefaultCollectionsAsync(
-            organizationUser.OrganizationId,
-            [organizationUser.Id],
-            defaultUserCollectionName);
-    }
-
-    /// <summary>
     /// Creates default collections for multiple users if required by the Organization Data Ownership policy.
     /// </summary>
     /// <param name="organization">The organization.</param>
@@ -330,12 +292,17 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var policyEligibleOrganizationUserIds = await _policyRequirementQuery
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id);
+        var confirmedUserIds = confirmedOrganizationUsers
+            .Select(s => s.UserId!.Value)
+            .ToList();
 
-        var eligibleOrganizationUserIds = confirmedOrganizationUsers
-            .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
-            .Select(ou => ou.Id)
+        var policiesForUsers = await _policyRequirementQuery
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(confirmedUserIds);
+
+        var eligibleOrganizationUserIds = policiesForUsers
+            .Select(x => x.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
             .ToList();
 
         if (eligibleOrganizationUserIds.Count == 0)

@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -9,437 +8,244 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
-using Stripe;
 using Xunit;
-using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
-using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 
 namespace Bit.Core.Test.Billing.Services;
 
 [SutProviderCustomize]
 public class SubscriptionDiscountServiceTests
 {
-    private static List<PremiumPlan> CreateTestPremiumPlans()
+    private static IDictionary<DiscountTierType, bool> DiscountDictionary(bool eligibilitySetting)
+        => Enum.GetValues<DiscountTierType>().ToDictionary(t => t, _ => eligibilitySetting);
+
+    [Theory, BitAutoData]
+    public async Task GetEligibleDiscountsAsync_NoActiveDiscounts_ReturnsEmpty(
+        User user,
+        SutProvider<SubscriptionDiscountService> sutProvider)
     {
-        return new List<PremiumPlan>
-        {
-            new PremiumPlan
-            {
-                Name = "Premium",
-                LegacyYear = null,
-                Available = true,
-                Seat = new PremiumPurchasable
-                {
-                    StripePriceId = "premium-annually",
-                    Price = 10m,
-                    Provided = 1
-                },
-                Storage = new PremiumPurchasable
-                {
-                    StripePriceId = "personal-storage-gb-annually",
-                    Price = 4m,
-                    Provided = 1
-                }
-            },
-            new PremiumPlan
-            {
-                Name = "Premium Legacy",
-                LegacyYear = 2020,
-                Available = false,
-                Seat = new PremiumPurchasable
-                {
-                    StripePriceId = "premium-annually-2020",
-                    Price = 10m,
-                    Provided = 1
-                },
-                Storage = new PremiumPurchasable
-                {
-                    StripePriceId = "personal-storage-gb-annually-2020",
-                    Price = 4m,
-                    Provided = 1
-                }
-            }
-        };
+        // Arrange
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetActiveDiscountsAsync()
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
+
+        // Assert
+        Assert.Empty(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_DiscountNotFound_ReturnsFalse(
+    public async Task GetEligibleDiscountsAsync_AllUsersDiscount_ReturnsDiscount(
         User user,
-        string stripeCouponId,
+        SubscriptionDiscount discount,
         SutProvider<SubscriptionDiscountService> sutProvider)
     {
+        // Arrange
+        discount.AudienceType = DiscountAudienceType.AllUsers;
+
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
+            .GetActiveDiscountsAsync()
+            .Returns([discount]);
+
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(filter);
+
+        // Act
+        var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
+
+        // Assert
+        Assert.Contains(result, e => e.Discount == discount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetEligibleDiscountsAsync_UserIsEligibleForDiscount_ReturnsDiscount(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        discount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetActiveDiscountsAsync()
+            .Returns([discount]);
+
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(filter);
+
+        // Act
+        var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
+
+        // Assert
+        Assert.Contains(result, e => e.Discount == discount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetEligibleDiscountsAsync_UserIsIneligibleForDiscount_ReturnsEmpty(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        discount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetActiveDiscountsAsync()
+            .Returns([discount]);
+
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(false));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(filter);
+
+        // Act
+        var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
+
+        // Assert
+        Assert.DoesNotContain(result, e => e.Discount == discount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetEligibleDiscountsAsync_NoFilterForAudienceType_ReturnsEmpty(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        discount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetActiveDiscountsAsync()
+            .Returns([discount]);
+
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .ReturnsNull();
 
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        // Act
+        var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
 
+        // Assert
+        Assert.DoesNotContain(result, e => e.Discount == discount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetEligibleDiscountsAsync_MixedDiscounts_ReturnsOnlyEligible(
+        User user,
+        SubscriptionDiscount allUsersDiscount,
+        SubscriptionDiscount eligibleDiscount,
+        SubscriptionDiscount ineligibleDiscount,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        allUsersDiscount.AudienceType = DiscountAudienceType.AllUsers;
+        eligibleDiscount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+        ineligibleDiscount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetActiveDiscountsAsync()
+            .Returns([allUsersDiscount, eligibleDiscount, ineligibleDiscount]);
+
+        var allUsersFilter = Substitute.For<IDiscountAudienceFilter>();
+        allUsersFilter.IsUserEligible(user, allUsersDiscount).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(allUsersFilter);
+
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, eligibleDiscount).Returns(DiscountDictionary(true));
+        filter.IsUserEligible(user, ineligibleDiscount).Returns(DiscountDictionary(false));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(filter);
+
+        // Act
+        var result = await sutProvider.Sut.GetEligibleDiscountsAsync(user);
+
+        // Assert
+        Assert.Contains(result, e => e.Discount == allUsersDiscount);
+        Assert.Contains(result, e => e.Discount == eligibleDiscount);
+        Assert.DoesNotContain(result, e => e.Discount == ineligibleDiscount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountEligibilityForUserAsync_CouponNotFound_ReturnsFalse(
+        User user,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync("invalid")
+            .ReturnsNull();
+
+        // Act
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, "invalid", DiscountTierType.Premium);
+
+        // Assert
         Assert.False(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_DiscountNotYetActive_ReturnsFalse(
+    public async Task ValidateDiscountEligibilityForUserAsync_CouponFound_UserIsEligible_ReturnsTrue(
         User user,
-        string stripeCouponId,
+        SubscriptionDiscount discount,
         SutProvider<SubscriptionDiscountService> sutProvider)
     {
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
+        // Arrange
+        discount.AudienceType = DiscountAudienceType.AllUsers;
+        discount.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount.EndDate = DateTime.UtcNow.AddDays(30);
 
         sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
+            .GetByStripeCouponIdAsync(discount.StripeCouponId)
             .Returns(discount);
 
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(true));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.AllUsers)
+            .Returns(filter);
 
+        // Act
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Premium);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateDiscountEligibilityForUserAsync_CouponFound_UserIsNotEligible_ReturnsFalse(
+        User user,
+        SubscriptionDiscount discount,
+        SutProvider<SubscriptionDiscountService> sutProvider)
+    {
+        // Arrange
+        discount.AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions;
+        discount.StartDate = DateTime.UtcNow.AddDays(-1);
+        discount.EndDate = DateTime.UtcNow.AddDays(30);
+
+        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
+            .GetByStripeCouponIdAsync(discount.StripeCouponId)
+            .Returns(discount);
+
+        var filter = Substitute.For<IDiscountAudienceFilter>();
+        filter.IsUserEligible(user, discount).Returns(DiscountDictionary(false));
+        sutProvider.GetDependency<IDiscountAudienceFilterFactory>()
+            .GetFilter(DiscountAudienceType.UserHasNoPreviousSubscriptions)
+            .Returns(filter);
+
+        // Act
+        var result = await sutProvider.Sut.ValidateDiscountEligibilityForUserAsync(user, discount.StripeCouponId, DiscountTierType.Families);
+
+        // Assert
         Assert.False(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_DiscountExpired_ReturnsFalse(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(-30),
-            EndDate = DateTime.UtcNow.AddDays(-1)
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.False(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_UserHasCurrentPremiumSubscription_ReturnsFalse(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.False(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_UserHasPastPremiumSubscription_ReturnsFalse(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = false;
-        user.GatewaySubscriptionId = null;
-        user.GatewayCustomerId = "cus_123";
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        var premiumPlans = CreateTestPremiumPlans();
-
-        var canceledPremiumSubscription = new Subscription
-        {
-            Id = "sub_old",
-            Status = "canceled",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new()
-                    {
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
-            }
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        sutProvider.GetDependency<IPricingClient>()
-            .ListPremiumPlans()
-            .Returns(premiumPlans);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts =>
-                opts.Customer == user.GatewayCustomerId))
-            .Returns(new StripeList<Subscription>
-            {
-                Data = new List<Subscription> { canceledPremiumSubscription }
-            });
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.False(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_UserHasNoPremiumSubscriptions_ReturnsTrue(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = false;
-        user.GatewaySubscriptionId = null;
-        user.GatewayCustomerId = "cus_123";
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        var premiumPlans = CreateTestPremiumPlans();
-
-        var nonPremiumSubscription = new Subscription
-        {
-            Id = "sub_org",
-            Status = "active",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new()
-                    {
-                        Price = new Price { Id = "teams-org-monthly" }
-                    }
-                }
-            }
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        sutProvider.GetDependency<IPricingClient>()
-            .ListPremiumPlans()
-            .Returns(premiumPlans);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts =>
-                opts.Customer == user.GatewayCustomerId))
-            .Returns(new StripeList<Subscription>
-            {
-                Data = new List<Subscription> { nonPremiumSubscription }
-            });
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.True(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_UserHasNoStripeCustomer_ReturnsTrue(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = false;
-        user.GatewaySubscriptionId = null;
-        user.GatewayCustomerId = null;
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.True(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_UserHasNoSubscriptions_ReturnsTrue(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = false;
-        user.GatewaySubscriptionId = null;
-        user.GatewayCustomerId = "cus_123";
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        var premiumPlans = CreateTestPremiumPlans();
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        sutProvider.GetDependency<IPricingClient>()
-            .ListPremiumPlans()
-            .Returns(premiumPlans);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .ListSubscriptionsAsync(Arg.Is<SubscriptionListOptions>(opts =>
-                opts.Customer == user.GatewayCustomerId))
-            .Returns(new StripeList<Subscription>
-            {
-                Data = new List<Subscription>()
-            });
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.True(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_AudienceTypeMismatch_ReturnsFalse(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = false;
-        user.GatewaySubscriptionId = null;
-        user.GatewayCustomerId = null;
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.UserHasNoPreviousSubscriptions,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        // Pass a different audience type than what the discount has
-        // Note: This currently will fail because there's only one enum value
-        // This test is future-proof for when more audience types are added
-        const DiscountAudienceType differentAudienceType = (DiscountAudienceType)999;
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, differentAudienceType);
-
-        Assert.False(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_AllUsers_NewUser_ReturnsTrue(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = false;
-        user.GatewaySubscriptionId = null;
-        user.GatewayCustomerId = null;
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.AllUsers,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.True(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_AllUsers_ExistingPremiumUser_ReturnsTrue(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.AllUsers,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.True(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateDiscountForUserAsync_AllUsers_UserWithPastSubscription_ReturnsTrue(
-        User user,
-        string stripeCouponId,
-        SutProvider<SubscriptionDiscountService> sutProvider)
-    {
-        user.Premium = false;
-        user.GatewaySubscriptionId = null;
-        user.GatewayCustomerId = "cus_123";
-
-        var discount = new SubscriptionDiscount
-        {
-            StripeCouponId = stripeCouponId,
-            AudienceType = DiscountAudienceType.AllUsers,
-            StartDate = DateTime.UtcNow.AddDays(-1),
-            EndDate = DateTime.UtcNow.AddDays(30)
-        };
-
-        sutProvider.GetDependency<ISubscriptionDiscountRepository>()
-            .GetByStripeCouponIdAsync(stripeCouponId)
-            .Returns(discount);
-
-        var result = await sutProvider.Sut.ValidateDiscountForUserAsync(user, stripeCouponId, DiscountAudienceType.UserHasNoPreviousSubscriptions);
-
-        Assert.True(result);
     }
 }

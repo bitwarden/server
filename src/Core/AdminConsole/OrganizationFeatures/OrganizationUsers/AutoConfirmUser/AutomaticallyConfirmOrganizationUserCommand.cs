@@ -103,7 +103,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         !string.IsNullOrWhiteSpace(request.DefaultUserCollectionName)
         && request.Organization!.UseMyItems
         && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(request.OrganizationUser!.UserId!.Value))
-            .RequiresDefaultCollectionOnConfirm(request.Organization!.Id);
+            .GetDefaultCollectionRequestOnConfirm(request.Organization!.Id).ShouldCreateDefaultCollection;
 
     private async Task PushSyncOrganizationKeysAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)
     {
@@ -191,7 +191,7 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
         }
         else
         {
-            await mailService.SendOrganizationConfirmedEmailAsync(organization.Name, userEmail, accessSecretsManager);
+            await mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
         }
     }
 }
