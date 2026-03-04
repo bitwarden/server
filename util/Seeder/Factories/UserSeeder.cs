@@ -11,7 +11,7 @@ internal static class UserSeeder
 {
     internal const string DefaultPassword = "asdfasdfasdf";
 
-    internal static User Create(
+    internal static (User user, UserKeys keys) Create(
         string email,
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService,
@@ -45,6 +45,6 @@ internal static class UserSeeder
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
 
-        return user;
+        return (user, keys);
     }
 }
