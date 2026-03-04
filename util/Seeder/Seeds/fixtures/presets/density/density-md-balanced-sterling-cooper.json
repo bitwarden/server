@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Sterling Cooper",
+    "domain": "sterlingcooper.example",
+    "planType": "enterprise-annually",
+    "seats": 300
+  },
+  "users": { "count": 250, "realisticStatusMix": true },
+  "groups": { "count": 50 },
+  "collections": { "count": 500 },
+  "density": {
+    "membership": { "shape": "powerLaw", "skew": 0.6 },
+    "collectionFanOut": { "min": 1, "max": 5, "shape": "powerLaw", "emptyGroupRate": 0.1 },
+    "directAccessRatio": 0.5,
+    "permissions": { "readOnly": 0.55, "readWrite": 0.20, "manage": 0.15, "hidePasswords": 0.10 },
+    "cipherAssignment": { "skew": "heavyRight", "orphanRate": 0.08 }
+  },
+  "ciphers": { "count": 5000 }
+}

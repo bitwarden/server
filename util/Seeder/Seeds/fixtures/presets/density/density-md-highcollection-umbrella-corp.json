@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Umbrella Corp",
+    "domain": "umbrellacorp.example",
+    "planType": "enterprise-annually",
+    "seats": 250
+  },
+  "users": { "count": 200, "realisticStatusMix": true },
+  "groups": { "count": 8 },
+  "collections": { "count": 800 },
+  "density": {
+    "membership": { "shape": "megaGroup", "skew": 0.5 },
+    "collectionFanOut": { "min": 1, "max": 3, "shape": "frontLoaded" },
+    "directAccessRatio": 0.9,
+    "permissions": { "readWrite": 0.50, "manage": 0.20, "readOnly": 0.20, "hidePasswords": 0.10 },
+    "cipherAssignment": { "skew": "heavyRight", "orphanRate": 0.2 }
+  },
+  "ciphers": { "count": 3000 }
+}

@@ -68,6 +68,8 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Validation presets**: `Seeds/fixtures/presets/validation/` contains presets that verify density algorithms produce correct distributions. See the README in that folder for queries and expected results.
 
+**Density presets**: `Seeds/fixtures/presets/density/` contains 9 production-calibrated preset profiles across 5 tiers (XS, S, M, L, XL). See the README in that folder for the full catalog and verification queries.
+
 ## The Recipe Contract
 
 Recipes follow strict rules:

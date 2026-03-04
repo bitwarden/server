@@ -47,11 +47,12 @@ See: `fixtures/ciphers/enterprise-basic.json`
 
 Presets **wire everything together**: org + roster + ciphers. You can reference fixtures by name or generate data with counts.
 
-Three styles:
+Four styles:
 
 - **Fixture-based**: `enterprise-basic.json` — references org, roster, and cipher fixtures
 - **Generated**: `wonka-teams-small.json` — uses `count` parameters to create users, groups, collections, ciphers
 - **Feature-specific**: `tde-enterprise.json`, `policy-enterprise.json` — adds SSO config, policies
+- **Density-calibrated**: `density/` subfolder — production-calibrated presets across 5 tiers (XS/S/M/L/XL) with density blocks controlling group membership, collection fan-out, permission distribution, and cipher assignment patterns
 
 Presets can also define inline orgs (name + domain right in the preset) instead of referencing a fixture — see `large-enterprise.json`.
 
