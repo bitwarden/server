@@ -46,11 +46,17 @@ public class SubscriptionDiscountService(
         }
 
         // Validate Stripe-native coupon properties (validity)
-        if (!await IsStripeCouponValidAsync(coupon))
+        var isValid = await IsStripeCouponValidAsync(coupon);
+        if (isValid == false)
         {
             logger.LogWarning("Deleting expired coupon {CouponId} from our table - discount is no longer active",
                 discount.Id);
             await subscriptionDiscountRepository.DeleteAsync(discount);
+            return false;
+        }
+
+        if (isValid == null)
+        {
             return false;
         }
 
@@ -85,7 +91,7 @@ public class SubscriptionDiscountService(
     /// </summary>
     /// <param name="couponId">The Stripe coupon ID to validate.</param>
     /// <returns><see langword="true"/> if the coupon is valid in Stripe; otherwise, <see langword="false"/>.</returns>
-    private async Task<bool> IsStripeCouponValidAsync(string couponId)
+    private async Task<bool?> IsStripeCouponValidAsync(string couponId)
     {
         try
         {
@@ -97,7 +103,7 @@ public class SubscriptionDiscountService(
         catch
         {
             // If we can't fetch the coupon from Stripe, consider it invalid
-            return false;
+            return null;
         }
     }
 }
