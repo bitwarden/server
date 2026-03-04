@@ -40,7 +40,7 @@ public class SubscriptionDiscountService(
     public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType)
     {
         var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(coupon);
-        if (discount == null  || !IsDiscountActive(discount))
+        if (discount == null || !IsDiscountActive(discount))
         {
             return false;
         }
