@@ -85,4 +85,14 @@ public class DensityProfile
     /// Fraction of org ciphers with no collection assignment (0.0-1.0).
     /// </summary>
     public double OrphanCipherRate { get; init; }
+
+    /// <summary>
+    /// Fraction of non-orphan ciphers assigned to more than one collection (0.0-1.0).
+    /// </summary>
+    public double MultiCollectionRate { get; init; }
+
+    /// <summary>
+    /// Maximum number of collections a multi-collection cipher can belong to.
+    /// </summary>
+    public int MaxCollectionsPerCipher { get; init; } = 2;
 }

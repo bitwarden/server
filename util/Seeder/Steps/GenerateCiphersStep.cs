@@ -118,6 +118,27 @@ internal sealed class GenerateCiphersStep(
                         CollectionId = collectionId
                     });
                 }
+
+                if (_density.MultiCollectionRate > 0 && collectionIds.Count > 1)
+                {
+                    var multiCount = (int)(nonOrphanCount * _density.MultiCollectionRate);
+                    for (var i = 0; i < multiCount; i++)
+                    {
+                        var primaryIndex = collectionCiphers[i].CollectionId == collectionIds[0]
+                            ? 0
+                            : collectionIds.IndexOf(collectionCiphers[i].CollectionId);
+                        var extraCount = 1 + (i % Math.Max(_density.MaxCollectionsPerCipher - 1, 1));
+                        for (var j = 0; j < extraCount; j++)
+                        {
+                            var secondaryIndex = (primaryIndex + 1 + j) % collectionIds.Count;
+                            collectionCiphers.Add(new CollectionCipher
+                            {
+                                CipherId = ciphers[i].Id,
+                                CollectionId = collectionIds[secondaryIndex]
+                            });
+                        }
+                    }
+                }
             }
         }
 

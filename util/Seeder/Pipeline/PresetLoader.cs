@@ -140,6 +140,8 @@ internal static class PresetLoader
             PermissionDistribution = ParsePermissions(preset.Permissions),
             CipherSkew = ParseEnum(preset.CipherAssignment?.Skew, CipherCollectionSkew.Uniform),
             OrphanCipherRate = preset.CipherAssignment?.OrphanRate ?? 0,
+            MultiCollectionRate = preset.CipherAssignment?.MultiCollectionRate ?? 0,
+            MaxCollectionsPerCipher = preset.CipherAssignment?.MaxCollectionsPerCipher ?? 2,
             UserCollectionMin = preset.UserCollections?.Min ?? 1,
             UserCollectionMax = preset.UserCollections?.Max ?? 3,
             UserCollectionShape = ParseEnum(preset.UserCollections?.Shape, CollectionFanOutShape.Uniform),

@@ -98,4 +98,8 @@ internal record SeedPresetCipherAssignment
     public string? Skew { get; init; }
 
     public double? OrphanRate { get; init; }
+
+    public double? MultiCollectionRate { get; init; }
+
+    public int? MaxCollectionsPerCipher { get; init; }
 }

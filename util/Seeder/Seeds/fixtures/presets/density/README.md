@@ -230,7 +230,7 @@ dotnet run -- seed --preset density.density-xs-central-perk --mangle
 | Orphan ciphers        | 0 of 200 (0% orphan rate).                                                   |
 | Direct access ratio   | 0.8 — ~80% of access paths are direct CollectionUser.                        |
 | Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                            |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                       |
+| Multi-collection rate | 20% of 200 non-orphan ciphers in 2 collections. ~40 multi-collection ciphers. |
 
 ### 2. Planet Express (S — Small Balanced)
 
@@ -247,7 +247,7 @@ dotnet run -- seed --preset density.density-sm-balanced-planet-express --mangle
 | Orphan ciphers        | ~37 of 750 (5% orphan rate).                                                   |
 | Direct access ratio   | 0.7 — ~70% of access paths are direct CollectionUser.                          |
 | Collections per user  | PowerLaw 1-5 (skew 0.3). First users get up to 5, most get 1-2. CV > 0.3.     |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                         |
+| Multi-collection rate | 15% of ~713 non-orphan ciphers in 2 collections. ~107 multi-collection ciphers.|
 
 ### 3. Bluth Company (S — Small Hierarchical)
 
@@ -264,7 +264,7 @@ dotnet run -- seed --preset density.density-sm-highperm-bluth-company --mangle
 | Orphan ciphers        | ~75 of 500 (15% orphan rate).                                                  |
 | Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                          |
 | Collections per user  | Uniform 1-3. Min=1, Max=3, Avg=2.                                              |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                         |
+| Multi-collection rate | 10% of ~425 non-orphan ciphers in 2 collections. ~42 multi-collection ciphers.  |
 
 ### 4. Sterling Cooper (M — Mid-Market Balanced)
 
@@ -282,7 +282,7 @@ dotnet run -- seed --preset density.density-md-balanced-sterling-cooper --mangle
 | Direct access ratio   | 0.5 — roughly even split between direct and group-mediated access.       |
 | Empty group rate      | ~26% — ~13 of 50 groups have 0 members due to power-law tail truncation. |
 | Collections per user  | PowerLaw 1-10 (skew 0.5). First users get up to 10, most get 1-2. CV > 0.5. |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                   |
+| Multi-collection rate | 20% of ~4,600 non-orphan ciphers in 2-3 collections. Max 3 per cipher.   |
 
 ### 5. Umbrella Corp (M — Collection-Heavy)
 
@@ -299,7 +299,7 @@ dotnet run -- seed --preset density.density-md-highcollection-umbrella-corp --ma
 | Orphan ciphers        | ~600 of 3,000 (20% orphan rate).                                                                        |
 | Direct access ratio   | 0.9 — ~90% of access paths are direct CollectionUser.                                                   |
 | Collections per user  | PowerLaw 1-15 (skew 0.6). First users get up to 15, most get 1-2. CV > 0.5.                             |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                                                   |
+| Multi-collection rate | 25% of ~2,400 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                   |
 
 ### 6. Wayne Enterprises (L — Large Balanced)
 
@@ -317,7 +317,7 @@ dotnet run -- seed --preset density.density-lg-balanced-wayne-enterprises --mang
 | Direct access ratio   | 0.5 — roughly even split between direct and group-mediated access.             |
 | Empty group rate      | ~30% — ~30 of 100 groups have 0 members due to power-law tail truncation.      |
 | Collections per user  | PowerLaw 1-25 (skew 0.6). First users get up to 25, most get 1-2. CV > 0.5.   |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                         |
+| Multi-collection rate | 25% of ~9,000 non-orphan ciphers in 2-4 collections. Max 4 per cipher.         |
 
 ### 7. Tyrell Corp (L — High Permission Density)
 
@@ -335,7 +335,7 @@ dotnet run -- seed --preset density.density-lg-highperm-tyrell-corp --mangle
 | Direct access ratio   | 0.6 — ~60% of access paths are direct CollectionUser.                            |
 | Empty group rate      | 20% — ~15 of 75 groups have 0 members and are excluded from fan-out.             |
 | Collections per user  | PowerLaw 1-30 (skew 0.7). First users get up to 30, most get 1-2. CV > 0.5.     |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                           |
+| Multi-collection rate | 30% of ~14,450 non-orphan ciphers in 2-4 collections. Max 4 per cipher.          |
 
 ### 8. Weyland-Yutani (XL — Mega Corp, Many Groups)
 
@@ -353,7 +353,7 @@ dotnet run -- seed --preset density.density-xl-highperm-weyland-yutani --mangle
 | Direct access ratio   | 0.4 — majority of access is group-mediated.                                          |
 | Empty group rate      | ~68% — ~341 of 500 groups have 0 members due to power-law tail truncation.           |
 | Collections per user  | PowerLaw 1-50 (skew 0.8). First users get up to 50, most get 1-2. CV > 0.5.         |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                               |
+| Multi-collection rate | 30% of ~13,500 non-orphan ciphers in 2-5 collections. Max 5 per cipher.              |
 
 ### 9. Buy n Large (XL — Mega Corp, Many Collections)
 
@@ -370,4 +370,4 @@ dotnet run -- seed --preset density.density-xl-highcollection-buy-n-large --mang
 | Orphan ciphers        | ~12,750 of 15,000 (85% orphan rate).                                                                        |
 | Direct access ratio   | 1.0 — 100% of access paths are direct CollectionUser (all users get individual records).                    |
 | Collections per user  | PowerLaw 1-20 (skew 0.5). First users get up to 20, most get 1. CV > 0.2.                                  |
-| Multi-collection rate | 0 — no multiCollectionRate configured.                                                                      |
+| Multi-collection rate | 15% of ~2,250 non-orphan ciphers in 2-3 collections. Max 3 per cipher.                                      |

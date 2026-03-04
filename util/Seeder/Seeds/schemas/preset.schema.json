@@ -280,6 +280,18 @@
               "minimum": 0.0,
               "maximum": 1.0,
               "description": "Fraction of org ciphers with no collection assignment."
+            },
+            "multiCollectionRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of non-orphan ciphers assigned to more than one collection. Default: 0."
+            },
+            "maxCollectionsPerCipher": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "Maximum number of collections a multi-collection cipher can belong to. Default: 2."
             }
           }
         },

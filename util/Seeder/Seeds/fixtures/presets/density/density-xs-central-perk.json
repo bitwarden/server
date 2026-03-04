@@ -14,7 +14,7 @@
     "collectionFanOut": { "min": 1, "max": 2, "shape": "uniform" },
     "directAccessRatio": 0.8,
     "permissions": { "manage": 0.50, "readWrite": 0.40, "readOnly": 0.10 },
-    "cipherAssignment": { "skew": "uniform", "orphanRate": 0.0 },
+    "cipherAssignment": { "skew": "uniform", "orphanRate": 0.0, "multiCollectionRate": 0.20, "maxCollectionsPerCipher": 2 },
     "userCollections": { "min": 1, "max": 3, "shape": "uniform" }
   },
   "ciphers": { "count": 200 }
