@@ -161,12 +161,13 @@ public class EmergencyAccessService : IEmergencyAccessService
         return emergencyAccess;
     }
 
-    public async Task DeleteAsync(Guid emergencyAccessId, Guid grantorId)
+    // TODO: remove with PM-31327 when we migrate to the command. 
+    public async Task DeleteAsync(Guid emergencyAccessId, Guid userId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);
-        // TODO PM-19438/PM-21687
-        // Not sure why the GrantorId and the GranteeId are supposed to be the same?
-        if (emergencyAccess == null || (emergencyAccess.GrantorId != grantorId && emergencyAccess.GranteeId != grantorId))
+
+        // Error if the emergency access doesn't exist or the user trying to delete is neither the grantor nor the grantee
+        if (emergencyAccess == null || (emergencyAccess.GrantorId != userId && emergencyAccess.GranteeId != userId))
         {
             throw new BadRequestException("Emergency Access not valid.");
         }

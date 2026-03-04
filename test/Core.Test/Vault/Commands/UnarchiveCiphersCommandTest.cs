@@ -43,7 +43,7 @@ public class UnarchiveCiphersCommandTest
                 : ids.All(id => cipherList.Contains(cipher))),
             user.Id);
         await sutProvider.GetDependency<IPushNotificationService>().Received(pushNotificationsCalls)
-            .PushSyncCiphersAsync(user.Id);
+            .PushSyncCiphersAsync(user.Id, true);
     }
 
     [Theory]
