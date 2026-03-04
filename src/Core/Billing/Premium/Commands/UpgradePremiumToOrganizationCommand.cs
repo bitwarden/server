@@ -247,7 +247,6 @@ public class UpgradePremiumToOrganizationCommand(
     /// <param name="taxId"> The tax ID to add, including the type and value.</param>
     private async Task AddTaxIdToCustomerAsync(User user, TaxID taxId)
     {
-
         await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
             new TaxIdCreateOptions { Type = taxId.Code, Value = taxId.Value });
 
