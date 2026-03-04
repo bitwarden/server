@@ -4,16 +4,13 @@ using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Subscriptions.Entities;
 using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Entities;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
 /// <inheritdoc />
 public class SubscriptionDiscountService(
     ISubscriptionDiscountRepository subscriptionDiscountRepository,
-    IDiscountAudienceFilterFactory discountAudienceFilterFactory,
-    IStripeAdapter stripeAdapter,
-    ILogger<SubscriptionDiscountService> logger) : ISubscriptionDiscountService
+    IDiscountAudienceFilterFactory discountAudienceFilterFactory) : ISubscriptionDiscountService
 {
     /// <inheritdoc />
     public async Task<IEnumerable<DiscountEligibility>> GetEligibleDiscountsAsync(User user)
@@ -45,21 +42,6 @@ public class SubscriptionDiscountService(
             return false;
         }
 
-        // Validate Stripe-native coupon properties (validity)
-        var isValid = await IsStripeCouponValidAsync(coupon);
-        if (isValid == false)
-        {
-            logger.LogWarning("Deleting expired coupon {CouponId} from our table - discount is no longer active",
-                discount.Id);
-            await subscriptionDiscountRepository.DeleteAsync(discount);
-            return false;
-        }
-
-        if (isValid == null)
-        {
-            return false;
-        }
-
         var tierEligibility = await GetTierEligibilityAsync(user, discount);
         return tierEligibility is not null && tierEligibility[tierType];
     }
@@ -84,26 +66,5 @@ public class SubscriptionDiscountService(
     {
         var now = DateTime.UtcNow;
         return now >= discount.StartDate && now <= discount.EndDate;
-    }
-
-    /// <summary>
-    /// Validates Stripe-native coupon properties including expiration date, redemption limits, and validity flag.
-    /// </summary>
-    /// <param name="couponId">The Stripe coupon ID to validate.</param>
-    /// <returns><see langword="true"/> if the coupon is valid in Stripe; otherwise, <see langword="false"/>.</returns>
-    private async Task<bool?> IsStripeCouponValidAsync(string couponId)
-    {
-        try
-        {
-            var stripeCoupon = await stripeAdapter.GetCouponAsync(couponId);
-
-            // Check if coupon has been marked invalid in Stripe
-            return stripeCoupon?.Valid == true;
-        }
-        catch
-        {
-            // If we can't fetch the coupon from Stripe, consider it invalid
-            return null;
-        }
     }
 }
