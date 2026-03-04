@@ -310,6 +310,48 @@
               "description": "Skew intensity for powerLaw shape. Ignored for uniform/frontLoaded. Default: 0."
             }
           }
+        },
+        "cipherTypes": {
+          "type": "object",
+          "description": "Cipher type distribution for generated ciphers. Use 'preset' for a named distribution or specify custom weights per type.",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "type": "string",
+              "enum": ["realistic", "loginOnly", "documentationHeavy", "developerFocused"],
+              "description": "Named cipher type distribution. Mutually exclusive with custom weights."
+            },
+            "login": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for Login ciphers. All custom weights must sum to 1.0."
+            },
+            "secureNote": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for SecureNote ciphers."
+            },
+            "card": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for Card ciphers."
+            },
+            "identity": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for Identity ciphers."
+            },
+            "sshKey": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for SSH Key ciphers."
+            }
+          }
         }
       }
     }

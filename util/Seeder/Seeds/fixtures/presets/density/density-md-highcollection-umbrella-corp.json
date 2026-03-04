@@ -15,7 +15,8 @@
     "directAccessRatio": 0.9,
     "permissions": { "readWrite": 0.50, "manage": 0.20, "readOnly": 0.20, "hidePasswords": 0.10 },
     "cipherAssignment": { "skew": "heavyRight", "orphanRate": 0.2 },
-    "userCollections": { "min": 1, "max": 15, "shape": "powerLaw", "skew": 0.6 }
+    "userCollections": { "min": 1, "max": 15, "shape": "powerLaw", "skew": 0.6 },
+    "cipherTypes": { "preset": "documentationHeavy" }
   },
   "ciphers": { "count": 3000 }
 }

@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Data.Distributions;
+﻿using Bit.Core.Vault.Enums;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -143,6 +144,7 @@ internal static class PresetLoader
             UserCollectionMax = preset.UserCollections?.Max ?? 3,
             UserCollectionShape = ParseEnum(preset.UserCollections?.Shape, CollectionFanOutShape.Uniform),
             UserCollectionSkew = preset.UserCollections?.Skew ?? 0,
+            CipherTypeDistribution = ParseCipherTypes(preset.CipherTypes),
         };
     }
 
@@ -169,6 +171,44 @@ internal static class PresetLoader
             (PermissionWeight.ReadWrite, readWrite),
             (PermissionWeight.Manage, manage),
             (PermissionWeight.HidePasswords, hidePasswords));
+    }
+
+    private static Distribution<CipherType>? ParseCipherTypes(SeedPresetCipherTypes? cipherTypes)
+    {
+        if (cipherTypes is null)
+        {
+            return null;
+        }
+
+        if (cipherTypes.Preset is not null)
+        {
+            return cipherTypes.Preset.ToLowerInvariant() switch
+            {
+                "realistic" => CipherTypeDistributions.Realistic,
+                "loginonly" => CipherTypeDistributions.LoginOnly,
+                "documentationheavy" => CipherTypeDistributions.DocumentationHeavy,
+                "developerfocused" => CipherTypeDistributions.DeveloperFocused,
+                _ => CipherTypeDistributions.Realistic,
+            };
+        }
+
+        var login = cipherTypes.Login ?? 0;
+        var secureNote = cipherTypes.SecureNote ?? 0;
+        var card = cipherTypes.Card ?? 0;
+        var identity = cipherTypes.Identity ?? 0;
+        var sshKey = cipherTypes.SshKey ?? 0;
+
+        if (login + secureNote + card + identity + sshKey < 0.001)
+        {
+            return null;
+        }
+
+        return new Distribution<CipherType>(
+            (CipherType.Login, login),
+            (CipherType.SecureNote, secureNote),
+            (CipherType.Card, card),
+            (CipherType.Identity, identity),
+            (CipherType.SSHKey, sshKey));
     }
 
     private static T ParseEnum<T>(string? value, T defaultValue) where T : struct, Enum =>

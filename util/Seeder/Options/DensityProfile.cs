@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Data.Distributions;
+﻿using Bit.Core.Vault.Enums;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 
 namespace Bit.Seeder.Options;
@@ -69,6 +70,11 @@ public class DensityProfile
     /// Skew intensity for PowerLaw user-collection shape (0.0-1.0). Ignored for Uniform/FrontLoaded.
     /// </summary>
     public double UserCollectionSkew { get; init; }
+
+    /// <summary>
+    /// Cipher type distribution override. When null, falls through to Realistic.
+    /// </summary>
+    public Distribution<CipherType>? CipherTypeDistribution { get; init; }
 
     /// <summary>
     /// Cipher-to-collection assignment skew shape.

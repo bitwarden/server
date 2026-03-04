@@ -43,7 +43,7 @@ internal sealed class GenerateCiphersStep(
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
         var collectionIds = context.Registry.CollectionIds;
-        var typeDistribution = typeDist ?? CipherTypeDistributions.Realistic;
+        var typeDistribution = typeDist ?? _density?.CipherTypeDistribution ?? CipherTypeDistributions.Realistic;
         var passwordDistribution = pwDist ?? PasswordDistributions.Realistic;
         var companies = Companies.All;
 

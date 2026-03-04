@@ -16,6 +16,26 @@ internal record SeedPresetDensity
     public SeedPresetCipherAssignment? CipherAssignment { get; init; }
 
     public SeedPresetUserCollections? UserCollections { get; init; }
+
+    public SeedPresetCipherTypes? CipherTypes { get; init; }
+}
+
+/// <summary>
+/// Cipher type distribution: a named preset or custom weights per type.
+/// </summary>
+internal record SeedPresetCipherTypes
+{
+    public string? Preset { get; init; }
+
+    public double? Login { get; init; }
+
+    public double? SecureNote { get; init; }
+
+    public double? Card { get; init; }
+
+    public double? Identity { get; init; }
+
+    public double? SshKey { get; init; }
 }
 
 /// <summary>

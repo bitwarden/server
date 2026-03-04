@@ -208,6 +208,8 @@ FROM (
 | density-xl-highcollection-buy-n-large  | XL   | Mega corp, many collections | 10,000 | 5      | 12,000      | 15,000  | enterprise-annually |
 
 > **Note:** The XS preset uses `families-annually` plan, which sets `UseGroups = false` on the org entity. The Seeder creates groups regardless, but the Bitwarden web vault UI will not display groups for families-plan orgs.
+>
+> **Cipher types:** Most presets use the default `realistic` distribution (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40% Login, 40% SecureNote) and Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
 
 ---
 
