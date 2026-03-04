@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;
@@ -17,7 +18,7 @@ namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 public class CreateWebAuthnLoginCredentialCommandTests
 {
     [Theory, BitAutoData]
-    internal async Task ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<CreateWebAuthnLoginCredentialCommand> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
+    internal async Task ExceedsExistingCredentialsLimit_ReturnsCredentialLimitReached(SutProvider<CreateWebAuthnLoginCredentialCommand> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
     {
         // Arrange
         var existingCredentials = credentialGenerator.Take(CreateWebAuthnLoginCredentialCommand.MaxCredentialsPerUser).ToList();
@@ -27,7 +28,8 @@ public class CreateWebAuthnLoginCredentialCommandTests
         var result = await sutProvider.Sut.CreateWebAuthnLoginCredentialAsync(user, "name", options, response, false, null, null, null);
 
         // Assert
-        Assert.Null(result);
+        Assert.True(result.IsError);
+        Assert.IsType<CredentialLimitReached>(result.AsError);
         await sutProvider.GetDependency<IWebAuthnCredentialRepository>().DidNotReceive().CreateAsync(Arg.Any<WebAuthnCredential>());
     }
 
@@ -45,7 +47,7 @@ public class CreateWebAuthnLoginCredentialCommandTests
         var result = await sutProvider.Sut.CreateWebAuthnLoginCredentialAsync(user, "name", options, response, false, null, null, null);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IWebAuthnCredentialRepository>().Received().CreateAsync(Arg.Any<WebAuthnCredential>());
     }
 

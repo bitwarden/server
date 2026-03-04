@@ -193,10 +193,10 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_ExpiredToken_ThrowsBadRequestException(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    public async Task Post_ExpiredToken_ThrowsBadRequestException(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, User otherUser, SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange
-        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
+        // Arrange - token belongs to a different user, so TokenIsValid returns false
+        var token = new WebAuthnCredentialCreateOptionsTokenable(otherUser, createOptions);
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(default)
             .ReturnsForAnyArgs(user);
@@ -238,7 +238,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_CredentialCreationFailed_ThrowsBadRequestException(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    public async Task Post_CredentialLimitReached_ThrowsBadRequestExceptionWithKey(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
         var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
@@ -247,13 +247,15 @@ public class WebAuthnControllerTests
             .ReturnsForAnyArgs(user);
         sutProvider.GetDependency<ICreateWebAuthnLoginCredentialCommand>()
             .CreateWebAuthnLoginCredentialAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
-            .Returns((WebAuthnCredential)null);
+            .Returns(new CredentialLimitReached());
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Post(requestModel));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Post(requestModel));
+        Assert.NotNull(exception.ModelState);
+        Assert.True(exception.ModelState.ContainsKey(nameof(CredentialLimitReached)));
     }
 
     [Theory, BitAutoData]

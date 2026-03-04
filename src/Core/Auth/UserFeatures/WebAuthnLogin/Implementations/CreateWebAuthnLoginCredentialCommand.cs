@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -22,12 +23,12 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
-    public async Task<WebAuthnCredential> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
+    public async Task<CommandResult<WebAuthnCredential>> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existingCredentials.Count >= MaxCredentialsPerUser)
         {
-            return null;
+            return new CredentialLimitReached();
         }
 
         var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);

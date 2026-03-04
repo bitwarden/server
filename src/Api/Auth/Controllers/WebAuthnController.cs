@@ -119,13 +119,17 @@ public class WebAuthnController : Controller
             throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
         }
 
-        var credential = await _createWebAuthnLoginCredentialCommand.CreateWebAuthnLoginCredentialAsync(user, model.Name, tokenable.Options, model.DeviceResponse, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey);
-        if (credential == null)
+        var result = await _createWebAuthnLoginCredentialCommand.CreateWebAuthnLoginCredentialAsync(user, model.Name, tokenable.Options, model.DeviceResponse, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey);
+        if (result.IsError)
         {
-            throw new BadRequestException("Unable to complete WebAuthn registration.");
+            throw result.AsError switch
+            {
+                CredentialLimitReached limitError => new BadRequestException(nameof(CredentialLimitReached), limitError.Message),
+                var other => new BadRequestException(other.Message)
+            };
         }
 
-        return new WebAuthnCredentialResponseModel(credential);
+        return new WebAuthnCredentialResponseModel(result.AsSuccess);
     }
 
     private async Task ValidateRequireSsoPolicyDisabledOrNotApplicable(Guid userId)
