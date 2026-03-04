@@ -18,6 +18,9 @@ public class UpgradePremiumToOrganizationRequestTests
         {
             OrganizationName = "Test Organization",
             Key = "encrypted-key",
+            PublicKey = "public-key",
+            EncryptedPrivateKey = "encrypted-private-key",
+            CollectionName = "Default Collection",
             TargetProductTierType = tierType,
             BillingAddress = new CheckoutBillingAddressRequest
             {
@@ -27,11 +30,14 @@ public class UpgradePremiumToOrganizationRequestTests
         };
 
         // Act
-        var (organizationName, key, planType, billingAddress) = sut.ToDomain();
+        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = sut.ToDomain();
 
         // Assert
         Assert.Equal("Test Organization", organizationName);
         Assert.Equal("encrypted-key", key);
+        Assert.Equal("public-key", publicKey);
+        Assert.Equal("encrypted-private-key", encryptedPrivateKey);
+        Assert.Equal("Default Collection", collectionName);
         Assert.Equal(expectedPlanType, planType);
         Assert.Equal("US", billingAddress.Country);
         Assert.Equal("12345", billingAddress.PostalCode);
@@ -47,6 +53,8 @@ public class UpgradePremiumToOrganizationRequestTests
         {
             OrganizationName = "Test Organization",
             Key = "encrypted-key",
+            PublicKey = "public-key",
+            EncryptedPrivateKey = "encrypted-private-key",
             TargetProductTierType = tierType,
             BillingAddress = new CheckoutBillingAddressRequest
             {
