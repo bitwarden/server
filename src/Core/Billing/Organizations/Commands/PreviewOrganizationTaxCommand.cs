@@ -133,7 +133,7 @@ public class PreviewOrganizationTaxCommand(
                         var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
                             user,
                             purchase.Coupon.Trim(),
-                            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+                            DiscountTierType.Families);
 
                         if (isValid)
                         {

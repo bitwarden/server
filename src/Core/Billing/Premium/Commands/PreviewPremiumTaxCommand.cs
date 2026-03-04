@@ -68,7 +68,7 @@ public class PreviewPremiumTaxCommand(
                 var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
                     user,
                     preview.Coupon.Trim(),
-                    DiscountAudienceType.UserHasNoPreviousSubscriptions);
+                    DiscountTierType.Premium);
 
                 if (isValid)
                 {

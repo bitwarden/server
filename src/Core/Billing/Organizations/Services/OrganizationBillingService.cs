@@ -50,7 +50,7 @@ public class OrganizationBillingService(
                 var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
                     owner,
                     customerSetup.Coupon.Trim(),
-                    DiscountAudienceType.UserHasNoPreviousSubscriptions);
+                    DiscountTierType.Families);
 
                 if (isValid)
                 {

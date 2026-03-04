@@ -304,7 +304,7 @@ public class OrganizationBillingServiceTests
             .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "VALID_COUPON",
-                DiscountAudienceType.UserHasNoPreviousSubscriptions)
+                DiscountTierType.Families)
             .Returns(true);
 
         sutProvider.GetDependency<IHasPaymentMethodQuery>()
@@ -342,7 +342,7 @@ public class OrganizationBillingServiceTests
             .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "VALID_COUPON",
-                DiscountAudienceType.UserHasNoPreviousSubscriptions);
+                DiscountTierType.Families);
 
         await sutProvider.GetDependency<IStripeAdapter>()
             .Received(1)
@@ -397,7 +397,7 @@ public class OrganizationBillingServiceTests
             .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "INVALID_COUPON",
-                DiscountAudienceType.UserHasNoPreviousSubscriptions)
+                DiscountTierType.Families)
             .Returns(false);
 
         sutProvider.GetDependency<IHasPaymentMethodQuery>()
@@ -435,7 +435,7 @@ public class OrganizationBillingServiceTests
             .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "INVALID_COUPON",
-                DiscountAudienceType.UserHasNoPreviousSubscriptions);
+                DiscountTierType.Families);
 
         // Verify subscription IS created without the coupon (no discounts applied)
         await sutProvider.GetDependency<IStripeAdapter>()
@@ -518,7 +518,7 @@ public class OrganizationBillingServiceTests
         // Assert - Validation should NOT be called
         await sutProvider.GetDependency<ISubscriptionDiscountService>()
             .DidNotReceive()
-            .ValidateDiscountEligibilityForUserAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<DiscountAudienceType>());
+            .ValidateDiscountEligibilityForUserAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<DiscountTierType>());
 
         // Subscription should still be created
         await sutProvider.GetDependency<IStripeAdapter>()
@@ -573,7 +573,7 @@ public class OrganizationBillingServiceTests
             .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "EXPIRED_COUPON",
-                DiscountAudienceType.UserHasNoPreviousSubscriptions)
+                DiscountTierType.Families)
             .Returns(false);
 
         sutProvider.GetDependency<IHasPaymentMethodQuery>()
@@ -611,7 +611,7 @@ public class OrganizationBillingServiceTests
             .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "EXPIRED_COUPON",
-                DiscountAudienceType.UserHasNoPreviousSubscriptions);
+                DiscountTierType.Families);
 
         // Subscription should still be created without the coupon
         await sutProvider.GetDependency<IStripeAdapter>()

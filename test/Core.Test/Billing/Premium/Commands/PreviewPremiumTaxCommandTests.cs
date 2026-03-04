@@ -391,7 +391,7 @@ public class PreviewPremiumTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_COUPON_CODE",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+            DiscountTierType.Premium).Returns(true);
 
         var invoice = new Invoice
         {
@@ -430,7 +430,7 @@ public class PreviewPremiumTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "STORAGE_DISCOUNT",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+            DiscountTierType.Premium).Returns(true);
 
         var invoice = new Invoice
         {
@@ -471,7 +471,7 @@ public class PreviewPremiumTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "WHITESPACE_COUPON",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+            DiscountTierType.Premium).Returns(true);
 
         var invoice = new Invoice
         {
@@ -592,7 +592,7 @@ public class PreviewPremiumTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_DISCOUNT",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+            DiscountTierType.Premium).Returns(true);
 
         var invoice = new Invoice
         {
@@ -612,7 +612,7 @@ public class PreviewPremiumTaxCommandTests
         await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_DISCOUNT",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+            DiscountTierType.Premium);
 
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.Discounts != null &&
@@ -629,7 +629,7 @@ public class PreviewPremiumTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
+            DiscountTierType.Premium).Returns(false);
 
         var invoice = new Invoice
         {
@@ -649,7 +649,7 @@ public class PreviewPremiumTaxCommandTests
         await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+            DiscountTierType.Premium);
 
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.Discounts == null || options.Discounts.Count == 0));
@@ -665,7 +665,7 @@ public class PreviewPremiumTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "NEW_USER_ONLY",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
+            DiscountTierType.Premium).Returns(false);
 
         var invoice = new Invoice
         {
@@ -685,7 +685,7 @@ public class PreviewPremiumTaxCommandTests
         await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "NEW_USER_ONLY",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+            DiscountTierType.Premium);
 
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.Discounts == null || options.Discounts.Count == 0));

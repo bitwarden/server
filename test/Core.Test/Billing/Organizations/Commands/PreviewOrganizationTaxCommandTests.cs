@@ -2058,7 +2058,7 @@ public class PreviewOrganizationTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_FAMILIES_DISCOUNT",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
+            DiscountTierType.Families).Returns(true);
 
         var invoice = new Invoice
         {
@@ -2078,7 +2078,7 @@ public class PreviewOrganizationTaxCommandTests
         await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_FAMILIES_DISCOUNT",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+            DiscountTierType.Families);
 
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
             options.Discounts != null &&
@@ -2114,7 +2114,7 @@ public class PreviewOrganizationTaxCommandTests
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
+            DiscountTierType.Families).Returns(false);
 
         var invoice = new Invoice
         {
@@ -2134,7 +2134,7 @@ public class PreviewOrganizationTaxCommandTests
         await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
-            DiscountAudienceType.UserHasNoPreviousSubscriptions);
+            DiscountTierType.Families);
 
         // Verify invalid coupon is silently ignored (no discount applied)
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
@@ -2193,7 +2193,7 @@ public class PreviewOrganizationTaxCommandTests
         await _subscriptionDiscountService.DidNotReceive().ValidateDiscountEligibilityForUserAsync(
             Arg.Any<User>(),
             Arg.Any<string>(),
-            Arg.Any<DiscountAudienceType>());
+            Arg.Any<DiscountTierType>());
 
         // Verify coupon is ignored for Teams plans (no discounts applied)
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
@@ -2252,7 +2252,7 @@ public class PreviewOrganizationTaxCommandTests
         await _subscriptionDiscountService.DidNotReceive().ValidateDiscountEligibilityForUserAsync(
             Arg.Any<User>(),
             Arg.Any<string>(),
-            Arg.Any<DiscountAudienceType>());
+            Arg.Any<DiscountTierType>());
 
         // Verify coupon is ignored for Enterprise plans (no discounts applied)
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
