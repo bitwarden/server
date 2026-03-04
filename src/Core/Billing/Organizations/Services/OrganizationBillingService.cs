@@ -52,10 +52,11 @@ public class OrganizationBillingService(
                     customerSetup.Coupon.Trim(),
                     DiscountTierType.Families);
 
-                if (isValid)
+                if (!isValid)
                 {
-                    validatedCoupon = customerSetup.Coupon.Trim();
+                    throw new BadRequestException("Discount expired. Please review your cart total and try again");
                 }
+                validatedCoupon = customerSetup.Coupon.Trim();
             }
         }
 
