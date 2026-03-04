@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Premium.Commands;
@@ -1246,7 +1246,7 @@ public class UpgradePremiumToOrganizationCommandTests
         };
 
         // Act
-        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key","Default Collection", PlanType.TeamsAnnually, billingAddress);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
         Assert.True(result.IsT0);
@@ -1305,7 +1305,7 @@ public class UpgradePremiumToOrganizationCommandTests
         };
 
         // Act
-        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key","Default Collection", PlanType.TeamsAnnually, billingAddress);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
         Assert.True(result.IsT0);
@@ -1368,7 +1368,7 @@ public class UpgradePremiumToOrganizationCommandTests
         };
 
         // Act
-        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key","Default Collection", PlanType.TeamsAnnually, billingAddress);
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
         Assert.True(result.IsT0);
