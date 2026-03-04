@@ -8,6 +8,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
@@ -351,7 +352,7 @@ public class OrganizationBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task Finalize_WithInvalidCoupon_IgnoresCouponAndProceeds(
+    public async Task Finalize_WithInvalidCoupon_ThrowsBadRequestException(
         Organization organization,
         User owner,
         SutProvider<OrganizationBillingService> sutProvider)
@@ -414,22 +415,10 @@ public class OrganizationBillingServiceTests
             .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
-            .Returns(new Subscription
-            {
-                Id = "sub_test123",
-                Status = StripeConstants.SubscriptionStatus.Active
-            });
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Finalize(sale));
+        Assert.Equal("Discount expired. Please review your cart total and try again", exception.Message);
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .ReplaceAsync(organization)
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await sutProvider.Sut.Finalize(sale);
-
-        // Assert
         await sutProvider.GetDependency<ISubscriptionDiscountService>()
             .Received(1)
             .ValidateDiscountEligibilityForUserAsync(
@@ -437,11 +426,10 @@ public class OrganizationBillingServiceTests
                 "INVALID_COUPON",
                 DiscountTierType.Families);
 
-        // Verify subscription IS created without the coupon (no discounts applied)
+        // Verify subscription was NOT created
         await sutProvider.GetDependency<IStripeAdapter>()
-            .Received(1)
-            .CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
-                opts.Discounts == null || opts.Discounts.Count == 0));
+            .DidNotReceive()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
     }
 
     [Theory, BitAutoData]
@@ -527,7 +515,7 @@ public class OrganizationBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task Finalize_WithCouponOutsideDateRange_IgnoresCouponAndProceeds(
+    public async Task Finalize_WithCouponOutsideDateRange_ThrowsBadRequestException(
         Organization organization,
         User owner,
         SutProvider<OrganizationBillingService> sutProvider)
@@ -590,22 +578,10 @@ public class OrganizationBillingServiceTests
             .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
-        sutProvider.GetDependency<IStripeAdapter>()
-            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
-            .Returns(new Subscription
-            {
-                Id = "sub_test123",
-                Status = StripeConstants.SubscriptionStatus.Active
-            });
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Finalize(sale));
+        Assert.Equal("Discount expired. Please review your cart total and try again", exception.Message);
 
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .ReplaceAsync(organization)
-            .Returns(Task.CompletedTask);
-
-        // Act
-        await sutProvider.Sut.Finalize(sale);
-
-        // Assert - Validation was called but coupon was rejected due to date range
         await sutProvider.GetDependency<ISubscriptionDiscountService>()
             .Received(1)
             .ValidateDiscountEligibilityForUserAsync(
@@ -613,11 +589,10 @@ public class OrganizationBillingServiceTests
                 "EXPIRED_COUPON",
                 DiscountTierType.Families);
 
-        // Subscription should still be created without the coupon
+        // Verify subscription was NOT created
         await sutProvider.GetDependency<IStripeAdapter>()
-            .Received(1)
-            .CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
-                opts.Discounts == null || opts.Discounts.Count == 0));
+            .DidNotReceive()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
     }
 
     #endregion

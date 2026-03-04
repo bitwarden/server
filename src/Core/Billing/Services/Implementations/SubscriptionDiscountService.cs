@@ -12,6 +12,7 @@ namespace Bit.Core.Billing.Services.Implementations;
 public class SubscriptionDiscountService(
     ISubscriptionDiscountRepository subscriptionDiscountRepository,
     IDiscountAudienceFilterFactory discountAudienceFilterFactory,
+    IStripeAdapter stripeAdapter,
     ILogger<SubscriptionDiscountService> logger) : ISubscriptionDiscountService
 {
     /// <inheritdoc />
@@ -39,12 +40,13 @@ public class SubscriptionDiscountService(
     public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType)
     {
         var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(coupon);
-        if (discount == null)
+        if (discount == null  || !IsDiscountActive(discount))
         {
             return false;
         }
 
-        if (!IsDiscountActive(discount))
+        // Validate Stripe-native coupon properties (validity)
+        if (!await IsStripeCouponValidAsync(coupon))
         {
             logger.LogWarning("Deleting expired coupon {CouponId} from our table - discount is no longer active",
                 discount.Id);
@@ -76,5 +78,26 @@ public class SubscriptionDiscountService(
     {
         var now = DateTime.UtcNow;
         return now >= discount.StartDate && now <= discount.EndDate;
+    }
+
+    /// <summary>
+    /// Validates Stripe-native coupon properties including expiration date, redemption limits, and validity flag.
+    /// </summary>
+    /// <param name="couponId">The Stripe coupon ID to validate.</param>
+    /// <returns><see langword="true"/> if the coupon is valid in Stripe; otherwise, <see langword="false"/>.</returns>
+    private async Task<bool> IsStripeCouponValidAsync(string couponId)
+    {
+        try
+        {
+            var stripeCoupon = await stripeAdapter.GetCouponAsync(couponId);
+
+            // Check if coupon has been marked invalid in Stripe
+            return stripeCoupon?.Valid == true;
+        }
+        catch
+        {
+            // If we can't fetch the coupon from Stripe, consider it invalid
+            return false;
+        }
     }
 }
