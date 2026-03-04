@@ -301,7 +301,7 @@ public class OrganizationBillingServiceTests
             .Returns(plan);
 
         sutProvider.GetDependency<ISubscriptionDiscountService>()
-            .ValidateDiscountForUserAsync(
+            .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "VALID_COUPON",
                 DiscountAudienceType.UserHasNoPreviousSubscriptions)
@@ -339,7 +339,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<ISubscriptionDiscountService>()
             .Received(1)
-            .ValidateDiscountForUserAsync(
+            .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "VALID_COUPON",
                 DiscountAudienceType.UserHasNoPreviousSubscriptions);
@@ -394,7 +394,7 @@ public class OrganizationBillingServiceTests
 
         // Return false to simulate invalid coupon
         sutProvider.GetDependency<ISubscriptionDiscountService>()
-            .ValidateDiscountForUserAsync(
+            .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "INVALID_COUPON",
                 DiscountAudienceType.UserHasNoPreviousSubscriptions)
@@ -432,7 +432,7 @@ public class OrganizationBillingServiceTests
         // Assert
         await sutProvider.GetDependency<ISubscriptionDiscountService>()
             .Received(1)
-            .ValidateDiscountForUserAsync(
+            .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "INVALID_COUPON",
                 DiscountAudienceType.UserHasNoPreviousSubscriptions);
@@ -518,7 +518,7 @@ public class OrganizationBillingServiceTests
         // Assert - Validation should NOT be called
         await sutProvider.GetDependency<ISubscriptionDiscountService>()
             .DidNotReceive()
-            .ValidateDiscountForUserAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<DiscountAudienceType>());
+            .ValidateDiscountEligibilityForUserAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<DiscountAudienceType>());
 
         // Subscription should still be created
         await sutProvider.GetDependency<IStripeAdapter>()
@@ -570,7 +570,7 @@ public class OrganizationBillingServiceTests
 
         // Return false to simulate expired coupon (outside valid date range)
         sutProvider.GetDependency<ISubscriptionDiscountService>()
-            .ValidateDiscountForUserAsync(
+            .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "EXPIRED_COUPON",
                 DiscountAudienceType.UserHasNoPreviousSubscriptions)
@@ -608,7 +608,7 @@ public class OrganizationBillingServiceTests
         // Assert - Validation was called but coupon was rejected due to date range
         await sutProvider.GetDependency<ISubscriptionDiscountService>()
             .Received(1)
-            .ValidateDiscountForUserAsync(
+            .ValidateDiscountEligibilityForUserAsync(
                 owner,
                 "EXPIRED_COUPON",
                 DiscountAudienceType.UserHasNoPreviousSubscriptions);

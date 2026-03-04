@@ -1133,7 +1133,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockCustomer = CreateMockCustomer();
         var mockSubscription = CreateMockActiveSubscription();
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "VALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(user, "VALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(true);
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
@@ -1145,7 +1145,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         // Assert
         Assert.True(result.IsT0);
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "VALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(user, "VALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
             opts.Discounts != null &&
             opts.Discounts.Count == 1 &&
@@ -1169,7 +1169,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "INVALID_COUPON");
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(false);
 
         // Act
@@ -1179,7 +1179,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
         Assert.Equal("Discount expired. Please review your cart and try again.", badRequest.Response);
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(user, "INVALID_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
         await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
@@ -1202,7 +1202,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var subscriptionPurchase = CreateSubscriptionPurchase(paymentMethod, billingAddress, coupon: "NEW_USER_ONLY_COUPON");
 
         // User has previous subscriptions, so they're not eligible
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(false);
 
         // Act
@@ -1212,7 +1212,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
         Assert.Equal("Discount expired. Please review your cart and try again.", badRequest.Response);
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(user, "NEW_USER_ONLY_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
         await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
@@ -1235,7 +1235,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         var mockCustomer = CreateMockCustomer();
         var mockSubscription = CreateMockActiveSubscription();
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(user, "WHITESPACE_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(user, "WHITESPACE_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions)
             .Returns(true);
         _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
@@ -1248,7 +1248,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Assert
         Assert.True(result.IsT0);
         // Verify the coupon was trimmed before validation
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(user, "WHITESPACE_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(user, "WHITESPACE_COUPON", DiscountAudienceType.UserHasNoPreviousSubscriptions);
         // Verify the coupon was trimmed before passing to Stripe
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
             opts.Discounts != null &&

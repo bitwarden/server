@@ -388,7 +388,7 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress();
         var preview = CreatePreview(coupon: "VALID_COUPON_CODE");
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_COUPON_CODE",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
@@ -427,7 +427,7 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress(country: "CA", postalCode: "K1A 0A6");
         var preview = CreatePreview(additionalStorageGb: 5, coupon: "STORAGE_DISCOUNT");
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "STORAGE_DISCOUNT",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
@@ -468,7 +468,7 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress(country: "GB", postalCode: "SW1A 1AA");
         var preview = CreatePreview(coupon: "  WHITESPACE_COUPON  ");
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "WHITESPACE_COUPON",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
@@ -589,7 +589,7 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress();
         var preview = CreatePreview(coupon: "VALID_DISCOUNT");
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_DISCOUNT",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
@@ -609,7 +609,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(2.00m, tax);
         Assert.Equal(22.00m, total);
 
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_DISCOUNT",
             DiscountAudienceType.UserHasNoPreviousSubscriptions);
@@ -626,7 +626,7 @@ public class PreviewPremiumTaxCommandTests
         var billingAddress = CreateBillingAddress();
         var preview = CreatePreview(coupon: "INVALID_COUPON");
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
@@ -646,7 +646,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(3.00m, tax);
         Assert.Equal(33.00m, total);
 
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
             DiscountAudienceType.UserHasNoPreviousSubscriptions);
@@ -662,7 +662,7 @@ public class PreviewPremiumTaxCommandTests
         var preview = CreatePreview(coupon: "NEW_USER_ONLY");
 
         // User has previous subscription, so validation fails
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "NEW_USER_ONLY",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
@@ -682,7 +682,7 @@ public class PreviewPremiumTaxCommandTests
         Assert.Equal(3.00m, tax);
         Assert.Equal(33.00m, total);
 
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "NEW_USER_ONLY",
             DiscountAudienceType.UserHasNoPreviousSubscriptions);

@@ -2055,7 +2055,7 @@ public class PreviewOrganizationTaxCommandTests
         var plan = new FamiliesPlan();
         _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_FAMILIES_DISCOUNT",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(true);
@@ -2075,7 +2075,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(3.00m, tax);
         Assert.Equal(33.00m, total);
 
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "VALID_FAMILIES_DISCOUNT",
             DiscountAudienceType.UserHasNoPreviousSubscriptions);
@@ -2111,7 +2111,7 @@ public class PreviewOrganizationTaxCommandTests
         var plan = new FamiliesPlan();
         _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
 
-        _subscriptionDiscountService.ValidateDiscountForUserAsync(
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
             DiscountAudienceType.UserHasNoPreviousSubscriptions).Returns(false);
@@ -2131,7 +2131,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(3.00m, tax);
         Assert.Equal(33.00m, total);
 
-        await _subscriptionDiscountService.Received(1).ValidateDiscountForUserAsync(
+        await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
             "INVALID_COUPON",
             DiscountAudienceType.UserHasNoPreviousSubscriptions);
@@ -2190,7 +2190,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(33.00m, total);
 
         // Verify coupon validation was NOT called for Teams (only Families plans use coupons)
-        await _subscriptionDiscountService.DidNotReceive().ValidateDiscountForUserAsync(
+        await _subscriptionDiscountService.DidNotReceive().ValidateDiscountEligibilityForUserAsync(
             Arg.Any<User>(),
             Arg.Any<string>(),
             Arg.Any<DiscountAudienceType>());
@@ -2249,7 +2249,7 @@ public class PreviewOrganizationTaxCommandTests
         Assert.Equal(66.00m, total);
 
         // Verify coupon validation was NOT called for Enterprise (only Families plans use coupons)
-        await _subscriptionDiscountService.DidNotReceive().ValidateDiscountForUserAsync(
+        await _subscriptionDiscountService.DidNotReceive().ValidateDiscountEligibilityForUserAsync(
             Arg.Any<User>(),
             Arg.Any<string>(),
             Arg.Any<DiscountAudienceType>());

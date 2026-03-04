@@ -65,7 +65,7 @@ public class PreviewPremiumTaxCommand(
             // Validate coupon and only apply if valid. If invalid, proceed without the discount.
             if (!string.IsNullOrWhiteSpace(preview.Coupon))
             {
-                var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
                     user,
                     preview.Coupon.Trim(),
                     DiscountAudienceType.UserHasNoPreviousSubscriptions);

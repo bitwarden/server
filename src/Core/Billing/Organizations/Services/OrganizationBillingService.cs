@@ -47,7 +47,7 @@ public class OrganizationBillingService(
             // Only Families plans support user-provided coupons
             if (subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families)
             {
-                var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
                     owner,
                     customerSetup.Coupon.Trim(),
                     DiscountAudienceType.UserHasNoPreviousSubscriptions);

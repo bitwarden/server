@@ -130,7 +130,7 @@ public class PreviewOrganizationTaxCommand(
                     // Only Families plans support user-provided coupons
                     if (!string.IsNullOrWhiteSpace(purchase.Coupon) && purchase.Tier == ProductTierType.Families)
                     {
-                        var isValid = await subscriptionDiscountService.ValidateDiscountForUserAsync(
+                        var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
                             user,
                             purchase.Coupon.Trim(),
                             DiscountAudienceType.UserHasNoPreviousSubscriptions);
