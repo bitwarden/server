@@ -5,17 +5,21 @@ using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Admin.Auth.Controllers;
 
 public class LoginController : Controller
 {
     private readonly PasswordlessSignInManager<IdentityUser> _signInManager;
+    private readonly ILogger<LoginController> _logger;
 
     public LoginController(
-        PasswordlessSignInManager<IdentityUser> signInManager)
+        PasswordlessSignInManager<IdentityUser> signInManager,
+        ILogger<LoginController> logger)
     {
         _signInManager = signInManager;
+        _logger = logger;
     }
 
     public IActionResult Index(string returnUrl = null, int? error = null, int? success = null,
@@ -40,7 +44,16 @@ public class LoginController : Controller
     {
         if (ModelState.IsValid)
         {
-            await _signInManager.PasswordlessSignInAsync(model.Email, model.ReturnUrl);
+            try
+            {
+                await _signInManager.PasswordlessSignInAsync(model.Email, model.ReturnUrl);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error sending login email");
+                return RedirectToAction("Index", new { error = 5 });
+            }
+
             return RedirectToAction("Index", new
             {
                 success = 3
@@ -89,6 +102,7 @@ public class LoginController : Controller
             3 => "If a valid admin user with this email address exists, " +
                 "we've sent you an email with a secure link to log in.",
             4 => "Access denied. Please log in.",
+            5 => "There was a problem sending the login email. Please check your mail server configuration.",
             _ => null,
         };
     }
