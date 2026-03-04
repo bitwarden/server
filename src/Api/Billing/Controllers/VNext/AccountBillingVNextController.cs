@@ -30,7 +30,8 @@ public class AccountBillingVNextController(
     IReinstateSubscriptionCommand reinstateSubscriptionCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
     IUpdatePremiumStorageCommand updatePremiumStorageCommand,
-    IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand) : BaseBillingController
+    IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand,
+    IGetApplicableDiscountsQuery getApplicableDiscountsQuery) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -136,4 +137,15 @@ public class AccountBillingVNextController(
         var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, planType, billingAddress);
         return Handle(result);
     }
+
+    [HttpGet("discounts")]
+    [RequireFeature(FeatureFlagKeys.PM29108_EnablePersonalDiscounts)]
+    [InjectUser]
+    public async Task<IResult> GetApplicableDiscountsAsync(
+        [BindNever] User user)
+    {
+        var result = await getApplicableDiscountsQuery.Run(user);
+        return Handle(result);
+    }
+
 }

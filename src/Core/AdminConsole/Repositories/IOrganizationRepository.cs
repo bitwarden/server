@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -66,4 +67,13 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="requestDate">When the action was performed</param>
     /// <returns></returns>
     Task IncrementSeatCountAsync(Guid organizationId, int increaseAmount, DateTime requestDate);
+
+    /// <summary>
+    /// Atomically initializes a pending organization and confirms its first owner user
+    /// within a single transaction. Both updates succeed or fail together.
+    /// </summary>
+    /// <param name="organization">The organization entity with updated properties (enabled, keys, status)</param>
+    /// <param name="confirmOwnerAction">Action to confirm the organization owner, obtained from
+    /// <see cref="IOrganizationUserRepository.BuildConfirmOwnerAction"/></param>
+    Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction);
 }
