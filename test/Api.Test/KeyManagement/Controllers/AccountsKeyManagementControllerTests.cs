@@ -473,6 +473,83 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task PostEnrollToKeyConnectorAsync_UserNull_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        KeyConnectorEnrollmentRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostEnrollToKeyConnectorAsync(data));
+
+        await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostEnrollToKeyConnectorAsync_KeyConnectorKeyWrappedUserKeyMissing_ThrowsBadRequest(
+        SutProvider<AccountsKeyManagementController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(new User());
+
+        var request = new KeyConnectorEnrollmentRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = " "
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostEnrollToKeyConnectorAsync(request));
+
+        Assert.Equal("KeyConnectorKeyWrappedUserKey must be supplied when request body is provided.",
+            exception.Message);
+        await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostEnrollToKeyConnectorAsync_ConvertToKeyConnectorFails_ThrowsBadRequestWithErrorResponse(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser,
+        KeyConnectorEnrollmentRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IUserService>()
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns(IdentityResult.Failed(new IdentityError { Description = "convert to key connector error" }));
+
+        var badRequestException =
+            await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostEnrollToKeyConnectorAsync(data));
+
+        Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
+        Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
+        await sutProvider.GetDependency<IUserService>().Received(1)
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostEnrollToKeyConnectorAsync_ConvertToKeyConnectorSucceeds_OkResponse(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser,
+        KeyConnectorEnrollmentRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IUserService>()
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns(IdentityResult.Success);
+
+        await sutProvider.Sut.PostEnrollToKeyConnectorAsync(data);
+
+        await sutProvider.GetDependency<IUserService>().Received(1)
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task GetKeyConnectorConfirmationDetailsAsync_NoUser_Throws(
         SutProvider<AccountsKeyManagementController> sutProvider, string orgSsoIdentifier)
     {
