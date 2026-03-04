@@ -1,6 +1,9 @@
 ﻿using Bit.Core.Billing.Payment.Clients;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.DiscountAudienceFilters;
+using Bit.Core.Billing.Services.Implementations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Billing.Payment;
@@ -15,7 +18,14 @@ public static class Registrations
         services.AddTransient<IUpdateBillingAddressCommand, UpdateBillingAddressCommand>();
         services.AddTransient<IUpdatePaymentMethodCommand, UpdatePaymentMethodCommand>();
 
+        // Discount services
+        services.AddScoped<IDiscountAudienceFilter, AllUsersFilter>();
+        services.AddScoped<IDiscountAudienceFilter, UserHasNoPreviousSubscriptionsFilter>();
+        services.AddScoped<IDiscountAudienceFilterFactory, DiscountAudienceFilterFactory>();
+        services.AddTransient<ISubscriptionDiscountService, SubscriptionDiscountService>();
+
         // Queries
+        services.AddTransient<IGetApplicableDiscountsQuery, GetApplicableDiscountsQuery>();
         services.AddTransient<IGetBillingAddressQuery, GetBillingAddressQuery>();
         services.AddTransient<IGetCreditQuery, GetCreditQuery>();
         services.AddTransient<IGetPaymentMethodQuery, GetPaymentMethodQuery>();
