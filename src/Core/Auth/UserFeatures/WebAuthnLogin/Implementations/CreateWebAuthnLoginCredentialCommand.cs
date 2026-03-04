@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
@@ -22,7 +19,7 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
-    public async Task<WebAuthnCredential> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
+    public async Task<WebAuthnCredential?> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string? encryptedUserKey = null, string? encryptedPublicKey = null, string? encryptedPrivateKey = null)
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existingCredentials.Count >= MaxCredentialsPerUser)
@@ -34,6 +31,10 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+        if (success.Result == null)
+        {
+            return null;
+        }
 
         var credential = new WebAuthnCredential
         {
