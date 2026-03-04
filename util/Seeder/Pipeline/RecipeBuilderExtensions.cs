@@ -259,7 +259,8 @@ public static class RecipeBuilderExtensions
     public static RecipeBuilder AddPersonalCiphers(
         this RecipeBuilder builder, int countPerUser,
         Distribution<CipherType>? typeDist = null,
-        Distribution<PasswordStrength>? pwDist = null)
+        Distribution<PasswordStrength>? pwDist = null,
+        DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -268,7 +269,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasPersonalCiphers = true;
-        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist));
+        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density));
         return builder;
     }
 

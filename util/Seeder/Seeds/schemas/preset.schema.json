@@ -364,6 +364,18 @@
               "description": "Weight for SSH Key ciphers."
             }
           }
+        },
+        "personalCiphers": {
+          "type": "object",
+          "description": "Personal cipher count distribution per user. Overrides the top-level personalCiphers.countPerUser with a variable distribution.",
+          "additionalProperties": false,
+          "properties": {
+            "shape": {
+              "type": "string",
+              "enum": ["realistic", "lightUsage", "heavyUsage"],
+              "description": "Named distribution for personal cipher counts per user. Default: flat countPerUser."
+            }
+          }
         }
       }
     }

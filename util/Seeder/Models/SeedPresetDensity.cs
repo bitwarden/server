@@ -18,6 +18,16 @@ internal record SeedPresetDensity
     public SeedPresetUserCollections? UserCollections { get; init; }
 
     public SeedPresetCipherTypes? CipherTypes { get; init; }
+
+    public SeedPresetDensityPersonalCiphers? PersonalCiphers { get; init; }
+}
+
+/// <summary>
+/// Personal cipher count distribution per user: a named preset shape.
+/// </summary>
+internal record SeedPresetDensityPersonalCiphers
+{
+    public string? Shape { get; init; }
 }
 
 /// <summary>

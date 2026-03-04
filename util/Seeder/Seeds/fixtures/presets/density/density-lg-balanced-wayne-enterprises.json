@@ -15,7 +15,8 @@
     "directAccessRatio": 0.5,
     "permissions": { "readOnly": 0.82, "readWrite": 0.09, "manage": 0.05, "hidePasswords": 0.04 },
     "cipherAssignment": { "skew": "heavyRight", "orphanRate": 0.1, "multiCollectionRate": 0.25, "maxCollectionsPerCipher": 4 },
-    "userCollections": { "min": 1, "max": 25, "shape": "powerLaw", "skew": 0.6 }
+    "userCollections": { "min": 1, "max": 25, "shape": "powerLaw", "skew": 0.6 },
+    "personalCiphers": { "shape": "realistic" }
   },
   "ciphers": { "count": 10000 }
 }

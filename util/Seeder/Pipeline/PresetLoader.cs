@@ -115,7 +115,11 @@ internal static class PresetLoader
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
         {
-            builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser);
+            builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser, density: density);
+        }
+        else if (density?.PersonalCipherDistribution is not null)
+        {
+            builder.AddPersonalCiphers(0, density: density);
         }
 
         builder.Validate();
@@ -147,6 +151,7 @@ internal static class PresetLoader
             UserCollectionShape = ParseEnum(preset.UserCollections?.Shape, CollectionFanOutShape.Uniform),
             UserCollectionSkew = preset.UserCollections?.Skew ?? 0,
             CipherTypeDistribution = ParseCipherTypes(preset.CipherTypes),
+            PersonalCipherDistribution = ParsePersonalCipherDistribution(preset.PersonalCiphers?.Shape),
         };
     }
 
@@ -211,6 +216,22 @@ internal static class PresetLoader
             (CipherType.Card, card),
             (CipherType.Identity, identity),
             (CipherType.SSHKey, sshKey));
+    }
+
+    private static Distribution<(int Min, int Max)>? ParsePersonalCipherDistribution(string? shape)
+    {
+        if (shape is null)
+        {
+            return null;
+        }
+
+        return shape.ToLowerInvariant() switch
+        {
+            "realistic" => PersonalCipherDistributions.Realistic,
+            "lightusage" => PersonalCipherDistributions.LightUsage,
+            "heavyusage" => PersonalCipherDistributions.HeavyUsage,
+            _ => null,
+        };
     }
 
     private static T ParseEnum<T>(string? value, T defaultValue) where T : struct, Enum =>

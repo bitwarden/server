@@ -95,4 +95,9 @@ public class DensityProfile
     /// Maximum number of collections a multi-collection cipher can belong to.
     /// </summary>
     public int MaxCollectionsPerCipher { get; init; } = 2;
+
+    /// <summary>
+    /// Personal cipher count distribution override. When null, uses flat countPerUser.
+    /// </summary>
+    public Distribution<(int Min, int Max)>? PersonalCipherDistribution { get; init; }
 }

@@ -210,6 +210,8 @@ FROM (
 > **Note:** The XS preset uses `families-annually` plan, which sets `UseGroups = false` on the org entity. The Seeder creates groups regardless, but the Bitwarden web vault UI will not display groups for families-plan orgs.
 >
 > **Cipher types:** Most presets use the default `realistic` distribution (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40% Login, 40% SecureNote) and Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
+>
+> **Personal ciphers:** Three presets use `density.personalCiphers.shape` for variable per-user counts: Sterling Cooper and Wayne Enterprises use `realistic` (30% zero, 25% 1-4, 25% 5-14, 15% 15-49, 5% 50-200), Weyland-Yutani uses `lightUsage` (60% zero, 30% 1-4, 10% 5-14). Use `heavyUsage` only for small/mid orgs — at XL scale (5,000+ users) it produces 300K+ ciphers and will timeout. Other presets have no personal ciphers configured.
 
 ---
 
