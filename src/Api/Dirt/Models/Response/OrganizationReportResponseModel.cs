@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Models.Data;
 
 namespace Bit.Api.Dirt.Models.Response;
 
@@ -13,6 +14,7 @@ public class OrganizationReportResponseModel
     public int? PasswordCount { get; set; }
     public int? PasswordAtRiskCount { get; set; }
     public int? MemberCount { get; set; }
+    public ReportFile? File { get; set; }
     public DateTime? CreationDate { get; set; } = null;
     public DateTime? RevisionDate { get; set; } = null;
 

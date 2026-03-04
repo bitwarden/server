@@ -813,7 +813,7 @@ public class OrganizationReportControllerTests
             .Returns(expectedReport);
 
         // Act
-        var result = await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request);
+        var result = await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -835,7 +835,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null));
 
         // Verify that the command was not called
         await sutProvider.GetDependency<IUpdateOrganizationReportDataCommand>()
@@ -860,7 +860,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null));
 
         Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
 
@@ -887,7 +887,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null));
 
         Assert.Equal("Report ID in the request body must match the route parameter", exception.Message);
 
@@ -918,7 +918,7 @@ public class OrganizationReportControllerTests
             .Returns(expectedReport);
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request);
+        await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null);
 
         // Assert
         await sutProvider.GetDependency<ICurrentContext>()

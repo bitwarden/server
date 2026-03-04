@@ -1,7 +1,6 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
@@ -41,9 +40,7 @@ public class CreateOrganizationReportV2CommandTests
 
         // Assert
         Assert.NotNull(report);
-        Assert.Equal(OrganizationReportType.File, report.Type);
-
-        // ReportData should contain serialized OrganizationReportFileData
+        // ReportData should contain serialized ReportFile
         Assert.NotEmpty(report.ReportData);
         var fileData = report.GetReportFileData();
         Assert.NotNull(fileData);
@@ -59,7 +56,6 @@ public class CreateOrganizationReportV2CommandTests
             .Received(1)
             .CreateAsync(Arg.Is<OrganizationReport>(r =>
                 r.OrganizationId == request.OrganizationId &&
-                r.Type == OrganizationReportType.File &&
                 r.SummaryData == request.SummaryData &&
                 r.ApplicationData == request.ApplicationData &&
                 r.ContentEncryptionKey == "test-encryption-key"));

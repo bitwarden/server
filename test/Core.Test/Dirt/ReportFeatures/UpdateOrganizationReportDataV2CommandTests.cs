@@ -1,6 +1,5 @@
 ﻿using AutoFixture;
 using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
@@ -18,17 +17,17 @@ public class UpdateOrganizationReportDataV2CommandTests
 {
     private static OrganizationReport CreateReportWithFileData(Guid reportId, Guid organizationId, string fileId)
     {
-        var fileData = new OrganizationReportFileData
+        var fileData = new ReportFile
         {
             Id = fileId,
+            FileName = "report-data.json",
             Validated = false
         };
 
         var report = new OrganizationReport
         {
             Id = reportId,
-            OrganizationId = organizationId,
-            Type = OrganizationReportType.File
+            OrganizationId = organizationId
         };
         report.SetReportFileData(fileData);
         return report;

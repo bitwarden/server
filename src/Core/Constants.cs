@@ -268,6 +268,7 @@ public static class FeatureFlagKeys
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     /* DIRT Team */
+    public const string WholeReportDataFileStorage = "pm-31920-whole-report-data-file-storage";
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
     public const string EventManagementForHuntress = "event-management-for-huntress";

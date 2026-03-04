@@ -21,11 +21,12 @@ public class AzureOrganizationReportStorageServiceTests
         return new AzureOrganizationReportStorageService(globalSettings, logger);
     }
 
-    private static OrganizationReportFileData CreateFileData(string fileId = "test-file-id-123")
+    private static ReportFile CreateFileData(string fileId = "test-file-id-123")
     {
-        return new OrganizationReportFileData
+        return new ReportFile
         {
             Id = fileId,
+            FileName = "report-data.json",
             Validated = false
         };
     }
@@ -90,6 +91,18 @@ public class AzureOrganizationReportStorageServiceTests
         Assert.Contains("report-data.json", url);
         Assert.Contains("sig=", url); // SAS signature
         Assert.Contains("sp=", url); // Permissions (should be read-only)
+    }
+
+    [Theory]
+    [InlineData("orgId/03-02-2026/reportId/fileId/report-data.json", "reportId")]
+    [InlineData("abc/01-01-2026/def/ghi/report-data.json", "def")]
+    public void ReportIdFromBlobName_ExtractsReportId(string blobName, string expectedReportId)
+    {
+        // Act
+        var result = AzureOrganizationReportStorageService.ReportIdFromBlobName(blobName);
+
+        // Assert
+        Assert.Equal(expectedReportId, result);
     }
 
     [Fact]

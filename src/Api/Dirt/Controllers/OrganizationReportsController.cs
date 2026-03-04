@@ -1,8 +1,15 @@
-﻿using Bit.Api.Dirt.Models.Response;
+﻿using System.Text.Json;
+using Bit.Api.Dirt.Models.Response;
+using Bit.Api.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
+using Bit.Core.Dirt.Reports.Services;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +30,15 @@ public class OrganizationReportsController : Controller
     private readonly IUpdateOrganizationReportDataCommand _updateOrganizationReportDataCommand;
     private readonly IGetOrganizationReportApplicationDataQuery _getOrganizationReportApplicationDataQuery;
     private readonly IUpdateOrganizationReportApplicationDataCommand _updateOrganizationReportApplicationDataCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationReportStorageService _storageService;
+    private readonly ICreateOrganizationReportV2Command _createV2Command;
+    private readonly IUpdateOrganizationReportDataV2Command _updateDataV2Command;
+    private readonly IGetOrganizationReportDataV2Query _getDataV2Query;
+    private readonly IOrganizationReportRepository _organizationReportRepo;
+    private readonly IValidateOrganizationReportFileCommand _validateCommand;
+    private readonly ILogger<OrganizationReportsController> _logger;
 
     public OrganizationReportsController(
         ICurrentContext currentContext,
@@ -35,8 +51,16 @@ public class OrganizationReportsController : Controller
         IGetOrganizationReportDataQuery getOrganizationReportDataQuery,
         IUpdateOrganizationReportDataCommand updateOrganizationReportDataCommand,
         IGetOrganizationReportApplicationDataQuery getOrganizationReportApplicationDataQuery,
-        IUpdateOrganizationReportApplicationDataCommand updateOrganizationReportApplicationDataCommand
-    )
+        IUpdateOrganizationReportApplicationDataCommand updateOrganizationReportApplicationDataCommand,
+        IFeatureService featureService,
+        IApplicationCacheService applicationCacheService,
+        IOrganizationReportStorageService storageService,
+        ICreateOrganizationReportV2Command createV2Command,
+        IUpdateOrganizationReportDataV2Command updateDataV2Command,
+        IGetOrganizationReportDataV2Query getDataV2Query,
+        IOrganizationReportRepository organizationReportRepo,
+        IValidateOrganizationReportFileCommand validateCommand,
+        ILogger<OrganizationReportsController> logger)
     {
         _currentContext = currentContext;
         _getOrganizationReportQuery = getOrganizationReportQuery;
@@ -49,9 +73,16 @@ public class OrganizationReportsController : Controller
         _updateOrganizationReportDataCommand = updateOrganizationReportDataCommand;
         _getOrganizationReportApplicationDataQuery = getOrganizationReportApplicationDataQuery;
         _updateOrganizationReportApplicationDataCommand = updateOrganizationReportApplicationDataCommand;
+        _featureService = featureService;
+        _applicationCacheService = applicationCacheService;
+        _storageService = storageService;
+        _createV2Command = createV2Command;
+        _updateDataV2Command = updateDataV2Command;
+        _getDataV2Query = getDataV2Query;
+        _organizationReportRepo = organizationReportRepo;
+        _validateCommand = validateCommand;
+        _logger = logger;
     }
-
-    #region Whole OrganizationReport Endpoints
 
     [HttpGet("{organizationId}/latest")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
@@ -70,29 +101,70 @@ public class OrganizationReportsController : Controller
     [HttpGet("{organizationId}/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.WholeReportDataFileStorage))
+        {
+            await AuthorizeV2Async(organizationId);
+
+            var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+
+            if (report.OrganizationId != organizationId)
+            {
+                throw new BadRequestException("Invalid report ID");
+            }
+
+            return Ok(new OrganizationReportResponseModel(report));
+        }
+
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+        var v1Report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
 
-        if (report == null)
+        if (v1Report == null)
         {
             throw new NotFoundException("Report not found for the specified organization.");
         }
 
-        if (report.OrganizationId != organizationId)
+        if (v1Report.OrganizationId != organizationId)
         {
             throw new BadRequestException("Invalid report ID");
         }
 
-        return Ok(report);
+        return Ok(v1Report);
     }
 
     [HttpPost("{organizationId}")]
-    public async Task<IActionResult> CreateOrganizationReportAsync(Guid organizationId, [FromBody] AddOrganizationReportRequest request)
+    public async Task<IActionResult> CreateOrganizationReportAsync(
+        Guid organizationId,
+        [FromBody] AddOrganizationReportRequest request)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.WholeReportDataFileStorage))
+        {
+            if (organizationId == Guid.Empty)
+            {
+                throw new BadRequestException("Organization ID is required.");
+            }
+
+            if (request.OrganizationId != organizationId)
+            {
+                throw new BadRequestException("Organization ID in the request body must match the route parameter");
+            }
+
+            await AuthorizeV2Async(organizationId);
+
+            var report = await _createV2Command.CreateAsync(request);
+            var fileData = report.GetReportFileData()!;
+
+            return Ok(new OrganizationReportV2ResponseModel
+            {
+                ReportDataUploadUrl = await _storageService.GetReportDataUploadUrlAsync(report, fileData),
+                ReportResponse = new OrganizationReportResponseModel(report),
+                FileUploadType = _storageService.FileUploadType
+            });
+        }
+
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
@@ -103,8 +175,8 @@ public class OrganizationReportsController : Controller
             throw new BadRequestException("Organization ID in the request body must match the route parameter");
         }
 
-        var report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
-        var response = report == null ? null : new OrganizationReportResponseModel(report);
+        var v1Report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
+        var response = v1Report == null ? null : new OrganizationReportResponseModel(v1Report);
         return Ok(response);
     }
 
@@ -125,10 +197,6 @@ public class OrganizationReportsController : Controller
         var response = new OrganizationReportResponseModel(updatedReport);
         return Ok(response);
     }
-
-    #endregion
-
-    # region SummaryData Field Endpoints
 
     [HttpGet("{organizationId}/data/summary")]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
@@ -191,9 +259,6 @@ public class OrganizationReportsController : Controller
 
         return Ok(response);
     }
-    #endregion
-
-    #region ReportData Field Endpoints
 
     [HttpGet("{organizationId}/data/report/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportDataAsync(Guid organizationId, Guid reportId)
@@ -214,8 +279,37 @@ public class OrganizationReportsController : Controller
     }
 
     [HttpPatch("{organizationId}/data/report/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportDataAsync(Guid organizationId, Guid reportId, [FromBody] UpdateOrganizationReportDataRequest request)
+    public async Task<IActionResult> UpdateOrganizationReportDataAsync(
+        Guid organizationId,
+        Guid reportId,
+        [FromBody] UpdateOrganizationReportDataRequest request,
+        [FromQuery] string? reportFileId)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.WholeReportDataFileStorage))
+        {
+            if (request.OrganizationId != organizationId || request.ReportId != reportId)
+            {
+                throw new BadRequestException("Organization ID and Report ID must match route parameters");
+            }
+
+            if (string.IsNullOrEmpty(reportFileId))
+            {
+                throw new BadRequestException("ReportFileId query parameter is required");
+            }
+
+            await AuthorizeV2Async(organizationId);
+
+            var uploadUrl = await _updateDataV2Command.GetUploadUrlAsync(request, reportFileId);
+            var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+
+            return Ok(new OrganizationReportV2ResponseModel
+            {
+                ReportDataUploadUrl = uploadUrl,
+                ReportResponse = new OrganizationReportResponseModel(report),
+                FileUploadType = _storageService.FileUploadType
+            });
+        }
+
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
@@ -236,10 +330,6 @@ public class OrganizationReportsController : Controller
 
         return Ok(response);
     }
-
-    #endregion
-
-    #region ApplicationData Field Endpoints
 
     [HttpGet("{organizationId}/data/application/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
@@ -297,5 +387,110 @@ public class OrganizationReportsController : Controller
         }
     }
 
-    #endregion
+    [RequireFeature(FeatureFlagKeys.WholeReportDataFileStorage)]
+    [HttpPost("{organizationId}/{reportId}/file/report-data")]
+    [SelfHosted(SelfHostedOnly = true)]
+    [RequestSizeLimit(Constants.FileSize501mb)]
+    [DisableFormValueModelBinding]
+    public async Task UploadReportDataAsync(Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
+    {
+        await AuthorizeV2Async(organizationId);
+
+        if (!Request?.ContentType?.Contains("multipart/") ?? true)
+        {
+            throw new BadRequestException("Invalid contenwt.");
+        }
+
+        if (string.IsNullOrEmpty(reportFileId))
+        {
+            throw new BadRequestException("ReportFileId query parameter is required");
+        }
+
+        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+        if (report.OrganizationId != organizationId)
+        {
+            throw new BadRequestException("Invalid report ID");
+        }
+
+        var fileData = report.GetReportFileData();
+        if (fileData == null || fileData.Id != reportFileId)
+        {
+            throw new NotFoundException();
+        }
+
+        await Request.GetFileAsync(async (stream) =>
+        {
+            await _storageService.UploadReportDataAsync(report, fileData, stream);
+        });
+
+        var (valid, length) = await _storageService.ValidateFileAsync(report, fileData, 0, Constants.FileSize501mb);
+        if (!valid)
+        {
+            throw new BadRequestException("File received does not match expected constraints.");
+        }
+
+        fileData.Validated = true;
+        fileData.Size = length;
+        report.SetReportFileData(fileData);
+        report.RevisionDate = DateTime.UtcNow;
+        await _organizationReportRepo.ReplaceAsync(report);
+    }
+
+    [AllowAnonymous]
+    [RequireFeature(FeatureFlagKeys.WholeReportDataFileStorage)]
+    [HttpPost("file/validate/azure")]
+    public async Task<ObjectResult> AzureValidateFile()
+    {
+        return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<Azure.Messaging.EventGrid.EventGridEvent, Task>>
+        {
+            {
+                "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
+                {
+                    try
+                    {
+                        var blobName =
+                            eventGridEvent.Subject.Split($"{AzureOrganizationReportStorageService.ContainerName}/blobs/")[1];
+                        var reportId = AzureOrganizationReportStorageService.ReportIdFromBlobName(blobName);
+                        var report = await _organizationReportRepo.GetByIdAsync(new Guid(reportId));
+                        if (report == null)
+                        {
+                            if (_storageService is AzureOrganizationReportStorageService azureStorageService)
+                            {
+                                await azureStorageService.DeleteBlobAsync(blobName);
+                            }
+
+                            return;
+                        }
+
+                        var fileData = report.GetReportFileData();
+                        if (fileData == null)
+                        {
+                            return;
+                        }
+
+                        await _validateCommand.ValidateAsync(report, fileData.Id!);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}",
+                            JsonSerializer.Serialize(eventGridEvent));
+                    }
+                }
+            }
+        });
+    }
+
+    private async Task AuthorizeV2Async(Guid organizationId)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (orgAbility is null || !orgAbility.UseRiskInsights)
+        {
+            throw new BadRequestException("Your organization's plan does not support this feature.");
+        }
+    }
 }

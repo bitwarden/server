@@ -27,6 +27,7 @@ public static class ReportingServiceCollectionExtensions
         // v2 file storage commands
         services.AddScoped<ICreateOrganizationReportV2Command, CreateOrganizationReportV2Command>();
         services.AddScoped<IUpdateOrganizationReportDataV2Command, UpdateOrganizationReportDataV2Command>();
+        services.AddScoped<IValidateOrganizationReportFileCommand, ValidateOrganizationReportFileCommand>();
 
         // v2 file storage queries
         services.AddScoped<IGetOrganizationReportDataV2Query, GetOrganizationReportDataV2Query>();
