@@ -187,19 +187,9 @@ public class DatabaseContext : DbContext
     // Make sure this is called after configuring all the entities as it iterates through all setup entities.
     private void ConfigureDateTimeUtcQueries(ModelBuilder builder)
     {
-        ValueConverter<DateTime, DateTime> converter;
-        if (Database.IsNpgsql())
-        {
-            converter = new ValueConverter<DateTime, DateTime>(
-                v => v,
-                d => new DateTime(d.Ticks, DateTimeKind.Utc));
-        }
-        else
-        {
-            converter = new ValueConverter<DateTime, DateTime>(
-                v => v,
-                v => new DateTime(v.Ticks, DateTimeKind.Utc));
-        }
+        var converter = new ValueConverter<DateTime, DateTime>(
+            v => v,
+            v => new DateTime(v.Ticks, DateTimeKind.Utc));
 
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
