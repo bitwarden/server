@@ -85,6 +85,9 @@ public class UpgradePremiumToOrganizationRequestTests
             OrganizationName = "International Business",
             Key = "encrypted-key",
             TargetProductTierType = tierType,
+            PublicKey = "public-key",
+            EncryptedPrivateKey = "encrypted-private-key",
+            CollectionName = "Default Collection",
             BillingAddress = new CheckoutBillingAddressRequest
             {
                 Country = country,
@@ -98,12 +101,14 @@ public class UpgradePremiumToOrganizationRequestTests
         };
 
         // Act
-        var (organizationName, key, planType, billingAddress) = sut.ToDomain();
+        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = sut.ToDomain();
 
         // Assert
         Assert.Equal("International Business", organizationName);
         Assert.Equal("encrypted-key", key);
-        Assert.Equal(expectedPlanType, planType);
+        Assert.Equal("public-key", publicKey);
+        Assert.Equal("encrypted-private-key", encryptedPrivateKey);
+        Assert.Equal("Default Collection", collectionName);        Assert.Equal(expectedPlanType, planType);
         Assert.Equal(country, billingAddress.Country);
         Assert.Equal(postalCode, billingAddress.PostalCode);
         Assert.NotNull(billingAddress.TaxId);
