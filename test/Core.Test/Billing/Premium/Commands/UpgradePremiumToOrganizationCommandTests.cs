@@ -29,7 +29,8 @@ public class UpgradePremiumToOrganizationCommandTests
             string? stripePlanId = null,
             string? stripeSeatPlanId = null,
             string? stripePremiumAccessPlanId = null,
-            string? stripeStoragePlanId = null)
+            string? stripeStoragePlanId = null,
+            int baseSeats = 1)
         {
             Type = planType;
             ProductTier = ProductTierType.Teams;
@@ -68,7 +69,7 @@ public class UpgradePremiumToOrganizationCommandTests
                 ProviderPortalSeatPrice = 0,
                 AllowSeatAutoscale = true,
                 HasAdditionalSeatsOption = true,
-                BaseSeats = 1,
+                BaseSeats = baseSeats,
                 HasPremiumAccessOption = !string.IsNullOrEmpty(stripePremiumAccessPlanId),
                 PremiumAccessOptionPrice = 0,
                 MaxSeats = null,
@@ -86,8 +87,9 @@ public class UpgradePremiumToOrganizationCommandTests
         string? stripePlanId = null,
         string? stripeSeatPlanId = null,
         string? stripePremiumAccessPlanId = null,
-        string? stripeStoragePlanId = null) =>
-        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId);
+        string? stripeStoragePlanId = null,
+        int baseSeats = 1) =>
+        new TestPlan(planType, stripePlanId, stripeSeatPlanId, stripePremiumAccessPlanId, stripeStoragePlanId, baseSeats);
 
     private static PremiumPlan CreateTestPremiumPlan(
         string seatPriceId = "premium-annually",
@@ -119,7 +121,7 @@ public class UpgradePremiumToOrganizationCommandTests
         return new List<PremiumPlan>
         {
             // Current available plan
-            CreateTestPremiumPlan("premium-annually", "personal-storage-gb-annually", available: true),
+            CreateTestPremiumPlan(available: true),
             // Legacy plan from 2020
             CreateTestPremiumPlan("premium-annually-2020", "personal-storage-gb-annually-2020", available: false)
         };
@@ -308,7 +310,8 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockPlan = CreateTestPlan(
             PlanType.FamiliesAnnually,
             stripePlanId: "families-plan-annually",
-            stripeSeatPlanId: null // Non-seat-based
+            stripeSeatPlanId: null, // Non-seat-based
+            baseSeats: 6
         );
 
         _stripeAdapter.GetSubscriptionAsync("sub_123")
@@ -338,7 +341,8 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Items.Any(i => i.Id == "si_premium" && i.Price == "families-plan-annually" && i.Quantity == 1 && i.Deleted != true)));
 
         await _organizationRepository.Received(1).CreateAsync(Arg.Is<Organization>(o =>
-            o.Name == "My Families Org"));
+            o.Name == "My Families Org" &&
+            o.Seats == 6));
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u =>
             u.Premium == false &&
             u.GatewaySubscriptionId == null));
