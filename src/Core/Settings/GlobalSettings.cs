@@ -144,6 +144,7 @@ public class GlobalSettings : IGlobalSettings
         private string _notifications;
         private string _sso;
         private string _scim;
+        private string _fillAssistRules;
         private string _internalApi;
         private string _internalIdentity;
         private string _internalAdmin;
@@ -193,6 +194,13 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _globalSettings.BuildExternalUri(_scim, "scim");
             set => _scim = value;
+        }
+        // Simple passthrough — not derived from the Vault URL because
+        // this points to an external resource, not a Bitwarden service.
+        public string FillAssistRules
+        {
+            get => _fillAssistRules;
+            set => _fillAssistRules = value;
         }
 
         public string InternalNotifications
