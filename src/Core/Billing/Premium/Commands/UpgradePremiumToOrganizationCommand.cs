@@ -68,7 +68,7 @@ public class UpgradePremiumToOrganizationCommand(
         string encryptedPrivateKey,
         string? collectionName,
         PlanType targetPlanType,
-        BillingAddress billingAddress) => HandleAsync<None>(async () =>
+        BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
