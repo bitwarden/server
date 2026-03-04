@@ -9,7 +9,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_UpdateMasterPassword]
     @KdfParallelism INT = NULL,
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7),
-    @MasterPasswordSalt NVARCHAR(256) = NULL -- NULL for backwards compat.;
+    @MasterPasswordSalt NVARCHAR(256) = NULL -- NULL for backwards compat.
 AS
 BEGIN
     SET NOCOUNT ON
