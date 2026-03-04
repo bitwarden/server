@@ -80,14 +80,25 @@ public class HomeController : Controller
                 var root = jsonDocument.RootElement;
                 return new JsonResult(root.GetProperty("version").GetString());
             }
+
+            _logger.LogWarning(
+                "Failed to fetch installed web version from {RequestUri}. Status code: {StatusCode}",
+                requestUri, response.StatusCode);
         }
         catch (HttpRequestException e)
         {
             _logger.LogError(e, "Error encountered while sending GET request to {RequestUri}", requestUri);
-            return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
+        }
+        catch (TaskCanceledException e) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError(e, "Request timed out while fetching installed web version from {RequestUri}", requestUri);
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException)
+        {
+            _logger.LogError(e, "Error parsing version response from {RequestUri}", requestUri);
         }
 
-        return new JsonResult("-");
+        return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
     }
 
     private class LatestVersions
