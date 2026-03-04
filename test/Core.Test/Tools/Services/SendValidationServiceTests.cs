@@ -72,7 +72,7 @@ public class SendValidationServiceTests
         // Act
         var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
 
-        // Assert
+        // Assert - should NOT call pricing service for individual premium users
         await sutProvider.GetDependency<IPricingClient>().DidNotReceive().GetAvailablePremiumPlan();
     }
 
@@ -96,7 +96,7 @@ public class SendValidationServiceTests
         // Act
         var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
 
-        // Assert
+        // Assert - should NOT call pricing service for self-hosted
         await sutProvider.GetDependency<IPricingClient>().DidNotReceive().GetAvailablePremiumPlan();
     }
 
@@ -117,7 +117,7 @@ public class SendValidationServiceTests
         // Act
         var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
 
-        // Assert
+        // Assert - should NOT call pricing service for org sends
         await sutProvider.GetDependency<IPricingClient>().DidNotReceive().GetAvailablePremiumPlan();
     }
 

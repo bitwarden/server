@@ -19,6 +19,9 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidat
 [SutProviderCustomize]
 public class SendControlsSyncPolicyValidatorTests
 {
+    /// When the pm-31885-send-controls flag is active changes to the SendControls policy should be synced
+    /// back into the legacy DisableSend and SendOptions policy rows, enabling safe rollback.
+    /// This test asserts that when the flag is disabled, the sync doesn't occur as it is not necessary.
     [Theory, BitAutoData]
     public async Task ExecutePostUpsertSideEffectAsync_DoesNothing_WhenFlagDisabled(
         [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
