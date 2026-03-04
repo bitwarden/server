@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Repositories;
@@ -354,6 +355,69 @@ public class OrganizationReportRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationReportAutoData]
+    public async Task GetSummaryDataByDateRangeAsync_ForAllEFProviders_ShouldReturnFilteredResults(
+        Organization organization,
+        List<EntityFramework.Dirt.Repositories.OrganizationReportRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrganizationRepos)
+    {
+        // Arrange
+        var baseDate = DateTime.UtcNow;
+        var startDate = baseDate.AddDays(-10);
+        var endDate = baseDate.AddDays(1);
+        var fixture = new Fixture();
+        var responses = new List<IEnumerable<OrganizationReportSummaryDataResponse>>();
+
+        foreach (var sut in suts)
+        {
+            var index = suts.IndexOf(sut);
+
+            // Create organization first
+            var org = await efOrganizationRepos[index].CreateAsync(organization);
+
+            // Create first report with a date within range
+            var report1 = fixture.Build<OrganizationReport>()
+                .With(x => x.OrganizationId, org.Id)
+                .With(x => x.SummaryData, "Summary 1")
+                .With(x => x.CreationDate, baseDate.AddDays(-5)) // Within range
+                .With(x => x.RevisionDate, baseDate.AddDays(-5))
+                .Create();
+            await sut.CreateAsync(report1);
+
+            // Create second report with a date within range
+            var report2 = fixture.Build<OrganizationReport>()
+                .With(x => x.OrganizationId, org.Id)
+                .With(x => x.SummaryData, "Summary 2")
+                .With(x => x.CreationDate, baseDate.AddDays(-3)) // within range
+                .With(x => x.RevisionDate, baseDate.AddDays(-3))
+                .Create();
+            await sut.CreateAsync(report2);
+
+            // Create third report with a date not within range
+            var report3 = fixture.Build<OrganizationReport>()
+                .With(x => x.OrganizationId, org.Id)
+                .With(x => x.SummaryData, "Summary 3")
+                .With(x => x.CreationDate, baseDate.AddDays(-20)) // not in range
+                .With(x => x.RevisionDate, baseDate.AddDays(-20))
+                .Create();
+            await sut.CreateAsync(report3);
+
+            // Act
+            var results = await sut.GetSummaryDataByDateRangeAsync(org.Id, startDate, endDate);
+            responses.Add(results);
+        }
+
+        // Assert
+        Assert.NotNull(responses);
+        foreach (var results in responses)
+        {
+            var resultsList = results.ToList();
+            Assert.True(resultsList.Count >= 2, $"Expected at least 2 results, but got {resultsList.Count}");
+            Assert.All(resultsList, r => Assert.NotNull(r.SummaryData));
+            Assert.All(resultsList, r => Assert.NotNull(r.ContentEncryptionKey));
+        }
+    }
+
+    [CiSkippedTheory, EfOrganizationReportAutoData]
     public async Task GetReportDataAsync_ShouldReturnReportData(
         OrganizationReportRepository sqlOrganizationReportRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -538,7 +602,10 @@ public class OrganizationReportRepositoryTests
         IOrganizationReportRepository orgReportRepo)
     {
         var fixture = new Fixture();
-        var organization = fixture.Create<Organization>();
+        var organization = fixture.Build<Organization>()
+            .With(x => x.CreationDate, DateTime.UtcNow)
+            .With(x => x.RevisionDate, DateTime.UtcNow)
+            .Create();
 
         var orgReportRecord = fixture.Build<OrganizationReport>()
             .With(x => x.OrganizationId, organization.Id)

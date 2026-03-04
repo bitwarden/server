@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Dirt.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
@@ -130,7 +131,22 @@ public class OrganizationReportsController : Controller
 
     # region SummaryData Field Endpoints
 
+    /// <summary>
+    /// Gets summary data for organization reports within a specified date range. 
+    /// The response is optimized for widget display by returning up to 6 entries that are 
+    /// evenly spaced across the date range, including the most recent entry. 
+    /// This allows the widget to show trends over time while ensuring the latest data point is always included.
+    /// </summary>
+    /// <param name="organizationId"></param>
+    /// <param name="startDate"></param>
+    /// <param name="endDate"></param>
+    /// <returns></returns>
+    /// <exception cref="NotFoundException"></exception>
+    /// <exception cref="BadRequestException"></exception>
     [HttpGet("{organizationId}/data/summary")]
+    [ProducesResponseType<IEnumerable<OrganizationReportSummaryDataResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
@@ -139,7 +155,7 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        if (organizationId.Equals(null))
+        if (organizationId == Guid.Empty)
         {
             throw new BadRequestException("Organization ID is required.");
         }
