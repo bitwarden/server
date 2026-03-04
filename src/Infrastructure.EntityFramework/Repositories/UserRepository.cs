@@ -18,26 +18,6 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
 
-    // Todo: PM-30355: once MasterPasswordSalt is fully detached from Email, MasterPasswordSalt should not be overwritten
-    public override async Task<Core.Entities.User> CreateAsync(Core.Entities.User user)
-    {
-        if (user.MasterPassword != null && string.IsNullOrEmpty(user.MasterPasswordSalt))
-        {
-            user.MasterPasswordSalt = user.Email.ToLowerInvariant().Trim();
-        }
-        return await base.CreateAsync(user);
-    }
-
-    // Todo: PM-30355: once MasterPasswordSalt is fully detached from Email, MasterPasswordSalt should not be overwritten
-    public override async Task ReplaceAsync(Core.Entities.User user)
-    {
-        if (user.MasterPassword != null && string.IsNullOrEmpty(user.MasterPasswordSalt))
-        {
-            user.MasterPasswordSalt = user.Email.ToLowerInvariant().Trim();
-        }
-        await base.ReplaceAsync(user);
-    }
-
     public async Task<Core.Entities.User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
