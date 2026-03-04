@@ -42,6 +42,10 @@ public class InitPendingOrganizationCommandTests
         var organizationServcie = sutProvider.GetDependency<IOrganizationService>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token);
 
         await organizationRepository.Received().GetByIdAsync(orgId);
@@ -65,6 +69,10 @@ public class InitPendingOrganizationCommandTests
 
         var organizationServcie = sutProvider.GetDependency<IOrganizationService>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, collectionName, token);
 
@@ -90,6 +98,10 @@ public class InitPendingOrganizationCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(orgId).Returns(org);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
         Assert.Equal("Organization is already enabled.", exception.Message);
@@ -110,6 +122,10 @@ public class InitPendingOrganizationCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(orgId).Returns(org);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
         Assert.Equal("Organization is not on a Pending status.", exception.Message);
@@ -127,6 +143,10 @@ public class InitPendingOrganizationCommandTests
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(orgId).Returns(org);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -149,6 +169,10 @@ public class InitPendingOrganizationCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(orgId).Returns(org);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
         Assert.Equal("Organization already has a Private Key.", exception.Message);
@@ -166,10 +190,6 @@ public class InitPendingOrganizationCommandTests
         org.PublicKey = null;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
 
         // User has SingleOrg policy from another org
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -190,7 +210,7 @@ public class InitPendingOrganizationCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
-        Assert.Contains("Cannot create organization because single organization policy is enabled for another organization.", exception.Message);
+        Assert.Contains("You may not create an organization. You belong to an organization which has a policy that prohibits you from being a member of any other organization.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -204,10 +224,6 @@ public class InitPendingOrganizationCommandTests
         org.PublicKey = null;
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
 
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()

@@ -191,19 +191,17 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     private async Task CheckPoliciesAsync(Guid organizationId, User user,
-        ICollection<OrganizationUser> userOrgs, bool userTwoFactorEnabled)
+        ICollection<OrganizationUser> orgUsers, bool userTwoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization
         await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
-
-        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
             var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                     new AutomaticUserConfirmationPolicyEnforcementRequest(
                         organizationId,
-                        userOrgs,
+                        orgUsers,
                         user)))
                 .Match(
                     error => new BadRequestException(error.Message),
@@ -216,29 +214,11 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             }
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+        var singleOrgError = singleOrgRequirement.CanJoinOrganization(organizationId, orgUsers);
+        if (singleOrgError is not null)
         {
-            var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
-            var error = singleOrgRequirement.CanJoinOrganization(organizationId, userOrgs);
-            if (error is not null)
-            {
-                throw new BadRequestException(error.Message);
-            }
-
-            return;
-        }
-
-        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
-        var otherSingleOrgPolicies = singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
-        // Enforce Single Organization Policy for this organization
-        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
-        {
-            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
-        }
-        // Enforce Single Organization Policy of other organizations user is a member of
-        if (otherSingleOrgPolicies.Any())
-        {
-            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+            throw new BadRequestException(singleOrgError.Message);
         }
     }
 

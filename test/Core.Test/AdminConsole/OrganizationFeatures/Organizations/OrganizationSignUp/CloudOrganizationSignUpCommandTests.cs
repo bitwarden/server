@@ -14,7 +14,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -43,6 +42,10 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromProvider = false;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -83,6 +86,10 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromProvider = false;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         // Extract orgUserId when created
         Guid? orgUserId = null;
@@ -129,6 +136,10 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromProvider = false;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -255,6 +266,10 @@ public class CloudICloudOrganizationSignUpCommandTests
             .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)
             .Returns(1);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -277,10 +292,6 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
-
         // User has SingleOrg policy from another org
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
@@ -299,7 +310,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Contains("Cannot create organization because single organization policy is enabled for another organization.", exception.Message);
+        Assert.Contains("You may not create an organization. You belong to an organization which has a policy that prohibits you from being a member of any other organization.", exception.Message);
     }
 
     [Theory]
@@ -317,10 +328,6 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromProvider = false;
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(MockPlans.Get(signup.Plan));
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
 
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()

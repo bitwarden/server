@@ -2,10 +2,8 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -37,7 +35,6 @@ public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationBillingService organizationBillingService,
     IStripePaymentService paymentService,
-    IPolicyService policyService,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     IApplicationCacheService applicationCacheService,
@@ -253,23 +250,11 @@ public class CloudOrganizationSignUpCommand(
             }
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
+        var error = singleOrgRequirement.CanCreateOrganization();
+        if (error is not null)
         {
-            var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
-            var error = singleOrgRequirement.CanCreateOrganization();
-            if (error is not null)
-            {
-                throw new BadRequestException(error.Message);
-            }
-
-            return;
-        }
-
-        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                          "which has a policy that prohibits you from being a member of any other organization.");
+            throw new BadRequestException(error.Message);
         }
     }
 

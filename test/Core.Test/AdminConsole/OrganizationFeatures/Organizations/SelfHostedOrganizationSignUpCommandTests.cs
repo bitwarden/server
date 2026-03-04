@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -145,30 +144,6 @@ public class SelfHostedOrganizationSignUpCommandTests
             () => sutProvider.Sut.SignUpAsync(license, owner, ownerKey, collectionName, publicKey, privateKey));
 
         Assert.Contains("License is already in use", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SignUpAsync_WithSingleOrgPolicy_ThrowsBadRequestException(
-        User owner, string ownerKey, string collectionName,
-        string publicKey, string privateKey,
-        SutProvider<SelfHostedOrganizationSignUpCommand> sutProvider)
-    {
-        // Arrange
-        var globalSettings = sutProvider.GetDependency<IGlobalSettings>();
-        var license = CreateValidOrganizationLicense(globalSettings);
-
-        SetupCommonMocks(sutProvider, owner);
-        SetupLicenseValidation(sutProvider, license);
-
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(owner.Id, PolicyType.SingleOrg)
-            .Returns(true);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignUpAsync(license, owner, ownerKey, collectionName, publicKey, privateKey));
-
-        Assert.Contains("You may not create an organization", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -312,10 +287,6 @@ public class SelfHostedOrganizationSignUpCommandTests
         SetupCommonMocks(sutProvider, owner);
         SetupLicenseValidation(sutProvider, license);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
-
         // User has SingleOrg policy from another org
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(owner.Id)
@@ -335,7 +306,7 @@ public class SelfHostedOrganizationSignUpCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(license, owner, ownerKey, collectionName, publicKey, privateKey));
 
-        Assert.Contains("Cannot create organization because single organization policy is enabled for another organization.", exception.Message);
+        Assert.Contains("You may not create an organization. You belong to an organization which has a policy that prohibits you from being a member of any other organization.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -350,10 +321,6 @@ public class SelfHostedOrganizationSignUpCommandTests
 
         SetupCommonMocks(sutProvider, owner);
         SetupLicenseValidation(sutProvider, license);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
 
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -389,11 +356,11 @@ public class SelfHostedOrganizationSignUpCommandTests
                 return Task.FromResult(org);
             });
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(owner.Id, PolicyType.SingleOrg)
-            .Returns(false);
-
         globalSettings.LicenseDirectory.Returns("/tmp/licenses");
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<SingleOrganizationPolicyRequirement>(owner.Id)
+            .Returns(new SingleOrganizationPolicyRequirement([]));
     }
 
     private void SetupLicenseValidation(
