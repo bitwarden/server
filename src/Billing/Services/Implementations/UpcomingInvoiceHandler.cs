@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -37,8 +36,7 @@ public class UpcomingInvoiceHandler(
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
     IValidateSponsorshipCommand validateSponsorshipCommand,
-    IMailer mailer,
-    IFeatureService featureService)
+    IMailer mailer)
     : IUpcomingInvoiceHandler
 {
     public async Task HandleAsync(Event parsedEvent)
@@ -109,14 +107,11 @@ public class UpcomingInvoiceHandler(
 
         var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        var milestone3 = featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3);
-
         var subscriptionAligned = await AlignOrganizationSubscriptionConcernsAsync(
             organization,
             @event,
             subscription,
-            plan,
-            milestone3);
+            plan);
 
         /*
          * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
@@ -199,24 +194,13 @@ public class UpcomingInvoiceHandler(
         }
     }
 
-    /// <summary>
-    /// Aligns the organization's subscription details with the specified plan and milestone requirements.
-    /// </summary>
-    /// <param name="organization">The organization whose subscription is being updated.</param>
-    /// <param name="event">The Stripe event associated with this operation.</param>
-    /// <param name="subscription">The organization's subscription.</param>
-    /// <param name="plan">The organization's current plan.</param>
-    /// <param name="milestone3">A flag indicating whether the third milestone is enabled.</param>
-    /// <returns>Whether the operation resulted in an updated subscription.</returns>
     private async Task<bool> AlignOrganizationSubscriptionConcernsAsync(
         Organization organization,
         Event @event,
         Subscription subscription,
-        Plan plan,
-        bool milestone3)
+        Plan plan)
     {
-        // currently these are the only plans that need aligned and both require the same flag and share most of the logic
-        if (!milestone3 || plan.Type is not (PlanType.FamiliesAnnually2019 or PlanType.FamiliesAnnually2025))
+        if (plan.Type is not (PlanType.FamiliesAnnually2019 or PlanType.FamiliesAnnually2025))
         {
             return false;
         }
@@ -323,19 +307,10 @@ public class UpcomingInvoiceHandler(
 
         await AlignPremiumUsersTaxConcernsAsync(user, @event, customer, subscription);
 
-        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
-        if (milestone2Feature)
+        var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
+        if (subscriptionAligned)
         {
-            var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
-
-            /*
-             * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
-             * with processing.
-             */
-            if (subscriptionAligned)
-            {
-                return;
-            }
+            return;
         }
 
         if (user.Premium)

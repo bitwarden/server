@@ -1,4 +1,4 @@
-﻿using Bit.Api.Models.Response;
+using Bit.Api.Models.Response;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Entities;
@@ -13,7 +13,7 @@ public class SubscriptionResponseModelTests
 {
     [Theory]
     [BitAutoData]
-    public void Constructor_IncludeMilestone2DiscountTrueMatchingCouponId_ReturnsDiscount(
+    public void Constructor_MatchingCouponId_ReturnsDiscount(
         User user,
         UserLicense license)
     {
@@ -31,7 +31,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
         Assert.NotNull(result.CustomerDiscount);
@@ -45,7 +45,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_IncludeMilestone2DiscountTrueNonMatchingCouponId_ReturnsNull(
+    public void Constructor_NonMatchingCouponId_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -63,35 +63,9 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
-        Assert.Null(result.CustomerDiscount);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Constructor_IncludeMilestone2DiscountFalseMatchingCouponId_ReturnsNull(
-        User user,
-        UserLicense license)
-    {
-        // Arrange
-        var subscriptionInfo = new SubscriptionInfo
-        {
-            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
-            {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, // Matching coupon ID
-                Active = true,
-                PercentOff = 20m,
-                AmountOff = null,
-                AppliesTo = new List<string> { "product1" }
-            }
-        };
-
-        // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: false);
-
-        // Assert - Should be null because includeMilestone2Discount is false
         Assert.Null(result.CustomerDiscount);
     }
 
@@ -108,7 +82,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -134,7 +108,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
         Assert.NotNull(result.CustomerDiscount);
@@ -145,31 +119,7 @@ public class SubscriptionResponseModelTests
 
     [Theory]
     [BitAutoData]
-    public void Constructor_DefaultIncludeMilestone2DiscountParameter_ReturnsNull(
-        User user,
-        UserLicense license)
-    {
-        // Arrange
-        var subscriptionInfo = new SubscriptionInfo
-        {
-            CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
-            {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                Active = true,
-                PercentOff = 20m
-            }
-        };
-
-        // Act - Using default parameter (includeMilestone2Discount defaults to false)
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
-
-        // Assert
-        Assert.Null(result.CustomerDiscount);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Constructor_NullDiscountIdIncludeMilestone2DiscountTrue_ReturnsNull(
+    public void Constructor_NullDiscountId_ReturnsNull(
         User user,
         UserLicense license)
     {
@@ -187,7 +137,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -213,7 +163,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert
         Assert.Null(result.CustomerDiscount);
@@ -293,7 +243,6 @@ public class SubscriptionResponseModelTests
         UserLicense license)
     {
         // Arrange - Edge case: Both PercentOff and AmountOff present
-        // This tests the scenario where Stripe coupon has both discount types
         var subscriptionInfo = new SubscriptionInfo
         {
             CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
@@ -307,7 +256,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert - Both values should be preserved
         Assert.NotNull(result.CustomerDiscount);
@@ -324,7 +273,7 @@ public class SubscriptionResponseModelTests
         User user,
         UserLicense license)
     {
-        // Arrange - Test with Subscription, UpcomingInvoice, and CustomerDiscount
+        // Arrange
         var stripeSubscription = new Subscription
         {
             Id = "sub_test123",
@@ -353,7 +302,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert - Verify all properties are mapped correctly
         Assert.NotNull(result.Subscription);
@@ -376,7 +325,7 @@ public class SubscriptionResponseModelTests
         User user,
         UserLicense license)
     {
-        // Arrange - Test with null Subscription and UpcomingInvoice
+        // Arrange
         var subscriptionInfo = new SubscriptionInfo
         {
             Subscription = null,
@@ -390,7 +339,7 @@ public class SubscriptionResponseModelTests
         };
 
         // Act
-        var result = new SubscriptionResponseModel(user, subscriptionInfo, license, includeMilestone2Discount: true);
+        var result = new SubscriptionResponseModel(user, subscriptionInfo, license);
 
         // Assert - Null Subscription and UpcomingInvoice should be handled gracefully
         Assert.Null(result.Subscription);

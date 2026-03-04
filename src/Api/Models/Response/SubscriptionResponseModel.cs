@@ -17,13 +17,7 @@ public class SubscriptionResponseModel : ResponseModel
     /// <param name="user">The user entity containing storage and premium subscription information</param>
     /// <param name="subscription">Subscription information retrieved from the payment provider (Stripe/Braintree)</param>
     /// <param name="license">The user's license containing expiration and feature entitlements</param>
-    /// <param name="includeMilestone2Discount">
-    /// Whether to include discount information in the response.
-    /// Set to true when the PM23341_Milestone_2 feature flag is enabled AND
-    /// you want to expose Milestone 2 discount information to the client.
-    /// The discount will only be included if it matches the specific Milestone 2 coupon ID.
-    /// </param>
-    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license, bool includeMilestone2Discount = false)
+    public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license)
         : base("subscription")
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
@@ -35,8 +29,7 @@ public class SubscriptionResponseModel : ResponseModel
         License = license;
         Expiration = License.Expires;
 
-        // Only display the Milestone 2 subscription discount on the subscription page.
-        CustomerDiscount = ShouldIncludeMilestone2Discount(includeMilestone2Discount, subscription.CustomerDiscount)
+        CustomerDiscount = ShouldIncludeDiscount(subscription.CustomerDiscount)
             ? new BillingCustomerDiscount(subscription.CustomerDiscount!)
             : null;
     }
@@ -45,13 +38,7 @@ public class SubscriptionResponseModel : ResponseModel
     /// <param name="subscription">Subscription information retrieved from the payment provider (Stripe/Braintree)</param>
     /// <param name="license">The user's license containing expiration and feature entitlements</param>
     /// <param name="claimsPrincipal">The claims principal containing cryptographically secure token claims</param>
-    /// <param name="includeMilestone2Discount">
-    /// Whether to include discount information in the response.
-    /// Set to true when the PM23341_Milestone_2 feature flag is enabled AND
-    /// you want to expose Milestone 2 discount information to the client.
-    /// The discount will only be included if it matches the specific Milestone 2 coupon ID.
-    /// </param>
-    public SubscriptionResponseModel(User user, SubscriptionInfo? subscription, UserLicense license, ClaimsPrincipal? claimsPrincipal, bool includeMilestone2Discount = false)
+    public SubscriptionResponseModel(User user, SubscriptionInfo? subscription, UserLicense license, ClaimsPrincipal? claimsPrincipal)
         : base("subscription")
     {
         Subscription = subscription?.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
@@ -75,8 +62,7 @@ public class SubscriptionResponseModel : ResponseModel
             Expiration = License.Expires;
         }
 
-        // Only display the Milestone 2 subscription discount on the subscription page.
-        CustomerDiscount = ShouldIncludeMilestone2Discount(includeMilestone2Discount, subscription?.CustomerDiscount)
+        CustomerDiscount = ShouldIncludeDiscount(subscription?.CustomerDiscount)
             ? new BillingCustomerDiscount(subscription!.CustomerDiscount!)
             : null;
     }
@@ -100,35 +86,14 @@ public class SubscriptionResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public BillingSubscriptionUpcomingInvoice? UpcomingInvoice { get; set; }
     public BillingSubscription? Subscription { get; set; }
-    /// <summary>
-    /// Customer discount information from Stripe for the Milestone 2 subscription discount.
-    /// Only includes the specific Milestone 2 coupon (cm3nHfO1) when it's a perpetual discount (no expiration).
-    /// This is for display purposes only and does not affect Stripe's automatic discount application.
-    /// Other discounts may still apply in Stripe billing but are not included in this response.
-    /// <para>
-    /// Null when:
-    /// - The PM23341_Milestone_2 feature flag is disabled
-    /// - There is no active discount
-    /// - The discount coupon ID doesn't match the Milestone 2 coupon (cm3nHfO1)
-    /// - The instance is self-hosted
-    /// </para>
-    /// </summary>
     public BillingCustomerDiscount? CustomerDiscount { get; set; }
     public UserLicense? License { get; set; }
     public DateTime? Expiration { get; set; }
 
-    /// <summary>
-    /// Determines whether the Milestone 2 discount should be included in the response.
-    /// </summary>
-    /// <param name="includeMilestone2Discount">Whether the feature flag is enabled and discount should be considered.</param>
-    /// <param name="customerDiscount">The customer discount from subscription info, if any.</param>
-    /// <returns>True if the discount should be included; false otherwise.</returns>
-    private static bool ShouldIncludeMilestone2Discount(
-        bool includeMilestone2Discount,
+    private static bool ShouldIncludeDiscount(
         SubscriptionInfo.BillingCustomerDiscount? customerDiscount)
     {
-        return includeMilestone2Discount &&
-               customerDiscount != null &&
+        return customerDiscount != null &&
                customerDiscount.Id == StripeConstants.CouponIDs.Milestone2SubscriptionDiscount &&
                customerDiscount.Active;
     }
