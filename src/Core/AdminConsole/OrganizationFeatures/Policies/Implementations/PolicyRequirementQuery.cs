@@ -32,29 +32,6 @@ public class PolicyRequirementQuery(
         return policyRequirements;
     }
 
-    public async Task<IEnumerable<Guid>> GetManyByOrganizationIdAsync<T>(Guid organizationId)
-        where T : IPolicyRequirement
-    {
-        var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
-        if (factory is null)
-        {
-            throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
-        }
-
-        var organizationPolicyDetails = await GetOrganizationPolicyDetails(organizationId, factory.PolicyType);
-
-        var eligibleOrganizationUserIds = organizationPolicyDetails
-            .Where(p => p.PolicyType == factory.PolicyType)
-            .Where(factory.Enforce)
-            .Select(p => p.OrganizationUserId)
-            .ToList();
-
-        return eligibleOrganizationUserIds;
-    }
-
     private async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetails(IEnumerable<Guid> userIds, PolicyType policyType)
         => await policyRepository.GetPolicyDetailsByUserIdsAndPolicyType(userIds, policyType);
-
-    private async Task<IEnumerable<OrganizationPolicyDetails>> GetOrganizationPolicyDetails(Guid organizationId, PolicyType policyType)
-        => await policyRepository.GetPolicyDetailsByOrganizationIdAsync(organizationId, policyType);
 }
