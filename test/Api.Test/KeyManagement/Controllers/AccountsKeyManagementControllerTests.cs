@@ -429,7 +429,7 @@ public class AccountsKeyManagementControllerTests
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostConvertToKeyConnectorAsync());
 
         await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
-            .ConvertToKeyConnectorAsync(Arg.Any<User>());
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>());
     }
 
     [Theory]
@@ -441,7 +441,7 @@ public class AccountsKeyManagementControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
         sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>())
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>())
             .Returns(IdentityResult.Failed(new IdentityError { Description = "convert to key connector error" }));
 
         var badRequestException =
@@ -450,7 +450,7 @@ public class AccountsKeyManagementControllerTests
         Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
         Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
         await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser));
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Any<string?>());
     }
 
     [Theory]
@@ -462,13 +462,13 @@ public class AccountsKeyManagementControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
         sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>())
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>())
             .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.PostConvertToKeyConnectorAsync();
 
         await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser));
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Any<string?>());
     }
 
     [Theory]
