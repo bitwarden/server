@@ -498,8 +498,9 @@ public class ConfirmOrganizationUserCommandTests
             PolicyType = PolicyType.OrganizationDataOwnership
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([(orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]))]);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
@@ -555,8 +556,9 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([(orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []))]);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(orgUser.UserId!.Value)
@@ -830,7 +832,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_UsesNewMailer(
+    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_CallsSendOrganizationConfirmationCommand(
         Organization org,
         string userEmail,
         SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -849,8 +851,8 @@ public class ConfirmOrganizationUserCommandTests
             .Received(1)
             .SendConfirmationAsync(org, userEmail, accessSecretsManager);
         await sutProvider.GetDependency<IMailService>()
-            .DidNotReceive()
-            .SendOrganizationConfirmedEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+            .DidNotReceiveWithAnyArgs()
+            .SendOrganizationConfirmedEmailAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -873,8 +875,8 @@ public class ConfirmOrganizationUserCommandTests
             .Received(1)
             .SendOrganizationConfirmedEmailAsync(org.DisplayName(), userEmail, accessSecretsManager);
         await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
-            .DidNotReceive()
-            .SendConfirmationAsync(Arg.Any<Organization>(), Arg.Any<string>(), Arg.Any<bool>());
+            .DidNotReceiveWithAnyArgs()
+            .SendConfirmationAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -945,8 +947,10 @@ public class ConfirmOrganizationUserCommandTests
             PolicyType = PolicyType.OrganizationDataOwnership
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([
+                (orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]))
+            ]);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(orgUser.UserId!.Value)
@@ -991,10 +995,6 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2 });
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id, orgUser2.Id]);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new SingleOrganizationPolicyRequirement([]));
 
@@ -1033,9 +1033,30 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser1, orgUser2 });
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2 });
 
+        var policyDetails1 = new PolicyDetails
+        {
+            OrganizationId = organization.Id,
+            OrganizationUserId = orgUser1.Id,
+            IsProvider = false,
+            OrganizationUserStatus = orgUser1.Status,
+            OrganizationUserType = orgUser1.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
+        var policyDetails2 = new PolicyDetails
+        {
+            OrganizationId = organization.Id,
+            OrganizationUserId = orgUser2.Id,
+            IsProvider = false,
+            OrganizationUserStatus = orgUser2.Status,
+            OrganizationUserType = orgUser2.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id, orgUser2.Id]);
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
+            .Returns([
+                (orgUser1.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails1])),
+                (orgUser2.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails2]))
+            ]);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(Arg.Any<Guid>())

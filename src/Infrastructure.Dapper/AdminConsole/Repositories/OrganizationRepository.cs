@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
@@ -276,5 +277,32 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         await connection.ExecuteAsync("[dbo].[Organization_IncrementSeatCount]",
             new { OrganizationId = organizationId, SeatsToAdd = increaseAmount, RequestDate = requestDate },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+
+        try
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[Organization_Update]",
+                organization,
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await confirmOwnerAction(connection, transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to initialize organization. Rolling back transaction.");
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

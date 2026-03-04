@@ -14,7 +14,7 @@ do
   export now=$(date +%Y%m%d_%H%M%S)
 
   # Do a new backup
-  /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -i /backup-db.sql
+  /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -C -i /backup-db.sql
 
   # Delete backup files older than 30 days
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _$now.BAK &&
