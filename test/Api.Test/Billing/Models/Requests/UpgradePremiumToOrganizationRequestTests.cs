@@ -108,7 +108,8 @@ public class UpgradePremiumToOrganizationRequestTests
         Assert.Equal("encrypted-key", key);
         Assert.Equal("public-key", publicKey);
         Assert.Equal("encrypted-private-key", encryptedPrivateKey);
-        Assert.Equal("Default Collection", collectionName);        Assert.Equal(expectedPlanType, planType);
+        Assert.Equal("Default Collection", collectionName);
+        Assert.Equal(expectedPlanType, planType);
         Assert.Equal(country, billingAddress.Country);
         Assert.Equal(postalCode, billingAddress.PostalCode);
         Assert.NotNull(billingAddress.TaxId);
