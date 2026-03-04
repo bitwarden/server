@@ -84,6 +84,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
+    private readonly IAdminRecoverAccountValidator _adminRecoverAccountValidator;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -115,6 +116,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
+        IAdminRecoverAccountValidator adminRecoverAccountValidator,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
@@ -150,6 +152,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
+        _adminRecoverAccountValidator = adminRecoverAccountValidator;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
     }
 
@@ -526,9 +529,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
 #nullable enable
-    [HttpPut("{id}/reset-password")]
+    [HttpPut("{id}/recover-account")]
+    [HttpPut("{id}/reset-password")] // backward compat alias — remove after clients migrate
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
@@ -546,7 +550,24 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
+        // Map to internal request record
+        var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+
+        // Validate
+        var validationResult = await _adminRecoverAccountValidator.ValidateAsync(commandRequest);
+        if (validationResult.IsError)
+        {
+            var error = validationResult.AsError;
+            return error switch
+            {
+                NotFoundError notFound => TypedResults.NotFound(new ErrorResponseModel(notFound.Message)),
+                BadRequestError badRequest => TypedResults.BadRequest(new ErrorResponseModel(badRequest.Message)),
+                _ => TypedResults.Json(new ErrorResponseModel(error.Message), statusCode: StatusCodes.Status500InternalServerError)
+            };
+        }
+
+        // Execute
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(commandRequest);
         if (result.Succeeded)
         {
             return TypedResults.Ok();

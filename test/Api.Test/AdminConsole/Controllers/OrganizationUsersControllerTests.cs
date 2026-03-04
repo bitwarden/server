@@ -15,6 +15,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -549,34 +550,34 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutResetPassword_WhenOrganizationUserNotFound_ReturnsNotFound(
+    public async Task PutRecoverAccount_WhenOrganizationUserNotFound_ReturnsNotFound(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns((OrganizationUser)null);
 
-        var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
         Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutResetPassword_WhenOrganizationIdMismatch_ReturnsNotFound(
+    public async Task PutRecoverAccount_WhenOrganizationIdMismatch_ReturnsNotFound(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         organizationUser.OrganizationId = Guid.NewGuid();
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
-        var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
         Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.NotFound>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutResetPassword_WhenAuthorizationFails_ReturnsBadRequest(
+    public async Task PutRecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -589,14 +590,14 @@ public class OrganizationUsersControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Failed());
 
-        var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutResetPassword_WhenRecoverAccountSucceeds_ReturnsOk(
+    public async Task PutRecoverAccount_WhenRecoverAccountSucceeds_ReturnsOk(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -608,20 +609,23 @@ public class OrganizationUsersControllerTests
                 organizationUser,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAdminRecoverAccountValidator>()
+            .ValidateAsync(Arg.Any<RecoverAccountRequest>())
+            .Returns(callInfo => ValidationResultHelpers.Valid(callInfo.Arg<RecoverAccountRequest>()));
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(orgId, organizationUser, model.NewMasterPasswordHash, model.Key)
+            .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
 
-        var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
         Assert.IsType<Ok>(result);
         await sutProvider.GetDependency<IAdminRecoverAccountCommand>().Received(1)
-            .RecoverAccountAsync(orgId, organizationUser, model.NewMasterPasswordHash, model.Key);
+            .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutResetPassword_WhenRecoverAccountFails_ReturnsBadRequest(
+    public async Task PutRecoverAccount_WhenRecoverAccountFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -633,11 +637,14 @@ public class OrganizationUsersControllerTests
                 organizationUser,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAdminRecoverAccountValidator>()
+            .ValidateAsync(Arg.Any<RecoverAccountRequest>())
+            .Returns(callInfo => ValidationResultHelpers.Valid(callInfo.Arg<RecoverAccountRequest>()));
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(orgId, organizationUser, model.NewMasterPasswordHash, model.Key)
+            .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Failed(new Microsoft.AspNetCore.Identity.IdentityError { Description = "Error message" }));
 
-        var result = await sutProvider.Sut.PutResetPassword(orgId, orgUserId, model);
+        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
         Assert.IsType<BadRequest<ModelStateDictionary>>(result);
     }

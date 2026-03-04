@@ -1,15 +1,25 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Request.Organizations;
 
 public class OrganizationUserResetPasswordRequestModel
 {
-    [Required]
+    public bool ResetMasterPassword { get; set; }
+    public bool ResetTwoFactor { get; set; }
+
     [StringLength(300)]
-    public string NewMasterPasswordHash { get; set; }
-    [Required]
-    public string Key { get; set; }
+    public string? NewMasterPasswordHash { get; set; }
+    public string? Key { get; set; }
+
+    public RecoverAccountRequest ToCommandRequest(Guid orgId, OrganizationUser organizationUser) => new()
+    {
+        OrgId = orgId,
+        OrganizationUser = organizationUser,
+        ResetMasterPassword = ResetMasterPassword,
+        ResetTwoFactor = ResetTwoFactor,
+        NewMasterPasswordHash = NewMasterPasswordHash,
+        Key = Key
+    };
 }
