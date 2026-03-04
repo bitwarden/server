@@ -79,6 +79,23 @@ internal static class EncryptedCipherDtoExtensions
         Fields = e.ToFields()
     };
 
+    internal static CipherBankAccountData ToBankAccountData(this EncryptedCipherDto e) => new()
+    {
+        Name = e.Name,
+        Notes = e.Notes,
+        BankName = e.BankAccount?.BankName,
+        NameOnAccount = e.BankAccount?.NameOnAccount,
+        AccountType = e.BankAccount?.AccountType,
+        AccountNumber = e.BankAccount?.AccountNumber,
+        RoutingNumber = e.BankAccount?.RoutingNumber,
+        BranchNumber = e.BankAccount?.BranchNumber,
+        Pin = e.BankAccount?.Pin,
+        SwiftCode = e.BankAccount?.SwiftCode,
+        Iban = e.BankAccount?.Iban,
+        BankContactPhone = e.BankAccount?.BankContactPhone,
+        Fields = e.ToFields()
+    };
+
     private static IEnumerable<CipherFieldData>? ToFields(this EncryptedCipherDto e) =>
         e.Fields?.Select(f => new CipherFieldData
         {

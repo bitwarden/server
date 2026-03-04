@@ -43,6 +43,9 @@ public class CipherViewDto
     [JsonPropertyName("sshKey")]
     public SshKeyViewDto? SshKey { get; set; }
 
+    [JsonPropertyName("bankAccount")]
+    public BankAccountViewDto? BankAccount { get; set; }
+
     [JsonPropertyName("favorite")]
     public bool Favorite { get; set; }
 
@@ -144,6 +147,7 @@ public static class CipherTypes
     public const int Card = 3;
     public const int Identity = 4;
     public const int SshKey = 5;
+    public const int BankAccount = 6;
 }
 
 public static class RepromptTypes
@@ -259,4 +263,40 @@ public record SshKeyViewDto
     /// <summary>SDK expects "fingerprint" field name.</summary>
     [JsonPropertyName("fingerprint")]
     public string? Fingerprint { get; init; }
+}
+
+/// <summary>
+/// Bank Account cipher data for SDK encryption. Uses record for composition via `with` expressions.
+/// </summary>
+public record BankAccountViewDto
+{
+    [JsonPropertyName("bankName")]
+    public string? BankName { get; init; }
+
+    [JsonPropertyName("nameOnAccount")]
+    public string? NameOnAccount { get; init; }
+
+    [JsonPropertyName("accountType")]
+    public string? AccountType { get; init; }
+
+    [JsonPropertyName("accountNumber")]
+    public string? AccountNumber { get; init; }
+
+    [JsonPropertyName("routingNumber")]
+    public string? RoutingNumber { get; init; }
+
+    [JsonPropertyName("branchNumber")]
+    public string? BranchNumber { get; init; }
+
+    [JsonPropertyName("pin")]
+    public string? Pin { get; init; }
+
+    [JsonPropertyName("swiftCode")]
+    public string? SwiftCode { get; init; }
+
+    [JsonPropertyName("iban")]
+    public string? Iban { get; init; }
+
+    [JsonPropertyName("bankContactPhone")]
+    public string? BankContactPhone { get; init; }
 }

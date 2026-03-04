@@ -31,6 +31,9 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+
+    // TODO: Update with actual version once the feature is implemented
+    public const string BankAccountCipherMinimumVersion = "2026.2.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
@@ -262,6 +265,7 @@ public static class FeatureFlagKeys
     public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
+    public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
