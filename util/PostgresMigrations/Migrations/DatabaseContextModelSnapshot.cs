@@ -1154,6 +1154,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ReportFile")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
