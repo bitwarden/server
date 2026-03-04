@@ -18,20 +18,20 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
         _baseUrl = globalSettings.OrganizationReport.BaseUrl;
     }
 
-    public Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, OrganizationReportFileData fileData)
-        => Task.FromResult($"/reports/v2/organizations/{report.OrganizationId}/{report.Id}/file/report-data");
+    public Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, ReportFile fileData)
+        => Task.FromResult($"/reports/organizations/{report.OrganizationId}/{report.Id}/file/report-data");
 
-    public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, OrganizationReportFileData fileData)
+    public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, ReportFile fileData)
     {
         InitDir();
         return Task.FromResult($"{_baseUrl}/{RelativePath(report, fileData.Id!, fileData.FileName)}");
     }
 
-    public async Task UploadReportDataAsync(OrganizationReport report, OrganizationReportFileData fileData, Stream stream)
+    public async Task UploadReportDataAsync(OrganizationReport report, ReportFile fileData, Stream stream)
         => await WriteFileAsync(report, fileData.Id!, fileData.FileName, stream);
 
     public Task<(bool valid, long length)> ValidateFileAsync(
-        OrganizationReport report, OrganizationReportFileData fileData, long minimum, long maximum)
+        OrganizationReport report, ReportFile fileData, long minimum, long maximum)
     {
         var path = Path.Combine(_baseDirPath, RelativePath(report, fileData.Id!, fileData.FileName));
         if (!File.Exists(path))

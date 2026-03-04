@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
@@ -41,16 +40,16 @@ public class CreateOrganizationReportV2Command : ICreateOrganizationReportV2Comm
             throw new BadRequestException(errorMessage);
         }
 
-        var fileData = new OrganizationReportFileData
+        var fileData = new ReportFile
         {
             Id = CoreHelpers.SecureRandomString(32, upper: false, special: false),
+            FileName = "report-data.json",
             Validated = false
         };
 
         var organizationReport = new OrganizationReport
         {
             OrganizationId = request.OrganizationId,
-            Type = OrganizationReportType.File,
             CreationDate = DateTime.UtcNow,
             ContentEncryptionKey = request.ContentEncryptionKey ?? string.Empty,
             SummaryData = request.SummaryData,

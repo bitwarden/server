@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.Services;
@@ -17,17 +16,17 @@ public class GetOrganizationReportDataV2QueryTests
 {
     private static OrganizationReport CreateReportWithFileData(Guid reportId, Guid organizationId, string fileId)
     {
-        var fileData = new OrganizationReportFileData
+        var fileData = new ReportFile
         {
             Id = fileId,
+            FileName = "report-data.json",
             Validated = true
         };
 
         var report = new OrganizationReport
         {
             Id = reportId,
-            OrganizationId = organizationId,
-            Type = OrganizationReportType.File
+            OrganizationId = organizationId
         };
         report.SetReportFileData(fileData);
         return report;
@@ -51,7 +50,7 @@ public class GetOrganizationReportDataV2QueryTests
             .Returns(report);
 
         sutProvider.GetDependency<IOrganizationReportStorageService>()
-            .GetReportDataDownloadUrlAsync(report, Arg.Any<OrganizationReportFileData>())
+            .GetReportDataDownloadUrlAsync(report, Arg.Any<ReportFile>())
             .Returns(expectedUrl);
 
         // Act
@@ -63,7 +62,7 @@ public class GetOrganizationReportDataV2QueryTests
 
         await sutProvider.GetDependency<IOrganizationReportStorageService>()
             .Received(1)
-            .GetReportDataDownloadUrlAsync(report, Arg.Any<OrganizationReportFileData>());
+            .GetReportDataDownloadUrlAsync(report, Arg.Any<ReportFile>());
     }
 
     [Theory]
@@ -136,8 +135,7 @@ public class GetOrganizationReportDataV2QueryTests
         {
             Id = reportId,
             OrganizationId = organizationId,
-            ReportData = string.Empty,
-            Type = OrganizationReportType.Data
+            ReportData = string.Empty
         };
 
         sutProvider.GetDependency<IOrganizationReportRepository>()

@@ -19,11 +19,12 @@ public class LocalOrganizationReportStorageServiceTests
         return globalSettings;
     }
 
-    private static OrganizationReportFileData CreateFileData(string fileId = "test-file-id")
+    private static ReportFile CreateFileData(string fileId = "test-file-id")
     {
-        return new OrganizationReportFileData
+        return new ReportFile
         {
             Id = fileId,
+            FileName = "report-data.json",
             Validated = false
         };
     }
@@ -61,7 +62,7 @@ public class LocalOrganizationReportStorageServiceTests
         var url = await sut.GetReportDataUploadUrlAsync(report, fileData);
 
         // Assert
-        Assert.Equal($"/reports/v2/organizations/{orgId}/{reportId}/file/report-data", url);
+        Assert.Equal($"/reports/organizations/{orgId}/{reportId}/file/report-data", url);
     }
 
     [Fact]
@@ -119,9 +120,10 @@ public class LocalOrganizationReportStorageServiceTests
             .With(r => r.ReportData, string.Empty)
             .Create();
 
-        var maliciousFileData = new OrganizationReportFileData
+        var maliciousFileData = new ReportFile
         {
             Id = maliciousFileId,
+            FileName = "report-data.json",
             Validated = false
         };
 

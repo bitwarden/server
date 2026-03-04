@@ -20,6 +20,8 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
 
     public FileUploadType FileUploadType => FileUploadType.Azure;
 
+    public static string ReportIdFromBlobName(string blobName) => blobName.Split('/')[2];
+
     public AzureOrganizationReportStorageService(
         GlobalSettings globalSettings,
         ILogger<AzureOrganizationReportStorageService> logger)
@@ -28,7 +30,7 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
         _logger = logger;
     }
 
-    public async Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, OrganizationReportFileData fileData)
+    public async Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, ReportFile fileData)
     {
         await InitAsync();
         var blobClient = _containerClient!.GetBlobClient(BlobPath(report, fileData.Id!, fileData.FileName));
@@ -37,7 +39,7 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
             DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
     }
 
-    public async Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, OrganizationReportFileData fileData)
+    public async Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, ReportFile fileData)
     {
         await InitAsync();
         var blobClient = _containerClient!.GetBlobClient(BlobPath(report, fileData.Id!, fileData.FileName));
@@ -45,7 +47,7 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
             DateTime.UtcNow.Add(_sasTokenLifetime)).ToString();
     }
 
-    public async Task UploadReportDataAsync(OrganizationReport report, OrganizationReportFileData fileData, Stream stream)
+    public async Task UploadReportDataAsync(OrganizationReport report, ReportFile fileData, Stream stream)
     {
         await InitAsync();
         var blobClient = _containerClient!.GetBlobClient(BlobPath(report, fileData.Id!, fileData.FileName));
@@ -53,7 +55,7 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
     }
 
     public async Task<(bool valid, long length)> ValidateFileAsync(
-        OrganizationReport report, OrganizationReportFileData fileData, long minimum, long maximum)
+        OrganizationReport report, ReportFile fileData, long minimum, long maximum)
     {
         await InitAsync();
 
@@ -81,6 +83,24 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
         {
             _logger.LogError(ex, "A storage operation failed in {MethodName}", nameof(ValidateFileAsync));
             return (false, -1);
+        }
+    }
+
+    public async Task DeleteBlobAsync(string blobName)
+    {
+        await InitAsync();
+        var blobClient = _containerClient!.GetBlobClient(blobName);
+        await blobClient.DeleteIfExistsAsync();
+    }
+
+    public async Task DeleteReportFilesAsync(OrganizationReport report, string reportFileId)
+    {
+        await InitAsync();
+        var prefix = $"{report.OrganizationId}/{report.CreationDate:MM-dd-yyyy}/{report.Id}/{reportFileId}/";
+        await foreach (var blobItem in _containerClient!.GetBlobsAsync(prefix: prefix))
+        {
+            var blobClient = _containerClient.GetBlobClient(blobItem.Name);
+            await blobClient.DeleteIfExistsAsync();
         }
     }
 
