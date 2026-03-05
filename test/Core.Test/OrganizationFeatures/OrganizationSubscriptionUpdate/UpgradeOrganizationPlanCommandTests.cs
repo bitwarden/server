@@ -1,9 +1,12 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
@@ -19,13 +22,28 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Organization = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
 [SutProviderCustomize]
 public class UpgradeOrganizationPlanCommandTests
 {
+    private static void SetupOrganizationOwner(SutProvider<UpgradeOrganizationPlanCommand> sutProvider, Organization organization, User owner)
+    {
+        var ownerOrganizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = owner.Id,
+            Type = OrganizationUserType.Owner
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new[] { ownerOrganizationUser });
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(owner.Id)
+            .Returns(owner);
+    }
+
     [Theory, BitAutoData]
     public async Task UpgradePlan_OrganizationIsNull_Throws(Guid organizationId, OrganizationUpgrade upgrade,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
@@ -76,9 +94,11 @@ public class UpgradeOrganizationPlanCommandTests
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
     public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
+        User owner,
         [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
+        SetupOrganizationOwner(sutProvider, organization, owner);
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>())
             .Returns(policy);
@@ -153,10 +173,11 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
+        User owner,
         [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
-
+        SetupOrganizationOwner(sutProvider, organization, owner);
         upgrade.Plan = planType;
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(MockPlans.Get(upgrade.Plan));
 
@@ -277,11 +298,13 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_WhenOrganizationIsMissingPublicAndPrivateKeys_Backfills(
         Organization organization,
         OrganizationUpgrade upgrade,
+        User owner,
         string newPublicKey,
         string newPrivateKey,
         [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
+        SetupOrganizationOwner(sutProvider, organization, owner);
         organization.PublicKey = null;
         organization.PrivateKey = null;
 
@@ -323,9 +346,11 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotOverwriteWithNull(
         Organization organization,
         OrganizationUpgrade upgrade,
+        User owner,
         [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
+        SetupOrganizationOwner(sutProvider, organization, owner);
         // Arrange
         const string existingPublicKey = "existing-public-key";
         const string existingPrivateKey = "existing-private-key";
@@ -369,9 +394,11 @@ public class UpgradeOrganizationPlanCommandTests
     public async Task UpgradePlan_WhenOrganizationAlreadyHasPublicAndPrivateKeys_DoesNotBackfillWithNewKeys(
         Organization organization,
         OrganizationUpgrade upgrade,
+        User owner,
         [Policy(PolicyType.ResetPassword, false)] PolicyStatus policy,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
+        SetupOrganizationOwner(sutProvider, organization, owner);
         // Arrange
         const string existingPublicKey = "existing-public-key";
         const string existingPrivateKey = "existing-private-key";
