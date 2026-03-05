@@ -118,30 +118,7 @@ public class SendRequestModelTests
     }
 
     [Fact]
-    public void ToSend_NoPasswordNoEmails_SetsAuthTypeNone()
-    {
-        var deletionDate = DateTime.UtcNow.AddDays(5);
-        var sendRequest = new SendRequestModel
-        {
-            DeletionDate = deletionDate,
-            Disabled = false,
-            Key = "encrypted_key",
-            Name = "encrypted_name",
-            Text = new SendTextModel { Hidden = false, Text = "encrypted_text" },
-            Type = SendType.Text,
-        };
-
-        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
-
-        var send = sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService);
-
-        Assert.Equal(AuthType.None, send.AuthType);
-        Assert.Null(send.Password);
-        Assert.Null(send.Emails);
-    }
-
-    [Fact]
-    public void UpdateSend_NoPasswordNoEmails_DoesNotClearExistingPassword()
+    public void UpdateSend_WithExistingPasswordAuth_WhenNoAuthInRequest_PreservesPasswordAuth()
     {
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
@@ -157,8 +134,40 @@ public class SendRequestModelTests
         var existingSend = new Send
         {
             Type = SendType.Text,
-            Emails = "existing@example.com",
             Password = "existing_hashed_password",
+            AuthType = AuthType.Password,
+            Emails = null,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
+
+        Assert.Equal(AuthType.Password, updatedSend.AuthType);
+        Assert.Equal("existing_hashed_password", updatedSend.Password);
+        Assert.Null(updatedSend.Emails);
+    }
+
+    [Fact]
+    public void UpdateSend_WithExistingEmailAuth_WhenNoAuthInRequest_ClearsEmailsAndSetsAuthTypeNone()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Text = new SendTextModel { Hidden = false, Text = "encrypted_text" },
+            Type = SendType.Text,
+        };
+
+        var existingSend = new Send
+        {
+            Type = SendType.Text,
+            Emails = "old@example.com",
+            AuthType = AuthType.Email,
+            Password = null,
         };
 
         var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
@@ -166,6 +175,7 @@ public class SendRequestModelTests
         var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
 
         Assert.Equal(AuthType.None, updatedSend.AuthType);
-        Assert.Equal("existing_hashed_password", updatedSend.Password);
+        Assert.Null(updatedSend.Emails);
+        Assert.Null(updatedSend.Password);
     }
 }
