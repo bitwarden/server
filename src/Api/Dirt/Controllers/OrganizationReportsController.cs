@@ -136,6 +136,7 @@ public class OrganizationReportsController : Controller
     }
 
     [HttpPost("{organizationId}")]
+    [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> CreateOrganizationReportAsync(
         Guid organizationId,
         [FromBody] AddOrganizationReportRequest request)
@@ -181,6 +182,7 @@ public class OrganizationReportsController : Controller
     }
 
     [HttpPatch("{organizationId}/{reportId}")]
+    [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(Guid organizationId, [FromBody] UpdateOrganizationReportRequest request)
     {
         if (!await _currentContext.AccessReports(organizationId))
