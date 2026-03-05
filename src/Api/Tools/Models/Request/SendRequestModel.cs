@@ -264,6 +264,7 @@ public class SendRequestModel
         else
         {
             existingSend.AuthType = Core.Tools.Enums.AuthType.None;
+            existingSend.Emails = null;
         }
 
         existingSend.Disabled = Disabled.GetValueOrDefault();
