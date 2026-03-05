@@ -376,6 +376,18 @@
               "description": "Named distribution for personal cipher counts per user. Default: flat countPerUser."
             }
           }
+        },
+        "folders": {
+          "type": "object",
+          "description": "Folder count distribution per user. Overrides the default realistic distribution.",
+          "additionalProperties": false,
+          "properties": {
+            "shape": {
+              "type": "string",
+              "enum": ["realistic", "enterprise", "minimal"],
+              "description": "Named folder count distribution. Default: realistic."
+            }
+          }
         }
       }
     }

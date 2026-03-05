@@ -99,9 +99,9 @@ internal static class PresetLoader
             builder.AddCollections(preset.Collections.Count, density);
         }
 
-        if (preset.Folders == true)
+        if (preset.Folders == true || density?.FolderDistribution is not null)
         {
-            builder.AddFolders();
+            builder.AddFolders(density);
         }
 
         if (preset.Ciphers?.Fixture is not null)
@@ -152,6 +152,7 @@ internal static class PresetLoader
             UserCollectionSkew = preset.UserCollections?.Skew ?? 0,
             CipherTypeDistribution = ParseCipherTypes(preset.CipherTypes),
             PersonalCipherDistribution = ParsePersonalCipherDistribution(preset.PersonalCiphers?.Shape),
+            FolderDistribution = ParseFolderDistribution(preset.Folders?.Shape),
         };
     }
 
@@ -230,6 +231,22 @@ internal static class PresetLoader
             "realistic" => PersonalCipherDistributions.Realistic,
             "lightusage" => PersonalCipherDistributions.LightUsage,
             "heavyusage" => PersonalCipherDistributions.HeavyUsage,
+            _ => null,
+        };
+    }
+
+    private static Distribution<(int Min, int Max)>? ParseFolderDistribution(string? shape)
+    {
+        if (shape is null)
+        {
+            return null;
+        }
+
+        return shape.ToLowerInvariant() switch
+        {
+            "realistic" => FolderCountDistributions.Realistic,
+            "enterprise" => FolderCountDistributions.Enterprise,
+            "minimal" => FolderCountDistributions.Minimal,
             _ => null,
         };
     }

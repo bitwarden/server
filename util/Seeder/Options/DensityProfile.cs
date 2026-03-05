@@ -100,4 +100,9 @@ public class DensityProfile
     /// Personal cipher count distribution override. When null, uses flat countPerUser.
     /// </summary>
     public Distribution<(int Min, int Max)>? PersonalCipherDistribution { get; init; }
+
+    /// <summary>
+    /// Folder count distribution override. When null, uses FolderCountDistributions.Realistic.
+    /// </summary>
+    public Distribution<(int Min, int Max)>? FolderDistribution { get; init; }
 }

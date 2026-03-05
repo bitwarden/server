@@ -20,6 +20,16 @@ internal record SeedPresetDensity
     public SeedPresetCipherTypes? CipherTypes { get; init; }
 
     public SeedPresetDensityPersonalCiphers? PersonalCiphers { get; init; }
+
+    public SeedPresetDensityFolders? Folders { get; init; }
+}
+
+/// <summary>
+/// Folder count distribution per user: a named preset shape.
+/// </summary>
+internal record SeedPresetDensityFolders
+{
+    public string? Shape { get; init; }
 }
 
 /// <summary>

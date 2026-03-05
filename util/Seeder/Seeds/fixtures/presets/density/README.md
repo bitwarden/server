@@ -212,6 +212,8 @@ FROM (
 > **Cipher types:** Most presets use the default `realistic` distribution (60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey). Umbrella Corp uses `documentationHeavy` (40% Login, 40% SecureNote) and Tyrell Corp uses `developerFocused` (50% Login, 20% SSHKey).
 >
 > **Personal ciphers:** Three presets use `density.personalCiphers.shape` for variable per-user counts: Sterling Cooper and Wayne Enterprises use `realistic` (30% zero, 25% 1-4, 25% 5-14, 15% 15-49, 5% 50-200), Weyland-Yutani uses `lightUsage` (60% zero, 30% 1-4, 10% 5-14). Use `heavyUsage` only for small/mid orgs — at XL scale (5,000+ users) it produces 300K+ ciphers and will timeout. Other presets have no personal ciphers configured.
+>
+> **Folders:** Most presets use the default `realistic` folder distribution (35% zero, 35% 1-3, 20% 4-7, 10% 10-15). Wayne Enterprises uses `enterprise` (20% zero, 30% 2-4, 30% 5-9, 20% 10-24) and Weyland-Yutani uses `minimal` (70% zero, 25% 1-2, 5% 3-5).
 
 ---
 

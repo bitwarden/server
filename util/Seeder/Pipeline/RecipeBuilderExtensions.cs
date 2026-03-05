@@ -181,7 +181,7 @@ public static class RecipeBuilderExtensions
     /// <summary>
     /// Generate folders for each user using a realistic distribution.
     /// </summary>
-    public static RecipeBuilder AddFolders(this RecipeBuilder builder)
+    public static RecipeBuilder AddFolders(this RecipeBuilder builder, DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -190,7 +190,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasFolders = true;
-        builder.AddStep(_ => new GenerateFoldersStep());
+        builder.AddStep(_ => new GenerateFoldersStep(density));
         return builder;
     }
 
