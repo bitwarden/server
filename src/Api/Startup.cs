@@ -185,7 +185,7 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddImportServices();
 
         services.AddSendServices();
