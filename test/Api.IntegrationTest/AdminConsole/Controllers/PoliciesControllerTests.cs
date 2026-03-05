@@ -441,4 +441,47 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Put_SingleOrgPolicy_RevokesNonCompliantUser()
+    {
+        // Arrange
+        // Create a second organization (Org B) with its own owner
+        var orgBOwnerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(orgBOwnerEmail);
+        var (orgB, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
+            ownerEmail: orgBOwnerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
+
+        // Create a user that belongs to both Org A and Org B
+        var multiOrgUserEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(multiOrgUserEmail);
+
+        var orgUserInOrgA = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id,
+            multiOrgUserEmail, OrganizationUserType.User);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, orgB.Id,
+            multiOrgUserEmail, OrganizationUserType.User);
+
+        // Re-authenticate as the owner of Org A
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var request = new PolicyRequestModel
+        {
+            Enabled = true,
+            Data = null
+        };
+
+        // Act - Enable Single Org policy on Org A
+        var response = await _client.PutAsync(
+            $"/organizations/{_organization.Id}/policies/{PolicyType.SingleOrg}",
+            JsonContent.Create(request));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Verify the multi-org user was revoked in Org A
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(orgUserInOrgA.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Revoked, updatedOrgUser.Status);
+    }
 }

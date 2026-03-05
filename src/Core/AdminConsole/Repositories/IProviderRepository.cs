@@ -8,6 +8,8 @@ namespace Bit.Core.AdminConsole.Repositories;
 
 public interface IProviderRepository : IRepository<Provider, Guid>
 {
+    Task<Provider?> GetByGatewayCustomerIdAsync(string gatewayCustomerId);
+    Task<Provider?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId);
     Task<Provider?> GetByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take);
     Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync();

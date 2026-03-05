@@ -4,7 +4,6 @@ using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Subscriptions;
 using Bit.Api.Billing.Models.Requirements;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Queries;
@@ -117,7 +116,6 @@ public class OrganizationBillingVNextController(
 
     [Authorize<MemberOrProviderRequirement>]
     [HttpGet("metadata")]
-    [RequireFeature(FeatureFlagKeys.PM25379_UseNewOrganizationMetadataStructure)]
     [InjectOrganization]
     public async Task<IResult> GetMetadataAsync(
         [BindNever] Organization organization)

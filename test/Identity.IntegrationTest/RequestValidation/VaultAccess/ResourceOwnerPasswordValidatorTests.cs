@@ -613,10 +613,10 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
                 KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel
                 {
-                    PublicKey = "public_key",
-                    EncryptedPrivateKey = "private_key"
+                    PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
+                    EncryptedPrivateKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring
                 },
-                UserSymmetricKey = "sym_key",
+                UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
     }
 

@@ -1,0 +1,22 @@
+{
+  "$schema": "../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "obsidian-labs",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "starter-team"
+  },
+  "ciphers": {
+    "fixture": "tde-vault"
+  },
+  "policies": {
+    "enable": ["requireSso"]
+  },
+  "sso": {
+    "identifier": "obsidian-labs",
+    "encryptionType": "trustedDevices",
+    "provider": "oidc"
+  }
+}

@@ -156,6 +156,7 @@ public class OrganizationLicense : ILicense
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
     public bool UseDisableSmAdsForUsers { get; set; }
+    public bool UseMyItems { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -232,7 +233,8 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
                     !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
                     !p.Name.Equals(nameof(UseDisableSmAdsForUsers)) &&
-                    !p.Name.Equals(nameof(UsePhishingBlocker)))
+                    !p.Name.Equals(nameof(UsePhishingBlocker)) &&
+                    !p.Name.Equals(nameof(UseMyItems)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -428,6 +430,7 @@ public class OrganizationLicense : ILicense
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
         var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSmAdsForUsers));
+        var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
 
@@ -465,7 +468,8 @@ public class OrganizationLicense : ILicense
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
                useOrganizationDomains == organization.UseOrganizationDomains &&
                useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation &&
-               useDisableSmAdsForUsers == organization.UseDisableSmAdsForUsers;
+               useDisableSmAdsForUsers == organization.UseDisableSmAdsForUsers &&
+               useMyItems == organization.UseMyItems;
 
     }
 
