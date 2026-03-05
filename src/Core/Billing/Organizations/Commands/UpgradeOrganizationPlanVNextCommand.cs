@@ -82,7 +82,7 @@ public class UpgradeOrganizationPlanVNextCommand(
                 AdditionalSeats = organization.Seats ?? 0,
                 UseSecretsManager = organization.UseSecretsManager,
                 AdditionalSmSeats = organization.UseSecretsManager ? organization.SmSeats : null,
-            });
+            }, null);
 
             await organizationBillingService.Finalize(sale);
 
