@@ -108,8 +108,9 @@ public class SingleOrganizationPolicyRequirementTests
     }
 
     [Theory]
-    [BitAutoData]
-    public void CanJoinOrganization_OtherOrgHasPolicy_ReturnsOtherOrgError(
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    public void CanJoinOrganization_OtherOrgHasPolicy_ReturnsOtherOrgError(OrganizationUserStatusType status,
         Guid targetOrgId, Guid otherOrgId, Guid userId)
     {
         var sut = new SingleOrganizationPolicyRequirement(
@@ -117,7 +118,7 @@ public class SingleOrganizationPolicyRequirementTests
             new PolicyDetails
             {
                 OrganizationId = otherOrgId,
-                OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+                OrganizationUserStatus = status,
                 PolicyType = PolicyType.SingleOrg
             }
         ]);
@@ -134,16 +135,17 @@ public class SingleOrganizationPolicyRequirementTests
     }
 
     [Theory]
-    [BitAutoData]
-    public void CanJoinOrganization_TargetHasPolicy_UserOnlyInTargetOrg_ReturnsNull(
-        Guid targetOrgId, Guid userId)
+    [BitAutoData(OrganizationUserStatusType.Invited)]
+    [BitAutoData(OrganizationUserStatusType.Revoked)]
+    public void CanJoinOrganization_OtherOrgHasPolicy_WithInvitedOrRevokedUser_ReturnsNull(
+        OrganizationUserStatusType status, Guid targetOrgId, Guid otherOrgId, Guid userId)
     {
         var sut = new SingleOrganizationPolicyRequirement(
         [
             new PolicyDetails
             {
-                OrganizationId = targetOrgId,
-                OrganizationUserStatus = OrganizationUserStatusType.Accepted,
+                OrganizationId = otherOrgId,
+                OrganizationUserStatus = status,
                 PolicyType = PolicyType.SingleOrg
             }
         ]);
@@ -158,18 +160,18 @@ public class SingleOrganizationPolicyRequirementTests
         Assert.Null(result);
     }
 
+
     [Theory]
-    [BitAutoData(OrganizationUserStatusType.Invited)]
-    [BitAutoData(OrganizationUserStatusType.Revoked)]
-    public void CanJoinOrganization_OtherOrgHasPolicy_WithInvitedOrRevokedUser_ReturnsNull(
-        OrganizationUserStatusType status, Guid targetOrgId, Guid otherOrgId, Guid userId)
+    [BitAutoData]
+    public void CanJoinOrganization_TargetHasPolicy_UserOnlyInTargetOrg_ReturnsNull(
+        Guid targetOrgId, Guid userId)
     {
         var sut = new SingleOrganizationPolicyRequirement(
         [
             new PolicyDetails
             {
-                OrganizationId = otherOrgId,
-                OrganizationUserStatus = status,
+                OrganizationId = targetOrgId,
+                OrganizationUserStatus = OrganizationUserStatusType.Accepted,
                 PolicyType = PolicyType.SingleOrg
             }
         ]);
