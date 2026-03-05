@@ -23,6 +23,7 @@ public class UserDeviceScene(IUserRepository userRepository, IDeviceRepository d
 
     public class Result
     {
+        public Guid DeviceId { get; init; }
     }
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
@@ -39,6 +40,7 @@ public class UserDeviceScene(IUserRepository userRepository, IDeviceRepository d
         return new SceneResult<Result>(
             result: new Result
             {
+                DeviceId = device.Id,
             },
             mangleMap: manglerService.GetMangleMap());
     }
