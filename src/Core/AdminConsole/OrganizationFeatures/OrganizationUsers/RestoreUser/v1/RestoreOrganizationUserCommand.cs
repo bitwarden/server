@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfir
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
@@ -33,7 +34,8 @@ public class RestoreOrganizationUserCommand(
     IFeatureService featureService,
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
-    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator) : IRestoreOrganizationUserCommand
+    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -344,10 +346,12 @@ public class RestoreOrganizationUserCommand(
 
         if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
+            var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+                user.Id);
+
             var validationResult = await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
-                    allOrgUsers,
-                    user!));
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user!),
+                policyRequirement);
 
             var badRequestException = validationResult.Match(
                 error => new BadRequestException(user.Email +
@@ -358,6 +362,11 @@ public class RestoreOrganizationUserCommand(
             if (badRequestException is not null)
             {
                 throw badRequestException;
+            }
+
+            if (policyRequirement.IsEnabled(orgUser.OrganizationId))
+            {
+                await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
             }
         }
     }

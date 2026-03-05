@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -34,6 +35,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
     private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
+    private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
     public AcceptOrgUserCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -46,7 +48,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery,
         IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
-        IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand)
+        IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
+        IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
@@ -59,6 +62,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _policyRequirementQuery = policyRequirementQuery;
         _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
         _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
+        _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -172,7 +176,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
-            await ValidateAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
+            await HandleAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
         }
 
         await ValidateSingleOrganizationPolicyAsync(orgUser, allOrgUsers, user);
@@ -250,13 +254,18 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
     }
 
-    private async Task ValidateAutomaticUserConfirmationPolicyAsync(OrganizationUser orgUser,
-        ICollection<OrganizationUser> allOrgUsers, User user)
+    private async Task HandleAutomaticUserConfirmationPolicyAsync(OrganizationUser orgUser,
+        ICollection<OrganizationUser> allOrgUsers,
+        User user)
     {
+        var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+            user.Id);
+
         var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
                     allOrgUsers.Append(orgUser),
-                    user)))
+                    user),
+                policyRequirement))
             .Match(
                 error => error.Message,
                 _ => string.Empty
@@ -265,6 +274,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         if (!string.IsNullOrEmpty(error))
         {
             throw new BadRequestException(error);
+        }
+
+        if (policyRequirement.IsEnabled(orgUser.OrganizationId))
+        {
+            await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
     }
 }
