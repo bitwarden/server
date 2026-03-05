@@ -236,6 +236,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("INTEGER");
 
@@ -1133,6 +1136,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReportFile")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")

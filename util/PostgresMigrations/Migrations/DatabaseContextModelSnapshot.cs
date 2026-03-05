@@ -243,6 +243,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("boolean");
 
@@ -1149,6 +1152,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReportFile")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("RevisionDate")
