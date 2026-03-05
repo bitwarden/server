@@ -10,16 +10,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
-public class CreateOrganizationReportV2Command : ICreateOrganizationReportV2Command
+public class CreateOrganizationReportCommand : ICreateOrganizationReportCommand
 {
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
-    private readonly ILogger<CreateOrganizationReportV2Command> _logger;
+    private readonly ILogger<CreateOrganizationReportCommand> _logger;
 
-    public CreateOrganizationReportV2Command(
+    public CreateOrganizationReportCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
-        ILogger<CreateOrganizationReportV2Command> logger)
+        ILogger<CreateOrganizationReportCommand> logger)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
@@ -44,6 +44,7 @@ public class CreateOrganizationReportV2Command : ICreateOrganizationReportV2Comm
         {
             Id = CoreHelpers.SecureRandomString(32, upper: false, special: false),
             FileName = "report-data.json",
+            Size = request.FileSize ?? 0,
             Validated = false
         };
 
@@ -68,7 +69,7 @@ public class CreateOrganizationReportV2Command : ICreateOrganizationReportV2Comm
             CriticalPasswordAtRiskCount = request.ReportMetrics?.CriticalPasswordAtRiskCount,
             RevisionDate = DateTime.UtcNow
         };
-        organizationReport.SetReportFileData(fileData);
+        organizationReport.SetReportFile(fileData);
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
 

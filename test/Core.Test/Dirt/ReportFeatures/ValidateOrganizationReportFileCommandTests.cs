@@ -28,7 +28,7 @@ public class ValidateOrganizationReportFileCommandTests
             OrganizationId = organizationId,
             RevisionDate = DateTime.UtcNow.AddDays(-1)
         };
-        report.SetReportFileData(fileData);
+        report.SetReportFile(fileData);
         return report;
     }
 
@@ -54,7 +54,7 @@ public class ValidateOrganizationReportFileCommandTests
         // Assert
         Assert.True(result);
 
-        var fileData = report.GetReportFileData();
+        var fileData = report.GetReportFile();
         Assert.NotNull(fileData);
         Assert.True(fileData!.Validated);
         Assert.Equal(12345L, fileData.Size);

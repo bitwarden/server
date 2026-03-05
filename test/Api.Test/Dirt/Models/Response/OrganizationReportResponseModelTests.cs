@@ -10,6 +10,7 @@ public class OrganizationReportResponseModelTests
     [Theory, BitAutoData]
     public void Constructor_MapsPropertiesFromEntity(OrganizationReport report)
     {
+        report.ReportFile = null;
         var model = new OrganizationReportResponseModel(report);
 
         Assert.Equal(report.Id, model.Id);
@@ -28,8 +29,9 @@ public class OrganizationReportResponseModelTests
     [Theory, BitAutoData]
     public void Constructor_FileIsNull(OrganizationReport report)
     {
+        report.ReportFile = null;
         var model = new OrganizationReportResponseModel(report);
 
-        Assert.Null(model.File);
+        Assert.Null(model.ReportFile);
     }
 }

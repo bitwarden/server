@@ -41,7 +41,7 @@ public class LocalOrganizationReportStorageServiceTests
     }
 
     [Fact]
-    public async Task GetReportDataUploadUrlAsync_ReturnsApiEndpoint()
+    public async Task GetReportFileUploadUrlAsync_ReturnsApiEndpoint()
     {
         // Arrange
         var fixture = new Fixture();
@@ -59,7 +59,7 @@ public class LocalOrganizationReportStorageServiceTests
         var fileData = CreateFileData();
 
         // Act
-        var url = await sut.GetReportDataUploadUrlAsync(report, fileData);
+        var url = await sut.GetReportFileUploadUrlAsync(report, fileData);
 
         // Assert
         Assert.Equal($"/reports/organizations/{orgId}/{reportId}/file/report-data", url);

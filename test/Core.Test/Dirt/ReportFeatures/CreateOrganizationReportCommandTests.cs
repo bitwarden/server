@@ -14,12 +14,12 @@ using Xunit;
 namespace Bit.Core.Test.Dirt.ReportFeatures;
 
 [SutProviderCustomize]
-public class CreateOrganizationReportV2CommandTests
+public class CreateOrganizationReportCommandTests
 {
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_Success_ReturnsReportWithSerializedFileData(
-        SutProvider<CreateOrganizationReportV2Command> sutProvider)
+        SutProvider<CreateOrganizationReportCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();
@@ -40,9 +40,9 @@ public class CreateOrganizationReportV2CommandTests
 
         // Assert
         Assert.NotNull(report);
-        // ReportData should contain serialized ReportFile
-        Assert.NotEmpty(report.ReportData);
-        var fileData = report.GetReportFileData();
+        // ReportFile should contain serialized file data
+        Assert.NotNull(report.ReportFile);
+        var fileData = report.GetReportFile();
         Assert.NotNull(fileData);
         Assert.NotNull(fileData.Id);
         Assert.Equal(32, fileData.Id.Length);
@@ -64,7 +64,7 @@ public class CreateOrganizationReportV2CommandTests
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_InvalidOrganization_ThrowsBadRequestException(
-        SutProvider<CreateOrganizationReportV2Command> sutProvider)
+        SutProvider<CreateOrganizationReportCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();
@@ -85,7 +85,7 @@ public class CreateOrganizationReportV2CommandTests
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_MissingContentEncryptionKey_ThrowsBadRequestException(
-        SutProvider<CreateOrganizationReportV2Command> sutProvider)
+        SutProvider<CreateOrganizationReportCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();
@@ -106,7 +106,7 @@ public class CreateOrganizationReportV2CommandTests
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_WithMetrics_StoresMetricsCorrectly(
-        SutProvider<CreateOrganizationReportV2Command> sutProvider)
+        SutProvider<CreateOrganizationReportCommand> sutProvider)
     {
         // Arrange
         var fixture = new Fixture();

@@ -8,7 +8,7 @@ public interface IOrganizationReportStorageService
 {
     FileUploadType FileUploadType { get; }
 
-    Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, ReportFile fileData);
+    Task<string> GetReportFileUploadUrlAsync(OrganizationReport report, ReportFile fileData);
 
     Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, ReportFile fileData);
 

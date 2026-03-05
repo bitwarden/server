@@ -2,11 +2,11 @@
 
 namespace Bit.Api.Dirt.Models.Response;
 
-public class OrganizationReportV2ResponseModel
+public class OrganizationReportFileResponseModel
 {
-    public OrganizationReportV2ResponseModel() { }
+    public OrganizationReportFileResponseModel() { }
 
-    public string ReportDataUploadUrl { get; set; } = string.Empty;
+    public string ReportFileUploadUrl { get; set; } = string.Empty;
     public OrganizationReportResponseModel ReportResponse { get; set; } = null!;
     public FileUploadType FileUploadType { get; set; }
 }

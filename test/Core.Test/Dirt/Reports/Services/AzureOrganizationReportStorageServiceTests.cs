@@ -39,7 +39,7 @@ public class AzureOrganizationReportStorageServiceTests
     }
 
     [Fact]
-    public async Task GetReportDataUploadUrlAsync_ReturnsValidSasUrl()
+    public async Task GetReportFileUploadUrlAsync_ReturnsValidSasUrl()
     {
         // Arrange
         var fixture = new Fixture();
@@ -55,7 +55,7 @@ public class AzureOrganizationReportStorageServiceTests
         var fileData = CreateFileData();
 
         // Act
-        var url = await sut.GetReportDataUploadUrlAsync(report, fileData);
+        var url = await sut.GetReportFileUploadUrlAsync(report, fileData);
 
         // Assert
         Assert.NotNull(url);
@@ -125,7 +125,7 @@ public class AzureOrganizationReportStorageServiceTests
             .Create();
 
         // Act
-        var url = await sut.GetReportDataUploadUrlAsync(report, fileData);
+        var url = await sut.GetReportFileUploadUrlAsync(report, fileData);
 
         // Assert
         // Expected path: {orgId}/{MM-dd-yyyy}/{reportId}/{fileId}/report-data.json
