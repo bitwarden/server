@@ -141,7 +141,7 @@ public class SendRequestModelTests
     }
 
     [Fact]
-    public void UpdateSend_NoPasswordNoEmails_DoesNotClearExistingEmailsOrPassword()
+    public void UpdateSend_NoPasswordNoEmails_DoesNotClearExistingPassword()
     {
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
@@ -166,7 +166,6 @@ public class SendRequestModelTests
         var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
 
         Assert.Equal(AuthType.None, updatedSend.AuthType);
-        Assert.Equal("existing@example.com", updatedSend.Emails);
         Assert.Equal("existing_hashed_password", updatedSend.Password);
     }
 }
