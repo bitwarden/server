@@ -17,6 +17,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -249,7 +250,12 @@ public class AcceptOrgUserCommandTests
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // User is part of another org
-        var otherOrgUser = new OrganizationUser { UserId = user.Id, OrganizationId = Guid.NewGuid() };
+        var otherOrgUser = new OrganizationUser
+        {
+            UserId = user.Id,
+            OrganizationId = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Confirmed
+        };
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(user.Id)
             .Returns(Task.FromResult<ICollection<OrganizationUser>>(new List<OrganizationUser> { otherOrgUser }));
@@ -257,17 +263,7 @@ public class AcceptOrgUserCommandTests
         // Target org has SingleOrg policy, user is a regular User (not exempt)
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = orgUser.OrganizationId,
-                    OrganizationUserId = orgUser.Id,
-                    OrganizationUserStatus = OrganizationUserStatusType.Invited,
-                    OrganizationUserType = OrganizationUserType.User,
-                    PolicyType = PolicyType.SingleOrg
-                }
-            ]));
+            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetails([orgUser, otherOrgUser]));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -281,26 +277,19 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_UserInOrgWithSingleOrgPolicyAlready_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, Organization org, OrganizationUser orgUser, OrganizationUser otherOrganizationUser,
+        OrganizationUserUserDetails adminUserDetails)
     {
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // Another org the user is in has SingleOrg policy (not the target org)
         var otherOrgId = Guid.NewGuid();
+        otherOrganizationUser.OrganizationId = otherOrgId;
+        otherOrganizationUser.UserId = orgUser.UserId;
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = otherOrgId,
-                    OrganizationUserId = Guid.NewGuid(),
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    OrganizationUserType = OrganizationUserType.User,
-                    PolicyType = PolicyType.SingleOrg
-                }
-            ]));
+            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetail(otherOrganizationUser));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -322,7 +311,7 @@ public class AcceptOrgUserCommandTests
         // No SingleOrg policy applies
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         // No 2FA policy either
         sutProvider.GetDependency<IPolicyRequirementQuery>()

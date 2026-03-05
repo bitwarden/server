@@ -1,7 +1,5 @@
 ﻿using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -14,6 +12,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -46,7 +45,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token);
 
@@ -73,7 +72,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, collectionName, token);
 
@@ -99,7 +98,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -119,7 +118,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -139,7 +138,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -161,7 +160,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -171,7 +170,8 @@ public class InitPendingOrganizationCommandTests
     [Theory, BitAutoData]
     public async Task InitPendingOrganization_WithSingleOrgPolicy_ThrowsBadRequest(
         User user, Guid orgId, Guid orgUserId, string publicKey,
-        string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
+        string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org,
+        OrganizationUser orgUser, OrganizationUser orgUserFromAnotherOrg)
     {
         var token = CreateToken(orgUser, orgUserId, sutProvider);
 
@@ -181,19 +181,11 @@ public class InitPendingOrganizationCommandTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
 
         // User has SingleOrg policy from another org
+        orgUserFromAnotherOrg.OrganizationId = Guid.NewGuid();
+        orgUserFromAnotherOrg.UserId = user.Id;
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = Guid.NewGuid(),
-                    OrganizationUserId = Guid.NewGuid(),
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    OrganizationUserType = OrganizationUserType.User,
-                    PolicyType = PolicyType.SingleOrg
-                }
-            ]));
+            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetail(orgUserFromAnotherOrg));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -217,7 +209,7 @@ public class InitPendingOrganizationCommandTests
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
 
         // Act
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token);

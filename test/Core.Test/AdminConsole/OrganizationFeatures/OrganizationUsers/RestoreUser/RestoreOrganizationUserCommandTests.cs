@@ -15,6 +15,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -402,6 +403,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        OrganizationUser otherOrganizationUser,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email = null; // required to mock that user was previously confirmed
@@ -415,20 +417,11 @@ public class RestoreOrganizationUserCommandTests
             });
 
         // Other org has SingleOrg policy (not the target org)
-        var otherOrgId = Guid.NewGuid();
+        otherOrganizationUser.OrganizationId = Guid.NewGuid();
+        otherOrganizationUser.UserId = organizationUser.UserId;
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(organizationUser.UserId.Value)
-            .Returns(new SingleOrganizationPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = otherOrgId,
-                    OrganizationUserId = Guid.NewGuid(),
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    OrganizationUserType = OrganizationUserType.User,
-                    PolicyType = PolicyType.SingleOrg
-                }
-            ]));
+            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetails([otherOrganizationUser]));
 
         // No 2FA policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -478,17 +471,7 @@ public class RestoreOrganizationUserCommandTests
         // Target org has SingleOrg policy, user is a regular User (not exempt)
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(organizationUser.UserId.Value)
-            .Returns(new SingleOrganizationPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organizationUser.OrganizationId,
-                    OrganizationUserId = organizationUser.Id,
-                    OrganizationUserStatus = OrganizationUserStatusType.Revoked,
-                    OrganizationUserType = OrganizationUserType.User,
-                    PolicyType = PolicyType.SingleOrg
-                }
-            ]));
+            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetails([organizationUser, secondOrganizationUser]));
 
         var user = new User { Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
