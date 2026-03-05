@@ -263,8 +263,6 @@ public class SendRequestModel
         }
         else
         {
-            existingSend.Emails = null;
-            existingSend.Password = null;
             existingSend.AuthType = Core.Tools.Enums.AuthType.None;
         }
 
