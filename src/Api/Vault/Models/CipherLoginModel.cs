@@ -29,6 +29,7 @@ public class CipherLoginModel
         PasswordRevisionDate = data.PasswordRevisionDate;
         Totp = data.Totp;
         AutofillOnPageLoad = data.AutofillOnPageLoad;
+        AutotypeApps = new CipherAutotypeAppsModel(data.AutotypeApps);
     }
 
     [EncryptedString]

@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models;
@@ -8,6 +8,11 @@ public class CipherAutotypeAppsModel
     public CipherAutotypeAppsModel()
     {
         WindowsApps = new List<WindowsAppModel>();
+    }
+
+    public CipherAutotypeAppsModel(CipherAutotypeAppsData autotypeAppsData)
+    {
+        WindowsApps = autotypeAppsData.WindowsApps.Select(app => new WindowsAppModel(app.Name, app.ExecutablePath)).ToList();
     }
 
     public List<WindowsAppModel> WindowsApps { get; set; }
