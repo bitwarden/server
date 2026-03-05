@@ -1,7 +1,5 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -15,6 +13,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -290,17 +289,7 @@ public class SelfHostedOrganizationSignUpCommandTests
         // User has SingleOrg policy from another org
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(owner.Id)
-            .Returns(new SingleOrganizationPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = Guid.NewGuid(),
-                    OrganizationUserId = Guid.NewGuid(),
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    OrganizationUserType = OrganizationUserType.User,
-                    PolicyType = PolicyType.SingleOrg
-                }
-            ]));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForAnotherOrganization());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -325,7 +314,7 @@ public class SelfHostedOrganizationSignUpCommandTests
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(owner.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(owner.Id)
@@ -360,7 +349,7 @@ public class SelfHostedOrganizationSignUpCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(owner.Id)
-            .Returns(new SingleOrganizationPolicyRequirement([]));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
     }
 
     private void SetupLicenseValidation(

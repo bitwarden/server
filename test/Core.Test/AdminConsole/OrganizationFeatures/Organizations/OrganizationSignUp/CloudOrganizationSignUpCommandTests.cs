@@ -298,7 +298,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         organizationUser.OrganizationId = Guid.NewGuid();
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
-            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetail(organizationUser));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForAnotherOrganization());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -325,7 +325,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         // Act
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);

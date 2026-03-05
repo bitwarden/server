@@ -45,7 +45,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token);
 
@@ -72,7 +72,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, collectionName, token);
 
@@ -98,7 +98,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -118,7 +118,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -138,7 +138,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -160,7 +160,7 @@ public class InitPendingOrganizationCommandTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token));
 
@@ -185,7 +185,7 @@ public class InitPendingOrganizationCommandTests
         orgUserFromAnotherOrg.UserId = user.Id;
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetail(orgUserFromAnotherOrg));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForAnotherOrganization());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -209,7 +209,7 @@ public class InitPendingOrganizationCommandTests
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         // Act
         await sutProvider.Sut.InitPendingOrganizationAsync(user, orgId, orgUserId, publicKey, privateKey, "", token);

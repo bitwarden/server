@@ -263,7 +263,7 @@ public class AcceptOrgUserCommandTests
         // Target org has SingleOrg policy, user is a regular User (not exempt)
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetails([orgUser, otherOrgUser]));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForTargetOrganization(org.Id));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -277,19 +277,16 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserAsync_UserInOrgWithSingleOrgPolicyAlready_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUser otherOrganizationUser,
+        User user, Organization org, OrganizationUser orgUser,
         OrganizationUserUserDetails adminUserDetails)
     {
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // Another org the user is in has SingleOrg policy (not the target org)
-        var otherOrgId = Guid.NewGuid();
-        otherOrganizationUser.OrganizationId = otherOrgId;
-        otherOrganizationUser.UserId = orgUser.UserId;
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetail(otherOrganizationUser));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForAnotherOrganization());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -311,7 +308,7 @@ public class AcceptOrgUserCommandTests
         // No SingleOrg policy applies
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         // No 2FA policy either
         sutProvider.GetDependency<IPolicyRequirementQuery>()

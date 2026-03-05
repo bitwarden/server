@@ -249,7 +249,7 @@ public class ConfirmOrganizationUserCommandTests
         // Confirming org has SingleOrg policy, user is a regular User (not exempt)
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetail(orgUser));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForTargetOrganization(org.Id));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
@@ -287,7 +287,7 @@ public class ConfirmOrganizationUserCommandTests
         // Other org has SingleOrg policy (not the confirming org)
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetEnabledSingleOrgDetail(orgUserAnotherOrg));
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.EnabledForAnotherOrganization());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
@@ -315,7 +315,7 @@ public class ConfirmOrganizationUserCommandTests
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(user.Id)
-            .Returns(PolicyRequirementsFactory.GetDisabledSingleOrganizationRequirement());
+            .Returns(SingleOrganizationPolicyRequirementTestFactory.NoSinglePolicyOrganizationsForUser());
 
         // No 2FA policy either
         sutProvider.GetDependency<IPolicyRequirementQuery>()
