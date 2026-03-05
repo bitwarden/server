@@ -1,13 +1,17 @@
 ﻿using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
 public static class ReportingServiceCollectionExtensions
 {
-    public static void AddReportingServices(this IServiceCollection services)
+    public static void AddReportingServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
+        services.AddExtendedCache(OrganizationReportCacheConstants.CacheName, (GlobalSettings)globalSettings);
+
         services.AddScoped<IRiskInsightsReportQuery, RiskInsightsReportQuery>();
         services.AddScoped<IMemberAccessReportQuery, MemberAccessReportQuery>();
         services.AddScoped<IAddPasswordHealthReportApplicationCommand, AddPasswordHealthReportApplicationCommand>();
