@@ -84,7 +84,6 @@ public interface IOnPolicyPreUpdateEvent : IPolicyUpdateEvent
 ```
 
 Typical uses: revoking non-compliant users, removing emergency access grants.
-Note:
 
 ---
 
@@ -104,6 +103,7 @@ public interface IOnPolicyPostUpdateEvent : IPolicyUpdateEvent
 
 Typical uses: creating collections, sending notifications that depend on the new policy state.
 Note: This is more useful for enabling a policy than for disabling a policy, since when the policy is disabled, there is no easy way to find the users the policy should be enforced on.
+
 ---
 
 ### `IPolicyEventHandlerFactory`
