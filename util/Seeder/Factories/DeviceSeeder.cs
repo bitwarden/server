@@ -1,14 +1,16 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Seeder.Factories;
 
 internal static class DeviceSeeder
 {
-    internal static Core.Entities.Device Create(Guid userId, DeviceType deviceType, string deviceName, string identifier, string? pushToken)
+    internal static Device Create(Guid userId, DeviceType deviceType, string deviceName, string identifier, string? pushToken)
     {
-        return new Core.Entities.Device
+        return new Device
         {
-            Id = Core.Utilities.CoreHelpers.GenerateComb(),
+            Id = CoreHelpers.GenerateComb(),
             UserId = userId,
             Type = deviceType,
             Name = deviceName,
