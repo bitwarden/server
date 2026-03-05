@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -37,6 +38,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
     private readonly ISendOrganizationConfirmationCommand _sendOrganizationConfirmationCommand;
+    private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
+
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -52,7 +55,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IFeatureService featureService,
         ICollectionRepository collectionRepository,
         IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
-        ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
+        ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand,
+        IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -69,6 +73,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _collectionRepository = collectionRepository;
         _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
         _sendOrganizationConfirmationCommand = sendOrganizationConfirmationCommand;
+        _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, string defaultUserCollectionName = null)
@@ -194,11 +199,15 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
+            var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+                user.Id);
+
             var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                     new AutomaticUserConfirmationPolicyEnforcementRequest(
                         organizationId,
                         userOrgs,
-                        user)))
+                        user),
+                    policyRequirement))
                 .Match(
                     error => new BadRequestException(error.Message),
                     _ => null
@@ -207,6 +216,11 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             if (error is not null)
             {
                 throw error;
+            }
+
+            if (policyRequirement.IsEnabled(organizationId))
+            {
+                await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
             }
         }
 
