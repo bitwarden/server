@@ -1,5 +1,4 @@
-using Bit.Core.Entities;
-using Xunit;
+﻿using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.DensityModel;
 
