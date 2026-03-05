@@ -105,7 +105,7 @@ public class PatchUserCommand : IPatchUserCommand
             await _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
             return true;
         }
-        else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
+        else if (!active && orgUser.Status.CanBeRevoked())
         {
             await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
             return true;
@@ -136,4 +136,10 @@ public class PatchUserCommand : IPatchUserCommand
         orgUser.ExternalId = newExternalId;
         await _organizationUserRepository.ReplaceAsync(orgUser);
     }
+}
+
+public static class OrgUserStatusExtensions
+{
+    public static bool CanBeRevoked(this OrganizationUserStatusType status)
+        => status is OrganizationUserStatusType.Invited or OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed;
 }
