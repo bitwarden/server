@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
+
 using Bit.Core.Auth.Settings;
 
 namespace Bit.Core.Settings;
@@ -105,7 +107,7 @@ public class GlobalSettings : IGlobalSettings
         {
             return null;
         }
-        return string.Format("{0}/{1}", BaseServiceUri.Vault, name);
+        return string.Format(CultureInfo.InvariantCulture, "{0}/{1}", BaseServiceUri.Vault, name);
     }
 
     public string BuildInternalUri(string explicitValue, string name)
@@ -118,7 +120,7 @@ public class GlobalSettings : IGlobalSettings
         {
             return null;
         }
-        return string.Format("http://{0}:5000", name);
+        return string.Format(CultureInfo.InvariantCulture, "http://{0}:5000", name);
     }
 
     public string BuildDirectory(string explicitValue, string appendedPath)
