@@ -7,6 +7,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
+using Bit.Infrastructure.EntityFramework.Repositories.Vault.Queries;
 using Bit.Test.Common.AutoFixture.Attributes;
 using LinqToDB;
 using Xunit;
@@ -366,6 +367,48 @@ public class CipherRepositoryTests
 
             var bumpedUser = await efUserRepos[i].GetByIdAsync(efUser.Id);
             Assert.Equal(DateTime.UtcNow.ToShortDateString(), bumpedUser.AccountRevisionDate.ToShortDateString());
+        }
+    }
+
+    [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
+    public async Task CipherOrganizationDetailsReadByOrganizationIdQuery_ReturnsAllProperties(
+        Cipher cipher,
+        Organization org,
+        List<EfVaultRepo.CipherRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos)
+    {
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+
+            var efOrg = await efOrgRepos[i].CreateAsync(org);
+            efOrgRepos[i].ClearChangeTracking();
+
+            cipher.OrganizationId = efOrg.Id;
+            cipher.UserId = null;
+
+            var createdCipher = await sut.CreateAsync(cipher);
+            sut.ClearChangeTracking();
+
+            var query = new CipherOrganizationDetailsReadByOrganizationIdQuery(efOrg.Id);
+            var result = await sut.Run(query).ToListAsync();
+
+            Assert.Single(result);
+            var resultCipher = result[0];
+
+            Assert.Equal(createdCipher.Id, resultCipher.Id);
+            Assert.Null(resultCipher.UserId);
+            Assert.Equal(efOrg.Id, resultCipher.OrganizationId);
+            Assert.Equal(createdCipher.Type, resultCipher.Type);
+            Assert.Equal(createdCipher.Data, resultCipher.Data);
+            Assert.Equal(createdCipher.Favorites, resultCipher.Favorites);
+            Assert.Equal(createdCipher.Folders, resultCipher.Folders);
+            Assert.Equal(createdCipher.Attachments, resultCipher.Attachments);
+            Assert.Equal(createdCipher.CreationDate, resultCipher.CreationDate);
+            Assert.Equal(createdCipher.RevisionDate, resultCipher.RevisionDate);
+            Assert.Equal(createdCipher.DeletedDate, resultCipher.DeletedDate);
+            Assert.Equal(createdCipher.Key, resultCipher.Key);
+            Assert.Equal(efOrg.UseTotp, resultCipher.OrganizationUseTotp);
         }
     }
 }
