@@ -169,7 +169,7 @@ public class InitPendingOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task InitPendingOrganization_WithPolicyRequirementsEnabled_WithSingleOrgPolicy_ThrowsBadRequest(
+    public async Task InitPendingOrganization_WithSingleOrgPolicy_ThrowsBadRequest(
         User user, Guid orgId, Guid orgUserId, string publicKey,
         string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
     {
@@ -203,7 +203,7 @@ public class InitPendingOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task InitPendingOrganization_WithPolicyRequirementsEnabled_WithoutSingleOrgPolicy_Succeeds(
+    public async Task InitPendingOrganization_WithoutSingleOrgPolicy_Succeeds(
         User user, Guid orgId, Guid orgUserId, string publicKey,
         string privateKey, SutProvider<InitPendingOrganizationCommand> sutProvider, Organization org, OrganizationUser orgUser)
     {

@@ -275,7 +275,7 @@ public class SelfHostedOrganizationSignUpCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SignUpAsync_WithPolicyRequirementsEnabled_WithSingleOrgPolicy_ThrowsBadRequest(
+    public async Task SignUpAsync_WithSingleOrgPolicy_ThrowsBadRequest(
         User owner, string ownerKey, string collectionName,
         string publicKey, string privateKey,
         SutProvider<SelfHostedOrganizationSignUpCommand> sutProvider)
@@ -310,7 +310,7 @@ public class SelfHostedOrganizationSignUpCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SignUpAsync_WithPolicyRequirementsEnabled_WithoutSingleOrgPolicy_Succeeds(
+    public async Task SignUpAsync_WithoutSingleOrgPolicy_Succeeds(
         User owner, string ownerKey, string collectionName,
         string publicKey, string privateKey, List<Device> devices,
         SutProvider<SelfHostedOrganizationSignUpCommand> sutProvider)

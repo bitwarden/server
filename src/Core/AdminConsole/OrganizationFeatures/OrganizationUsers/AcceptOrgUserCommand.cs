@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -208,7 +209,14 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var error = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
         if (error is not null)
         {
-            throw new BadRequestException(error.Message);
+            var singleOrgErrorMessage = error switch
+            {
+                UserIsAMemberOfAnotherOrganization => "You cannot accept this invite until you leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => "You cannot accept this invite because you are in another organization which forbids it.",
+                _ => error.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
         }
     }
 

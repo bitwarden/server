@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationC
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -212,7 +213,14 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         var singleOrgError = singleOrgRequirement.CanJoinOrganization(organizationId, orgUsers);
         if (singleOrgError is not null)
         {
-            throw new BadRequestException(singleOrgError.Message);
+            var singleOrgErrorMessage = singleOrgError switch
+            {
+                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be confirmed until they leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be confirmed because they are in another organization which forbids it.",
+                _ => singleOrgError.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
         }
     }
 

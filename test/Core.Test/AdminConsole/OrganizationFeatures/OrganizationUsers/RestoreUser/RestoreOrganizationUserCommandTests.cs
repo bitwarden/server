@@ -398,7 +398,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_WithPolicyRequirementsEnabled_WithOtherOrgSingleOrgPolicy_Fails(
+    public async Task RestoreUse_WithOtherOrgSingleOrgPolicy_Fails(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -441,7 +441,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("test@bitwarden.com: member cannot join the organization because they are in another organization which forbids it.", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com cannot be restored because they are in another organization which forbids it.", exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -449,7 +449,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUser_WithPolicyRequirementsEnabled_WithSingleOrgPolicyEnabled_Fails(
+    public async Task RestoreUse_WithSingleOrgPolicyEnabled_Fails(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
@@ -496,7 +496,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("test@bitwarden.com: member cannot join the organization until they leave or remove all other organizations.", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com cannot be restored until they leave or remove all other organizations.", exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()

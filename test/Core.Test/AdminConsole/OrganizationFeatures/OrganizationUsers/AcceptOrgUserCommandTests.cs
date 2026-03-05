@@ -241,7 +241,7 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_UserJoiningOrgWithSingleOrgPolicy_ThrowsBadRequest(
+    public async Task AcceptOrgUserAsync_WithSingleOrgEnabled_UserJoiningOrgWithSingleOrgPolicy_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -273,13 +273,13 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("Member cannot join the organization until they leave or remove all other organizations.",
+        Assert.Equal("You cannot accept this invite until you leave or remove all other organizations.",
             exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_UserInOrgWithSingleOrgPolicyAlready_ThrowsBadRequest(
+    public async Task AcceptOrgUserAsync_UserInOrgWithSingleOrgPolicyAlready_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -306,13 +306,13 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("Member cannot join the organization because they are in another organization which forbids it.",
+        Assert.Equal("You cannot accept this invite because you are in another organization which forbids it.",
             exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_NoSingleOrgPolicy_Succeeds(
+    public async Task AcceptOrgUserAsync_NoSingleOrgPolicy_Succeeds(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {

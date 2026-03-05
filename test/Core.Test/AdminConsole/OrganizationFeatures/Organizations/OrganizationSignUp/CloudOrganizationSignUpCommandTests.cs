@@ -278,7 +278,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task SignUpAsync_WithPolicyRequirementsEnabled_WithSingleOrgPolicy_ThrowsBadRequest(
+    public async Task SignUpAsync_WhenSingleOrgPolicyIsEnabled_ThrowsBadRequest(
         PlanType planType, OrganizationSignup signup,
         SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {
@@ -315,7 +315,7 @@ public class CloudICloudOrganizationSignUpCommandTests
 
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task SignUpAsync_WithPolicyRequirementsEnabled_WithoutSingleOrgPolicy_Succeeds(
+    public async Task SignUpAsync_WithoutSingleOrgPolicy_Succeeds(
         PlanType planType, OrganizationSignup signup,
         SutProvider<CloudOrganizationSignUpCommand> sutProvider)
     {

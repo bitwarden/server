@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -316,22 +317,27 @@ public class RestoreOrganizationUserCommand(
         var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(userId);
         var singleOrgError = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
 
-        var twoFactorCompliant = true;
-        if (!userHasTwoFactorEnabled)
-        {
-            twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
-        }
+        var twoFactorCompliant = userHasTwoFactorEnabled || !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
 
         if (singleOrgError is not null && !twoFactorCompliant)
         {
             throw new BadRequestException(user.Email +
                                           " is not compliant with the single organization and two-step login policy");
         }
-        else if (singleOrgError is not null)
+
+        if (singleOrgError is not null)
         {
-            throw new BadRequestException(user.Email + ": " + singleOrgError.Message);
+            var singleOrgErrorMessage = singleOrgError switch
+            {
+                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be restored until they leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be restored because they are in another organization which forbids it.",
+                _ => singleOrgError.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
         }
-        else if (!twoFactorCompliant)
+
+        if (!twoFactorCompliant)
         {
             throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }

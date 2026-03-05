@@ -262,7 +262,7 @@ public class ConfirmOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
-        Assert.Contains("Member cannot join the organization until they leave or remove all other organizations.", exception.Message);
+        Assert.Contains($"{user.Email} cannot be confirmed until they leave or remove all other organizations.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -310,7 +310,7 @@ public class ConfirmOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
-        Assert.Contains("Member cannot join the organization because they are in another organization which forbids it.", exception.Message);
+        Assert.Contains($"{user.Email} cannot be confirmed because they are in another organization which forbids it.", exception.Message);
     }
 
     [Theory, BitAutoData]
