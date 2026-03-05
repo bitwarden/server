@@ -135,7 +135,6 @@ internal sealed class CreateCollectionsStep : IStep
                 return min + (int)(weight * (range - 1) + 0.5);
 
             case CollectionFanOutShape.FrontLoaded:
-                // First 10% of collections get max fan-out, rest get min
                 var topCount = Math.Max(1, collectionCount / 10);
                 return collectionIndex < topCount ? max : min;
 

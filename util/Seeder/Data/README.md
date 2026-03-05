@@ -37,8 +37,8 @@ Percentage-based deterministic selection via `Distribution<T>.Select(index, tota
 | Distribution | Values | Usage |
 |--------------|--------|-------|
 | `PasswordDistributions.Realistic` | 25% VeryWeak → 5% VeryStrong | Password strength mix |
-| `UsernameDistributions.Realistic` | 45% corporate, 30% personal, etc. | Username category mix |
-| `CipherTypeDistributions.Realistic` | 70% Login, 15% Card, etc. | Cipher type mix |
+| `UsernameDistributions.Realistic` | 45% corporate, 15% personal, 10% social, etc. | Username category mix |
+| `CipherTypeDistributions.Realistic` | 60% Login, 15% SecureNote, 12% Card, 10% Identity, 3% SSHKey | Cipher type mix |
 | `UserStatusDistributions.Realistic` | 85% Confirmed, 5% each other | Org user status mix |
 | `FolderCountDistributions.Realistic` | 35% zero, 35% 1-3, etc. | Folders per user |
 
@@ -49,9 +49,9 @@ Percentage-based deterministic selection via `Distribution<T>.Select(index, tota
 ### Login Ciphers
 
 - 50 real companies across 3 regions with metadata (category, type, domain)
-- 200 first names + 200 last names (US, European)
-- 6 username patterns (corporate email conventions)
-- 3 password strength levels (95 total passwords)
+- Locale-aware name generation via Bogus (Faker) library with 1500-entry pools
+- 8 username patterns (corporate email, personal, social, employee ID, etc.)
+- 5 password strength levels (138 total passwords)
 
 ### Organizational Structures
 
@@ -138,16 +138,12 @@ ciphers:
 
 ## Adding New Data
 
-### New Region (e.g., Swedish Names)
+### New Region (e.g., Swedish locale)
 
 ```csharp
-// In Names.cs - add array
-public static readonly string[] SwedishFirstNames = ["Erik", "Lars", "Anna", ...];
-public static readonly string[] SwedishLastNames = ["Andersson", "Johansson", ...];
-
-// Update aggregates
-public static readonly string[] AllFirstNames = [.. UsFirstNames, .. EuropeanFirstNames, .. SwedishFirstNames];
-public static readonly string[] AllLastNames = [.. UsLastNames, .. EuropeanLastNames, .. SwedishLastNames];
+// In Generators/CipherUsernameGenerator.cs - add locale to the supported locales
+// Names are generated via Bogus (Faker) library, not static arrays
+private static readonly string[] Locales = ["en", "fr", "de", "sv"];
 ```
 
 ### New Company Category

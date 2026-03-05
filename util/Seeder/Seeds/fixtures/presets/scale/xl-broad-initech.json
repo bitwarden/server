@@ -1,8 +1,8 @@
 {
   "$schema": "../../../schemas/preset.schema.json",
   "organization": {
-    "name": "Buy n Large",
-    "domain": "buynlarge.example",
+    "name": "Initech",
+    "domain": "initech.example",
     "planType": "enterprise-annually",
     "seats": 12000
   },

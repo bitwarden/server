@@ -177,7 +177,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **Folder structure:** See `Data/README.md` for Generators and Distributions details.
 
-- `Static/` - Read-only data arrays (Companies, Passwords, Names, OrgStructures)
+- `Static/` - Read-only data arrays (Companies, Passwords, OrgStructures)
 - `Generators/` - Seeded data generators via `GeneratorContext`
 - `Distributions/` - Percentage-based selection via `Distribution<T>`
 - `Enums/` - Public API enums

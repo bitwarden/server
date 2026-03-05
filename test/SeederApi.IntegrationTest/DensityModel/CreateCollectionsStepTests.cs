@@ -207,8 +207,6 @@ public class CreateCollectionsStepTests
         Assert.Equal(1, step.ComputeFanOut(3, 10, 1, 3));
     }
 
-    // --- ComputeCollectionsPerUser tests ---
-
     [Fact]
     public void ComputeCollectionsPerUser_Uniform_CyclesThroughRange()
     {
