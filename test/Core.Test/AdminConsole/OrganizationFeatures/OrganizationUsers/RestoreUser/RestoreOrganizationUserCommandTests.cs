@@ -393,7 +393,7 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RestoreUse_WithOtherOrgSingleOrgPolicy_Fails(
+    public async Task RestoreUser_WithOtherOrgSingleOrgPolicy_Fails(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
