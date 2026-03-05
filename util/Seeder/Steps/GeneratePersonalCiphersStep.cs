@@ -53,7 +53,7 @@ internal sealed class GeneratePersonalCiphersStep(
             if (personalDist is not null)
             {
                 var range = personalDist.Select(userIndex, userDigests.Count);
-                userCount = range.Min + (userIndex % Math.Max(range.Max - range.Min, 1));
+                userCount = range.Min + (userIndex % Math.Max(range.Max - range.Min + 1, 1));
             }
 
             for (var i = 0; i < userCount; i++)
@@ -79,7 +79,7 @@ internal sealed class GeneratePersonalCiphersStep(
         for (var i = 0; i < userCount; i++)
         {
             var range = dist.Select(i, userCount);
-            total += range.Min + (i % Math.Max(range.Max - range.Min, 1));
+            total += range.Min + (i % Math.Max(range.Max - range.Min + 1, 1));
         }
 
         return Math.Max(total, 1);

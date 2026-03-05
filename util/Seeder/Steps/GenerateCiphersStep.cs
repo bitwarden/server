@@ -126,6 +126,7 @@ internal sealed class GenerateCiphersStep(
                     for (var i = 0; i < multiCount; i++)
                     {
                         var extraCount = 1 + (i % Math.Max(_density.MaxCollectionsPerCipher - 1, 1));
+                        extraCount = Math.Min(extraCount, collectionIds.Count - 1);
                         for (var j = 0; j < extraCount; j++)
                         {
                             var secondaryIndex = (primaryIndices[i] + 1 + j) % collectionIds.Count;
