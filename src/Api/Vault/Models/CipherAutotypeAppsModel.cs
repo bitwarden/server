@@ -29,11 +29,9 @@ public class CipherAutotypeAppsModel
         public string ExecutablePath { get; set; }
     }
 
-    // TODO: fix me
     public CipherAutotypeAppsData ToCipherAutotypeAppsData()
     {
-        List<WindowsAppData> appsData = new List<WindowsAppData>();
-        this.WindowsApps.Select(app => new WindowsAppData(app.Name, app.ExecutablePath));
+        var appsData = this.WindowsApps.Select(app => new CipherAutotypeAppsData.WindowsAppData(app.Name, app.ExecutablePath)).ToList();
         return new CipherAutotypeAppsData(appsData);
     }
 }
