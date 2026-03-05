@@ -95,6 +95,7 @@ internal sealed class GenerateCiphersStep(
             {
                 var orphanCount = (int)(count * _density.OrphanCipherRate);
                 var nonOrphanCount = count - orphanCount;
+                var primaryIndices = new int[nonOrphanCount];
 
                 for (var i = 0; i < nonOrphanCount; i++)
                 {
@@ -110,12 +111,12 @@ internal sealed class GenerateCiphersStep(
                         collectionIndex = i % collectionIds.Count;
                     }
 
-                    var collectionId = collectionIds[collectionIndex];
+                    primaryIndices[i] = collectionIndex;
 
                     collectionCiphers.Add(new CollectionCipher
                     {
                         CipherId = ciphers[i].Id,
-                        CollectionId = collectionId
+                        CollectionId = collectionIds[collectionIndex]
                     });
                 }
 
@@ -124,13 +125,10 @@ internal sealed class GenerateCiphersStep(
                     var multiCount = (int)(nonOrphanCount * _density.MultiCollectionRate);
                     for (var i = 0; i < multiCount; i++)
                     {
-                        var primaryIndex = collectionCiphers[i].CollectionId == collectionIds[0]
-                            ? 0
-                            : collectionIds.IndexOf(collectionCiphers[i].CollectionId);
                         var extraCount = 1 + (i % Math.Max(_density.MaxCollectionsPerCipher - 1, 1));
                         for (var j = 0; j < extraCount; j++)
                         {
-                            var secondaryIndex = (primaryIndex + 1 + j) % collectionIds.Count;
+                            var secondaryIndex = (primaryIndices[i] + 1 + j) % collectionIds.Count;
                             collectionCiphers.Add(new CollectionCipher
                             {
                                 CipherId = ciphers[i].Id,

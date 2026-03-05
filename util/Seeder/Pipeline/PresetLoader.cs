@@ -76,8 +76,15 @@ internal static class PresetLoader
             builder.AddOwner();
         }
 
+        var density = ParseDensity(preset.Density);
+
         // Generator requires a domain and is needed for generated ciphers, personal ciphers, or folders
-        if (domain is not null && (preset.Ciphers?.Count > 0 || preset.PersonalCiphers?.CountPerUser > 0 || preset.Folders == true))
+        if (domain is not null && (
+            preset.Ciphers?.Count > 0 ||
+            preset.PersonalCiphers?.CountPerUser > 0 ||
+            preset.Folders == true ||
+            density?.FolderDistribution is not null ||
+            density?.PersonalCipherDistribution is not null))
         {
             builder.WithGenerator(domain);
         }
@@ -86,8 +93,6 @@ internal static class PresetLoader
         {
             builder.AddUsers(preset.Users.Count, preset.Users.RealisticStatusMix);
         }
-
-        var density = ParseDensity(preset.Density);
 
         if (preset.Groups is not null)
         {
@@ -196,7 +201,8 @@ internal static class PresetLoader
                 "loginonly" => CipherTypeDistributions.LoginOnly,
                 "documentationheavy" => CipherTypeDistributions.DocumentationHeavy,
                 "developerfocused" => CipherTypeDistributions.DeveloperFocused,
-                _ => CipherTypeDistributions.Realistic,
+                _ => throw new InvalidOperationException(
+                    $"Unknown cipher type preset '{cipherTypes.Preset}'. Valid values: realistic, loginOnly, documentationHeavy, developerFocused."),
             };
         }
 
@@ -231,7 +237,8 @@ internal static class PresetLoader
             "realistic" => PersonalCipherDistributions.Realistic,
             "lightusage" => PersonalCipherDistributions.LightUsage,
             "heavyusage" => PersonalCipherDistributions.HeavyUsage,
-            _ => null,
+            _ => throw new InvalidOperationException(
+                $"Unknown personal cipher distribution '{shape}'. Valid values: realistic, lightUsage, heavyUsage."),
         };
     }
 
@@ -247,7 +254,8 @@ internal static class PresetLoader
             "realistic" => FolderCountDistributions.Realistic,
             "enterprise" => FolderCountDistributions.Enterprise,
             "minimal" => FolderCountDistributions.Minimal,
-            _ => null,
+            _ => throw new InvalidOperationException(
+                $"Unknown folder distribution '{shape}'. Valid values: realistic, enterprise, minimal."),
         };
     }
 
