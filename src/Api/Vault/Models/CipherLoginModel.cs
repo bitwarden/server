@@ -64,6 +64,7 @@ public class CipherLoginModel
     public string Totp { get; set; }
     public bool? AutofillOnPageLoad { get; set; }
     public CipherFido2CredentialModel[] Fido2Credentials { get; set; }
+    public CipherAutotypeAppsModel AutotypeApps { get; set; }
 
     public class CipherLoginUriModel
     {

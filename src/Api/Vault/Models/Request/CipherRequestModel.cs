@@ -217,6 +217,7 @@ public class CipherRequestModel
             Totp = Login.Totp,
             AutofillOnPageLoad = Login.AutofillOnPageLoad,
             Fido2Credentials = Login.Fido2Credentials == null ? null : Login.Fido2Credentials.ToCipherLoginFido2CredentialData(),
+            AutotypeApps = Login.AutotypeApps.ToCipherAutotypeAppsData(),
         };
     }
 
