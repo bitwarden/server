@@ -8,7 +8,7 @@ public class NoopOrganizationReportStorageService : IOrganizationReportStorageSe
 {
     public FileUploadType FileUploadType => FileUploadType.Direct;
 
-    public Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, ReportFile fileData) => Task.FromResult(string.Empty);
+    public Task<string> GetReportFileUploadUrlAsync(OrganizationReport report, ReportFile fileData) => Task.FromResult(string.Empty);
 
     public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, ReportFile fileData) => Task.FromResult(string.Empty);
 

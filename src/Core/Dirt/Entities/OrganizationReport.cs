@@ -27,21 +27,21 @@ public class OrganizationReport : ITableObject<Guid>
     public int? PasswordAtRiskCount { get; set; }
     public int? CriticalPasswordCount { get; set; }
     public int? CriticalPasswordAtRiskCount { get; set; }
-    public ReportFile? OrganizationReportFile { get; set; }
+    public string? ReportFile { get; set; }
 
-    public ReportFile? GetReportFileData()
+    public ReportFile? GetReportFile()
     {
-        if (string.IsNullOrWhiteSpace(ReportData))
+        if (string.IsNullOrWhiteSpace(ReportFile))
         {
             return null;
         }
 
-        return JsonSerializer.Deserialize<ReportFile>(ReportData);
+        return JsonSerializer.Deserialize<ReportFile>(ReportFile);
     }
 
-    public void SetReportFileData(ReportFile data)
+    public void SetReportFile(ReportFile data)
     {
-        ReportData = JsonSerializer.Serialize(data, JsonHelpers.IgnoreWritingNull);
+        ReportFile = JsonSerializer.Serialize(data, JsonHelpers.IgnoreWritingNull);
     }
 
     public void SetNewId()

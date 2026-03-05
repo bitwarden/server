@@ -1,11 +1,16 @@
 ﻿using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
+using Bit.Core.Dirt.Reports.Services;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -18,15 +23,21 @@ namespace Bit.Api.Test.Dirt;
 [SutProviderCustomize]
 public class OrganizationReportControllerTests
 {
-    #region Whole OrganizationReport Endpoints
+    // GetLatestOrganizationReportAsync - V1 (flag off)
 
     [Theory, BitAutoData]
-    public async Task GetLatestOrganizationReportAsync_WithValidOrgId_ReturnsOkResult(
+    public async Task GetLatestOrganizationReportAsync_V1_WithValidOrgId_ReturnsOkResult(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         OrganizationReport expectedReport)
     {
         // Arrange
+        expectedReport.ReportFile = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -45,31 +56,38 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetLatestOrganizationReportAsync_WithoutAccess_ThrowsNotFoundException(
+    public async Task GetLatestOrganizationReportAsync_V1_WithoutAccess_ThrowsNotFoundException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
-            .Returns(Task.FromResult(false));
+            .Returns(false);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
 
-        // Verify that the query was not called
         await sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .DidNotReceive()
             .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
-    public async Task GetLatestOrganizationReportAsync_WhenNoReportFound_ReturnsOkWithNull(
+    public async Task GetLatestOrganizationReportAsync_V1_WhenNoReportFound_ReturnsOkWithNull(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
@@ -86,163 +104,136 @@ public class OrganizationReportControllerTests
         Assert.Null(okResult.Value);
     }
 
+    // GetLatestOrganizationReportAsync - V2 (flag on)
+
     [Theory, BitAutoData]
-    public async Task GetLatestOrganizationReportAsync_CallsCorrectMethods(
+    public async Task GetLatestOrganizationReportAsync_V2_WithValidatedFile_ReturnsOkWithDownloadUrl(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport expectedReport,
+        string downloadUrl)
+    {
+        // Arrange
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        expectedReport.SetReportFile(reportFile);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetLatestOrganizationReportAsync(orgId)
+            .Returns(expectedReport);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportDataDownloadUrlAsync(expectedReport, Arg.Any<ReportFile>())
+            .Returns(downloadUrl);
+
+        // Act
+        var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+        Assert.Equal(downloadUrl, response.ReportFileDownloadUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_V2_WithNoFile_ReturnsOkWithNullDownloadUrl(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         OrganizationReport expectedReport)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        expectedReport.ReportFile = null;
+
+        SetupV2Authorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetLatestOrganizationReportAsync(orgId)
             .Returns(expectedReport);
 
         // Act
-        await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
-
-        // Assert
-        await sutProvider.GetDependency<ICurrentContext>()
-            .Received(1)
-            .AccessReports(orgId);
-
-        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .Received(1)
-            .GetLatestOrganizationReportAsync(orgId);
-    }
-
-
-
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationReportAsync_WithValidIds_ReturnsOkResult(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        OrganizationReport expectedReport)
-    {
-        // Arrange
-        expectedReport.OrganizationId = orgId;
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .GetOrganizationReportAsync(reportId)
-            .Returns(expectedReport);
-
-        // Act
-        var result = await sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId);
+        var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(expectedReport, okResult.Value);
+        var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+        Assert.Null(response.ReportFileDownloadUrl);
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationReportAsync_WithoutAccess_ThrowsNotFoundException(
+    public async Task GetLatestOrganizationReportAsync_V2_NoReport_ReturnsOkWithNull(
         SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId)
+        Guid orgId)
     {
         // Arrange
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetLatestOrganizationReportAsync(orgId)
+            .Returns((OrganizationReport)null);
+
+        // Act
+        var result = await sutProvider.Sut.GetLatestOrganizationReportAsync(orgId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Null(okResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetLatestOrganizationReportAsync_V2_WithoutAccess_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
-            .Returns(Task.FromResult(false));
+            .Returns(false);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId));
+            sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
 
-        // Verify that the query was not called
         await sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .DidNotReceive()
-            .GetOrganizationReportAsync(Arg.Any<Guid>());
+            .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationReportAsync_WhenReportNotFound_ThrowsNotFoundException(
+    public async Task GetLatestOrganizationReportAsync_V2_NoUseRiskInsights_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId)
+        Guid orgId)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .GetOrganizationReportAsync(reportId)
-            .Returns((OrganizationReport)null);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { UseRiskInsights = false });
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId));
-
-        Assert.Equal("Report not found for the specified organization.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationReportAsync_CallsCorrectMethods(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        OrganizationReport expectedReport)
-    {
-        // Arrange
-        expectedReport.OrganizationId = orgId;
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .GetOrganizationReportAsync(reportId)
-            .Returns(expectedReport);
-
-        // Act
-        await sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId);
-
-        // Assert
-        await sutProvider.GetDependency<ICurrentContext>()
-            .Received(1)
-            .AccessReports(orgId);
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetLatestOrganizationReportAsync(orgId));
 
         await sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .Received(1)
-            .GetOrganizationReportAsync(reportId);
+            .DidNotReceive()
+            .GetLatestOrganizationReportAsync(Arg.Any<Guid>());
     }
 
-    [Theory, BitAutoData]
-    public async Task GetOrganizationReportAsync_WithValidAccess_UsesCorrectReportId(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        OrganizationReport expectedReport)
-    {
-        // Arrange
-        expectedReport.OrganizationId = orgId;
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .GetOrganizationReportAsync(reportId)
-            .Returns(expectedReport);
-
-        // Act
-        await sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId);
-
-        // Assert
-        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
-            .Received(1)
-            .GetOrganizationReportAsync(reportId);
-    }
+    // CreateOrganizationReportAsync - V1 (flag off)
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_WithValidRequest_ReturnsOkResult(
+    public async Task CreateOrganizationReportAsync_V1_WithValidRequest_ReturnsOkResult(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequest request,
@@ -250,6 +241,11 @@ public class OrganizationReportControllerTests
     {
         // Arrange
         request.OrganizationId = orgId;
+        expectedReport.ReportFile = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -269,12 +265,16 @@ public class OrganizationReportControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_WithoutAccess_ThrowsNotFoundException(
+    public async Task CreateOrganizationReportAsync_V1_WithoutAccess_ThrowsNotFoundException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequest request)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(false);
@@ -283,20 +283,23 @@ public class OrganizationReportControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
 
-        // Verify that the command was not called
         await sutProvider.GetDependency<IAddOrganizationReportCommand>()
             .DidNotReceive()
             .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_WithMismatchedOrgId_ThrowsBadRequestException(
+    public async Task CreateOrganizationReportAsync_V1_WithMismatchedOrgId_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequest request)
     {
         // Arrange
-        request.OrganizationId = Guid.NewGuid(); // Different from orgId
+        request.OrganizationId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -308,99 +311,437 @@ public class OrganizationReportControllerTests
 
         Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
 
-        // Verify that the command was not called
         await sutProvider.GetDependency<IAddOrganizationReportCommand>()
             .DidNotReceive()
             .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>());
     }
 
+    // CreateOrganizationReportAsync - V2 (flag on)
+
     [Theory, BitAutoData]
-    public async Task CreateOrganizationReportAsync_CallsCorrectMethods(
+    public async Task CreateOrganizationReportAsync_V2_WithValidRequest_ReturnsFileResponseModel(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         AddOrganizationReportRequest request,
-        OrganizationReport expectedReport)
+        OrganizationReport expectedReport,
+        string uploadUrl)
     {
         // Arrange
         request.OrganizationId = orgId;
+        request.FileSize = 1024;
+
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        expectedReport.SetReportFile(reportFile);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<ICreateOrganizationReportCommand>()
+            .CreateAsync(request)
+            .Returns(expectedReport);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportFileUploadUrlAsync(expectedReport, Arg.Any<ReportFile>())
+            .Returns(uploadUrl);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .FileUploadType
+            .Returns(FileUploadType.Azure);
+
+        // Act
+        var result = await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<OrganizationReportFileResponseModel>(okResult.Value);
+        Assert.Equal(uploadUrl, response.ReportFileUploadUrl);
+        Assert.Equal(FileUploadType.Azure, response.FileUploadType);
+        Assert.NotNull(response.ReportResponse);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_V2_EmptyOrgId_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        AddOrganizationReportRequest request)
+    {
+        // Arrange
+        var emptyOrgId = Guid.Empty;
+        request.OrganizationId = emptyOrgId;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateOrganizationReportAsync(emptyOrgId, request));
+
+        Assert.Equal("Organization ID is required.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_V2_MismatchedOrgId_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequest request)
+    {
+        // Arrange
+        request.OrganizationId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
+
+        Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_V2_MissingFileSize_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequest request)
+    {
+        // Arrange
+        request.OrganizationId = orgId;
+        request.FileSize = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
+
+        Assert.Equal("File size is required.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateOrganizationReportAsync_V2_WithoutAccess_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        AddOrganizationReportRequest request)
+    {
+        // Arrange
+        request.OrganizationId = orgId;
+        request.FileSize = 1024;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateOrganizationReportAsync(orgId, request));
+
+        await sutProvider.GetDependency<ICreateOrganizationReportCommand>()
+            .DidNotReceive()
+            .CreateAsync(Arg.Any<AddOrganizationReportRequest>());
+    }
+
+    // GetOrganizationReportAsync - V1 (flag off)
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_V1_WithValidIds_ReturnsOkResult(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        OrganizationReport expectedReport)
+    {
+        // Arrange
+        expectedReport.OrganizationId = orgId;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IAddOrganizationReportCommand>()
-            .AddOrganizationReportAsync(request)
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(reportId)
             .Returns(expectedReport);
 
         // Act
-        await sutProvider.Sut.CreateOrganizationReportAsync(orgId, request);
+        var result = await sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId);
 
         // Assert
-        await sutProvider.GetDependency<ICurrentContext>()
-            .Received(1)
-            .AccessReports(orgId);
-
-        await sutProvider.GetDependency<IAddOrganizationReportCommand>()
-            .Received(1)
-            .AddOrganizationReportAsync(request);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(expectedReport, okResult.Value);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportAsync_WithValidRequest_ReturnsOkResult(
+    public async Task GetOrganizationReportAsync_V1_WithoutAccess_ThrowsNotFoundException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
-        UpdateOrganizationReportRequest request,
+        Guid reportId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId));
+
+        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .DidNotReceive()
+            .GetOrganizationReportAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_V1_WhenReportNotFound_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(reportId)
+            .Returns((OrganizationReport)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId));
+
+        Assert.Equal("Report not found for the specified organization.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_V1_WithOrgMismatch_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        OrganizationReport expectedReport)
+    {
+        // Arrange
+        expectedReport.OrganizationId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(reportId)
+            .Returns(expectedReport);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId));
+
+        Assert.Equal("Invalid report ID", exception.Message);
+    }
+
+    // GetOrganizationReportAsync - V2 (flag on)
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_V2_WithValidatedFile_ReturnsOkWithDownloadUrl(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        OrganizationReport expectedReport,
+        string downloadUrl)
+    {
+        // Arrange
+        expectedReport.OrganizationId = orgId;
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        expectedReport.SetReportFile(reportFile);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(reportId)
+            .Returns(expectedReport);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportDataDownloadUrlAsync(expectedReport, Arg.Any<ReportFile>())
+            .Returns(downloadUrl);
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+        Assert.Equal(downloadUrl, response.ReportFileDownloadUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_V2_WithNoFile_ReturnsOkWithoutDownloadUrl(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        OrganizationReport expectedReport)
+    {
+        // Arrange
+        expectedReport.OrganizationId = orgId;
+        expectedReport.ReportFile = null;
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(reportId)
+            .Returns(expectedReport);
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
+        Assert.Null(response.ReportFileDownloadUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_V2_WithOrgMismatch_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        OrganizationReport expectedReport)
+    {
+        // Arrange
+        expectedReport.OrganizationId = Guid.NewGuid();
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .GetOrganizationReportAsync(reportId)
+            .Returns(expectedReport);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId));
+
+        Assert.Equal("Invalid report ID", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationReportAsync_V2_WithoutAccess_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetOrganizationReportAsync(orgId, reportId));
+
+        await sutProvider.GetDependency<IGetOrganizationReportQuery>()
+            .DidNotReceive()
+            .GetOrganizationReportAsync(Arg.Any<Guid>());
+    }
+
+    // UpdateOrganizationReportAsync - V1 (flag off)
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationReportAsync_V1_WithValidRequest_ReturnsOkResult(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        UpdateOrganizationReportV2Request request,
         OrganizationReport expectedReport)
     {
         // Arrange
         request.OrganizationId = orgId;
+        expectedReport.ReportFile = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(true);
 
         sutProvider.GetDependency<IUpdateOrganizationReportCommand>()
-            .UpdateOrganizationReportAsync(request)
+            .UpdateOrganizationReportAsync(Arg.Any<UpdateOrganizationReportRequest>())
             .Returns(expectedReport);
 
         // Act
-        var result = await sutProvider.Sut.UpdateOrganizationReportAsync(orgId, request);
+        var result = await sutProvider.Sut.UpdateOrganizationReportAsync(orgId, reportId, request);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         var expectedResponse = new OrganizationReportResponseModel(expectedReport);
         Assert.Equivalent(expectedResponse, okResult.Value);
+
+        await sutProvider.GetDependency<IUpdateOrganizationReportCommand>()
+            .Received(1)
+            .UpdateOrganizationReportAsync(Arg.Is<UpdateOrganizationReportRequest>(r =>
+                r.OrganizationId == orgId && r.ReportId == reportId));
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportAsync_WithoutAccess_ThrowsNotFoundException(
+    public async Task UpdateOrganizationReportAsync_V1_WithoutAccess_ThrowsNotFoundException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
-        UpdateOrganizationReportRequest request)
+        Guid reportId,
+        UpdateOrganizationReportV2Request request)
     {
         // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
+
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
             .Returns(false);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportAsync(orgId, request));
+            sutProvider.Sut.UpdateOrganizationReportAsync(orgId, reportId, request));
 
-        // Verify that the command was not called
         await sutProvider.GetDependency<IUpdateOrganizationReportCommand>()
             .DidNotReceive()
             .UpdateOrganizationReportAsync(Arg.Any<UpdateOrganizationReportRequest>());
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportAsync_WithMismatchedOrgId_ThrowsBadRequestException(
+    public async Task UpdateOrganizationReportAsync_V1_WithMismatchedOrgId_ThrowsBadRequestException(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
-        UpdateOrganizationReportRequest request)
+        Guid reportId,
+        UpdateOrganizationReportV2Request request)
     {
         // Arrange
-        request.OrganizationId = Guid.NewGuid(); // Different from orgId
+        request.OrganizationId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(false);
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -408,50 +749,113 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportAsync(orgId, request));
+            sutProvider.Sut.UpdateOrganizationReportAsync(orgId, reportId, request));
 
         Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
 
-        // Verify that the command was not called
         await sutProvider.GetDependency<IUpdateOrganizationReportCommand>()
             .DidNotReceive()
             .UpdateOrganizationReportAsync(Arg.Any<UpdateOrganizationReportRequest>());
     }
 
+    // UpdateOrganizationReportAsync - V2 (flag on)
+
     [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportAsync_CallsCorrectMethods(
+    public async Task UpdateOrganizationReportAsync_V2_NoNewFileUpload_ReturnsReportResponseModel(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
-        UpdateOrganizationReportRequest request,
+        Guid reportId,
+        UpdateOrganizationReportV2Request request,
         OrganizationReport expectedReport)
     {
         // Arrange
-        request.OrganizationId = orgId;
+        request.RequiresNewFileUpload = false;
+        expectedReport.ReportFile = null;
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupV2Authorization(sutProvider, orgId);
 
-        sutProvider.GetDependency<IUpdateOrganizationReportCommand>()
-            .UpdateOrganizationReportAsync(request)
+        sutProvider.GetDependency<IUpdateOrganizationReportV2Command>()
+            .UpdateAsync(request)
             .Returns(expectedReport);
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationReportAsync(orgId, request);
+        var result = await sutProvider.Sut.UpdateOrganizationReportAsync(orgId, reportId, request);
 
         // Assert
-        await sutProvider.GetDependency<ICurrentContext>()
-            .Received(1)
-            .AccessReports(orgId);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.IsType<OrganizationReportResponseModel>(okResult.Value);
 
-        await sutProvider.GetDependency<IUpdateOrganizationReportCommand>()
+        await sutProvider.GetDependency<IUpdateOrganizationReportV2Command>()
             .Received(1)
-            .UpdateOrganizationReportAsync(request);
+            .UpdateAsync(request);
     }
 
-    #endregion
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationReportAsync_V2_WithNewFileUpload_ReturnsFileResponseModel(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        UpdateOrganizationReportV2Request request,
+        OrganizationReport expectedReport,
+        string uploadUrl)
+    {
+        // Arrange
+        request.RequiresNewFileUpload = true;
 
-    #region SummaryData Field Endpoints
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        expectedReport.SetReportFile(reportFile);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IUpdateOrganizationReportV2Command>()
+            .UpdateAsync(request)
+            .Returns(expectedReport);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportFileUploadUrlAsync(expectedReport, Arg.Any<ReportFile>())
+            .Returns(uploadUrl);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .FileUploadType
+            .Returns(FileUploadType.Azure);
+
+        // Act
+        var result = await sutProvider.Sut.UpdateOrganizationReportAsync(orgId, reportId, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<OrganizationReportFileResponseModel>(okResult.Value);
+        Assert.Equal(uploadUrl, response.ReportFileUploadUrl);
+        Assert.Equal(FileUploadType.Azure, response.FileUploadType);
+        Assert.NotNull(response.ReportResponse);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateOrganizationReportAsync_V2_WithoutAccess_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId,
+        UpdateOrganizationReportV2Request request)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.UpdateOrganizationReportAsync(orgId, reportId, request));
+
+        await sutProvider.GetDependency<IUpdateOrganizationReportV2Command>()
+            .DidNotReceive()
+            .UpdateAsync(Arg.Any<UpdateOrganizationReportV2Request>());
+    }
+
+    // SummaryData Field Endpoints
 
     [Theory, BitAutoData]
     public async Task GetOrganizationReportSummaryDataByDateRangeAsync_WithValidParameters_ReturnsOkResult(
@@ -587,6 +991,7 @@ public class OrganizationReportControllerTests
         // Arrange
         request.OrganizationId = orgId;
         request.ReportId = reportId;
+        expectedReport.ReportFile = null;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -692,6 +1097,7 @@ public class OrganizationReportControllerTests
         // Arrange
         request.OrganizationId = orgId;
         request.ReportId = reportId;
+        expectedReport.ReportFile = null;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -714,9 +1120,7 @@ public class OrganizationReportControllerTests
             .UpdateOrganizationReportSummaryAsync(request);
     }
 
-    #endregion
-
-    #region ReportData Field Endpoints
+    // ReportData Field Endpoints
 
     [Theory, BitAutoData]
     public async Task GetOrganizationReportDataAsync_WithValidIds_ReturnsOkResult(
@@ -803,6 +1207,7 @@ public class OrganizationReportControllerTests
         // Arrange
         request.OrganizationId = orgId;
         request.ReportId = reportId;
+        expectedReport.ReportFile = null;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -813,7 +1218,7 @@ public class OrganizationReportControllerTests
             .Returns(expectedReport);
 
         // Act
-        var result = await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null);
+        var result = await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -835,7 +1240,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
 
         // Verify that the command was not called
         await sutProvider.GetDependency<IUpdateOrganizationReportDataCommand>()
@@ -860,7 +1265,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
 
         Assert.Equal("Organization ID in the request body must match the route parameter", exception.Message);
 
@@ -887,7 +1292,7 @@ public class OrganizationReportControllerTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null));
+            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
 
         Assert.Equal("Report ID in the request body must match the route parameter", exception.Message);
 
@@ -908,6 +1313,7 @@ public class OrganizationReportControllerTests
         // Arrange
         request.OrganizationId = orgId;
         request.ReportId = reportId;
+        expectedReport.ReportFile = null;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -918,7 +1324,7 @@ public class OrganizationReportControllerTests
             .Returns(expectedReport);
 
         // Act
-        await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request, null);
+        await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request);
 
         // Assert
         await sutProvider.GetDependency<ICurrentContext>()
@@ -930,9 +1336,7 @@ public class OrganizationReportControllerTests
             .UpdateOrganizationReportDataAsync(request);
     }
 
-    #endregion
-
-    #region ApplicationData Field Endpoints
+    // ApplicationData Field Endpoints
 
     [Theory, BitAutoData]
     public async Task GetOrganizationReportApplicationDataAsync_WithValidIds_ReturnsOkResult(
@@ -1042,6 +1446,7 @@ public class OrganizationReportControllerTests
         request.OrganizationId = orgId;
         request.Id = reportId;
         expectedReport.Id = request.Id;
+        expectedReport.ReportFile = null;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -1146,6 +1551,7 @@ public class OrganizationReportControllerTests
         request.OrganizationId = orgId;
         request.Id = reportId;
         expectedReport.Id = reportId;
+        expectedReport.ReportFile = null;
 
         sutProvider.GetDependency<ICurrentContext>()
             .AccessReports(orgId)
@@ -1168,5 +1574,22 @@ public class OrganizationReportControllerTests
             .UpdateOrganizationReportApplicationDataAsync(request);
     }
 
-    #endregion
+    // Helper method for setting up V2 authorization mocks
+
+    private static void SetupV2Authorization(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { UseRiskInsights = true });
+    }
 }

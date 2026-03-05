@@ -30,7 +30,7 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
         _logger = logger;
     }
 
-    public async Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, ReportFile fileData)
+    public async Task<string> GetReportFileUploadUrlAsync(OrganizationReport report, ReportFile fileData)
     {
         await InitAsync();
         var blobClient = _containerClient!.GetBlobClient(BlobPath(report, fileData.Id!, fileData.FileName));

@@ -24,7 +24,7 @@ public class ValidateOrganizationReportFileCommand : IValidateOrganizationReport
 
     public async Task<bool> ValidateAsync(OrganizationReport report, string reportFileId)
     {
-        var fileData = report.GetReportFileData();
+        var fileData = report.GetReportFile();
         if (fileData == null || fileData.Id != reportFileId)
         {
             return false;
@@ -43,7 +43,7 @@ public class ValidateOrganizationReportFileCommand : IValidateOrganizationReport
 
         fileData.Validated = true;
         fileData.Size = length;
-        report.SetReportFileData(fileData);
+        report.SetReportFile(fileData);
         report.RevisionDate = DateTime.UtcNow;
         await _organizationReportRepo.ReplaceAsync(report);
         return true;

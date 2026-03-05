@@ -18,7 +18,7 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
         _baseUrl = globalSettings.OrganizationReport.BaseUrl;
     }
 
-    public Task<string> GetReportDataUploadUrlAsync(OrganizationReport report, ReportFile fileData)
+    public Task<string> GetReportFileUploadUrlAsync(OrganizationReport report, ReportFile fileData)
         => Task.FromResult($"/reports/organizations/{report.OrganizationId}/{report.Id}/file/report-data");
 
     public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, ReportFile fileData)
