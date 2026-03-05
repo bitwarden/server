@@ -24,6 +24,14 @@ The `PolicyEventHandlerHandlerFactory` resolves the correct handler for a given 
 
 ---
 
+## Limitations
+
+1. Currently, we don't have a way to keep this whole process idempotent, so if there is an exception at any point that is not being handled, the state will stay where the process failed.
+
+
+
+---
+
 ## Interfaces
 
 ### `IPolicyUpdateEvent`
