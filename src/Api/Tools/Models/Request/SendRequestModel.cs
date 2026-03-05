@@ -162,7 +162,7 @@ public class SendRequestModel
     /// <returns>The send object</returns>
     public Send UpdateSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
     {
-        existingSend = ToSendBase(existingSend, sendAuthorizationService);
+        existingSend = ToSendBase(existingSend, sendAuthorizationService, preserveExistingAuth: existingSend.Id != Guid.Empty);
         switch (existingSend.Type)
         {
             case SendType.File:
@@ -240,7 +240,7 @@ public class SendRequestModel
         }
     }
 
-    private Send ToSendBase(Send existingSend, ISendAuthorizationService authorizationService)
+    private Send ToSendBase(Send existingSend, ISendAuthorizationService authorizationService, bool preserveExistingAuth = false)
     {
         existingSend.Key = Key;
         existingSend.ExpirationDate = ExpirationDate;
@@ -261,7 +261,7 @@ public class SendRequestModel
             existingSend.Emails = null;
             existingSend.AuthType = Core.Tools.Enums.AuthType.Password;
         }
-        else
+        else if (!preserveExistingAuth)
         {
             existingSend.Emails = null;
             existingSend.Password = null;

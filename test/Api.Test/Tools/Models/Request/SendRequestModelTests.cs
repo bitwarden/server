@@ -2,6 +2,7 @@
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
 using Bit.Core.Exceptions;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.Helpers;
@@ -55,6 +56,128 @@ public class SendRequestModelTests
         Assert.False(root.TryGetProperty("Notes", out var _));
         var name = AssertHelper.AssertJsonProperty(root, "Name", JsonValueKind.String).GetString();
         Assert.Equal("encrypted_name", name);
+    }
+
+    // UpdateSend auth preservation tests
+
+    private static Send ExistingSendWithPassword() => new Send
+    {
+        Id = Guid.NewGuid(),
+        Type = SendType.Text,
+        Password = "hashed_existing_password",
+        Emails = null,
+        AuthType = AuthType.Password,
+        Key = "key",
+        DeletionDate = DateTime.UtcNow.AddDays(7),
+    };
+
+    private static Send ExistingSendWithEmails() => new Send
+    {
+        Id = Guid.NewGuid(),
+        Type = SendType.Text,
+        Password = null,
+        Emails = "user@example.com",
+        AuthType = AuthType.Email,
+        Key = "key",
+        DeletionDate = DateTime.UtcNow.AddDays(7),
+    };
+
+    private static SendRequestModel MinimalTextUpdateRequest() => new SendRequestModel
+    {
+        Type = SendType.Text,
+        Name = "updated_name",
+        Text = new SendTextModel { Text = "text", Hidden = false },
+        Key = "key",
+        DeletionDate = DateTime.UtcNow.AddDays(7),
+        Disabled = false,
+    };
+
+    [Fact]
+    public void UpdateSend_OmitsPassword_PreservesExistingPasswordProtection()
+    {
+        var existingSend = ExistingSendWithPassword();
+        var request = MinimalTextUpdateRequest(); // no Password field
+        var authService = Substitute.For<ISendAuthorizationService>();
+
+        var updated = request.UpdateSend(existingSend, authService);
+
+        Assert.Equal("hashed_existing_password", updated.Password);
+        Assert.Equal(AuthType.Password, updated.AuthType);
+        Assert.Null(updated.Emails);
+    }
+
+    [Fact]
+    public void UpdateSend_OmitsEmails_PreservesExistingEmailProtection()
+    {
+        var existingSend = ExistingSendWithEmails();
+        var request = MinimalTextUpdateRequest(); // no Emails field
+        var authService = Substitute.For<ISendAuthorizationService>();
+
+        var updated = request.UpdateSend(existingSend, authService);
+
+        Assert.Equal("user@example.com", updated.Emails);
+        Assert.Equal(AuthType.Email, updated.AuthType);
+        Assert.Null(updated.Password);
+    }
+
+    [Fact]
+    public void UpdateSend_ProvidesNewPassword_ReplacesExistingPasswordProtection()
+    {
+        var existingSend = ExistingSendWithPassword();
+        var request = MinimalTextUpdateRequest();
+        request.Password = "new_password";
+        var authService = Substitute.For<ISendAuthorizationService>();
+        authService.HashPassword("new_password").Returns("hashed_new_password");
+
+        var updated = request.UpdateSend(existingSend, authService);
+
+        Assert.Equal("hashed_new_password", updated.Password);
+        Assert.Equal(AuthType.Password, updated.AuthType);
+        Assert.Null(updated.Emails);
+    }
+
+    [Fact]
+    public void UpdateSend_ProvidesEmails_ReplacesExistingPasswordProtection()
+    {
+        var existingSend = ExistingSendWithPassword();
+        var request = MinimalTextUpdateRequest();
+        request.Emails = "new@example.com";
+        var authService = Substitute.For<ISendAuthorizationService>();
+
+        var updated = request.UpdateSend(existingSend, authService);
+
+        Assert.Equal("new@example.com", updated.Emails);
+        Assert.Equal(AuthType.Email, updated.AuthType);
+        Assert.Null(updated.Password);
+    }
+
+    [Fact]
+    public void UpdateSend_ProvidesPassword_ReplacesExistingEmailProtection()
+    {
+        var existingSend = ExistingSendWithEmails();
+        var request = MinimalTextUpdateRequest();
+        request.Password = "new_password";
+        var authService = Substitute.For<ISendAuthorizationService>();
+        authService.HashPassword("new_password").Returns("hashed_new_password");
+
+        var updated = request.UpdateSend(existingSend, authService);
+
+        Assert.Equal("hashed_new_password", updated.Password);
+        Assert.Equal(AuthType.Password, updated.AuthType);
+        Assert.Null(updated.Emails);
+    }
+
+    [Fact]
+    public void ToSend_WithoutAuth_SetsAuthTypeNone()
+    {
+        var request = MinimalTextUpdateRequest(); // no Password or Emails
+        var authService = Substitute.For<ISendAuthorizationService>();
+
+        var send = request.ToSend(Guid.NewGuid(), authService);
+
+        Assert.Equal(AuthType.None, send.AuthType);
+        Assert.Null(send.Password);
+        Assert.Null(send.Emails);
     }
 
     [Fact]
