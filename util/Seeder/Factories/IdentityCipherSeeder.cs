@@ -41,6 +41,7 @@ internal static class IdentityCipherSeeder
             Type = CipherTypes.Identity,
             Identity = item.Identity == null ? null : new IdentityViewDto
             {
+                Title = item.Identity.Title,
                 FirstName = item.Identity.FirstName,
                 MiddleName = item.Identity.MiddleName,
                 LastName = item.Identity.LastName,
@@ -63,6 +64,10 @@ internal static class IdentityCipherSeeder
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToIdentityData(), CipherType.Identity, organizationId, userId);
+        var cipher = CipherEncryption.CreateEntity(encrypted, encrypted.ToIdentityData(), CipherType.Identity, organizationId, userId);
+
+        cipher.Reprompt = (CipherRepromptType?)item.Reprompt;
+
+        return cipher;
     }
 }

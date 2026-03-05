@@ -30,6 +30,7 @@ internal sealed class CreateCiphersStep(string fixtureName) : IStep
                 "card" => CardCipherSeeder.CreateFromSeed(orgKey, item, organizationId: orgId),
                 "identity" => IdentityCipherSeeder.CreateFromSeed(orgKey, item, organizationId: orgId),
                 "secureNote" => SecureNoteCipherSeeder.CreateFromSeed(orgKey, item, organizationId: orgId),
+                "sshKey" => SshKeyCipherSeeder.CreateFromSeed(orgKey, item, organizationId: orgId),
                 _ => throw new InvalidOperationException($"Unknown cipher type: {item.Type}")
             };
 

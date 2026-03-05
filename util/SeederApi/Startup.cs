@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Settings;
+using Bit.Seeder.Services;
 using Bit.SeederApi.Extensions;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
@@ -33,6 +34,7 @@ public class Startup
         services.AddManglerService(globalSettings);
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.TryAddSingleton<ISeedReader, SeedReader>();
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
 

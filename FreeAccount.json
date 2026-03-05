@@ -1,0 +1,1010 @@
+{
+  "encrypted": false,
+  "folders": [
+    {
+      "id": "a36fc707-5490-4106-8b5d-ae600141ba80",
+      "name": "Folder-19597"
+    },
+    {
+      "id": "9da05437-c546-4088-8edf-ae600141ba80",
+      "name": "Folder-19598"
+    },
+    {
+      "id": "5b157982-acae-46c7-9c6e-ae600141ba80",
+      "name": "Folder-19553"
+    },
+    {
+      "id": "2266237b-d6bb-48f8-bb0e-ae600141ba80",
+      "name": "Folder-19617"
+    },
+    {
+      "id": "9f969fbf-b724-4d07-b6e9-b05a00e1452a",
+      "name": "Folder-19928"
+    },
+    {
+      "id": "9f969fbf-b724-4d07-b6e9-b05a00e1452a",
+      "name": "Folder-1867255"
+    }
+  ],
+  "items": [
+    {
+      "id": "fcf9df76-2d2a-4c8c-8e4d-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "Cipher-19652",
+      "notes": null,
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "c8e0e46b-96ae-458e-8d07-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Cipher-19549",
+      "notes": "Test is a test card created by automation",
+      "favorite": false,
+      "card": {
+        "cardholderName": "Selenium Visa Card",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "1",
+        "expYear": "2025",
+        "code": "999"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "259caaef-ed8e-47e6-a040-ae600136cc6d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Cipher-19656",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": null,
+        "brand": null,
+        "number": "123",
+        "expMonth": null,
+        "expYear": null,
+        "code": "123"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "a281ef5e-ea29-424d-9f7a-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Cipher-19612",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": "Automation",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "10",
+        "expYear": "2025",
+        "code": "999"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "7d03ddfd-2f5f-455e-9c41-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 3,
+      "reprompt": 0,
+      "name": "Cipher-19615",
+      "notes": null,
+      "favorite": false,
+      "card": {
+        "cardholderName": "Automation",
+        "brand": "Mastercard",
+        "number": "4242424242424242",
+        "expMonth": "2",
+        "expYear": "2028",
+        "code": "999"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "e61fc811-4197-442b-9fff-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "Cipher-19550",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": "Mr",
+        "firstName": "Bitwarden",
+        "middleName": null,
+        "lastName": "Automation",
+        "address1": "123 Main St",
+        "address2": null,
+        "address3": null,
+        "city": "Jacksonville",
+        "state": "FL",
+        "postalCode": "32003",
+        "country": "USA",
+        "company": "Bitwarden",
+        "email": null,
+        "phone": "9045551234",
+        "ssn": "555123456",
+        "username": "automation",
+        "passportNumber": "PS999147",
+        "licenseNumber": "FL-999999"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "f9f16e5d-4b98-422a-8d63-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "Cipher-19613",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": "Mr",
+        "firstName": "test",
+        "middleName": null,
+        "lastName": "user",
+        "address1": null,
+        "address2": null,
+        "address3": null,
+        "city": null,
+        "state": null,
+        "postalCode": null,
+        "country": null,
+        "company": "Bitwarden",
+        "email": null,
+        "phone": null,
+        "ssn": "555555555",
+        "username": "automation1",
+        "passportNumber": null,
+        "licenseNumber": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "a9b40679-7640-4671-bf48-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 4,
+      "reprompt": 0,
+      "name": "Cipher-19616",
+      "notes": null,
+      "favorite": false,
+      "identity": {
+        "title": "Mr",
+        "firstName": "Automion",
+        "middleName": null,
+        "lastName": "Jones",
+        "address1": null,
+        "address2": null,
+        "address3": null,
+        "city": null,
+        "state": null,
+        "postalCode": null,
+        "country": null,
+        "company": "Bitwarden",
+        "email": null,
+        "phone": null,
+        "ssn": null,
+        "username": "autojones",
+        "passportNumber": null,
+        "licenseNumber": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "fc0b974f-26e7-4655-b64b-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19594",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "C-1337 Username",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "7308e53a-2ce0-47b4-a00b-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19595",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "Selenium",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "60b99364-3d01-4387-8800-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19602",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.bing.com"
+          }
+        ],
+        "username": "test Username",
+        "password": "password",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "abcd1234-abcd-1234-abcd-abc000000000",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19703",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "Username",
+        "password": "testPassword",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "ed3c69d4-50e4-49af-9c05-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19603",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "test Username",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "5eb5a4db-ea7b-49e0-9f24-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19604",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.bing.com"
+          }
+        ],
+        "username": "test Username",
+        "password": "test password",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "25cd5072-6340-4978-bd4d-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19605",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://www.nbc.com"
+          }
+        ],
+        "username": "test Username",
+        "password": "test Password",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "e8b65c20-b5ef-4806-a5e7-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19548",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "automation",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "8e25e18c-3dce-4474-84d0-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19756",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "dc8ec4af-05e3-4cdb-9e5a-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19757",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "cef27b0f-1629-4f58-ae6e-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19758",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "18ff68dc-e090-4de5-92a1-ae600141ba80",
+      "organizationId": null,
+      "folderId": "2266237b-d6bb-48f8-bb0e-ae600141ba80",
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19617",
+      "notes": null,
+      "favorite": true,
+      "login": {
+        "username": "selenium",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "07baf12b-c79a-4852-b4a7-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-19618",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "Selenium",
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "fa4ff1a6-a57d-44b3-a305-ae6001392cdc",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-1867223",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "fd3c0afd-baaa-4c26-967c-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "Cipher-19614",
+      "notes": "This note will be deleted",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "87010cf4-558f-4855-9cfd-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "Cipher-19551",
+      "notes": "Secure Note Created by Automation",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "540c408b-eaca-49ea-9d1a-ae600141ba80",
+      "organizationId": null,
+      "folderId": null,
+      "type": 2,
+      "reprompt": 0,
+      "name": "Cipher-19611",
+      "notes": "This note will be edited",
+      "favorite": false,
+      "secureNote": {
+        "type": 0
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "d3a8c023-087f-4232-97bc-ae60013affed",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19661",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "a26de23b-a2fb-4e1a-a7e8-ae60013b4354",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "PasswordPrompt-19662",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "f1b3679d-c13f-4f2f-917e-ae60013bc253",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19664",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "009d9c60-710d-4dcf-bab7-ae60013c611d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-1867226",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "username",
+        "password": "password123",
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "3180d3a2-c32c-4650-825a-ae60013e1fd3",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19669",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "434acdea-0dd8-4107-b0e4-ae60013f4efa",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19670",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "d5444c84-f051-4880-96c4-ae6001401bea",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19671",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "99380965-47b4-4dd9-a451-ae6001407e6d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19675",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "8ae5cdeb-b466-4a42-bd2c-ae600140b0f2",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19677",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "6476f2e6-45d0-433b-b9ab-aec300e8789b",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19546",
+      "notes": null,
+      "favorite": true,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "c14e7827-0b4a-43a0-a5d8-af100137069e",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-19848",
+      "notes": null,
+      "favorite": true,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "c14e7827-0b4a-43a0-a5d8-af100137069e",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-21987",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-27T19:10:30.603Z",
+      "creationDate": "2024-02-27T16:15:28.360Z",
+      "deletedDate": null,
+      "id": "f1f30ab5-6ed6-4335-9f7d-b123010bec19",
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-21741",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [
+          {
+            "credentialId": "42a5e273-cfc8-4691-ae46-29eb299a03cc",
+            "keyType": "public-key",
+            "keyAlgorithm": "ECDSA",
+            "keyCurve": "P-256",
+            "keyValue": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgu3B4xwy1RneyTYPpLDkMICcR14Yb6rQBMRV3dWiT-uChRANCAAQgKKOpCvGQqAMPxKgXO_tyv4dG2zOV7gwcBUbgIgYtY3fEY4fMajBgIrH6x38QJOAMq_3cs19bXpgvcVlExe5b",
+            "rpId": "demo.yubico.com",
+            "userHandle": "bWXtXHUAGaGZxhoz6pIC-3J8BeJXVg848BTmsVIOUO0",
+            "userName": "automation",
+            "counter": "0",
+            "rpName": "Yubico Demo",
+            "userDisplayName": "automation",
+            "discoverable": "false",
+            "creationDate": "2024-10-04T16:57:01.881Z"
+          }
+        ],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://demo.yubico.com/playground"
+          }
+        ],
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-27T19:10:30.603Z",
+      "creationDate": "2024-02-27T16:15:28.360Z",
+      "deletedDate": null,
+      "id": "f1f30ab5-6ed6-4335-9f7d-b123010bec19",
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-21744",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [
+          {
+            "credentialId": "42a5e273-cfc8-4691-ae46-29eb299a03cc",
+            "keyType": "public-key",
+            "keyAlgorithm": "ECDSA",
+            "keyCurve": "P-256",
+            "keyValue": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgu3B4xwy1RneyTYPpLDkMICcR14Yb6rQBMRV3dWiT-uChRANCAAQgKKOpCvGQqAMPxKgXO_tyv4dG2zOV7gwcBUbgIgYtY3fEY4fMajBgIrH6x38QJOAMq_3cs19bXpgvcVlExe5b",
+            "rpId": "demo.yubico.com",
+            "userHandle": "bWXtXHUAGaGZxhoz6pIC-3J8BeJXVg848BTmsVIOUO0",
+            "userName": "automation",
+            "counter": "0",
+            "rpName": "Yubico Demo",
+            "userDisplayName": "automation",
+            "discoverable": "false",
+            "creationDate": "2024-10-04T16:57:01.881Z"
+          }
+        ],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://demo.yubico.com/playground"
+          }
+        ],
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2024-02-27T19:10:30.603Z",
+      "creationDate": "2024-02-27T16:15:28.360Z",
+      "deletedDate": null,
+      "id": "f1f30ab5-6ed6-4335-9f7d-b123010bec19",
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-760087",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "fido2Credentials": [
+          {
+            "credentialId": "42a5e273-cfc8-4691-ae46-29eb299a03cc",
+            "keyType": "public-key",
+            "keyAlgorithm": "ECDSA",
+            "keyCurve": "P-256",
+            "keyValue": "MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgu3B4xwy1RneyTYPpLDkMICcR14Yb6rQBMRV3dWiT-uChRANCAAQgKKOpCvGQqAMPxKgXO_tyv4dG2zOV7gwcBUbgIgYtY3fEY4fMajBgIrH6x38QJOAMq_3cs19bXpgvcVlExe5b",
+            "rpId": "demo.yubico.com",
+            "userHandle": "bWXtXHUAGaGZxhoz6pIC-3J8BeJXVg848BTmsVIOUO0",
+            "userName": "automation",
+            "counter": "0",
+            "rpName": "Yubico Demo",
+            "userDisplayName": "automation",
+            "discoverable": "false",
+            "creationDate": "2024-10-04T16:57:01.881Z"
+          }
+        ],
+        "uris": [
+          {
+            "match": null,
+            "uri": "https://demo.yubico.com/playground"
+          }
+        ],
+        "username": null,
+        "password": null,
+        "totp": null
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "c14e7827-0b4a-43a0-a5d8-af100137069e",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-1891920",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "username",
+        "password": "password",
+        "totp": "1234567890"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "009d9c60-710d-4dcf-bab7-ae60013c611d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-1867255-1",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "username",
+        "password": "password123",
+        "totp": "1234567890"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "009d9c60-710d-4dcf-bab7-ae60013c611d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-1867255-2",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "username",
+        "password": "password123",
+        "totp": "1234567890"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "009d9c60-710d-4dcf-bab7-ae60013c611d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 1,
+      "name": "Cipher-1867256-1",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "username",
+        "password": "password123",
+        "totp": "1234567890"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "009d9c60-710d-4dcf-bab7-ae60013c611d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-1867256-2",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "username",
+        "password": "password123",
+        "totp": "1234567890"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-26T22:24:20.378Z",
+      "creationDate": "2025-03-26T22:24:20.378Z",
+      "deletedDate": null,
+      "id": "0bdaaef4-f314-46d6-b725-b2ac01713c04",
+      "organizationId": null,
+      "folderId": null,
+      "type": 5,
+      "reprompt": 0,
+      "name": "Cipher-2859562",
+      "notes": null,
+      "favorite": false,
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQgAAAIjFoG4KxaBu\nCgAAAAtzc2gtZWQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQg\nAAAEBmNfxHPR1fnsM/sIjqOXLajRuFtgEWcRlSmCUTt4ZSO3uLmDbWN4zUKduxB1FRlRH3\njaoqib7O4wgrETDIQk9CAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuLmDbWN4zUKduxB1FRlRH3jaoqib7O4wgrETDIQk9C",
+        "keyFingerprint": "SHA256:W+9poIil88Z4VPub4l9Oy5rC6ePM+8GDE+pBih4wsTQ"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-26T22:24:20.378Z",
+      "creationDate": "2025-03-26T22:24:20.378Z",
+      "deletedDate": null,
+      "id": "0bdaaef4-f314-46d6-b725-b2ac01713c04",
+      "organizationId": null,
+      "folderId": null,
+      "type": 5,
+      "reprompt": 0,
+      "name": "Cipher-2859561",
+      "notes": null,
+      "favorite": false,
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQgAAAIjFoG4KxaBu\nCgAAAAtzc2gtZWQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQg\nAAAEBmNfxHPR1fnsM/sIjqOXLajRuFtgEWcRlSmCUTt4ZSO3uLmDbWN4zUKduxB1FRlRH3\njaoqib7O4wgrETDIQk9CAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuLmDbWN4zUKduxB1FRlRH3jaoqib7O4wgrETDIQk9C",
+        "keyFingerprint": "SHA256:W+9poIil88Z4VPub4l9Oy5rC6ePM+8GDE+pBih4wsTQ"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-26T22:24:20.378Z",
+      "creationDate": "2025-03-26T22:24:20.378Z",
+      "deletedDate": null,
+      "id": "0bdaaef4-f314-46d6-b725-b2ac01713c04",
+      "organizationId": null,
+      "folderId": null,
+      "type": 5,
+      "reprompt": 0,
+      "name": "Cipher-2859557",
+      "notes": null,
+      "favorite": false,
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQgAAAIjFoG4KxaBu\nCgAAAAtzc2gtZWQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQg\nAAAEBmNfxHPR1fnsM/sIjqOXLajRuFtgEWcRlSmCUTt4ZSO3uLmDbWN4zUKduxB1FRlRH3\njaoqib7O4wgrETDIQk9CAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuLmDbWN4zUKduxB1FRlRH3jaoqib7O4wgrETDIQk9C",
+        "keyFingerprint": "SHA256:W+9poIil88Z4VPub4l9Oy5rC6ePM+8GDE+pBih4wsTQ"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": null,
+      "revisionDate": "2025-03-26T22:24:20.378Z",
+      "creationDate": "2025-03-26T22:24:20.378Z",
+      "deletedDate": null,
+      "id": "0bdaaef4-f314-46d6-b725-b2ac01713c04",
+      "organizationId": null,
+      "folderId": null,
+      "type": 5,
+      "reprompt": 1,
+      "name": "Cipher-2859558",
+      "notes": null,
+      "favorite": false,
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQgAAAIjFoG4KxaBu\nCgAAAAtzc2gtZWQyNTUxOQAAACB7i5g21jeM1CnbsQdRUZUR942qKom+zuMIKxEwyEJPQg\nAAAEBmNfxHPR1fnsM/sIjqOXLajRuFtgEWcRlSmCUTt4ZSO3uLmDbWN4zUKduxB1FRlRH3\njaoqib7O4wgrETDIQk9CAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHuLmDbWN4zUKduxB1FRlRH3jaoqib7O4wgrETDIQk9C",
+        "keyFingerprint": "SHA256:W+9poIil88Z4VPub4l9Oy5rC6ePM+8GDE+pBih4wsTQ"
+      },
+      "collectionIds": null
+    },
+    {
+      "passwordHistory": [],
+      "revisionDate": "2025-10-09T19:18:37.659Z",
+      "creationDate": "2025-10-09T19:18:37.659Z",
+      "id": "e4ef66c2-1f36-4d7c-9222-b371013e3a1f",
+      "type": 5,
+      "reprompt": 0,
+      "name": "Cipher-2859557",
+      "notes": "",
+      "favorite": false,
+      "fields": [],
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACBxrN1MN3sqpxYwSNnm+0LaOClXN+GXZwWnOfQWm+eASwAAAJAuKgQFLioE\nBQAAAAtzc2gtZWQyNTUxOQAAACBxrN1MN3sqpxYwSNnm+0LaOClXN+GXZwWnOfQWm+eASw\nAAAEBHn+Y3vfRchn6fSddZ4z7p3hldjvIn7B4jbn6FFUTJ73Gs3Uw3eyqnFjBI2eb7Qto4\nKVc34ZdnBac59Bab54BLAAAAB3Rlc3RrZXkBAgMEBQY=\n-----END OPENSSH PRIVATE KEY-----\n",
+        "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHGs3Uw3eyqnFjBI2eb7Qto4KVc34ZdnBac59Bab54BL testkey",
+        "keyFingerprint": "SHA256:aNqFbMDR/eQ7syi78ZEGz5XZbTI1840Z9+aNUuJWq6E"
+      },
+      "collectionIds": null
+    },
+    {
+      "id": "009d9c60-710d-4dcf-bab7-ae60013c611d",
+      "organizationId": null,
+      "folderId": null,
+      "type": 1,
+      "reprompt": 0,
+      "name": "Cipher-2138921",
+      "notes": null,
+      "favorite": false,
+      "login": {
+        "username": "username",
+        "password": "password123",
+        "totp": "1234567890"
+      },
+      "collectionIds": null
+    }
+  ]
+}

@@ -52,6 +52,10 @@ internal static class CardCipherSeeder
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToCardData(), CipherType.Card, organizationId, userId);
+        var cipher = CipherEncryption.CreateEntity(encrypted, encrypted.ToCardData(), CipherType.Card, organizationId, userId);
+
+        cipher.Reprompt = (CipherRepromptType?)item.Reprompt;
+
+        return cipher;
     }
 }

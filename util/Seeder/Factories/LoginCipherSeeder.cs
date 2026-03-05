@@ -68,6 +68,10 @@ internal static class LoginCipherSeeder
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, organizationId, userId);
+        var cipher = CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, organizationId, userId);
+
+        cipher.Reprompt = (CipherRepromptType?)item.Reprompt;
+
+        return cipher;
     }
 }

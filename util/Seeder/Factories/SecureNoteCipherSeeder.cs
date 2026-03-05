@@ -43,6 +43,10 @@ internal static class SecureNoteCipherSeeder
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, organizationId, userId);
+        var cipher = CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, organizationId, userId);
+
+        cipher.Reprompt = (CipherRepromptType?)item.Reprompt;
+
+        return cipher;
     }
 }

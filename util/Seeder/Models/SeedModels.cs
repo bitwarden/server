@@ -10,9 +10,11 @@ internal record SeedVaultItem
     public required string Type { get; init; }
     public required string Name { get; init; }
     public string? Notes { get; init; }
+    public int Reprompt { get; init; }
     public SeedLogin? Login { get; init; }
     public SeedCard? Card { get; init; }
     public SeedIdentity? Identity { get; init; }
+    public SeedSshKey? SshKey { get; init; }
     public List<SeedField>? Fields { get; init; }
 }
 
@@ -59,6 +61,14 @@ internal record SeedIdentity
     public string? Username { get; init; }
     public string? PassportNumber { get; init; }
     public string? LicenseNumber { get; init; }
+    public string? Title { get; init; }
+}
+
+internal record SeedSshKey
+{
+    public required string PrivateKey { get; init; }
+    public required string PublicKey { get; init; }
+    public required string KeyFingerprint { get; init; }
 }
 
 internal record SeedField

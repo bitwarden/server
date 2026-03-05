@@ -52,11 +52,6 @@
           "default": 0,
           "description": "Master password re-prompt. 0=None, 1=Password."
         },
-        "favorite": {
-          "type": "boolean",
-          "default": false,
-          "description": "Whether the item is marked as a favorite."
-        },
         "fields": {
           "type": "array",
           "items": {
@@ -144,6 +139,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "title": { "type": "string" },
         "firstName": { "type": "string" },
         "middleName": { "type": "string" },
         "lastName": { "type": "string" },
@@ -182,6 +178,7 @@
     },
     "sshKey": {
       "type": "object",
+      "required": ["privateKey", "publicKey", "keyFingerprint"],
       "additionalProperties": false,
       "properties": {
         "privateKey": { "type": "string" },
