@@ -21,25 +21,6 @@ public class OrganizationBillingController(
     IStripePaymentService paymentService,
     IPaymentHistoryService paymentHistoryService) : BaseBillingController
 {
-    // TODO: Remove when pm-25379-use-new-organization-metadata-structure is removed.
-    [HttpGet("metadata")]
-    public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
-    {
-        if (!await currentContext.OrganizationUser(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var metadata = await organizationBillingService.GetMetadata(organizationId);
-
-        if (metadata == null)
-        {
-            return Error.NotFound();
-        }
-
-        return TypedResults.Ok(metadata);
-    }
-
     // TODO: Migrate to Query / OrganizationBillingVNextController
     [HttpGet("history")]
     public async Task<IResult> GetHistoryAsync([FromRoute] Guid organizationId)

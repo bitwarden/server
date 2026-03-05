@@ -46,6 +46,7 @@ SELECT
     [VerifyDevices],
     [SecurityState],
     [SecurityVersion],
-    [SignedPublicKey]
+    [SignedPublicKey],
+    [V2UpgradeToken]
 FROM
     [dbo].[User]

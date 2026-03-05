@@ -36,6 +36,10 @@ namespace Bit.Api.Test.KeyManagement.Controllers;
 [JsonDocumentCustomize]
 public class AccountsKeyManagementControllerTests
 {
+    private static readonly string _mockEncryptedType2String =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+
     [Theory]
     [BitAutoData]
     public async Task RegenerateKeysAsync_FeatureFlagOff_Throws(
@@ -109,7 +113,8 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysSuccess(SutProvider<AccountsKeyManagementController> sutProvider,
+    public async Task RotateUserAccountKeys_UserCryptoV1_Success(
+        SutProvider<AccountsKeyManagementController> sutProvider,
         RotateUserAccountKeysAndDataRequestModel data, User user)
     {
         data.AccountKeys.SignatureKeyPair = null;
@@ -234,6 +239,62 @@ public class AccountsKeyManagementControllerTests
         {
             Assert.NotEmpty(ex.ModelState!.Values);
         }
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithV2UpgradeToken_PassesTokenToCommand(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        RotateUserAccountKeysAndDataRequestModel data,
+        User user)
+    {
+        // Arrange
+        data.AccountKeys.SignatureKeyPair = null;
+        data.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>()
+            .RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
+            .Returns(IdentityResult.Success);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(data);
+
+        // Assert
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .RotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<RotateUserAccountKeysData>(d =>
+                d.V2UpgradeToken != null &&
+                d.V2UpgradeToken.WrappedUserKey1 == _mockEncryptedType7String &&
+                d.V2UpgradeToken.WrappedUserKey2 == _mockEncryptedType2String));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithoutV2UpgradeToken_PassesNullToCommand(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        RotateUserAccountKeysAndDataRequestModel data,
+        User user)
+    {
+        // Arrange
+        data.AccountKeys.SignatureKeyPair = null;
+        data.AccountUnlockData.V2UpgradeToken = null;
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>()
+            .RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
+            .Returns(IdentityResult.Success);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(data);
+
+        // Assert
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .RotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<RotateUserAccountKeysData>(d =>
+                d.V2UpgradeToken == null));
     }
 
     [Theory]

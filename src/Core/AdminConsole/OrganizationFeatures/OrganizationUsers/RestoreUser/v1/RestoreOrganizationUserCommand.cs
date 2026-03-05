@@ -106,9 +106,9 @@ public class RestoreOrganizationUserCommand(
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
         if (organizationUser.UserId.HasValue
+           && organization.UseMyItems
            && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled
            && status == OrganizationUserStatusType.Confirmed
-           && featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore)
            && !string.IsNullOrWhiteSpace(defaultCollectionName))
         {
             await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
@@ -251,34 +251,51 @@ public class RestoreOrganizationUserCommand(
             }
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.DefaultUserCollectionRestore))
-        {
-            await CreateDefaultCollectionsForConfirmedUsersAsync(organizationId, defaultCollectionName,
-                result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
-        }
+        await CreateDefaultCollectionsForConfirmedUsersAsync(organization, defaultCollectionName,
+            result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
+
 
         return result;
     }
 
-    private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Guid organizationId, string defaultCollectionName,
+    private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Organization organization, string defaultCollectionName,
         ICollection<OrganizationUser> restoredUsers)
     {
-        if (!string.IsNullOrWhiteSpace(defaultCollectionName))
+        if (string.IsNullOrWhiteSpace(defaultCollectionName))
         {
-            var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
-                    .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organizationId))
-                .ToList();
+            return;
+        }
 
-            var usersToCreateDefaultCollectionsFor = restoredUsers.Where(x =>
-                organizationUsersDataOwnershipEnabled.Contains(x.Id)
-                && x.Status == OrganizationUserStatusType.Confirmed).ToList();
+        if (!organization.UseMyItems)
+        {
+            return;
+        }
 
-            if (usersToCreateDefaultCollectionsFor.Count != 0)
-            {
-                await collectionRepository.CreateDefaultCollectionsAsync(organizationId,
-                    usersToCreateDefaultCollectionsFor.Select(x => x.Id),
-                    defaultCollectionName);
-            }
+        var restoredConfirmedUsers = restoredUsers
+            .Where(w => w.Status == OrganizationUserStatusType.Confirmed)
+            .Where(w => w.UserId != null)
+            .Select(s => s.UserId.Value)
+            .ToList();
+
+        if (restoredConfirmedUsers.Count == 0)
+        {
+            return;
+        }
+
+        var restoredUserPolicyRequirements = await
+            policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredConfirmedUsers);
+
+        var orgUserIdsToCreateDefaultCollectionsFor = restoredUserPolicyRequirements
+            .Select(s => s.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
+            .ToList();
+
+        if (orgUserIdsToCreateDefaultCollectionsFor.Count != 0)
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(organization.Id,
+                orgUserIdsToCreateDefaultCollectionsFor,
+                defaultCollectionName);
         }
     }
 

@@ -31,7 +31,7 @@ public interface IGetBitwardenSubscriptionQuery
     /// Currently only supports <see cref="User"/> subscribers. Future versions will support all
     /// <see cref="ISubscriber"/> types (User and Organization).
     /// </remarks>
-    Task<BitwardenSubscription> Run(User user);
+    Task<BitwardenSubscription?> Run(User user);
 }
 
 public class GetBitwardenSubscriptionQuery(
@@ -39,18 +39,19 @@ public class GetBitwardenSubscriptionQuery(
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IGetBitwardenSubscriptionQuery
 {
-    public async Task<BitwardenSubscription> Run(User user)
+    public async Task<BitwardenSubscription?> Run(User user)
     {
-        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
         {
-            Expand =
-            [
-                "customer.discount.coupon.applies_to",
-                "discounts.coupon.applies_to",
-                "items.data.price.product",
-                "test_clock"
-            ]
-        });
+            return null;
+        }
+
+        var subscription = await FetchSubscriptionAsync(user);
+
+        if (subscription == null)
+        {
+            return null;
+        }
 
         var cart = await GetPremiumCartAsync(subscription);
 
@@ -241,6 +242,28 @@ public class GetBitwardenSubscriptionQuery(
         }
 
         return (cartLevel.FirstOrDefault(), productLevel);
+    }
+
+    private async Task<Subscription?> FetchSubscriptionAsync(User user)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+            {
+                Expand =
+                [
+                    "customer.discount.coupon.applies_to",
+                    "discounts.coupon.applies_to",
+                    "items.data.price.product",
+                    "test_clock"
+                ]
+            });
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscription ({SubscriptionID}) for User ({UserID}) was not found", user.GatewaySubscriptionId, user.Id);
+            return null;
+        }
     }
 
     #endregion
