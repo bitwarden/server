@@ -38,9 +38,12 @@ internal sealed class GeneratePersonalCiphersStep(
         var passwordDistribution = pwDist ?? PasswordDistributions.Realistic;
         var companies = Companies.All;
         var personalDist = density?.PersonalCipherDistribution;
+        var expectedTotal = personalDist is not null
+            ? EstimateTotal(userDigests.Count, personalDist)
+            : userDigests.Count * countPerUser;
 
-        var ciphers = new List<Cipher>(userDigests.Count * countPerUser);
-        var cipherIds = new List<Guid>(userDigests.Count * countPerUser);
+        var ciphers = new List<Cipher>(expectedTotal);
+        var cipherIds = new List<Guid>(expectedTotal);
         var globalIndex = 0;
 
         for (var userIndex = 0; userIndex < userDigests.Count; userIndex++)
@@ -55,7 +58,7 @@ internal sealed class GeneratePersonalCiphersStep(
 
             for (var i = 0; i < userCount; i++)
             {
-                var cipherType = typeDistribution.Select(globalIndex, userDigests.Count * Math.Max(countPerUser, 1));
+                var cipherType = typeDistribution.Select(globalIndex, expectedTotal);
                 var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId);
 
                 CipherComposer.AssignFolder(cipher, userDigest.UserId, i, context.Registry.UserFolderIds);
@@ -68,5 +71,17 @@ internal sealed class GeneratePersonalCiphersStep(
 
         context.Ciphers.AddRange(ciphers);
         context.Registry.CipherIds.AddRange(cipherIds);
+    }
+
+    private static int EstimateTotal(int userCount, Distribution<(int Min, int Max)> dist)
+    {
+        var total = 0;
+        for (var i = 0; i < userCount; i++)
+        {
+            var range = dist.Select(i, userCount);
+            total += range.Min + (i % Math.Max(range.Max - range.Min, 1));
+        }
+
+        return Math.Max(total, 1);
     }
 }
