@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
@@ -104,9 +106,10 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
-    [HttpPost("{sponsoringOrgId}/families-for-enterprise/resend")]
+    [Authorize<ManageUsersRequirement>]
+    [HttpPost("{organizationId}/families-for-enterprise/resend")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task ResendSponsorshipOffer(Guid sponsoringOrgId, [FromQuery] string sponsoredFriendlyName)
+    public async Task ResendSponsorshipOffer([FromRoute(Name = "organizationId")] Guid sponsoringOrgId, [FromQuery] string sponsoredFriendlyName)
     {
         var freeFamiliesSponsorshipPolicy = await _policyQuery.RunAsync(sponsoringOrgId,
             PolicyType.FreeFamiliesSponsorshipPolicy);
@@ -221,9 +224,10 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
-    [HttpDelete("{sponsoringOrgId}/{sponsoredFriendlyName}/revoke")]
+    [Authorize<ManageUsersRequirement>]
+    [HttpDelete("{organizationId}/{sponsoredFriendlyName}/revoke")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task AdminInitiatedRevokeSponsorshipAsync(Guid sponsoringOrgId, string sponsoredFriendlyName)
+    public async Task AdminInitiatedRevokeSponsorshipAsync([FromRoute(Name = "organizationId")] Guid sponsoringOrgId, string sponsoredFriendlyName)
     {
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
         var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
