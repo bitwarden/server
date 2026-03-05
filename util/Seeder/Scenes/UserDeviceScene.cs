@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Seeder;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
+
+namespace Bit.Seeder.Scenes;
 
 public class UserDeviceScene(IUserRepository userRepository, IDeviceRepository deviceRepository, IManglerService manglerService) : IScene<UserDeviceScene.Request, UserDeviceScene.Result>
 {
