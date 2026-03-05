@@ -15,6 +15,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -42,6 +43,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IUpgradeOrganizationPlanVNextCommand _upgradeOrganizationPlanVNextCommand;
+    private readonly IUserRepository _userRepository;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -58,7 +60,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IFeatureService featureService,
         IOrganizationBillingService organizationBillingService,
         IPricingClient pricingClient,
-        IUpgradeOrganizationPlanVNextCommand upgradeOrganizationPlanVNextCommand)
+        IUpgradeOrganizationPlanVNextCommand upgradeOrganizationPlanVNextCommand,
+        IUserRepository userRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -75,9 +78,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _organizationBillingService = organizationBillingService;
         _pricingClient = pricingClient;
         _upgradeOrganizationPlanVNextCommand = upgradeOrganizationPlanVNextCommand;
+        _userRepository = userRepository;
     }
 
-    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
+    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade, Guid? userId = null)
     {
         var organization = await GetOrgById(organizationId);
 
@@ -250,7 +254,19 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var sale = OrganizationSale.From(organization, upgrade);
+            // Check if the user performing the upgrade is an owner of the organization
+            // This is used for discount validation - discounts only apply if the owner is upgrading
+            User owner = null;
+            if (userId.HasValue)
+            {
+                var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId.Value);
+                if (organizationUser != null && organizationUser.Type == OrganizationUserType.Owner)
+                {
+                    owner = await _userRepository.GetByIdAsync(organizationUser.UserId.Value);
+                }
+            }
+
+            var sale = OrganizationSale.From(organization, upgrade, owner);
             await _organizationBillingService.Finalize(sale);
         }
         else
