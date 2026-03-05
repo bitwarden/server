@@ -26,8 +26,8 @@ public sealed class Distribution<T>
 
     /// <summary>
     /// Selects a value deterministically based on index position within a total count.
-    /// Uses Hamilton apportionment so remainder items go to the buckets with the largest
-    /// fractional parts, not unconditionally to the last bucket.
+    /// Remainder items go to buckets with the largest fractional parts,
+    /// not unconditionally to the last bucket.
     /// </summary>
     /// <param name="index">Zero-based index of the item.</param>
     /// <param name="total">Total number of items being distributed.</param>
@@ -49,8 +49,8 @@ public sealed class Distribution<T>
 
     /// <summary>
     /// Returns all values with their calculated counts for a given total.
-    /// Uses Hamilton (largest-remainder) apportionment: each bucket gets its truncated share,
-    /// then the deficit is distributed one-at-a-time to buckets with the largest fractional remainders.
+    /// Each bucket gets its truncated share, then the deficit is distributed one-at-a-time
+    /// to buckets with the largest fractional remainders.
     /// Zero-weight buckets always receive exactly zero items.
     /// </summary>
     /// <param name="total">Total number of items to distribute.</param>
