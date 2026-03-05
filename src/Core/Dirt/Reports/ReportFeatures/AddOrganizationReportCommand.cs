@@ -4,7 +4,10 @@ using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -12,15 +15,18 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
 {
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
+    private readonly IFusionCache _cache;
     private ILogger<AddOrganizationReportCommand> _logger;
 
     public AddOrganizationReportCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache,
         ILogger<AddOrganizationReportCommand> logger)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -63,6 +69,8 @@ public class AddOrganizationReportCommand : IAddOrganizationReportCommand
         organizationReport.SetNewId();
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
+
+        await _cache.RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
 
         _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully added organization report for organization {organizationId}, {organizationReportId}",
                 request.OrganizationId, data.Id);
