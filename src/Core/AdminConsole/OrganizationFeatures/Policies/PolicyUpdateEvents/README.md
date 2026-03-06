@@ -4,6 +4,8 @@ This is the policy update pattern that we want our system’s end state to follo
 This directory contains the interfaces and infrastructure for the policy save workflow used by `IVNextSavePolicyCommand`.
 Currently, we’re using `IVNextSavePolicyCommand` to transition from the old `IPolicyValidator` pattern.
 
+---
+
 ## Overview
 
 When an organization policy is created or updated, the save workflow runs a series of ordered steps. Each step acts like a hook that a handler may listen to by implementing the particular policy event interface.
@@ -150,7 +152,7 @@ public class AutomaticUserConfirmationPolicyEventHandler(
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
 
-    // IEnforceDependentPoliciesEvent — SingleOrg must be enabled before this policy can be enabled
+    // IEnforceDependentPoliciesEvent: SingleOrg must be enabled before this policy can be enabled
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
     // IPolicyValidationEvent: Validates org compliance
@@ -198,3 +200,33 @@ services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandl
 ```
 
 
+# IPolicyValidator (Legacy)
+
+`IPolicyValidator` is the **old pattern** and is being phased out. It is consumed by `ISavePolicyCommand` / `PolicyService.SavePolicyAsync`.
+
+```csharp
+public interface IPolicyValidator
+{
+    PolicyType Type { get; }
+    IEnumerable<PolicyType> RequiredPolicies { get; }
+    Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
+    Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
+}
+```
+
+---
+
+## Reason for transition
+
+1. IPolicyValidator combines dependency enforcement (RequiredPolicies), validation (ValidateAsync), and pre-save side effects (OnSaveSideEffectsAsync) into a single flat interface. This makes it awkward to add a post-save side effect, since that must be executed after the policy is saved, which lives in a different abstraction.
+2. The request body has also expanded, and we need to support metadata that the server needs to perform operations, but that data is not intended to be saved with the policy.
+3. By breaking each event hook into a separate interface, it reduces boilerplate, and new hooks can be added without affecting existing services.
+
+---
+
+## During the transition
+
+1. New policies should implement **both** `IPolicyValidator` and the appropriate `IPolicyUpdateEvent` sub-interfaces so they work correctly regardless of which save path is called. Once `ISavePolicyCommand` is fully replaced by `IVNextSavePolicyCommand` and removed, the `IPolicyValidator` implementation can be dropped.
+2. Previous implementations of IPolicyValidator classes have a postfix of `Validator`, but once we move to `IPolicyUpdateEvent`, they should be renamed to `Handler`. This will reduce confusion since validation normally implies there are no write operations, but there are in this context.
+
+---
