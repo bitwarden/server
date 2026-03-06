@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Xunit;
 using Xunit.Abstractions;
+using IdentityAccountsController = Bit.Identity.Controllers.AccountsController;
 
 namespace Bit.Api.Test.KeyManagement;
 
@@ -76,7 +77,7 @@ public class MasterPasswordEndpointMigrationTests
     #region Known endpoint manifest
 
     /// <summary>
-    /// The complete, known set of endpoint signatures that accept master password data.
+    /// A set of known endpoint signatures that accept master password data.
     /// Format: "ControllerTypeName.MethodName(BodyParameterTypeName)"
     ///
     /// If <see cref="AllEndpointsAcceptingMasterPasswordData_MatchExpectedManifest"/> fails,
@@ -84,12 +85,15 @@ public class MasterPasswordEndpointMigrationTests
     /// </summary>
     private static readonly HashSet<string> ExpectedEndpoints = new()
     {
-        // ── Auth/AccountsController ────────────────────────────────────────────
+        // ── Auth/Api/AccountsController ────────────────────────────────────────────
         "AccountsController.PostPassword(PasswordRequestModel)",
         "AccountsController.PostSetPasswordAsync(SetInitialPasswordRequestModel)",
         "AccountsController.PostKdf(PasswordRequestModel)",
         "AccountsController.PutUpdateTempPasswordAsync(UpdateTempPasswordRequestModel)",
         "AccountsController.PutUpdateTdePasswordAsync(UpdateTdeOffboardingPasswordRequestModel)",
+
+        // ── Auth/Identity/AccountsController ────────────────────────────────────────────
+        "AccountsController.PostRegisterFinish(RegisterFinishRequestModel)",
 
         // ── KeyManagement/AccountsKeyManagementController ──────────────────────
         "AccountsKeyManagementController.RotateUserAccountKeysAsync(RotateUserAccountKeysAndDataRequestModel)",
@@ -195,6 +199,7 @@ public class MasterPasswordEndpointMigrationTests
     [
         typeof(AccountsController).Assembly,         // Bit.Api
         typeof(RegisterFinishRequestModel).Assembly, // Bit.Core
+        typeof(IdentityAccountsController).Assembly, // Bit.Identity
     ];
 
     /// <summary>
@@ -523,12 +528,18 @@ public class MasterPasswordEndpointMigrationTests
 
     #region Discovery engine
 
+    private static readonly Assembly[] ScannedControllerAssemblies =
+    [
+        typeof(AccountsController).Assembly,          // Bit.Api
+        typeof(IdentityAccountsController).Assembly,  // Bit.Identity
+    ];
+
     private static List<EndpointInfo> DiscoverEndpoints()
     {
         var results = new List<EndpointInfo>();
 
-        var apiAssembly = typeof(AccountsController).Assembly;
-        var controllerTypes = apiAssembly.GetTypes()
+        var controllerTypes = ScannedControllerAssemblies
+            .SelectMany(a => a.GetTypes())
             .Where(t => !t.IsAbstract && IsControllerType(t))
             .OrderBy(t => t.FullName);
 
