@@ -72,6 +72,11 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
         }
 
+        if (grantorUser.Email.Equals(emergencyContactEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException("You cannot add yourself as an emergency access contact.");
+        }
+
         var emergencyAccess = new Entities.EmergencyAccess
         {
             GrantorId = grantorUser.Id,
