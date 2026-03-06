@@ -14,7 +14,7 @@ public class NoopOrganizationReportStorageService : IOrganizationReportStorageSe
 
     public Task UploadReportDataAsync(OrganizationReport report, ReportFile fileData, Stream stream) => Task.CompletedTask;
 
-    public Task<(bool valid, long length)> ValidateFileAsync(OrganizationReport report, ReportFile fileData, long minimum, long maximum) => Task.FromResult((true, 0L));
+    public Task<(bool valid, long length)> ValidateFileAsync(OrganizationReport report, ReportFile fileData, long minimum, long maximum) => Task.FromResult((true, fileData.Size));
 
     public Task DeleteReportFilesAsync(OrganizationReport report, string reportFileId) => Task.CompletedTask;
 }

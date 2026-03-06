@@ -2,6 +2,7 @@
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
+using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -14,15 +15,18 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
 {
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
+    private readonly IOrganizationReportStorageService _storageService;
     private readonly ILogger<UpdateOrganizationReportV2Command> _logger;
 
     public UpdateOrganizationReportV2Command(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
+        IOrganizationReportStorageService storageService,
         ILogger<UpdateOrganizationReportV2Command> logger)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
+        _storageService = storageService;
         _logger = logger;
     }
 
@@ -90,12 +94,18 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
 
         if (request.RequiresNewFileUpload)
         {
+            var oldFileData = existingReport.GetReportFile();
+            if (oldFileData?.Id != null)
+            {
+                await _storageService.DeleteReportFilesAsync(existingReport, oldFileData.Id);
+            }
+
             var fileData = new ReportFile
             {
                 Id = CoreHelpers.SecureRandomString(32, upper: false, special: false),
                 FileName = "report-data.json",
                 Validated = false,
-                Size = 0
+                Size = request.FileSize ?? 0
             };
             existingReport.SetReportFile(fileData);
         }
