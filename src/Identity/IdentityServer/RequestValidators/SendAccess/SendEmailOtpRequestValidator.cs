@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
@@ -9,7 +10,12 @@ using Duende.IdentityServer.Validation;
 
 namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 
+/**
+* The error responses here do not fully match the standard for OAuth with respect to Invalid Request vs Invalid Grant. This is intended to better protect
+* against enumeration. We return Invalid Request for all errors related to the email and OTP, even if in some cases Invalid Grant might be more appropriate.
+*/
 public class SendEmailOtpRequestValidator(
+    ILogger<SendEmailOtpRequestValidator> logger,
     IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider,
     IMailService mailService) : ISendAuthenticationMethodValidator<EmailOtp>
 {
@@ -20,8 +26,7 @@ public class SendEmailOtpRequestValidator(
     private static readonly Dictionary<string, string> _sendEmailOtpValidatorErrorDescriptions = new()
     {
         { SendAccessConstants.EmailOtpValidatorResults.EmailRequired, $"{SendAccessConstants.TokenRequest.Email} is required." },
-        { SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, $"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required." },
-        { SendAccessConstants.EmailOtpValidatorResults.EmailOtpInvalid, $"{SendAccessConstants.TokenRequest.Email} otp is invalid." },
+        { SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, $"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required." }
     };
 
     public async Task<GrantValidationResult> ValidateRequestAsync(ExtensionGrantValidationContext context, EmailOtp authMethod, Guid sendId)
@@ -37,21 +42,14 @@ public class SendEmailOtpRequestValidator(
             return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailRequired);
         }
 
-        /*
-         * This is somewhat contradictory to our process where a poor shape means invalid_request and invalid
-         * data is invalid_grant.
-         * In this case the shape is correct and the data is invalid but to protect against enumeration we treat incorrect emails
-         * as invalid requests. The response for a request with a correct email which needs an OTP and a request
-         * that has an invalid email need to be the same otherwise an attacker could enumerate until a valid email is found.
-         */
         if (!authMethod.emails.Contains(email, StringComparer.OrdinalIgnoreCase))
         {
-            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
+            return BuildErrorResult();
         }
 
         // get otp from request
         var requestOtp = request.Get(SendAccessConstants.TokenRequest.Otp);
-        var uniqueIdentifierForTokenCache = string.Format(SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var uniqueIdentifierForTokenCache = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
         if (string.IsNullOrEmpty(requestOtp))
         {
             // Since the request doesn't have an OTP, generate one
@@ -63,15 +61,16 @@ public class SendEmailOtpRequestValidator(
             // Verify that the OTP is generated
             if (string.IsNullOrEmpty(token))
             {
-                return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.OtpGenerationFailed);
+                logger.LogWarning("Failed to generate OTP for sendId: {SendId}", sendId);
+                return BuildErrorResult();
             }
 
             await mailService.SendSendEmailOtpEmailAsync(
                 email,
                 token,
-                string.Format(SendAccessConstants.OtpEmail.Subject, token));
+                string.Format(CultureInfo.CurrentCulture, SendAccessConstants.OtpEmail.Subject, token));
 
-            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
+            return BuildErrorResult();
         }
 
         // validate request otp
@@ -84,27 +83,24 @@ public class SendEmailOtpRequestValidator(
         // If OTP is invalid return error result
         if (!otpResult)
         {
-            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.EmailOtpInvalid);
+            return BuildErrorResult();
         }
 
         return BuildSuccessResult(sendId, email!);
     }
 
-    private static GrantValidationResult BuildErrorResult(string error)
+    /// <summary>
+    /// Build the error response for the SendEmailOtpRequestValidator.
+    /// </summary>
+    /// <param name="error">The error code to use for the validation result. This is defaulted to EmailAndOtpRequired if not specified because it is the most common response.</param>
+    /// <returns>A GrantValidationResult representing the error.</returns>
+    private static GrantValidationResult BuildErrorResult(string error = SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired)
     {
         switch (error)
         {
             case SendAccessConstants.EmailOtpValidatorResults.EmailRequired:
             case SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired:
                 return new GrantValidationResult(TokenRequestErrors.InvalidRequest,
-                    errorDescription: _sendEmailOtpValidatorErrorDescriptions[error],
-                    new Dictionary<string, object>
-                    {
-                        { SendAccessConstants.SendAccessError, error }
-                    });
-            case SendAccessConstants.EmailOtpValidatorResults.EmailOtpInvalid:
-                return new GrantValidationResult(
-                    TokenRequestErrors.InvalidGrant,
                     errorDescription: _sendEmailOtpValidatorErrorDescriptions[error],
                     new Dictionary<string, object>
                     {
