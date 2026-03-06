@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
@@ -110,12 +111,16 @@ public class OrganizationUserUpdateRequestModel
         return existingUser;
     }
 }
-
+#nullable enable
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
-    public string ResetPasswordKey { get; set; }
-    public string MasterPasswordHash { get; set; }
+    public string? ResetPasswordKey { get; set; }
+    public string? MasterPasswordHash { get; set; }
+
+    public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
+    public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
 }
+#nullable disable
 #nullable enable
 public class OrganizationUserBulkRequestModel
 {

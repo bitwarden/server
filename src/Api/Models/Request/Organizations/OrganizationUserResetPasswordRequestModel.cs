@@ -2,14 +2,16 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Models.Request.Organizations;
 
 public class OrganizationUserResetPasswordRequestModel
 {
-    [Required]
     [StringLength(300)]
     public string NewMasterPasswordHash { get; set; }
-    [Required]
     public string Key { get; set; }
+
+    public MasterPasswordAuthenticationDataRequestModel AuthenticationData { get; set; }
+    public MasterPasswordUnlockDataRequestModel UnlockData { get; set; }
 }
