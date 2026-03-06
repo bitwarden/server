@@ -49,6 +49,7 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
     {
         var dirPath = Path.Combine(_baseDirPath, report.OrganizationId.ToString(),
             report.CreationDate.ToString("MM-dd-yyyy"), report.Id.ToString(), reportFileId);
+        EnsurePathWithinBaseDir(dirPath);
         if (Directory.Exists(dirPath))
         {
             Directory.Delete(dirPath, true);
