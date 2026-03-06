@@ -2,18 +2,24 @@
     <PropertyGroup>
       <!-- These opt outs should be removed when all warnings are addressed -->
       <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1304;CA1305</WarningsNotAsErrors>
+      <!--
+        Pomelo.EntityFrameworkCore.MySql 9.0.0 has not yet released EF Core 10 support.
+        NU1608 suppresses the version conflict warning until a compatible release is available.
+        Another suppression exists in Directory.Build.props.
+      -->
+      <NoWarn>$(NoWarn);NU1608</NoWarn>
     </PropertyGroup>
 
 
     <ItemGroup>
       <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
-      <PackageReference Include="linq2db" Version="5.4.1" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="[8.0.8]" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="[8.0.8]" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="[8.0.8]" />
-      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="[8.0.4]" />
-      <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="[8.0.2]" />
-      <PackageReference Include="linq2db.EntityFrameworkCore" Version="[8.1.0]" />
+      <PackageReference Include="linq2db" Version="6.1.0" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="[10.0.3]" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="[10.0.3]" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="[10.0.3]" />
+      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="[10.0.0]" />
+      <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="[9.0.0]" />
+      <PackageReference Include="linq2db.EntityFrameworkCore" Version="[10.1.0]" />
     </ItemGroup>
 
     <ItemGroup>
