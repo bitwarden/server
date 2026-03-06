@@ -244,6 +244,19 @@ public class OrganizationReportsController : Controller
             request.OrganizationId = organizationId;
             request.ReportId = reportId;
 
+            if (request.RequiresNewFileUpload)
+            {
+                if (!request.FileSize.HasValue)
+                {
+                    throw new BadRequestException("File size is required.");
+                }
+
+                if (request.FileSize.Value > Constants.FileSize501mb)
+                {
+                    throw new BadRequestException("Max file size is 500 MB.");
+                }
+            }
+
             var report = await _updateReportV2Command.UpdateAsync(request);
 
             if (request.RequiresNewFileUpload)

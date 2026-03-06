@@ -98,8 +98,8 @@ public class LocalOrganizationReportStorageServiceTests
     }
 
     [Theory]
-    [InlineData("../../etc/malicious")]
-    [InlineData("../../../tmp/evil")]
+    [InlineData("../../../../etc/malicious")]
+    [InlineData("../../../../../tmp/evil")]
     public async Task UploadReportDataAsync_WithPathTraversalPayload_ThrowsInvalidOperationException(string maliciousFileId)
     {
         // Arrange

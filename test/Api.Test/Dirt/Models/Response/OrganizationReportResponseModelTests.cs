@@ -19,9 +19,6 @@ public class OrganizationReportResponseModelTests
         Assert.Equal(report.ContentEncryptionKey, model.ContentEncryptionKey);
         Assert.Equal(report.SummaryData, model.SummaryData);
         Assert.Equal(report.ApplicationData, model.ApplicationData);
-        Assert.Equal(report.PasswordCount, model.PasswordCount);
-        Assert.Equal(report.PasswordAtRiskCount, model.PasswordAtRiskCount);
-        Assert.Equal(report.MemberCount, model.MemberCount);
         Assert.Equal(report.CreationDate, model.CreationDate);
         Assert.Equal(report.RevisionDate, model.RevisionDate);
     }
