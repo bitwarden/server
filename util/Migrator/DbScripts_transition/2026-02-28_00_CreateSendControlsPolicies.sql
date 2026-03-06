@@ -33,16 +33,38 @@ BEGIN
         GETUTCDATE(),
         GETUTCDATE()
     FROM (
-        SELECT
-            COALESCE(ds.OrganizationId, so.OrganizationId) AS OrganizationId,
-            ds.Enabled  AS DisableSendEnabled,
-            so.Enabled  AS SendOptionsEnabled,
-            so.Data     AS SendOptionsData
-        FROM      [dbo].[Policy] ds
-        FULL OUTER JOIN [dbo].[Policy] so
-            ON  ds.OrganizationId = so.OrganizationId
+        SELECT DISTINCT
+             COALESCE(ds.OrganizationId, so.OrganizationId) AS OrganizationId,
+             ds.Enabled AS DisableSendEnabled,
+             so.Enabled AS SendOptionsEnabled,
+             so.Data AS SendOptionsData
+        FROM 
+            [dbo].[Policy] ds
+        LEFT JOIN
+            [dbo].[Policy] so 
+        ON ds.OrganizationId = so.OrganizationId 
             AND so.Type = @SendOptionsType
-        WHERE (ds.Type = @DisableSendType OR so.Type = @SendOptionsType)
+        WHERE
+            ds.Type = @DisableSendType
+        UNION
+        SELECT
+            so.OrganizationId, 
+            NULL, 
+            so.Enabled, 
+            so.Data
+        FROM 
+            [dbo].[Policy] so
+        WHERE 
+            so.Type = @SendOptionsType
+            AND NOT EXISTS (
+                SELECT
+                    1 
+                FROM
+                    [dbo].[Policy] ds 
+                WHERE
+                    ds.OrganizationId = so.OrganizationId 
+                    AND ds.Type = @DisableSendType
+
     ) combined
     -- Skip orgs that already have a SendControls row
     WHERE NOT EXISTS (
