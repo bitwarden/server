@@ -244,7 +244,7 @@ public interface IPolicyValidator
 
 ## Reason for transition
 
-1. IPolicyValidator combines dependency enforcement (RequiredPolicies), validation (ValidateAsync), and pre-save side effects (OnSaveSideEffectsAsync) into a single flat interface. This makes it awkward to add a post-save side effect, since that must be executed after the policy is saved, which lives in a different abstraction.
+1. `IPolicyValidator` combines dependency enforcement (`RequiredPolicies`), validation (`ValidateAsync`), and pre-save side effects (`OnSaveSideEffectsAsync`) into a single flat interface. This makes it awkward to add a post-save side effect, since that must be executed after the policy is saved, which lives in a different abstraction.
 2. The request body has also expanded, and we need to support metadata that the server needs to perform operations, but that data is not intended to be saved with the policy.
 3. By breaking each event hook into a separate interface, it reduces boilerplate, and new hooks can be added without affecting existing services.
 
@@ -253,6 +253,6 @@ public interface IPolicyValidator
 ## During the transition
 
 1. New policies should implement **both** `IPolicyValidator` and the appropriate `IPolicyUpdateEvent` sub-interfaces so they work correctly regardless of which save path is called. Once `ISavePolicyCommand` is fully replaced by `IVNextSavePolicyCommand` and removed, the `IPolicyValidator` implementation can be dropped.
-2. Previous implementations of IPolicyValidator classes have a postfix of `Validator`, but once we move to `IPolicyUpdateEvent`, they should be renamed to `Handler`. This will reduce confusion since validation normally implies there are no write operations, but there are in this context.
+2. Previous implementations of `IPolicyValidator` classes have a postfix of `Validator`, but once we move to `IPolicyUpdateEvent`, they should be renamed to `Handler`. This will reduce confusion since validation normally implies there are no write operations, but there are in this context.
 
 ---
