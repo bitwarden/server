@@ -62,8 +62,8 @@ public interface IEnforceDependentPoliciesEvent : IPolicyUpdateEvent
 }
 ```
 
-- **Enabling** – Each `PolicyType` in `RequiredPolicies` must already be enabled, otherwise a `BadRequestException` is thrown.
-- **Disabling a required policy** – If any other policy has this policy listed as a requirement and is currently enabled, the disable action is blocked.
+- **Enabling**: Each `PolicyType` in `RequiredPolicies` must already be enabled, otherwise a `BadRequestException` is thrown.
+- **Disabling a required policy**: If any other policy has this policy listed as a requirement and is currently enabled, the disable action is blocked.
 
 ---
 
@@ -141,7 +141,7 @@ Note: No changes to `VNextSavePolicyCommand` or `PolicyEventHandlerHandlerFactor
 
 `AutomaticUserConfirmationPolicyEventHandler` is a good reference. It requires `SingleOrg`, validates org compliance before enabling, and removes emergency access grants as a pre-save side effect.
 
-**Step 1 – Create the handler** (`PolicyValidators/AutomaticUserConfirmationPolicyEventHandler.cs`):
+**Step 1: Create the handler** (`PolicyValidators/AutomaticUserConfirmationPolicyEventHandler.cs`):
 
 ```csharp
 public class AutomaticUserConfirmationPolicyEventHandler(
@@ -193,12 +193,38 @@ public class AutomaticUserConfirmationPolicyEventHandler(
 }
 ```
 
-**Step 2 – Register the handler** in `PolicyServiceCollectionExtensions.AddPolicyUpdateEvents()`:
+**Step 2: Register the handler** in `PolicyServiceCollectionExtensions.AddPolicyUpdateEvents()`:
 
 ```csharp
 services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
 ```
 
+---
+
+## Adding a New Event Interface
+
+Use this when the existing interfaces don't cover your use case and you need a new hook in the save workflow.
+
+### Step 1: Define the interface in `PolicyUpdateEvents/Interfaces/`:
+
+```csharp
+public interface IMyNewEvent : IPolicyUpdateEvent
+{
+    Task ExecuteMyNewEventAsync(SavePolicyModel policyRequest, Policy? currentPolicy);
+}
+```
+
+It must extend `IPolicyUpdateEvent`.
+
+### Step 2: Add a step to `SavePolicyCommand.SaveAsync()` or `VNextSavePolicyCommand.SaveAsync()` during transition
+
+1. Call your method at the appropriate position in the workflow
+2. You can use the existing `ExecutePolicyEventAsync<T>` helper or have your method use `policyEventHandlerFactory` directly to retrieve the handlers.
+3. **Note on cross-policy logic:** `IEnforceDependentPoliciesEvent` is a special case. It scans *all* registered handlers (not just the targeted policy's handler) to find dependents when disabling a policy. If your new interface requires similar cross-policy scanning, you will need to add that logic directly to `SavePolicyCommand` or `VNextSavePolicyCommand.SaveAsync()` during transition rather than using `ExecutePolicyEventAsync<T>`.
+
+### Step 3: Document the interface in the [Interfaces](#interfaces) section of this README and add it to the workflow diagram.
+
+---
 
 # IPolicyValidator (Legacy)
 
