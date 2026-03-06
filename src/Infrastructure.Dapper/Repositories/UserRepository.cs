@@ -523,7 +523,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var timestamp = DateTime.UtcNow;
 
             await connection!.ExecuteAsync(
-                "[dbo].[User_SetMasterPasswordUnlockUserData]",
+                "[dbo].[User_UpdateMasterPasswordUnlockUserData]",
                 new
                 {
                     Id = userId,

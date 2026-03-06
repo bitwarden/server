@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[User_SetMasterPasswordUnlockUserData]
+CREATE OR ALTER PROCEDURE [dbo].[User_UpdateMasterPasswordUnlockUserData]
     @Id UNIQUEIDENTIFIER,
     @Kdf TINYINT,
     @KdfIterations INT,
@@ -24,3 +24,4 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
