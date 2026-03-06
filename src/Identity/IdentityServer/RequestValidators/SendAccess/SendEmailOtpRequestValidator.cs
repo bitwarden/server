@@ -61,7 +61,7 @@ public class SendEmailOtpRequestValidator(
             // Verify that the OTP is generated
             if (string.IsNullOrEmpty(token))
             {
-                logger.LogWarning("Failed to generate OTP for sendId: {SendId}", sendId);
+                logger.LogWarning("Failed to generate OTP for SendAccess");
                 return BuildErrorResult();
             }
 
