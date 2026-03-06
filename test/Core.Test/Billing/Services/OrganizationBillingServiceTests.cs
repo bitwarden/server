@@ -7,6 +7,8 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
@@ -20,11 +22,13 @@ namespace Bit.Core.Test.Billing.Services;
 [SutProviderCustomize]
 public class OrganizationBillingServiceTests
 {
+
     #region Finalize - Trial Settings
 
     [Theory, BitAutoData]
     public async Task NoPaymentMethodAndTrialPeriod_SetsMissingPaymentMethodCancelBehavior(
         Organization organization,
+        User owner,
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
@@ -49,7 +53,8 @@ public class OrganizationBillingServiceTests
         var sale = new OrganizationSale
         {
             Organization = organization,
-            SubscriptionSetup = subscriptionSetup
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
         };
 
         sutProvider.GetDependency<IPricingClient>()
@@ -101,6 +106,7 @@ public class OrganizationBillingServiceTests
     [Theory, BitAutoData]
     public async Task NoPaymentMethodButNoTrial_DoesNotSetMissingPaymentMethodBehavior(
         Organization organization,
+        User owner,
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
@@ -125,7 +131,8 @@ public class OrganizationBillingServiceTests
         var sale = new OrganizationSale
         {
             Organization = organization,
-            SubscriptionSetup = subscriptionSetup
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
         };
 
         sutProvider.GetDependency<IPricingClient>()
@@ -175,6 +182,7 @@ public class OrganizationBillingServiceTests
     [Theory, BitAutoData]
     public async Task HasPaymentMethodAndTrialPeriod_DoesNotSetMissingPaymentMethodBehavior(
         Organization organization,
+        User owner,
         SutProvider<OrganizationBillingService> sutProvider)
     {
         // Arrange
@@ -199,7 +207,8 @@ public class OrganizationBillingServiceTests
         var sale = new OrganizationSale
         {
             Organization = organization,
-            SubscriptionSetup = subscriptionSetup
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
         };
 
         sutProvider.GetDependency<IPricingClient>()
@@ -244,6 +253,346 @@ public class OrganizationBillingServiceTests
         Assert.NotNull(capturedOptions);
         Assert.Equal(7, capturedOptions.TrialPeriodDays);
         Assert.Null(capturedOptions.TrialSettings);
+    }
+
+    #endregion
+
+    #region Finalize - Coupon Validation
+
+    [Theory, BitAutoData]
+    public async Task Finalize_WithValidCoupon_SuccessfullyCreatesSubscription(
+        Organization organization,
+        User owner,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.FamiliesAnnually);
+        organization.PlanType = PlanType.FamiliesAnnually;
+        organization.GatewayCustomerId = "cus_test123";
+        organization.GatewaySubscriptionId = null;
+
+        var customerSetup = new CustomerSetup
+        {
+            Coupon = "VALID_COUPON"
+        };
+
+        var subscriptionSetup = new SubscriptionSetup
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            PasswordManagerOptions = new SubscriptionSetup.PasswordManager
+            {
+                Seats = 5,
+                Storage = null,
+                PremiumAccess = false
+            },
+            SecretsManagerOptions = null,
+            SkipTrial = false
+        };
+
+        var sale = new OrganizationSale
+        {
+            Organization = organization,
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
+        };
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.FamiliesAnnually)
+            .Returns(plan);
+
+        sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .ValidateDiscountEligibilityForUserAsync(
+                owner,
+                "VALID_COUPON",
+                DiscountTierType.Families)
+            .Returns(true);
+
+        sutProvider.GetDependency<IHasPaymentMethodQuery>()
+            .Run(organization)
+            .Returns(true);
+
+        var customer = new Customer
+        {
+            Id = "cus_test123",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
+            .Returns(new Subscription
+            {
+                Id = "sub_test123",
+                Status = StripeConstants.SubscriptionStatus.Active
+            });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sutProvider.Sut.Finalize(sale);
+
+        // Assert
+        await sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .Received(1)
+            .ValidateDiscountEligibilityForUserAsync(
+                owner,
+                "VALID_COUPON",
+                DiscountTierType.Families);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
+                opts.Discounts != null && opts.Discounts.Count == 1 && opts.Discounts[0].Coupon == "VALID_COUPON"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Finalize_WithInvalidCoupon_ThrowsBadRequestException(
+        Organization organization,
+        User owner,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.FamiliesAnnually);
+        organization.PlanType = PlanType.FamiliesAnnually;
+        organization.GatewayCustomerId = "cus_test123";
+        organization.GatewaySubscriptionId = null;
+
+        var customerSetup = new CustomerSetup
+        {
+            Coupon = "INVALID_COUPON"
+        };
+
+        var subscriptionSetup = new SubscriptionSetup
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            PasswordManagerOptions = new SubscriptionSetup.PasswordManager
+            {
+                Seats = 5,
+                Storage = null,
+                PremiumAccess = false
+            },
+            SecretsManagerOptions = null,
+            SkipTrial = false
+        };
+
+        var sale = new OrganizationSale
+        {
+            Organization = organization,
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
+        };
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.FamiliesAnnually)
+            .Returns(plan);
+
+        // Return false to simulate invalid coupon
+        sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .ValidateDiscountEligibilityForUserAsync(
+                owner,
+                "INVALID_COUPON",
+                DiscountTierType.Families)
+            .Returns(false);
+
+        sutProvider.GetDependency<IHasPaymentMethodQuery>()
+            .Run(organization)
+            .Returns(true);
+
+        var customer = new Customer
+        {
+            Id = "cus_test123",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Finalize(sale));
+        Assert.Equal("Discount expired. Please review your cart total and try again", exception.Message);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .Received(1)
+            .ValidateDiscountEligibilityForUserAsync(
+                owner,
+                "INVALID_COUPON",
+                DiscountTierType.Families);
+
+        // Verify subscription was NOT created
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Finalize_WithNullCoupon_SkipsValidation(
+        Organization organization,
+        User owner,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
+        organization.PlanType = PlanType.TeamsAnnually;
+        organization.GatewayCustomerId = "cus_test123";
+        organization.GatewaySubscriptionId = null;
+
+        var customerSetup = new CustomerSetup
+        {
+            Coupon = null
+        };
+
+        var subscriptionSetup = new SubscriptionSetup
+        {
+            PlanType = PlanType.TeamsAnnually,
+            PasswordManagerOptions = new SubscriptionSetup.PasswordManager
+            {
+                Seats = 5,
+                Storage = null,
+                PremiumAccess = false
+            },
+            SecretsManagerOptions = null,
+            SkipTrial = false
+        };
+
+        var sale = new OrganizationSale
+        {
+            Organization = organization,
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
+        };
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsAnnually)
+            .Returns(plan);
+
+        sutProvider.GetDependency<IHasPaymentMethodQuery>()
+            .Run(organization)
+            .Returns(true);
+
+        var customer = new Customer
+        {
+            Id = "cus_test123",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>())
+            .Returns(new Subscription
+            {
+                Id = "sub_test123",
+                Status = StripeConstants.SubscriptionStatus.Active
+            });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sutProvider.Sut.Finalize(sale);
+
+        // Assert - Validation should NOT be called
+        await sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .DidNotReceive()
+            .ValidateDiscountEligibilityForUserAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<DiscountTierType>());
+
+        // Subscription should still be created
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Finalize_WithCouponOutsideDateRange_ThrowsBadRequestException(
+        Organization organization,
+        User owner,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.FamiliesAnnually);
+        organization.PlanType = PlanType.FamiliesAnnually;
+        organization.GatewayCustomerId = "cus_test123";
+        organization.GatewaySubscriptionId = null;
+
+        var customerSetup = new CustomerSetup
+        {
+            Coupon = "EXPIRED_COUPON"
+        };
+
+        var subscriptionSetup = new SubscriptionSetup
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            PasswordManagerOptions = new SubscriptionSetup.PasswordManager
+            {
+                Seats = 5,
+                Storage = null,
+                PremiumAccess = false
+            },
+            SecretsManagerOptions = null,
+            SkipTrial = false
+        };
+
+        var sale = new OrganizationSale
+        {
+            Organization = organization,
+            CustomerSetup = customerSetup,
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
+        };
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.FamiliesAnnually)
+            .Returns(plan);
+
+        // Return false to simulate expired coupon (outside valid date range)
+        sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .ValidateDiscountEligibilityForUserAsync(
+                owner,
+                "EXPIRED_COUPON",
+                DiscountTierType.Families)
+            .Returns(false);
+
+        sutProvider.GetDependency<IHasPaymentMethodQuery>()
+            .Run(organization)
+            .Returns(true);
+
+        var customer = new Customer
+        {
+            Id = "cus_test123",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Finalize(sale));
+        Assert.Equal("Discount expired. Please review your cart total and try again", exception.Message);
+
+        await sutProvider.GetDependency<ISubscriptionDiscountService>()
+            .Received(1)
+            .ValidateDiscountEligibilityForUserAsync(
+                owner,
+                "EXPIRED_COUPON",
+                DiscountTierType.Families);
+
+        // Verify subscription was NOT created
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive()
+            .CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
     }
 
     #endregion

@@ -17,6 +17,13 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
         var automaticUserConfirmationPolicyRequirement = await policyRequirementQuery
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(request.User.Id);
 
+        return await IsCompliantAsync(request, automaticUserConfirmationPolicyRequirement);
+    }
+
+    public async Task<ValidationResult<AutomaticUserConfirmationPolicyEnforcementRequest>> IsCompliantAsync(
+        AutomaticUserConfirmationPolicyEnforcementRequest request,
+        AutomaticUserConfirmationPolicyRequirement policyRequirement)
+    {
         var currentOrganizationUser = request.AllOrganizationUsers
             .FirstOrDefault(x => x.OrganizationId == request.OrganizationId
                                  // invited users do not have a userId but will have email
@@ -27,7 +34,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
             return Invalid(request, new CurrentOrganizationUserIsNotPresentInRequest());
         }
 
-        if (automaticUserConfirmationPolicyRequirement.IsEnabled(request.OrganizationId))
+        if (policyRequirement.IsEnabled(request.OrganizationId))
         {
             if ((await providerUserRepository.GetManyByUserAsync(request.User.Id)).Count != 0)
             {
@@ -40,7 +47,7 @@ public class AutomaticUserConfirmationPolicyEnforcementValidator(
             }
         }
 
-        if (automaticUserConfirmationPolicyRequirement.IsEnabledForOrganizationsOtherThan(currentOrganizationUser.OrganizationId))
+        if (policyRequirement.IsEnabledForOrganizationsOtherThan(currentOrganizationUser.OrganizationId))
         {
             return Invalid(request, new OtherOrganizationDoesNotAllowOtherMembership());
         }
