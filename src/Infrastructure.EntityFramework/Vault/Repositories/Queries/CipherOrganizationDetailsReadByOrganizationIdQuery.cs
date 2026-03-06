@@ -39,6 +39,7 @@ public class CipherOrganizationDetailsReadByOrganizationIdQuery : IQuery<CipherO
                         RevisionDate = c.RevisionDate,
                         DeletedDate = c.DeletedDate,
                         Key = c.Key,
+                        Reprompt = c.Reprompt,
                         OrganizationUseTotp = o.UseTotp,
                     };
 
