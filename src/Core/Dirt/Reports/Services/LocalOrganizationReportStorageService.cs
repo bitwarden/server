@@ -34,6 +34,7 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
         OrganizationReport report, ReportFile fileData, long minimum, long maximum)
     {
         var path = Path.Combine(_baseDirPath, RelativePath(report, fileData.Id!, fileData.FileName));
+        EnsurePathWithinBaseDir(path);
         if (!File.Exists(path))
         {
             return Task.FromResult((false, -1L));
@@ -59,6 +60,7 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
     {
         InitDir();
         var path = Path.Combine(_baseDirPath, RelativePath(report, fileId, fileName));
+        EnsurePathWithinBaseDir(path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using var fs = File.Create(path);
         stream.Seek(0, SeekOrigin.Begin);
@@ -70,6 +72,16 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
         var date = report.CreationDate.ToString("MM-dd-yyyy");
         return Path.Combine(report.OrganizationId.ToString(), date, report.Id.ToString(),
             fileId, fileName);
+    }
+
+    private void EnsurePathWithinBaseDir(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullBaseDir = Path.GetFullPath(_baseDirPath + Path.DirectorySeparatorChar);
+        if (!fullPath.StartsWith(fullBaseDir, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Path traversal detected.");
+        }
     }
 
     private void InitDir()
