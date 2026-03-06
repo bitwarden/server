@@ -100,10 +100,9 @@ public class LocalOrganizationReportStorageServiceTests
     [Theory]
     [InlineData("../../etc/malicious")]
     [InlineData("../../../tmp/evil")]
-    public async Task UploadReportDataAsync_WithPathTraversalPayload_WritesOutsideBaseDirectory(string maliciousFileId)
+    public async Task UploadReportDataAsync_WithPathTraversalPayload_ThrowsInvalidOperationException(string maliciousFileId)
     {
-        // Arrange - demonstrates the path traversal vulnerability that is mitigated
-        // by validating reportFileId matches report's file data at the controller/command layer
+        // Arrange
         var fixture = new Fixture();
         var tempDir = Path.Combine(Path.GetTempPath(), "bitwarden-test-" + Guid.NewGuid());
 
@@ -132,17 +131,9 @@ public class LocalOrganizationReportStorageServiceTests
 
         try
         {
-            // Act
-            await sut.UploadReportDataAsync(report, maliciousFileData, stream);
-
-            // Assert - the file is written at a path that escapes the intended report directory
-            var intendedBaseDir = Path.Combine(tempDir, report.OrganizationId.ToString(),
-                report.CreationDate.ToString("MM-dd-yyyy"), report.Id.ToString());
-            var actualFilePath = Path.Combine(intendedBaseDir, maliciousFileId, "report-data.json");
-            var resolvedPath = Path.GetFullPath(actualFilePath);
-
-            // This demonstrates the vulnerability: the resolved path escapes the base directory
-            Assert.False(resolvedPath.StartsWith(Path.GetFullPath(intendedBaseDir)));
+            // Act & Assert - EnsurePathWithinBaseDir guard rejects the traversal attempt
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => sut.UploadReportDataAsync(report, maliciousFileData, stream));
         }
         finally
         {
