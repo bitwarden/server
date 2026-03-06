@@ -188,6 +188,11 @@ public class OrganizationReportsController : Controller
 
             var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
 
+            if (report == null)
+            {
+                throw new NotFoundException("Report not found for the specified organization.");
+            }
+
             if (report.OrganizationId != organizationId)
             {
                 throw new BadRequestException("Invalid report ID");
@@ -321,7 +326,7 @@ public class OrganizationReportsController : Controller
 
         if (!Request?.ContentType?.Contains("multipart/") ?? true)
         {
-            throw new BadRequestException("Invalid contenwt.");
+            throw new BadRequestException("Invalid content.");
         }
 
         if (string.IsNullOrEmpty(reportFileId))
@@ -330,6 +335,11 @@ public class OrganizationReportsController : Controller
         }
 
         var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+        if (report == null)
+        {
+            throw new NotFoundException();
+        }
+
         if (report.OrganizationId != organizationId)
         {
             throw new BadRequestException("Invalid report ID");
