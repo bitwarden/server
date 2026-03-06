@@ -9,11 +9,11 @@ Currently, we’re using `IVNextSavePolicyCommand` to transition from the old `I
 ## Overview
 
 When an organization policy is created or updated, the save workflow runs a series of ordered steps. Each step acts like a hook that a handler may listen to by implementing the particular policy event interface.
+
 Note: If you don’t want to hook into these events, you don’t need to create a handler, and your policy will simply upsert to the database with log events.
 
 ```
 SaveAsync()
-  │
   ├─ 1. Validate org can use policies
   ├─ 2. Validate policy dependencies     ← IEnforceDependentPoliciesEvent
   ├─ 3. Run policy-specific validation   ← IPolicyValidationEvent
@@ -28,7 +28,7 @@ The `PolicyEventHandlerHandlerFactory` resolves the correct handler for a given 
 
 ## Limitations
 
-1. Currently, we don't have a way to keep this whole process idempotent, so if there is an exception at any point that is not being handled, the state will stay where the process failed.
+1. We don't have a way to keep this whole process idempotent, so if there is an exception at any point that is not being handled, the state will stay where the process failed.
 
 
 
