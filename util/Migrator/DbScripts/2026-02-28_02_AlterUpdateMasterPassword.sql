@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[User_UpdateMasterPassword]
+CREATE OR ALTER PROCEDURE [dbo].[User_UpdateMasterPassword]
     @Id UNIQUEIDENTIFIER,
     @MasterPassword NVARCHAR(300),
     @MasterPasswordHint NVARCHAR(50) = NULL,
@@ -9,7 +9,7 @@ CREATE PROCEDURE [dbo].[User_UpdateMasterPassword]
     @KdfParallelism INT = NULL,
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7),
-    @MasterPasswordSalt NVARCHAR(256) = NULL
+    @MasterPasswordSalt NVARCHAR(256) = NULL -- NULL for backwards compat.
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,3 +30,4 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO

@@ -486,7 +486,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     KdfMemory = masterPasswordUnlockData.Kdf.Memory,
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
                     RevisionDate = timestamp,
-                    AccountRevisionDate = timestamp
+                    AccountRevisionDate = timestamp,
+                    MasterPasswordSalt = masterPasswordUnlockData.Salt
                 },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
