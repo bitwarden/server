@@ -26,11 +26,11 @@ public class DisableSendSyncPolicyEvent(IPolicyRepository policyRepository) : IO
 
         var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
             policyUpdate.OrganizationId, PolicyType.SendControls) ?? new Policy
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = policyUpdate.OrganizationId,
-            Type = PolicyType.SendControls,
-        };
+            {
+                Id = CoreHelpers.GenerateComb(),
+                OrganizationId = policyUpdate.OrganizationId,
+                Type = PolicyType.SendControls,
+            };
 
         var sendControlsPolicyData =
             sendControlsPolicy.GetDataModel<SendControlsPolicyData>();

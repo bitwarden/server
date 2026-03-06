@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
@@ -28,11 +27,11 @@ public class SendControlsSyncPolicyEvent(
 
         var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
             policyUpdate.OrganizationId, PolicyType.SendControls) ?? new Policy
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = policyUpdate.OrganizationId,
-            Type = PolicyType.SendControls,
-        };
+            {
+                Id = CoreHelpers.GenerateComb(),
+                OrganizationId = policyUpdate.OrganizationId,
+                Type = PolicyType.SendControls,
+            };
 
         var sendControlsPolicyData =
             sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
