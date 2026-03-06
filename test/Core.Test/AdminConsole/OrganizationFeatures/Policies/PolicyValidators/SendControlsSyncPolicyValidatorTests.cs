@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -19,28 +18,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidat
 [SutProviderCustomize]
 public class SendControlsSyncPolicyValidatorTests
 {
-    /// When the pm-31885-send-controls flag is active changes to the SendControls policy should be synced
-    /// back into the legacy DisableSend and SendOptions policy rows, enabling safe rollback.
-    /// This test asserts that when the flag is disabled, the sync doesn't occur as it is not necessary.
-    [Theory, BitAutoData]
-    public async Task ExecutePostUpsertSideEffectAsync_DoesNothing_WhenFlagDisabled(
-        [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
-        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
-    {
-        postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControls)
-            .Returns(false);
-
-        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
-            new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
-
-        await sutProvider.GetDependency<IPolicyRepository>()
-            .DidNotReceive()
-            .UpsertAsync(Arg.Any<Policy>());
-    }
-
     [Theory, BitAutoData]
     public async Task ExecutePostUpsertSideEffectAsync_SyncsDisableSend_ToLegacyDisableSendPolicy(
         [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
@@ -50,11 +27,11 @@ public class SendControlsSyncPolicyValidatorTests
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DisableSend = true, DisableHideEmail = false });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControls)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, Arg.Any<PolicyType>())
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendControls)
+            .Returns(postUpsertedPolicy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, Arg.Is<PolicyType>(t => t != PolicyType.SendControls))
             .Returns((Policy?)null);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
@@ -77,11 +54,11 @@ public class SendControlsSyncPolicyValidatorTests
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DisableSend = false, DisableHideEmail = true });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControls)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, Arg.Any<PolicyType>())
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendControls)
+            .Returns(postUpsertedPolicy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, Arg.Is<PolicyType>(t => t != PolicyType.SendControls))
             .Returns((Policy?)null);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
@@ -105,11 +82,11 @@ public class SendControlsSyncPolicyValidatorTests
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DisableSend = true, DisableHideEmail = true });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControls)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, Arg.Any<PolicyType>())
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendControls)
+            .Returns(postUpsertedPolicy);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, Arg.Is<PolicyType>(t => t != PolicyType.SendControls))
             .Returns((Policy?)null);
 
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
@@ -140,9 +117,9 @@ public class SendControlsSyncPolicyValidatorTests
         existingSendOptionsPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DisableSend = true, DisableHideEmail = true });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControls)
-            .Returns(true);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendControls)
+            .Returns(postUpsertedPolicy);
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.DisableSend)
             .Returns(existingDisableSendPolicy);
