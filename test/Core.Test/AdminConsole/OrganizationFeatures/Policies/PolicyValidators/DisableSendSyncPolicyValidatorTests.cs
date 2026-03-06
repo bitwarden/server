@@ -22,7 +22,7 @@ public class DisableSendSyncPolicyValidatorTests
     public async Task ExecutePostUpsertSideEffectAsync_CreatesNewSendControlsPolicy_WhenNoneExists(
         [PolicyUpdate(PolicyType.DisableSend, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.DisableSend, enabled: true)] Policy postUpsertedPolicy,
-        SutProvider<DisableSendSyncPolicyValidator> sutProvider)
+        SutProvider<DisableSendSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IPolicyRepository>()
@@ -46,7 +46,7 @@ public class DisableSendSyncPolicyValidatorTests
         [PolicyUpdate(PolicyType.DisableSend, enabled: false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.DisableSend, enabled: false)] Policy postUpsertedPolicy,
         [Policy(PolicyType.SendControls, enabled: true)] Policy existingSendControlsPolicy,
-        SutProvider<DisableSendSyncPolicyValidator> sutProvider)
+        SutProvider<DisableSendSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingSendControlsPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -72,7 +72,7 @@ public class DisableSendSyncPolicyValidatorTests
         [PolicyUpdate(PolicyType.DisableSend, enabled: false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.DisableSend, enabled: false)] Policy postUpsertedPolicy,
         [Policy(PolicyType.SendControls, enabled: true)] Policy existingSendControlsPolicy,
-        SutProvider<DisableSendSyncPolicyValidator> sutProvider)
+        SutProvider<DisableSendSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingSendControlsPolicy.OrganizationId = policyUpdate.OrganizationId;

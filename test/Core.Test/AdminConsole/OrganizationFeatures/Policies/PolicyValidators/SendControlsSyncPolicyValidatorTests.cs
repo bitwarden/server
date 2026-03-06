@@ -26,7 +26,7 @@ public class SendControlsSyncPolicyValidatorTests
     public async Task ExecutePostUpsertSideEffectAsync_DoesNothing_WhenFlagDisabled(
         [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
-        SutProvider<SendControlsSyncPolicyValidator> sutProvider)
+        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IFeatureService>()
@@ -45,7 +45,7 @@ public class SendControlsSyncPolicyValidatorTests
     public async Task ExecutePostUpsertSideEffectAsync_SyncsDisableSend_ToLegacyDisableSendPolicy(
         [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
-        SutProvider<SendControlsSyncPolicyValidator> sutProvider)
+        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DisableSend = true, DisableHideEmail = false });
@@ -72,7 +72,7 @@ public class SendControlsSyncPolicyValidatorTests
     public async Task ExecutePostUpsertSideEffectAsync_SyncsDisableHideEmail_ToLegacySendOptionsPolicy(
         [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
-        SutProvider<SendControlsSyncPolicyValidator> sutProvider)
+        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DisableSend = false, DisableHideEmail = true });
@@ -100,7 +100,7 @@ public class SendControlsSyncPolicyValidatorTests
     public async Task ExecutePostUpsertSideEffectAsync_DisablesLegacyPolicies_WhenSendControlsPolicyDisabled(
         [PolicyUpdate(PolicyType.SendControls, enabled: false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendControls, enabled: false)] Policy postUpsertedPolicy,
-        SutProvider<SendControlsSyncPolicyValidator> sutProvider)
+        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendControlsPolicyData { DisableSend = true, DisableHideEmail = true });
@@ -133,7 +133,7 @@ public class SendControlsSyncPolicyValidatorTests
         [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
         [Policy(PolicyType.DisableSend, enabled: false)] Policy existingDisableSendPolicy,
         [Policy(PolicyType.SendOptions, enabled: false)] Policy existingSendOptionsPolicy,
-        SutProvider<SendControlsSyncPolicyValidator> sutProvider)
+        SutProvider<SendControlsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         existingDisableSendPolicy.OrganizationId = policyUpdate.OrganizationId;

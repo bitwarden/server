@@ -63,9 +63,9 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, BlockClaimedDomainAccountCreationPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
-        services.AddScoped<IPolicyUpdateEvent, DisableSendSyncPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, SendOptionsSyncPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, SendControlsSyncPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, DisableSendSyncPolicyEvent>();
+        services.AddScoped<IPolicyUpdateEvent, SendOptionsSyncPolicyEvent>();
+        services.AddScoped<IPolicyUpdateEvent, SendControlsSyncPolicyEvent>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

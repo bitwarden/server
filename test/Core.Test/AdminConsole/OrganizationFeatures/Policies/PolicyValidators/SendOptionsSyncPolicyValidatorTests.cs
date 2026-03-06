@@ -22,7 +22,7 @@ public class SendOptionsSyncPolicyValidatorTests
     public async Task ExecutePostUpsertSideEffectAsync_CreatesNewSendControlsPolicy_WhenNoneExists(
         [PolicyUpdate(PolicyType.SendOptions, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendOptions, enabled: true)] Policy postUpsertedPolicy,
-        SutProvider<SendOptionsSyncPolicyValidator> sutProvider)
+        SutProvider<SendOptionsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendOptionsPolicyData { DisableHideEmail = true });
@@ -48,7 +48,7 @@ public class SendOptionsSyncPolicyValidatorTests
         [PolicyUpdate(PolicyType.SendOptions, enabled: false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendOptions, enabled: false)] Policy postUpsertedPolicy,
         [Policy(PolicyType.SendControls, enabled: true)] Policy existingSendControlsPolicy,
-        SutProvider<SendOptionsSyncPolicyValidator> sutProvider)
+        SutProvider<SendOptionsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendOptionsPolicyData { DisableHideEmail = true });
@@ -74,7 +74,7 @@ public class SendOptionsSyncPolicyValidatorTests
         [PolicyUpdate(PolicyType.SendOptions, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendOptions, enabled: true)] Policy postUpsertedPolicy,
         [Policy(PolicyType.SendControls, enabled: false)] Policy existingSendControlsPolicy,
-        SutProvider<SendOptionsSyncPolicyValidator> sutProvider)
+        SutProvider<SendOptionsSyncPolicyEvent> sutProvider)
     {
         postUpsertedPolicy.OrganizationId = policyUpdate.OrganizationId;
         postUpsertedPolicy.SetDataModel(new SendOptionsPolicyData { DisableHideEmail = true });

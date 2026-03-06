@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -15,9 +13,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 /// When the pm-31885-send-controls flag is active, syncs changes to the SendControls policy
 /// back into the legacy DisableSend and SendOptions policy rows, enabling safe rollback.
 /// </summary>
-public class SendControlsSyncPolicyValidator(
+public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
-    IFeatureService featureService) : IOnPolicyPostUpdateEvent
+    TimeProvider timeProvider) : IOnPolicyPostUpdateEvent
 {
     public PolicyType Type => PolicyType.SendControls;
 
@@ -26,25 +24,30 @@ public class SendControlsSyncPolicyValidator(
         Policy postUpsertedPolicyState,
         Policy? previousPolicyState)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.SendControls))
-        {
-            return;
-        }
+        var policyUpdate = policyRequest.PolicyUpdate;
 
-        var data = CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(postUpsertedPolicyState.Data)
-            ?? new SendControlsPolicyData();
+        var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
+            policyUpdate.OrganizationId, PolicyType.SendControls) ?? new Policy
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = policyUpdate.OrganizationId,
+            Type = PolicyType.SendControls,
+        };
+
+        var sendControlsPolicyData =
+            sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
 
         await UpsertLegacyPolicyAsync(
             policyRequest.PolicyUpdate.OrganizationId,
             PolicyType.DisableSend,
-            enabled: postUpsertedPolicyState.Enabled && data.DisableSend,
+            enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableSend,
             policyData: null);
 
-        var sendOptionsData = new SendOptionsPolicyData { DisableHideEmail = data.DisableHideEmail };
+        var sendOptionsData = new SendOptionsPolicyData { DisableHideEmail = sendControlsPolicyData.DisableHideEmail };
         await UpsertLegacyPolicyAsync(
             policyRequest.PolicyUpdate.OrganizationId,
             PolicyType.SendOptions,
-            enabled: postUpsertedPolicyState.Enabled && data.DisableHideEmail,
+            enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
             policyData: CoreHelpers.ClassToJsonData(sendOptionsData));
     }
 
@@ -56,11 +59,7 @@ public class SendControlsSyncPolicyValidator(
     {
         var existing = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, type);
 
-        var policy = existing ?? new Policy
-        {
-            OrganizationId = organizationId,
-            Type = type,
-        };
+        var policy = existing ?? new Policy { OrganizationId = organizationId, Type = type, };
 
         if (existing == null)
         {
@@ -69,6 +68,7 @@ public class SendControlsSyncPolicyValidator(
 
         policy.Enabled = enabled;
         policy.Data = policyData;
+        policy.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
         await policyRepository.UpsertAsync(policy);
     }

@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -15,7 +13,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 /// Runs regardless of the pm-31885-send-controls feature flag to ensure SendControls
 /// always stays current for when the flag is eventually enabled.
 /// </summary>
-public class DisableSendSyncPolicyValidator(IPolicyRepository policyRepository) : IOnPolicyPostUpdateEvent
+public class DisableSendSyncPolicyEvent(IPolicyRepository policyRepository) : IOnPolicyPostUpdateEvent
 {
     public PolicyType Type => PolicyType.DisableSend;
 
@@ -27,28 +25,24 @@ public class DisableSendSyncPolicyValidator(IPolicyRepository policyRepository) 
         var policyUpdate = policyRequest.PolicyUpdate;
 
         var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
-            policyUpdate.OrganizationId, PolicyType.SendControls);
-
-        var data = sendControlsPolicy != null
-            ? CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(sendControlsPolicy.Data) ?? new SendControlsPolicyData()
-            : new SendControlsPolicyData();
-
-        data.DisableSend = postUpsertedPolicyState.Enabled;
-
-        var policy = sendControlsPolicy ?? new Policy
+            policyUpdate.OrganizationId, PolicyType.SendControls) ?? new Policy
         {
+            Id = CoreHelpers.GenerateComb(),
             OrganizationId = policyUpdate.OrganizationId,
             Type = PolicyType.SendControls,
         };
 
-        if (sendControlsPolicy == null)
-        {
-            policy.SetNewId();
-        }
+        var sendControlsPolicyData =
+            sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
 
-        policy.Enabled = data.DisableSend || data.DisableHideEmail;
-        policy.SetDataModel(data);
+        sendControlsPolicyData.DisableSend = postUpsertedPolicyState.Enabled;
 
-        await policyRepository.UpsertAsync(policy);
+        // TODO: seek clarification on review comment: sendControlsPolicyData.DisableHideEmail not mapped during this event
+        // DisableHideEmail mapping should be handled in
+        // src/Core/AdminConsole/OrganizationFeatures/Policies/PolicyValidators/SendOptionsSyncPolicyEvent.cs
+        sendControlsPolicy.Enabled = sendControlsPolicyData.DisableSend || sendControlsPolicyData.DisableHideEmail;
+        sendControlsPolicy.SetDataModel(sendControlsPolicyData);
+
+        await policyRepository.UpsertAsync(sendControlsPolicy);
     }
 }
