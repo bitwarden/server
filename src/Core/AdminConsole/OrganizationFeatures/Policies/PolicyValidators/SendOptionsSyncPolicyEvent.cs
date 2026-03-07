@@ -22,26 +22,26 @@ public class SendOptionsSyncPolicyEvent(IPolicyRepository policyRepository) : IO
         Policy postUpsertedPolicyState,
         Policy? previousPolicyState)
     {
-        var policyUpdate = policyRequest.PolicyUpdate;
+        var organizationId = policyRequest.PolicyUpdate.OrganizationId;
 
+        // Step 1: sync SendOptionsPolicy.Data.DisableSend -> SendControlsPolicy.Data.DisableSend
         var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
-            policyUpdate.OrganizationId, PolicyType.SendControls) ?? new Policy
+            organizationId, PolicyType.SendControls) ?? new Policy
             {
                 Id = CoreHelpers.GenerateComb(),
-                OrganizationId = policyUpdate.OrganizationId,
+                OrganizationId = organizationId,
                 Type = PolicyType.SendControls,
             };
 
-        var sendControlsPolicyData =
-            sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
-
-        var disableSendPolicyState = await policyRepository.GetByOrganizationIdTypeAsync(
-            policyUpdate.OrganizationId, PolicyType.DisableSend);
-
-        sendControlsPolicyData.DisableSend = disableSendPolicyState?.Enabled ?? false;
-        sendControlsPolicyData.DisableHideEmail = postUpsertedPolicyState.Enabled && postUpsertedPolicyState.GetDataModel<SendOptionsPolicyData>().DisableHideEmail;
-        sendControlsPolicy.Enabled = sendControlsPolicyData.DisableSend || sendControlsPolicyData.DisableHideEmail;
+        var sendControlsPolicyData = sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
+        sendControlsPolicyData.DisableHideEmail = postUpsertedPolicyState.GetDataModel<SendOptionsPolicyData>().DisableHideEmail;
         sendControlsPolicy.SetDataModel(sendControlsPolicyData);
+
+        // Step 2: sync Enabled status. SendControlsPolicy is enabled if either legacy policy is enabled
+        // Optimization: DisableSendPolicy.Enabled maps to SendControlsPolicy.Data.DisableSend - so we can use that
+        // as a proxy for that legacy policy state
+        sendControlsPolicy.Enabled = postUpsertedPolicyState.Enabled ||
+                                     sendControlsPolicyData.DisableSend;
 
         await policyRepository.UpsertAsync(sendControlsPolicy);
     }
