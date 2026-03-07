@@ -8,4 +8,5 @@ public class UserKdfInformation
     public required int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
+    public string? MasterPasswordSalt {get; set; }
 }
