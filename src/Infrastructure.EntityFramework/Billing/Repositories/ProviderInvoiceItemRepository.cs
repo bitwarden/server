@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using LinqToDB;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using EFProviderInvoiceItem = Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem;
 
