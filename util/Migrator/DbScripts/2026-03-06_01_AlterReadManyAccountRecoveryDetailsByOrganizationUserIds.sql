@@ -11,7 +11,7 @@ BEGIN
         U.[KdfIterations],
         U.[KdfMemory],
         U.[KdfParallelism],
-        U.[MasterPasswordSalt] AS [Salt],
+        U.[MasterPasswordSalt],
         OU.[ResetPasswordKey],
         O.[PrivateKey] AS EncryptedPrivateKey
     FROM @OrganizationUserIds AS OUIDs
