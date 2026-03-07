@@ -32,14 +32,21 @@ public class DisableSendSyncPolicyEvent(IPolicyRepository policyRepository) : IO
                 Type = PolicyType.SendControls,
             };
 
+        var sendOptionsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
+            policyUpdate.OrganizationId, PolicyType.SendOptions) ?? new Policy
+            {
+                Id = CoreHelpers.GenerateComb(),
+                OrganizationId = policyUpdate.OrganizationId,
+                Type = PolicyType.SendOptions,
+            };
+
         var sendControlsPolicyData =
             sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
 
-        sendControlsPolicyData.DisableSend = postUpsertedPolicyState.Enabled;
+        var sendOptionsPolicyData = sendOptionsPolicy.GetDataModel<SendOptionsPolicyData>();
 
-        // TODO: seek clarification on review comment: sendControlsPolicyData.DisableHideEmail not mapped during this event
-        // DisableHideEmail mapping should be handled in
-        // src/Core/AdminConsole/OrganizationFeatures/Policies/PolicyValidators/SendOptionsSyncPolicyEvent.cs
+        sendControlsPolicyData.DisableSend = postUpsertedPolicyState.Enabled;
+        sendControlsPolicyData.DisableHideEmail = sendOptionsPolicy.Enabled && sendOptionsPolicyData.DisableHideEmail;
         sendControlsPolicy.Enabled = sendControlsPolicyData.DisableSend || sendControlsPolicyData.DisableHideEmail;
         sendControlsPolicy.SetDataModel(sendControlsPolicyData);
 

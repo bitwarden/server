@@ -35,10 +35,11 @@ public class SendOptionsSyncPolicyEvent(IPolicyRepository policyRepository) : IO
         var sendControlsPolicyData =
             sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
 
-        // Right now, SendOptions is only used to contain DisableHideEmail
-        // Future SendOptions will be added and mapped here
-        sendControlsPolicyData.DisableHideEmail = postUpsertedPolicyState.Enabled;
+        var disableSendPolicyState = await policyRepository.GetByOrganizationIdTypeAsync(
+            policyUpdate.OrganizationId, PolicyType.DisableSend);
 
+        sendControlsPolicyData.DisableSend = disableSendPolicyState?.Enabled ?? false;
+        sendControlsPolicyData.DisableHideEmail = postUpsertedPolicyState.Enabled && postUpsertedPolicyState.GetDataModel<SendOptionsPolicyData>().DisableHideEmail;
         sendControlsPolicy.Enabled = sendControlsPolicyData.DisableSend || sendControlsPolicyData.DisableHideEmail;
         sendControlsPolicy.SetDataModel(sendControlsPolicyData);
 
