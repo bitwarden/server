@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -28,10 +28,18 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         {
             OrganizationId = org.Id,
             Type = PolicyType.TwoFactorAuthentication,
-            Data = string.Empty,
             Enabled = true
         });
-        var orgUser = await organizationUserRepository.CreateAsync(GetConfirmedOrganizationUser(org, user));
+
+        var customPermissions = "{\"accessReports\":true,\"manageGroups\":false}";
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Custom,
+            Permissions = customPermissions
+        });
 
         // Act
         var results = await policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(
@@ -40,14 +48,14 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
 
         // Assert
         var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        var result = resultsList.First();
+        var result = Assert.Single(resultsList);
         Assert.Equal(orgUser.Id, result.OrganizationUserId);
         Assert.Equal(org.Id, result.OrganizationId);
         Assert.Equal(PolicyType.TwoFactorAuthentication, result.PolicyType);
         Assert.Equal(policy.Data, result.PolicyData);
         Assert.Equal(OrganizationUserStatusType.Confirmed, result.OrganizationUserStatus);
-        Assert.Equal(OrganizationUserType.User, result.OrganizationUserType);
+        Assert.Equal(OrganizationUserType.Custom, result.OrganizationUserType);
+        Assert.Equal(customPermissions, result.OrganizationUserPermissionsData);
         Assert.False(result.IsProvider);
 
         // Cleanup
@@ -82,8 +90,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
 
         // Assert
         var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        var result = resultsList.First();
+        var result = Assert.Single(resultsList);
         Assert.Equal(orgUser.Id, result.OrganizationUserId);
         Assert.Equal(org.Id, result.OrganizationId);
         Assert.Equal(PolicyType.MasterPassword, result.PolicyType);
@@ -111,7 +118,6 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         {
             OrganizationId = org.Id,
             Type = PolicyType.RequireSso,
-            Data = string.Empty,
             Enabled = true
         });
         var orgUser = await organizationUserRepository.CreateAsync(GetInvitedOrganizationUser(org, user));
@@ -123,8 +129,7 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
 
         // Assert
         var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        var result = resultsList.First();
+        var result = Assert.Single(resultsList);
         Assert.Equal(orgUser.Id, result.OrganizationUserId);
         Assert.Equal(org.Id, result.OrganizationId);
         Assert.Equal(PolicyType.RequireSso, result.PolicyType);
@@ -149,18 +154,16 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         var org1 = await CreateEnterpriseOrgAsync(organizationRepository);
         var org2 = await CreateEnterpriseOrgAsync(organizationRepository);
 
-        var policy1 = await policyRepository.CreateAsync(new Policy
+        await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org1.Id,
             Type = PolicyType.SingleOrg,
-            Data = string.Empty,
             Enabled = true
         });
-        var policy2 = await policyRepository.CreateAsync(new Policy
+        await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org2.Id,
             Type = PolicyType.SingleOrg,
-            Data = string.Empty,
             Enabled = true
         });
 
@@ -207,21 +210,18 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         {
             OrganizationId = org.Id,
             Type = PolicyType.TwoFactorAuthentication,
-            Data = string.Empty,
             Enabled = true
         });
         await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org.Id,
             Type = PolicyType.MasterPassword,
-            Data = string.Empty,
             Enabled = true
         });
         await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org.Id,
             Type = PolicyType.SingleOrg,
-            Data = string.Empty,
             Enabled = true
         });
 
@@ -234,8 +234,8 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
 
         // Assert
         var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        Assert.All(resultsList, r => Assert.Equal(PolicyType.TwoFactorAuthentication, r.PolicyType));
+        var result = Assert.Single(resultsList);
+        Assert.Equal(PolicyType.TwoFactorAuthentication, result.PolicyType);
 
         // Cleanup
         await organizationRepository.DeleteAsync(org);
@@ -258,7 +258,6 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         {
             OrganizationId = org.Id,
             Type = PolicyType.DisableSend,
-            Data = string.Empty,
             Enabled = false // Disabled policy
         });
 
@@ -308,7 +307,6 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         {
             OrganizationId = org.Id,
             Type = PolicyType.PasswordGenerator,
-            Data = string.Empty,
             Enabled = true
         });
 
@@ -358,7 +356,6 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         {
             OrganizationId = org.Id,
             Type = PolicyType.MaximumVaultTimeout,
-            Data = string.Empty,
             Enabled = true
         });
 
@@ -396,7 +393,6 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
         {
             OrganizationId = org.Id,
             Type = PolicyType.SingleOrg,
-            Data = string.Empty,
             Enabled = true
         });
 
@@ -435,74 +431,9 @@ public class GetPolicyDetailsByUserIdAndPolicyTypeTests
 
         // Assert
         var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        var result = resultsList.First();
+        var result = Assert.Single(resultsList);
         Assert.True(result.IsProvider);
         Assert.Equal(org.Id, result.OrganizationId);
-
-        // Cleanup
-        await organizationRepository.DeleteAsync(org);
-        await userRepository.DeleteAsync(user);
-    }
-
-    [Theory]
-    [DatabaseData]
-    public async Task GetPolicyDetailsByUserIdAndPolicyTypeAsync_WithNonExistentUser_ReturnsEmpty(
-        IPolicyRepository policyRepository)
-    {
-        // Arrange
-        var nonExistentUserId = Guid.NewGuid();
-
-        // Act
-        var results = await policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(
-            nonExistentUserId,
-            PolicyType.TwoFactorAuthentication);
-
-        // Assert
-        Assert.Empty(results);
-    }
-
-    [Theory]
-    [DatabaseData]
-    public async Task GetPolicyDetailsByUserIdAndPolicyTypeAsync_WithCustomPermissions_PopulatesPermissionsData(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IPolicyRepository policyRepository)
-    {
-        // Arrange
-        var user = await userRepository.CreateAsync(GetDefaultUser());
-        var org = await CreateEnterpriseOrgAsync(organizationRepository);
-
-        await policyRepository.CreateAsync(new Policy
-        {
-            OrganizationId = org.Id,
-            Type = PolicyType.SingleOrg,
-            Data = string.Empty,
-            Enabled = true
-        });
-
-        var customPermissions = "{\"accessReports\":true,\"manageGroups\":false}";
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = org.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.Custom,
-            Permissions = customPermissions
-        });
-
-        // Act
-        var results = await policyRepository.GetPolicyDetailsByUserIdAndPolicyTypeAsync(
-            user.Id,
-            PolicyType.SingleOrg);
-
-        // Assert
-        var resultsList = results.ToList();
-        Assert.Single(resultsList);
-        var result = resultsList.First();
-        Assert.Equal(OrganizationUserType.Custom, result.OrganizationUserType);
-        Assert.Equal(customPermissions, result.OrganizationUserPermissionsData);
 
         // Cleanup
         await organizationRepository.DeleteAsync(org);

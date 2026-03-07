@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[PolicyDetails_ReadByUserIdPolicyType]
+CREATE OR ALTER PROCEDURE [dbo].[PolicyDetails_ReadByUserIdPolicyType]
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT
 AS
@@ -44,15 +44,14 @@ BEGIN
             AND @UserEmail IS NOT NULL
     ),
     Providers AS
-    (
-        SELECT DISTINCT PO.[OrganizationId]
-        FROM
-            [dbo].[ProviderUserView] PU
-        INNER JOIN
-            [dbo].[ProviderOrganizationView] PO ON PO.[ProviderId] = PU.[ProviderId]
-        WHERE
-            PU.[UserId] = @UserId
-    )
+      (
+          SELECT
+              OrganizationId
+          FROM
+              [dbo].[UserProviderAccessView]
+          WHERE
+              UserId = @UserId
+      )
     SELECT
         OU.[Id] AS OrganizationUserId,
         P.[OrganizationId],
