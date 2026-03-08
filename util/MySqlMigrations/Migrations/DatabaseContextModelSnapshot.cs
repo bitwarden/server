@@ -1149,6 +1149,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("ReportFile")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
@@ -1999,6 +2002,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("MasterPasswordHint")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
+
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
 
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");

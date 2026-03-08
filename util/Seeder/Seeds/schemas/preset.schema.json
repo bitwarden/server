@@ -71,7 +71,7 @@
     },
     "groups": {
       "type": "object",
-      "description": "Generate random groups with round-robin user assignment.",
+      "description": "Generate random groups with user assignment. Distribution shape is configurable via the density block.",
       "additionalProperties": false,
       "properties": {
         "count": {
@@ -84,7 +84,7 @@
     },
     "collections": {
       "type": "object",
-      "description": "Generate random collections with user assignments.",
+      "description": "Generate random collections with user and group assignments. Access patterns are configurable via the density block.",
       "additionalProperties": false,
       "properties": {
         "count": {
@@ -174,6 +174,114 @@
           "type": "string",
           "enum": ["oidc", "saml"],
           "description": "Identity provider protocol."
+        }
+      }
+    },
+    "density": {
+      "type": "object",
+      "description": "Density profile controlling how users, groups, collections, and ciphers relate within the seeded organization.",
+      "additionalProperties": false,
+      "properties": {
+        "membership": {
+          "type": "object",
+          "description": "How users are distributed across groups.",
+          "additionalProperties": false,
+          "properties": {
+            "shape": {
+              "type": "string",
+              "enum": ["uniform", "powerLaw", "megaGroup"],
+              "description": "How users spread across groups. 'uniform' = equal sizes, 'powerLaw' = few large groups and many small, 'megaGroup' = one group gets 90%+ of users."
+            },
+            "skew": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Skew intensity for powerLaw and megaGroup shapes. Ignored for uniform."
+            }
+          }
+        },
+        "collectionFanOut": {
+          "type": "object",
+          "description": "How collections are assigned to groups.",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minimum collections assigned per non-empty group."
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum collections assigned per non-empty group."
+            },
+            "shape": {
+              "type": "string",
+              "enum": ["uniform", "powerLaw", "frontLoaded"],
+              "description": "How collections spread across groups. 'uniform' = equal counts, 'powerLaw' = few groups get many collections, 'frontLoaded' = first 10% of collections get max fan-out, rest get min."
+            },
+            "emptyGroupRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of groups that have zero users assigned to them (0.0-1.0)."
+            }
+          }
+        },
+        "directAccessRatio": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Fraction of access paths that are direct CollectionUser assignments. 1.0 = all direct, 0.0 = all group-mediated."
+        },
+        "permissions": {
+          "type": "object",
+          "description": "How Manage, ReadOnly, HidePasswords, and ReadWrite permissions are distributed across collection access assignments.",
+          "additionalProperties": false,
+          "properties": {
+            "manage": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for Manage permission (0.0-1.0). All four weights must sum to 1.0."
+            },
+            "readOnly": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for ReadOnly permission (0.0-1.0). All four weights must sum to 1.0."
+            },
+            "hidePasswords": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for HidePasswords permission (0.0-1.0). All four weights must sum to 1.0."
+            },
+            "readWrite": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for ReadWrite permission (0.0-1.0). All four weights must sum to 1.0."
+            }
+          }
+        },
+        "cipherAssignment": {
+          "type": "object",
+          "description": "How ciphers are distributed across collections.",
+          "additionalProperties": false,
+          "properties": {
+            "skew": {
+              "type": "string",
+              "enum": ["uniform", "heavyRight"],
+              "description": "How ciphers spread across collections. 'uniform' = equal counts, 'heavyRight' = few collections hold most ciphers while most collections are sparse."
+            },
+            "orphanRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of org ciphers with no collection assignment."
+            }
+          }
         }
       }
     }
