@@ -167,7 +167,6 @@ public class AccountControllerTest
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var featureService = sutProvider.GetDependency<IFeatureService>();
         var interactionService = sutProvider.GetDependency<IIdentityServerInteractionService>();
 
         var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
@@ -262,7 +261,6 @@ public class AccountControllerTest
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id).Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -303,7 +301,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -358,7 +355,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -400,7 +396,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -437,7 +432,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -481,7 +475,6 @@ public class AccountControllerTest
             providerUserId,
             user);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -534,7 +527,6 @@ public class AccountControllerTest
             organization,
             orgUser);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -607,7 +599,6 @@ public class AccountControllerTest
         organizationRepository.GetByIdAsync(orgId).Returns(organization);
         organizationUserRepository.GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -674,7 +665,6 @@ public class AccountControllerTest
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, user.Id).Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -735,7 +725,6 @@ public class AccountControllerTest
         sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns(user);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -781,7 +770,6 @@ public class AccountControllerTest
         sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId).Returns(user);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
@@ -833,7 +821,6 @@ public class AccountControllerTest
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
         sutProvider.GetDependency<IIdentityServerInteractionService>()
             .GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
