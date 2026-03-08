@@ -203,7 +203,6 @@ public class AccountControllerTest
                 break;
         }
 
-        featureService.IsEnabled(Arg.Any<string>()).Returns(preventNonCompliant);
         interactionService.GetAuthorizationContextAsync("~/").Returns((AuthorizationRequest?)null);
 
         try
