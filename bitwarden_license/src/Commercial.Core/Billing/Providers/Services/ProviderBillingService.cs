@@ -35,7 +35,6 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Commercial.Core.Billing.Providers.Services;
 
-using static Constants;
 using static StripeConstants;
 
 public class ProviderBillingService(

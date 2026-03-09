@@ -1,4 +1,4 @@
-using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
+﻿using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 namespace Bit.Core.Billing.Tax.Utilities;
 
@@ -22,7 +22,7 @@ public static class TaxHelpers
     /// to add a new country, add its ISO 3166 code to <see cref="Bit.Core.Constants.CountryAbbreviations"/>
     /// </summary>
     private static readonly HashSet<string> PreserveReverseChargeCountries =
-        [ CountryAbbreviations.Switzerland ];
+        [CountryAbbreviations.Switzerland];
 
     /// <summary>
     /// Returns <see langword="true"/> if <paramref name="country"/> is in <see cref="DirectTaxCountries"/>,

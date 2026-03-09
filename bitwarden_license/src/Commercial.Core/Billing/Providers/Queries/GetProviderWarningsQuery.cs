@@ -10,7 +10,6 @@ using Stripe.Tax;
 
 namespace Bit.Commercial.Core.Billing.Providers.Queries;
 
-using static Bit.Core.Constants;
 using static StripeConstants;
 using SuspensionWarning = ProviderWarnings.SuspensionWarning;
 using TaxIdWarning = ProviderWarnings.TaxIdWarning;

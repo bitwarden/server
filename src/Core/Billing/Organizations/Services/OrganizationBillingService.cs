@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Organizations.Models;
@@ -8,6 +7,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -17,9 +17,8 @@ using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
-using Subscription = Stripe.Subscription;
-using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
+using Subscription = Stripe.Subscription;
 
 
 namespace Bit.Core.Billing.Organizations.Services;

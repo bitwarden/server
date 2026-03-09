@@ -6,10 +6,10 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -123,7 +123,7 @@ public class StripePaymentService : IStripePaymentService
             var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address.Country, sub.Customer.TaxExempt);
             switch (sub.Customer)
             {
-                case { Address.Country: not null and not "" , TaxExempt: var customerTaxExemptStatus}
+                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
                     when determinedTaxExemptStatus != customerTaxExemptStatus:
                     await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
                         new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });

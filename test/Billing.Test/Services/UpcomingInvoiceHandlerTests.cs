@@ -552,7 +552,7 @@ public class UpcomingInvoiceHandlerTests
             Arg.Is<List<string>>(items => items.Count == invoice.Lines.Data.Count),
             Arg.Is<bool>(b => b == true));
     }
-    
+
     [Fact]
     public async Task HandleAsync_WhenNonDirectTaxCountryOrganization_SetsReverseCharge()
     {
@@ -825,7 +825,7 @@ public class UpcomingInvoiceHandlerTests
             Arg.Any<CustomerUpdateOptions>());
     }
 
-        [Fact]
+    [Fact]
     public async Task HandleAsync_WhenNonDirectTaxCountryProvider_SetsReverseCharge()
     {
         // Arrange

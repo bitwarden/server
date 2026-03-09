@@ -2,7 +2,6 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
-using Bit.Core;
 using Bit.Core.Billing.Tax.Utilities;
 
 namespace Bit.Api.Models.Request.Accounts;

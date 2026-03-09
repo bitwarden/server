@@ -5,10 +5,10 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
@@ -165,7 +165,7 @@ public class UpcomingInvoiceHandler(
             var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address.Country, customer.TaxExempt);
             switch (customer)
             {
-                case { Address.Country: not null and not "" , TaxExempt: var customerTaxExemptStatus}
+                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
                     when determinedTaxExemptStatus != customerTaxExemptStatus:
                     try
                     {
@@ -458,7 +458,7 @@ public class UpcomingInvoiceHandler(
         var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address.Country, customer.TaxExempt);
         switch (customer)
         {
-            case { Address.Country: not null and not "" , TaxExempt: var customerTaxExemptStatus}
+            case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
                 when determinedTaxExemptStatus != customerTaxExemptStatus:
                 try
                 {
