@@ -134,7 +134,7 @@ public class UpdateOrganizationAuthRequestCommandTests
             organizationUsers[i].UserId = unprocessedAuthRequests[i].UserId;
 
             sutProvider.GetDependency<IUserRepository>().GetByIdAsync(Arg.Is(users[i].Id)).Returns(users[i]);
-        };
+        }
 
         sutProvider.GetDependency<IGlobalSettings>().PasswordlessAuth.AdminRequestExpiration.Returns(TimeSpan.FromDays(7));
 
@@ -205,7 +205,8 @@ public class UpdateOrganizationAuthRequestCommandTests
             update.Approved = false;
             unprocessedAuthRequest.Id = update.Id;
             unprocessedAuthRequests.Add(unprocessedAuthRequest);
-        };
+        }
+        ;
 
         sutProvider.GetDependency<IGlobalSettings>().PasswordlessAuth.AdminRequestExpiration.Returns(TimeSpan.FromDays(7));
 
