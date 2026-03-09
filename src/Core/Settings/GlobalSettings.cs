@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
+
 using Bit.Core.Auth.Settings;
 
 namespace Bit.Core.Settings;
@@ -107,7 +109,7 @@ public class GlobalSettings : IGlobalSettings
         {
             return null;
         }
-        return string.Format("{0}/{1}", BaseServiceUri.Vault, name);
+        return string.Format(CultureInfo.InvariantCulture, "{0}/{1}", BaseServiceUri.Vault, name);
     }
 
     public string BuildInternalUri(string explicitValue, string name)
@@ -120,7 +122,7 @@ public class GlobalSettings : IGlobalSettings
         {
             return null;
         }
-        return string.Format("http://{0}:5000", name);
+        return string.Format(CultureInfo.InvariantCulture, "http://{0}:5000", name);
     }
 
     public string BuildDirectory(string explicitValue, string appendedPath)
@@ -146,6 +148,7 @@ public class GlobalSettings : IGlobalSettings
         private string _notifications;
         private string _sso;
         private string _scim;
+        private string _fillAssistRules;
         private string _internalApi;
         private string _internalIdentity;
         private string _internalAdmin;
@@ -195,6 +198,13 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _globalSettings.BuildExternalUri(_scim, "scim");
             set => _scim = value;
+        }
+        // Simple passthrough — not derived from the Vault URL because
+        // this points to an external resource, not a Bitwarden service.
+        public string FillAssistRules
+        {
+            get => _fillAssistRules;
+            set => _fillAssistRules = value;
         }
 
         public string InternalNotifications
