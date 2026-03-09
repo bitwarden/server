@@ -521,6 +521,39 @@ public class GetProviderWarningsQueryTests
     }
 
     [Theory, BitAutoData]
+    public async Task Run_CHCustomer_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "CH" }
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CH" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
+
+    [Theory, BitAutoData]
     public async Task Run_USCustomer_NoTaxIdWarning(
         Provider provider,
         SutProvider<GetProviderWarningsQuery> sutProvider)
