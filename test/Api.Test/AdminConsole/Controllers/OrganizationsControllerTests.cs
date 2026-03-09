@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
@@ -172,7 +171,7 @@ public class OrganizationsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetAutoEnrollStatus_WithPolicyRequirementsEnabled_ReturnsOrganizationAutoEnrollStatus_WithResetPasswordEnabledTrue(
+    public async Task GetAutoEnrollStatus_ReturnsOrganizationAutoEnrollStatus_WithResetPasswordEnabledTrue(
         SutProvider<OrganizationsController> sutProvider,
         User user,
         Organization organization,
@@ -188,7 +187,6 @@ public class OrganizationsControllerTests
 
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<ResetPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
 

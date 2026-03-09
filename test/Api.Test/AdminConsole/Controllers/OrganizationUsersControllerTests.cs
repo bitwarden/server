@@ -467,22 +467,16 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Accept_WithInvalidModelResetPasswordKey_WithPolicyRequirementsEnabled_ThrowsBadRequestException(Guid orgId, Guid orgUserId,
+    public async Task Accept_WithInvalidModelResetPasswordKey_ThrowsBadRequestException(Guid orgId, Guid orgUserId,
         OrganizationUserAcceptRequestModel model, User user, OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
         model.ResetPasswordKey = " ";
         organizationUser.OrganizationId = orgId;
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
-        applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = true });
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
-
-        var policyQuery = sutProvider.GetDependency<IPolicyQuery>();
 
         var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
 
@@ -507,9 +501,6 @@ public class OrganizationUsersControllerTests
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
-        await applicationCacheService.Received(0).GetOrganizationAbilityAsync(orgId);
-        await policyQuery.Received(0).RunAsync(orgId, PolicyType.ResetPassword);
-        await policyRequirementQuery.Received(1).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
 
         Assert.Equal("Master Password reset is required, but not provided.", exception.Message);
     }

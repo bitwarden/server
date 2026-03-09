@@ -48,7 +48,6 @@ public class OrganizationsController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
@@ -58,7 +57,6 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
@@ -74,7 +72,6 @@ public class OrganizationsController : Controller
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IPolicyQuery policyQuery,
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
@@ -84,7 +81,6 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IFeatureService featureService,
         GlobalSettings globalSettings,
         IProviderRepository providerRepository,
         IProviderBillingService providerBillingService,
@@ -99,7 +95,6 @@ public class OrganizationsController : Controller
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _policyQuery = policyQuery;
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
@@ -109,7 +104,6 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _featureService = featureService;
         _globalSettings = globalSettings;
         _providerRepository = providerRepository;
         _providerBillingService = providerBillingService;
