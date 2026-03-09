@@ -521,7 +521,7 @@ public class GetProviderWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_CHCustomer_NoTaxIdWarning(
+    public async Task Run_SwissCustomer_NoTaxIdWarning(
         Provider provider,
         SutProvider<GetProviderWarningsQuery> sutProvider)
     {
