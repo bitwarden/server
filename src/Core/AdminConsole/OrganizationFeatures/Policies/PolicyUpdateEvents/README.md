@@ -8,9 +8,9 @@ Currently, we’re using `IVNextSavePolicyCommand` to transition from the old `I
 
 ## Overview
 
-When an organization policy is created or updated, the save workflow runs a series of ordered steps. Each step acts like a hook that a handler may listen to by implementing the particular policy event interface.
+When an organization policy is created or updated, the save workflow runs a series of ordered steps. A policy handler can hook into any step by implementing the corresponding Policy Update Event interface.
 
-Note: If you don’t want to hook into these events, you don’t need to create a handler, and your policy will simply upsert to the database with log events.
+Note: If you do not need to hook into any step, you do not need to create a policy handler. The policy will simply upsert to the database with an audit log event.
 
 ```
 SaveAsync()
@@ -28,9 +28,7 @@ The `PolicyEventHandlerHandlerFactory` resolves the correct handler for a given 
 
 ## Limitations
 
-1. We don't have a way to keep this whole process idempotent, so if there is an exception at any point that is not being handled, the state will stay where the process failed.
-
-
+1. The save workflow is not atomic. If an unhandled exception occurs at any step, changes made by prior steps are not rolled back. For example, pre-save side effects that have already executed will not be undone if the upsert subsequently fails.
 
 ---
 
@@ -47,8 +45,6 @@ public interface IPolicyUpdateEvent
 }
 ```
 
-Every handler declares which `PolicyType` it handles via `Type`. All other event interfaces extend this one.
-
 ---
 
 ### `IEnforceDependentPoliciesEvent`
@@ -61,9 +57,6 @@ public interface IEnforceDependentPoliciesEvent : IPolicyUpdateEvent
     IEnumerable<PolicyType> RequiredPolicies { get; }
 }
 ```
-
-- **Enabling**: Each `PolicyType` in `RequiredPolicies` must already be enabled, otherwise a `BadRequestException` is thrown.
-- **Disabling a required policy**: If any other policy has this policy listed as a requirement and is currently enabled, the disable action is blocked.
 
 ---
 
