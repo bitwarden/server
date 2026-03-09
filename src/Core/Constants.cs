@@ -144,6 +144,7 @@ public static class FeatureFlagKeys
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
+    public const string CommandResultRefactor = "pm-23401-commandresult-refactor";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
