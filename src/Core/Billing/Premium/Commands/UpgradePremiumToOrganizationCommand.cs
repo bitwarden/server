@@ -2,16 +2,19 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using Stripe;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
+using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 
 namespace Bit.Core.Billing.Premium.Commands;
 /// <summary>
@@ -26,15 +29,21 @@ public interface IUpgradePremiumToOrganizationCommand
     /// <param name="user">The user with an active Premium subscription to upgrade.</param>
     /// <param name="organizationName">The name for the new organization.</param>
     /// <param name="key">The encrypted organization key for the owner.</param>
+    /// <param name="publicKey">The organization's public key.</param>
+    /// <param name="encryptedPrivateKey">The organization's encrypted private key.</param>
+    /// <param name="collectionName">Optional name for the default collection.</param>
     /// <param name="targetPlanType">The target organization plan type to upgrade to.</param>
     /// <param name="billingAddress">The billing address for tax calculation.</param>
-    /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
-    Task<BillingCommandResult<None>> Run(
+    /// <returns>A billing command result containing the new organization ID on success, or error details on failure.</returns>
+    Task<BillingCommandResult<Guid>> Run(
         User user,
         string organizationName,
         string key,
+        string publicKey,
+        string encryptedPrivateKey,
+        string? collectionName,
         PlanType targetPlanType,
-        Payment.Models.BillingAddress billingAddress);
+        BillingAddress billingAddress);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -45,24 +54,27 @@ public class UpgradePremiumToOrganizationCommand(
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
+    ICollectionRepository collectionRepository,
     IApplicationCacheService applicationCacheService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
-    public Task<BillingCommandResult<None>> Run(
+    private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
+
+    public Task<BillingCommandResult<Guid>> Run(
         User user,
         string organizationName,
         string key,
+        string publicKey,
+        string encryptedPrivateKey,
+        string? collectionName,
         PlanType targetPlanType,
-        Payment.Models.BillingAddress billingAddress) => HandleAsync<None>(async () =>
+        BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
         {
             return new BadRequest("User does not have an active Premium subscription.");
         }
-
-        // Hardcode seats to 1 for upgrade flow
-        const int seats = 1;
 
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
@@ -84,6 +96,11 @@ public class UpgradePremiumToOrganizationCommand(
         // Get the target organization plan
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
 
+        var isNonSeatBasedPmPlan = targetPlan.HasNonSeatBasedPasswordManagerPlan();
+
+        // if the target plan is non-seat-based, set seats to the base seats of the target plan, otherwise set to 1
+        var initialSeats = isNonSeatBasedPmPlan ? targetPlan.PasswordManager.BaseSeats : 1;
+
         // Build the list of subscription item updates
         var subscriptionItemOptions = new List<SubscriptionItemOptions>();
 
@@ -101,7 +118,7 @@ public class UpgradePremiumToOrganizationCommand(
         }
 
         // Add new organization subscription items
-        if (targetPlan.HasNonSeatBasedPasswordManagerPlan())
+        if (isNonSeatBasedPmPlan)
         {
             subscriptionItemOptions.Add(new SubscriptionItemOptions
             {
@@ -116,7 +133,7 @@ public class UpgradePremiumToOrganizationCommand(
             {
                 Id = passwordManagerItem.Id,
                 Price = targetPlan.PasswordManager.StripeSeatPlanId,
-                Quantity = seats
+                Quantity = initialSeats
             });
         }
 
@@ -144,7 +161,7 @@ public class UpgradePremiumToOrganizationCommand(
             Name = organizationName,
             BillingEmail = user.Email,
             PlanType = targetPlan.Type,
-            Seats = seats,
+            Seats = initialSeats,
             MaxCollections = targetPlan.PasswordManager.MaxCollections,
             MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
@@ -165,6 +182,8 @@ public class UpgradePremiumToOrganizationCommand(
             Gateway = GatewayType.Stripe,
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
+            PublicKey = publicKey,
+            PrivateKey = encryptedPrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
@@ -182,8 +201,15 @@ public class UpgradePremiumToOrganizationCommand(
             {
                 Country = billingAddress.Country,
                 PostalCode = billingAddress.PostalCode
-            }
+            },
+            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
         });
+
+        // Add tax ID to customer for accurate tax calculation if provided
+        if (billingAddress.TaxId != null)
+        {
+            await AddTaxIdToCustomerAsync(user, billingAddress.TaxId);
+        }
 
         // Update the subscription in Stripe
         await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
@@ -218,6 +244,33 @@ public class UpgradePremiumToOrganizationCommand(
         organizationUser.SetNewId();
         await organizationUserRepository.CreateAsync(organizationUser);
 
+        // Create default collection if collection name is provided
+        if (!string.IsNullOrWhiteSpace(collectionName))
+        {
+            try
+            {
+                // Give the owner Can Manage access over the default collection
+                List<CollectionAccessSelection> defaultOwnerAccess =
+                    [new CollectionAccessSelection { Id = organizationUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+
+                var defaultCollection = new Collection
+                {
+                    Name = collectionName,
+                    OrganizationId = organization.Id,
+                    CreationDate = organization.CreationDate,
+                    RevisionDate = organization.CreationDate
+                };
+                await collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "{Command}: Failed to create default collection for organization {OrganizationId}. Organization upgrade will continue.",
+                    CommandName, organization.Id);
+                // Continue - organization is fully functional without default collection
+            }
+        }
+
         // Remove subscription from user
         user.Premium = false;
         user.PremiumExpirationDate = null;
@@ -226,6 +279,28 @@ public class UpgradePremiumToOrganizationCommand(
         user.RevisionDate = DateTime.UtcNow;
         await userService.SaveUserAsync(user);
 
-        return new None();
+        return organization.Id;
     });
+
+    /// <summary>
+    /// Adds a tax ID to the Stripe customer for accurate tax calculation.
+    /// If the tax ID is a Spanish NIF, also adds the corresponding EU VAT ID.
+    /// </summary>
+    /// <param name="user"> The user whose Stripe customer will be updated with the tax ID.</param>
+    /// <param name="taxId"> The tax ID to add, including the type and value.</param>
+    private async Task AddTaxIdToCustomerAsync(User user, TaxID taxId)
+    {
+        await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
+            new TaxIdCreateOptions { Type = taxId.Code, Value = taxId.Value });
+
+        if (taxId.Code == StripeConstants.TaxIdType.SpanishNIF)
+        {
+            await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
+                new TaxIdCreateOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{taxId.Value}"
+                });
+        }
+    }
 }

@@ -6,7 +6,9 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
@@ -32,7 +34,8 @@ public class RestoreOrganizationUserCommand(
     IFeatureService featureService,
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
-    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator) : IRestoreOrganizationUserCommand
+    IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
@@ -261,27 +264,41 @@ public class RestoreOrganizationUserCommand(
     private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Organization organization, string defaultCollectionName,
         ICollection<OrganizationUser> restoredUsers)
     {
+        if (string.IsNullOrWhiteSpace(defaultCollectionName))
+        {
+            return;
+        }
+
         if (!organization.UseMyItems)
         {
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(defaultCollectionName))
+        var restoredConfirmedUsers = restoredUsers
+            .Where(w => w.Status == OrganizationUserStatusType.Confirmed)
+            .Where(w => w.UserId != null)
+            .Select(s => s.UserId.Value)
+            .ToList();
+
+        if (restoredConfirmedUsers.Count == 0)
         {
-            var organizationUsersDataOwnershipEnabled = (await policyRequirementQuery
-                    .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id))
-                .ToList();
+            return;
+        }
 
-            var usersToCreateDefaultCollectionsFor = restoredUsers.Where(x =>
-                organizationUsersDataOwnershipEnabled.Contains(x.Id)
-                && x.Status == OrganizationUserStatusType.Confirmed).ToList();
+        var restoredUserPolicyRequirements = await
+            policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredConfirmedUsers);
 
-            if (usersToCreateDefaultCollectionsFor.Count != 0)
-            {
-                await collectionRepository.CreateDefaultCollectionsAsync(organization.Id,
-                    usersToCreateDefaultCollectionsFor.Select(x => x.Id),
-                    defaultCollectionName);
-            }
+        var orgUserIdsToCreateDefaultCollectionsFor = restoredUserPolicyRequirements
+            .Select(s => s.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
+            .ToList();
+
+        if (orgUserIdsToCreateDefaultCollectionsFor.Count != 0)
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(organization.Id,
+                orgUserIdsToCreateDefaultCollectionsFor,
+                defaultCollectionName);
         }
     }
 
@@ -296,63 +313,45 @@ public class RestoreOrganizationUserCommand(
 
         var userId = orgUser.UserId.Value;
 
-        // Enforce Single Organization Policy of organization user is being restored to
         var allOrgUsers = await organizationUserRepository.GetManyByUserAsync(userId);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var singleOrgPoliciesApplyingToRevokedUsers = await policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
-        var singleOrgPolicyApplies =
-            singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
-
-        var singleOrgCompliant = true;
-        var belongsToOtherOrgCompliant = true;
-        var twoFactorCompliant = true;
-
-        if (hasOtherOrgs && singleOrgPolicyApplies)
-        {
-            singleOrgCompliant = false;
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            belongsToOtherOrgCompliant = false;
-        }
-
-        // Enforce 2FA Policy of organization user is trying to join
-        if (!userHasTwoFactorEnabled)
-        {
-            twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
-        }
-
         var user = await userRepository.GetByIdAsync(userId);
 
-        if (!singleOrgCompliant && !twoFactorCompliant)
+        var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(userId);
+        var singleOrgError = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
+
+        var twoFactorCompliant = userHasTwoFactorEnabled || !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
+
+        if (singleOrgError is not null && !twoFactorCompliant)
         {
             throw new BadRequestException(user.Email +
                                           " is not compliant with the single organization and two-step login policy");
         }
-        else if (!singleOrgCompliant)
+
+        if (singleOrgError is not null)
         {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
+            var singleOrgErrorMessage = singleOrgError switch
+            {
+                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be restored until they leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be restored because they are in another organization which forbids it.",
+                _ => singleOrgError.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
         }
-        else if (!belongsToOtherOrgCompliant)
-        {
-            throw new BadRequestException(user.Email +
-                                          " belongs to an organization that doesn't allow them to join multiple organizations");
-        }
-        else if (!twoFactorCompliant)
+
+        if (!twoFactorCompliant)
         {
             throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }
 
         if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
+            var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+                user.Id);
+
             var validationResult = await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
-                    allOrgUsers,
-                    user!));
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user!),
+                policyRequirement);
 
             var badRequestException = validationResult.Match(
                 error => new BadRequestException(user.Email +
@@ -363,6 +362,11 @@ public class RestoreOrganizationUserCommand(
             if (badRequestException is not null)
             {
                 throw badRequestException;
+            }
+
+            if (policyRequirement.IsEnabled(orgUser.OrganizationId))
+            {
+                await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
             }
         }
     }
