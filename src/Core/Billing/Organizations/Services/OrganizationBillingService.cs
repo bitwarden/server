@@ -493,7 +493,7 @@ public class OrganizationBillingService(
         }
 
         List<string> expansions = ["tax", "tax_ids"];
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address.Country, customer.TaxExempt);
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
         customer = customer switch
         {
             { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
