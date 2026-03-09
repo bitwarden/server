@@ -17,6 +17,7 @@ using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
+
 [SutProviderCustomize]
 public class AddSecretsManagerSubscriptionCommandTests
 {
