@@ -22,33 +22,32 @@ public class DisableSendSyncPolicyEvent(IPolicyRepository policyRepository) : IO
         Policy postUpsertedPolicyState,
         Policy? previousPolicyState)
     {
-        var policyUpdate = policyRequest.PolicyUpdate;
+        var organizationId = policyRequest.PolicyUpdate.OrganizationId;
 
+        // Step 1: sync DisableSend.Enabled -> SendControlsPolicy.Data.DisableSend
         var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
-            policyUpdate.OrganizationId, PolicyType.SendControls) ?? new Policy
+            organizationId, PolicyType.SendControls) ?? new Policy
             {
                 Id = CoreHelpers.GenerateComb(),
-                OrganizationId = policyUpdate.OrganizationId,
+                OrganizationId = organizationId,
                 Type = PolicyType.SendControls,
             };
 
         var sendOptionsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
-            policyUpdate.OrganizationId, PolicyType.SendOptions) ?? new Policy
-            {
-                Id = CoreHelpers.GenerateComb(),
-                OrganizationId = policyUpdate.OrganizationId,
-                Type = PolicyType.SendOptions,
-            };
+            organizationId, PolicyType.SendOptions);
 
-        var sendControlsPolicyData =
-            sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
-
-        var sendOptionsPolicyData = sendOptionsPolicy.GetDataModel<SendOptionsPolicyData>();
-
+        var sendControlsPolicyData = sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
         sendControlsPolicyData.DisableSend = postUpsertedPolicyState.Enabled;
-        sendControlsPolicyData.DisableHideEmail = sendOptionsPolicy.Enabled && sendOptionsPolicyData.DisableHideEmail;
-        sendControlsPolicy.Enabled = sendControlsPolicyData.DisableSend || sendControlsPolicyData.DisableHideEmail;
+        if (sendOptionsPolicy?.Enabled == true)
+        {
+            sendControlsPolicyData.DisableHideEmail =
+                sendOptionsPolicy.GetDataModel<SendOptionsPolicyData>().DisableHideEmail;
+        }
+
         sendControlsPolicy.SetDataModel(sendControlsPolicyData);
+
+        // Step 2: sync Enabled status. SendControlsPolicy is enabled if either legacy policy is enabled
+        sendControlsPolicy.Enabled = postUpsertedPolicyState.Enabled || (sendOptionsPolicy?.Enabled ?? false);
 
         await policyRepository.UpsertAsync(sendControlsPolicy);
     }

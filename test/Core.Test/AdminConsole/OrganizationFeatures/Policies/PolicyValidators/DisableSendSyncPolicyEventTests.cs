@@ -74,7 +74,7 @@ public class DisableSendSyncPolicyEventTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecutePostUpsertSideEffectAsync_SendControlsEnabled_WhenEitherFieldIsTrue(
+    public async Task ExecutePostUpsertSideEffectAsync_SendControlsRemainsEnabled_WhenSendOptionsStillEnabled(
         [PolicyUpdate(PolicyType.DisableSend, enabled: false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.DisableSend, enabled: false)] Policy postUpsertedPolicy,
         [Policy(PolicyType.SendControls, enabled: true)] Policy existingSendControlsPolicy,
@@ -100,7 +100,8 @@ public class DisableSendSyncPolicyEventTests
         await sutProvider.GetDependency<IPolicyRepository>()
             .Received(1)
             .UpsertAsync(Arg.Is<Policy>(p =>
-                p.Enabled == true)); // stays enabled because SendOptions is still enabled
+                p.Enabled == true && // stays enabled because SendOptions is still enabled
+                CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.Data)!.DisableHideEmail == true));
     }
 
     [Theory, BitAutoData]

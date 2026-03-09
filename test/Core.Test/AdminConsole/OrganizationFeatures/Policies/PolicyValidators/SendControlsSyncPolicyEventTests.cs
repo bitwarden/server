@@ -16,7 +16,7 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 [SutProviderCustomize]
-public class SendControlsSyncPolicyValidatorTests
+public class SendControlsSyncPolicyEventTests
 {
     [Theory, BitAutoData]
     public async Task ExecutePostUpsertSideEffectAsync_SyncsDisableSend_ToLegacyDisableSendPolicy(
