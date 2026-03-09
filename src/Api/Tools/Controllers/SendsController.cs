@@ -452,8 +452,6 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
-        // This allows clients to update other fields without re-submitting sensitive auth data.
         send.Password = null;
         send.Emails = null;
         send.AuthType = AuthType.None;
