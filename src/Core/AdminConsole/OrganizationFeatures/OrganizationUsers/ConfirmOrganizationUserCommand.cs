@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationC
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -190,12 +191,10 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     private async Task CheckPoliciesAsync(Guid organizationId, User user,
-        ICollection<OrganizationUser> userOrgs, bool userTwoFactorEnabled)
+        ICollection<OrganizationUser> orgUsers, bool userTwoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization
         await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
-
-        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
@@ -205,7 +204,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                     new AutomaticUserConfirmationPolicyEnforcementRequest(
                         organizationId,
-                        userOrgs,
+                        orgUsers,
                         user),
                     policyRequirement))
                 .Match(
@@ -224,18 +223,18 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             }
         }
 
-        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
-        var otherSingleOrgPolicies =
-            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
-        // Enforce Single Organization Policy for this organization
-        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
+        var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+        var singleOrgError = singleOrgRequirement.CanJoinOrganization(organizationId, orgUsers);
+        if (singleOrgError is not null)
         {
-            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
-        }
-        // Enforce Single Organization Policy of other organizations user is a member of
-        if (otherSingleOrgPolicies.Any())
-        {
-            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+            var singleOrgErrorMessage = singleOrgError switch
+            {
+                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be confirmed until they leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be confirmed because they are in another organization which forbids it.",
+                _ => singleOrgError.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
         }
     }
 
