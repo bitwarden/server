@@ -183,14 +183,7 @@ public class PoliciesController : Controller
     [HttpPut("{type}")]
     public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
     {
-        if (!await _currentContext.ManagePolicies(orgId))
-        {
-            throw new NotFoundException();
-        }
-
-        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, type, _currentContext);
-        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
-        return new PolicyResponseModel(policy);
+        return await PutVNext(orgId, type, new SavePolicyRequest { Policy = model });
     }
 
     [HttpPut("{type}/vnext")]

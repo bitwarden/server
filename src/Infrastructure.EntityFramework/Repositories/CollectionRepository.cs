@@ -622,7 +622,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             dbContext.Collections.RemoveRange(collectionEntities);
             await dbContext.SaveChangesAsync();
 
-            foreach (var collection in collectionEntities.GroupBy(g => g.Organization.Id))
+            foreach (var collection in collectionEntities.GroupBy(g => g.OrganizationId))
             {
                 await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(collection.Key);
             }

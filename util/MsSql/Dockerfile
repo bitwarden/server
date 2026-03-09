@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04
+FROM mcr.microsoft.com/mssql/server:2022-CU22-ubuntu-22.04
 
 LABEL com.bitwarden.product="bitwarden"
 
@@ -19,7 +19,7 @@ RUN chmod +x /entrypoint.sh \
 
 RUN /opt/mssql/bin/mssql-conf set telemetry.customerfeedback false
 
-HEALTHCHECK --start-period=120s --timeout=3s CMD /opt/mssql-tools/bin/sqlcmd \
-    -S localhost -U sa -P ${SA_PASSWORD} -Q "SELECT 1" || exit 1
+HEALTHCHECK --start-period=120s --timeout=3s CMD /opt/mssql-tools18/bin/sqlcmd \
+    -S localhost -U sa -P ${SA_PASSWORD} -C -Q "SELECT 1" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
