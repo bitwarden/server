@@ -8,7 +8,6 @@ using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 
