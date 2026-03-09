@@ -139,7 +139,7 @@ Note: No changes to `VNextSavePolicyCommand` or `PolicyEventHandlerHandlerFactor
 
 ### Example
 
-`AutomaticUserConfirmationPolicyEventHandler` is a good reference. It requires `SingleOrg`, validates org compliance before enabling, and removes emergency access grants as a pre-save side effect.
+`AutomaticUserConfirmationPolicyEventHandler` is a good reference. It requires `SingleOrg`, validates organization compliance before enabling, and removes emergency access grants as a pre-save side effect.
 
 **Step 1: Create the handler** (`PolicyValidators/AutomaticUserConfirmationPolicyEventHandler.cs`):
 
