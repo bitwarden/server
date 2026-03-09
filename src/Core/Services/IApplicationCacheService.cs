@@ -14,6 +14,11 @@ public interface IApplicationCacheService
 #nullable disable
     [Obsolete("We are transitioning to a new cache pattern. Please consult the Admin Console team before using.", false)]
     Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync();
+#nullable enable
+    Task<ProviderAbility?> GetProviderAbilityAsync(Guid providerId);
+#nullable disable
+    Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync(IEnumerable<Guid> providerIds);
+    Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds);
     Task UpsertOrganizationAbilityAsync(Organization organization);
     Task UpsertProviderAbilityAsync(Provider provider);
     Task DeleteOrganizationAbilityAsync(Guid organizationId);
