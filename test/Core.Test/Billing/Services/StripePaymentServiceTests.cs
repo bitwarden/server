@@ -461,6 +461,18 @@ public class StripePaymentServiceTests
             .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
+            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCustomerAsync("cus_123")
+            .Returns(new Customer { Id = "cus_123" });
+
         await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
 
         await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
@@ -512,6 +524,18 @@ public class StripePaymentServiceTests
             .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
+            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCustomerAsync("cus_123")
+            .Returns(new Customer { Id = "cus_123" });
+
         await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
 
         await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
@@ -562,6 +586,18 @@ public class StripePaymentServiceTests
         sutProvider.GetDependency<IStripeAdapter>()
             .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
+            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
+            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCustomerAsync("cus_123")
+            .Returns(new Customer { Id = "cus_123" });
 
         await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
 
