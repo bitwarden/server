@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Api.Tools.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -253,21 +254,19 @@ public class SendRequestModel
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
             existingSend.Emails = string.Join(",", emails);
             existingSend.Password = null;
-            existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
         }
         else if (!string.IsNullOrWhiteSpace(Password))
         {
             existingSend.Password = authorizationService.HashPassword(Password);
             existingSend.Emails = null;
-            existingSend.AuthType = Core.Tools.Enums.AuthType.Password;
         }
-        else
+        else if (existingSend.AuthType == Core.Tools.Enums.AuthType.Email)
         {
             existingSend.Emails = null;
             existingSend.Password = null;
-            existingSend.AuthType = Core.Tools.Enums.AuthType.None;
         }
 
+        existingSend.AuthType = SendUtilities.InferAuthType(existingSend);
         existingSend.Disabled = Disabled.GetValueOrDefault();
         existingSend.HideEmail = HideEmail.GetValueOrDefault();
 

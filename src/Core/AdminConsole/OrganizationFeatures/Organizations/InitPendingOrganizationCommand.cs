@@ -1,10 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
@@ -26,7 +24,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly ICollectionRepository _collectionRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IPolicyService _policyService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
@@ -45,7 +42,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             ICollectionRepository collectionRepository,
             IOrganizationRepository organizationRepository,
             IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-            IPolicyService policyService,
             IOrganizationUserRepository organizationUserRepository,
             IFeatureService featureService,
             IPolicyRequirementQuery policyRequirementQuery,
@@ -63,7 +59,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _collectionRepository = collectionRepository;
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _policyService = policyService;
         _organizationUserRepository = organizationUserRepository;
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
@@ -156,11 +151,11 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             }
         }
 
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
+        var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
+        var error = singleOrgRequirement.CanCreateOrganization();
+        if (error is not null)
         {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                "which has a policy that prohibits you from being a member of any other organization.");
+            throw new BadRequestException(error.Message);
         }
     }
 
