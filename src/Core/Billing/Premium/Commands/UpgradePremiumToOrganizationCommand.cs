@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
@@ -13,10 +13,10 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
+using static Bit.Core.Billing.Utilities;
 using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
-using static Bit.Core.Billing.Utilities;
-using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Billing.Premium.Commands;
 
