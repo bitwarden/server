@@ -73,7 +73,10 @@ public class OrganizationReportRepository :
                 .Where(p => p.Id == reportId)
                 .Select(p => new OrganizationReportSummaryDataResponse
                 {
-                    SummaryData = p.SummaryData
+                    OrganizationId = p.OrganizationId,
+                    ContentEncryptionKey = p.ContentEncryptionKey,
+                    SummaryData = p.SummaryData,
+                    RevisionDate = p.RevisionDate
                 })
                 .FirstOrDefaultAsync();
 
@@ -92,10 +95,13 @@ public class OrganizationReportRepository :
 
             var results = await dbContext.OrganizationReports
                 .Where(p => p.OrganizationId == organizationId &&
-                            p.CreationDate >= startDate && p.CreationDate <= endDate)
+                            p.RevisionDate >= startDate && p.RevisionDate <= endDate)
                 .Select(p => new OrganizationReportSummaryDataResponse
                 {
-                    SummaryData = p.SummaryData
+                    OrganizationId = p.OrganizationId,
+                    ContentEncryptionKey = p.ContentEncryptionKey,
+                    SummaryData = p.SummaryData,
+                    RevisionDate = p.RevisionDate
                 })
                 .ToListAsync();
 

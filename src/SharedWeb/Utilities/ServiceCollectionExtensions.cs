@@ -170,7 +170,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddKeyManagementServices();
         services.AddNotificationCenterServices();
         services.AddPlatformServices();

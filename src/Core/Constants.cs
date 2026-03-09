@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
+    public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -261,6 +262,7 @@ public static class FeatureFlagKeys
     public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
+    public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";

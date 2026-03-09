@@ -647,6 +647,8 @@ public static class CoreHelpers
             origin == globalSettings.BaseServiceUri.Vault ||
             // Safari extension origin
             origin == "file://" ||
+            // Desktop application custom file protocol
+            origin == "bw-desktop-file://bundle" ||
             // Product website
             (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
     }

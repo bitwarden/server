@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -485,8 +486,9 @@ public class ConfirmOrganizationUserCommandTests
             PolicyType = PolicyType.OrganizationDataOwnership
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([(orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]))]);
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
@@ -534,8 +536,9 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user });
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([(orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Disabled, []))]);
 
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
 
@@ -568,8 +571,12 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.Id, [orgUser, otherOrgUser], user),
                 new UserCannotBelongToAnotherOrganization()));
@@ -578,6 +585,9 @@ public class ConfirmOrganizationUserCommandTests
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
         Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -605,8 +615,12 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
                 new OtherOrganizationDoesNotAllowOtherMembership()));
@@ -616,6 +630,9 @@ public class ConfirmOrganizationUserCommandTests
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
         Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership().Message, exception.Message);
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -641,8 +658,12 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user),
                 new ProviderUsersCannotJoin()));
@@ -652,6 +673,9 @@ public class ConfirmOrganizationUserCommandTests
             () => sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id));
 
         Assert.Equal(new ProviderUsersCannotJoin().Message, exception.Message);
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -677,8 +701,12 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
 
         // Act
@@ -689,6 +717,86 @@ public class ConfirmOrganizationUserCommandTests
             .Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
         await sutProvider.GetDependency<IMailService>()
             .Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUserAsync_WithAutoConfirmPolicyEnabled_DeletesEmergencyAccess(
+        Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync([]).ReturnsForAnyArgs([orgUser]);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync([])
+            .ReturnsForAnyArgs([orgUser]);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([user]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
+
+        // Act
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
+
+        // Assert
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .Received(1)
+            .DeleteAllByUserIdAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmUserAsync_WithAutoConfirmPolicyNotEnabled_DoesNotDeleteEmergencyAccess(
+        Organization org, OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
+        string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        org.PlanType = PlanType.EnterpriseAnnually;
+        orgUser.OrganizationId = confirmingUser.OrganizationId = org.Id;
+        orgUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync([]).ReturnsForAnyArgs([orgUser]);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync([])
+            .ReturnsForAnyArgs([orgUser]);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([user]);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
+
+        // Act
+        await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
+
+        // Assert
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -723,8 +831,12 @@ public class ConfirmOrganizationUserCommandTests
             .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
             .Returns([singleOrgPolicy]);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>())
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser, otherOrgUser], user),
                 new UserCannotBelongToAnotherOrganization()));
@@ -770,16 +882,20 @@ public class ConfirmOrganizationUserCommandTests
             .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
             .Returns(true);
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = org.Id }]));
+
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user1.Id))
+            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user1.Id), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser1], user1)));
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user2.Id))
+            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user2.Id), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser2], user2)));
 
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user3.Id))
+            .IsCompliantAsync(Arg.Is<AutomaticUserConfirmationPolicyEnforcementRequest>(r => r.User.Id == user3.Id), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser3, otherOrgUser], user3),
                 new OtherOrganizationDoesNotAllowOtherMembership()));
@@ -908,8 +1024,10 @@ public class ConfirmOrganizationUserCommandTests
             PolicyType = PolicyType.OrganizationDataOwnership
         };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(orgUser.UserId!.Value)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId!.Value)))
+            .Returns([
+                (orgUser.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]))
+            ]);
 
         // Act
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id, collectionName);
@@ -949,10 +1067,6 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser1, orgUser2 });
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2 });
 
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id, orgUser2.Id]);
-
         // Act
         await sutProvider.Sut.ConfirmUsersAsync(organization.Id, keys, confirmingUser.Id, collectionName);
 
@@ -988,9 +1102,30 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser1, orgUser2 });
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2 });
 
+        var policyDetails1 = new PolicyDetails
+        {
+            OrganizationId = organization.Id,
+            OrganizationUserId = orgUser1.Id,
+            IsProvider = false,
+            OrganizationUserStatus = orgUser1.Status,
+            OrganizationUserType = orgUser1.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
+        var policyDetails2 = new PolicyDetails
+        {
+            OrganizationId = organization.Id,
+            OrganizationUserId = orgUser2.Id,
+            IsProvider = false,
+            OrganizationUserStatus = orgUser2.Status,
+            OrganizationUserType = orgUser2.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id, orgUser2.Id]);
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
+            .Returns([
+                (orgUser1.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails1])),
+                (orgUser2.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails2]))
+            ]);
 
         // Act
         await sutProvider.Sut.ConfirmUsersAsync(organization.Id, keys, confirmingUser.Id, collectionName);

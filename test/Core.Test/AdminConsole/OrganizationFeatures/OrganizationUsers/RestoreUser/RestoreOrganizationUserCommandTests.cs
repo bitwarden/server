@@ -1,10 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
@@ -20,6 +23,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser;
 
@@ -749,6 +753,114 @@ public class RestoreOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RestoreUser_WithAutoConfirmPolicyEnabled_DeletesEmergencyAccess(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.Email = null;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
+
+        // Act
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        // Assert
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .Received(1)
+            .DeleteAllByUserIdAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithAutoConfirmPolicyNotEnabled_DoesNotDeleteEmergencyAccess(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.Email = null;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
+
+        // Act
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null);
+
+        // Assert
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WithAutoConfirmNonCompliant_DoesNotDeleteEmergencyAccess(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.Email = null;
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        var user = new User { Id = organizationUser.UserId!.Value, Email = "test@bitwarden.com" };
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Invalid(
+                new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user),
+                new UserCannotBelongToAnotherOrganization()));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
+
+        Assert.Contains("is not compliant with the automatic user confirmation policy", exception.Message);
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task RestoreUsers_Success(Organization organization,
     [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
     [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
@@ -1368,14 +1480,19 @@ public class RestoreOrganizationUserCommandTests
         orgUser2.Key = null;
         orgUser2.OrganizationId = organization.Id;
 
+        var orgUser1PolicyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Enabled,
+            [new PolicyDetails { OrganizationId = organization.Id, OrganizationUserId = orgUser1.Id }]);
+
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
         // Setup bulk policy query - returns org user IDs with policy enabled
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id]);
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId.Value)))
+            .Returns([(orgUser1.UserId!.Value, orgUser1PolicyRequirement)]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -1421,14 +1538,22 @@ public class RestoreOrganizationUserCommandTests
         orgUser2.Email = null;
         orgUser2.OrganizationId = organization.Id;
 
+        var orgUser1PolicyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Enabled,
+            [new PolicyDetails { OrganizationId = organization.Id, OrganizationUserId = orgUser1.Id }]);
+
+        var orgUser2PolicyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Disabled, []);
+
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
         // Setup bulk policy query - only orgUser1 has policy enabled
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id]);
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
+            .Returns([(orgUser1.UserId!.Value, orgUser1PolicyRequirement), (orgUser2.UserId!.Value, orgUser2PolicyRequirement)]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -1474,14 +1599,23 @@ public class RestoreOrganizationUserCommandTests
         orgUser2.Email = null;
         orgUser2.OrganizationId = organization.Id;
 
+        var orgUser1PolicyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Enabled,
+            [new PolicyDetails { OrganizationId = organization.Id, OrganizationUserId = orgUser1.Id }]);
+
+        var orgUser2PolicyRequirement = new OrganizationDataOwnershipPolicyRequirement(
+            OrganizationDataOwnershipState.Enabled,
+            [new PolicyDetails { OrganizationId = organization.Id, OrganizationUserId = orgUser2.Id }]);
+
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
         // Setup bulk policy query - both users have policy enabled
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id, orgUser2.Id]);
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
+            .Returns([(orgUser1.UserId!.Value, orgUser1PolicyRequirement), (orgUser2.UserId!.Value, orgUser2PolicyRequirement)]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
@@ -1596,11 +1730,6 @@ public class RestoreOrganizationUserCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
-        // Setup bulk policy query - both users have policy enabled
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id, orgUser2.Id]);
-
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
@@ -1649,11 +1778,6 @@ public class RestoreOrganizationUserCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
             .Returns([orgUser1, orgUser2]);
 
-        // Setup bulk policy query - both users have policy enabled
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id)
-            .Returns([orgUser1.Id, orgUser2.Id]);
-
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
@@ -1661,6 +1785,31 @@ public class RestoreOrganizationUserCommandTests
                 (orgUser1.UserId!.Value, true),
                 (orgUser2.UserId!.Value, true)
             });
+
+        var policyDetails1 = new PolicyDetails
+        {
+            OrganizationId = organization.Id,
+            OrganizationUserId = orgUser1.Id,
+            IsProvider = false,
+            OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+            OrganizationUserType = orgUser1.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
+        var policyDetails2 = new PolicyDetails
+        {
+            OrganizationId = organization.Id,
+            OrganizationUserId = orgUser2.Id,
+            IsProvider = false,
+            OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+            OrganizationUserType = orgUser2.Type,
+            PolicyType = PolicyType.OrganizationDataOwnership
+        };
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
+            .Returns([
+                (orgUser1.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails1])),
+                (orgUser2.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails2]))
+            ]);
 
         // Act
         var result = await sutProvider.Sut.RestoreUsersAsync(
