@@ -93,7 +93,7 @@ public interface IOnPolicyPreUpdateEvent : IPolicyUpdateEvent
 }
 ```
 
-Typical uses: revoking non-compliant users, removing emergency access grants.
+Typical uses: revoking non-compliant users.
 
 ---
 
