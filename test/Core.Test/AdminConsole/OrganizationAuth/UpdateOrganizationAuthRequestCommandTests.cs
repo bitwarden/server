@@ -206,7 +206,6 @@ public class UpdateOrganizationAuthRequestCommandTests
             unprocessedAuthRequest.Id = update.Id;
             unprocessedAuthRequests.Add(unprocessedAuthRequest);
         }
-        ;
 
         sutProvider.GetDependency<IGlobalSettings>().PasswordlessAuth.AdminRequestExpiration.Returns(TimeSpan.FromDays(7));
 
