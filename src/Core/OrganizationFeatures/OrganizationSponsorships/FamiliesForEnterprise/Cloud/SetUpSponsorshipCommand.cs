@@ -1,11 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
@@ -14,12 +18,24 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
     private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripePaymentService _paymentService;
+    private readonly IFeatureService _featureService;
+    private readonly IPricingClient _pricingClient;
+    private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
 
-    public SetUpSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository, IOrganizationRepository organizationRepository, IStripePaymentService paymentService)
+    public SetUpSponsorshipCommand(
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+        IOrganizationRepository organizationRepository,
+        IStripePaymentService paymentService,
+        IFeatureService featureService,
+        IPricingClient pricingClient,
+        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
+        _featureService = featureService;
+        _pricingClient = pricingClient;
+        _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
     }
 
     public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship,
@@ -50,7 +66,8 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         }
 
         // Check org to sponsor's product type
-        var requiredSponsoredProductType = SponsoredPlans.Get(sponsorship.PlanSponsorshipType.Value).SponsoredProductTierType;
+        var sponsoredPlan = SponsoredPlans.Get(sponsorship.PlanSponsorshipType.Value);
+        var requiredSponsoredProductType = sponsoredPlan.SponsoredProductTierType;
         var sponsoredOrganizationProductTier = sponsoredOrganization.PlanType.GetProductTier();
 
         if (sponsoredOrganizationProductTier != requiredSponsoredProductType)
@@ -58,9 +75,26 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
             throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
         }
 
-        await _paymentService.SponsorOrganizationAsync(sponsoredOrganization, sponsorship);
-        await _organizationRepository.UpsertAsync(sponsoredOrganization);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
+        {
+            var existingPlan = await _pricingClient.GetPlanOrThrow(sponsoredOrganization.PlanType);
+            var changeSet = OrganizationSubscriptionChangeSet.Builder()
+                .RemoveItem(existingPlan.PasswordManager.StripePlanId)
+                .AddItem(sponsoredPlan.StripePlanId, 1)
+                .Build();
 
+            var result = await _updateOrganizationSubscriptionCommand.Run(sponsoredOrganization, changeSet);
+            var updatedSubscription = result.GetValueOrThrow();
+            var currentPeriodEnd = updatedSubscription.GetCurrentPeriodEnd();
+            sponsoredOrganization.ExpirationDate = currentPeriodEnd;
+            sponsorship.ValidUntil = currentPeriodEnd;
+        }
+        else
+        {
+            await _paymentService.SponsorOrganizationAsync(sponsoredOrganization, sponsorship);
+        }
+
+        await _organizationRepository.UpsertAsync(sponsoredOrganization);
         sponsorship.SponsoredOrganizationId = sponsoredOrganization.Id;
         sponsorship.OfferedToEmail = null;
         await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
