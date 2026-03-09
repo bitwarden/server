@@ -51,6 +51,7 @@ public class StripePaymentService : IStripePaymentService
         _pricingClient = pricingClient;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     private async Task ChangeOrganizationSponsorship(
         Organization org,
         OrganizationSponsorship sponsorship,
@@ -74,9 +75,11 @@ public class StripePaymentService : IStripePaymentService
         }
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, true);
 
+    // TODO: Remove -> Unused
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
@@ -228,6 +231,7 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpgradeOrganizationPlanCommand
     public async Task<string> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,
@@ -255,14 +259,17 @@ public class StripePaymentService : IStripePaymentService
                 }), true);
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated OrganizationService.AdjustSeatsAsync
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustServiceAccountsAsync(
         Organization organization,
         StaticStore.Plan plan,
