@@ -17,6 +17,7 @@ public class ConfigControllerTests : IDisposable
     {
         _globalSettings = new GlobalSettings();
         _featureService = Substitute.For<IFeatureService>();
+        _featureService.GetAll().Returns(new Dictionary<string, object>());
 
         _sut = new ConfigController(
             _globalSettings,
@@ -39,5 +40,27 @@ public class ConfigControllerTests : IDisposable
         Assert.NotNull(response);
         Assert.NotNull(response.FeatureStates);
         Assert.Equal(featureStates, response.FeatureStates);
+    }
+
+    [Fact]
+    public void GetConfigs_FillAssistRulesNotConfigured_ReturnsNullEnvironmentValue()
+    {
+        // BaseServiceUriSettings.FillAssistRules defaults to null when not explicitly set
+        var response = _sut.GetConfigs();
+
+        Assert.NotNull(response.Environment);
+        Assert.Null(response.Environment.FillAssistRules);
+    }
+
+    [Fact]
+    public void GetConfigs_FillAssistRulesConfigured_ReturnsConfiguredValue()
+    {
+        var expectedUri = "https://example.com/custom-rules.json";
+        _globalSettings.BaseServiceUri.FillAssistRules = expectedUri;
+
+        var response = _sut.GetConfigs();
+
+        Assert.NotNull(response.Environment);
+        Assert.Equal(expectedUri, response.Environment.FillAssistRules);
     }
 }
