@@ -14,7 +14,7 @@ Note: If you don’t want to hook into these events, you don’t need to create 
 
 ```
 SaveAsync()
-  ├─ 1. Validate org can use policies
+  ├─ 1. Validate organization can use policies
   ├─ 2. Validate policy dependencies     ← IEnforceDependentPoliciesEvent
   ├─ 3. Run policy-specific validation   ← IPolicyValidationEvent
   ├─ 4. Execute pre-save side effects    ← IOnPolicyPreUpdateEvent
