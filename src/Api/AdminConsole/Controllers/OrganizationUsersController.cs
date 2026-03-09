@@ -352,37 +352,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException("Organization user mismatch");
         }
 
-        var useMasterPasswordPolicy = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-        ? (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id)).AutoEnrollEnabled(orgId)
-        : await ShouldHandleResetPasswordAsync(orgId);
+        var autoEnrollEnabled = (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id))
+            .AutoEnrollEnabled(orgId);
 
-        if (useMasterPasswordPolicy && !OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey))
+        if (autoEnrollEnabled && !OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey))
         {
             throw new BadRequestException("Master Password reset is required, but not provided.");
         }
 
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
 
-        if (useMasterPasswordPolicy)
+        if (autoEnrollEnabled)
         {
             await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
         }
-    }
-
-    private async Task<bool> ShouldHandleResetPasswordAsync(Guid orgId)
-    {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-
-        if (organizationAbility is not { UsePolicies: true })
-        {
-            return false;
-        }
-
-        var masterPasswordPolicy = await _policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
-        var useMasterPasswordPolicy = masterPasswordPolicy.Enabled &&
-                                      masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
-
-        return useMasterPasswordPolicy;
     }
 
     [HttpPost("{id}/confirm")]

@@ -177,20 +177,10 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id));
-        }
+        var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
+        var autoEnrollEnabledForOrganization = resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id);
 
-        var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
-        if (!resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
-        {
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
-        }
-
-        var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
-        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, autoEnrollEnabledForOrganization);
     }
 
     [HttpPost("")]

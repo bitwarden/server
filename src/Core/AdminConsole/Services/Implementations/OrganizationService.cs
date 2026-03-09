@@ -857,37 +857,20 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Organization does not allow password reset enrollment.");
         }
 
+        var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(
+            userId);
+
         // Make sure the organization has the policy enabled
-        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
-        if (!resetPasswordPolicy.Enabled)
+        if (!resetPasswordPolicyRequirement.IsEnabled(organizationId))
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }
 
         // Block the user from withdrawal if auto enrollment is enabled
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
         {
-            var resetPasswordPolicyRequirement =
-                await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId);
-            if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
-            {
-                throw new BadRequestException(
-                    "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
-            }
-        }
-        else
-        {
-            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
-            {
-                var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
-                    JsonHelpers.IgnoreCase);
-
-                if (data?.AutoEnrollEnabled ?? false)
-                {
-                    throw new BadRequestException(
-                        "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
-                }
-            }
+            throw new BadRequestException(
+                "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
         }
 
         orgUser.ResetPasswordKey = resetPasswordKey;
