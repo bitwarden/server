@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
@@ -637,8 +638,8 @@ public class SubscriberService(
             {
                 User => true,
                 Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
-                                             customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
-                Provider => customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
+                                             TaxHelpers.IsDirectTaxCountry(customer.Address.Country) || (customer.TaxIds?.Any() ?? false),
+                Provider => TaxHelpers.IsDirectTaxCountry(customer.Address.Country)|| (customer.TaxIds?.Any() ?? false),
                 _ => false
             };
 

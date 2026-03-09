@@ -3,6 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Queries;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
 using Stripe;
 using Stripe.Tax;
@@ -61,7 +62,7 @@ public class GetProviderWarningsQuery(
         Provider provider,
         Customer customer)
     {
-        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
         {
             return null;
         }

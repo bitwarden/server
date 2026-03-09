@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Queries;
@@ -14,7 +15,6 @@ using Stripe.Tax;
 
 namespace Bit.Core.Billing.Organizations.Queries;
 
-using static Core.Constants;
 using static StripeConstants;
 using FreeTrialWarning = OrganizationWarnings.FreeTrialWarning;
 using InactiveSubscriptionWarning = OrganizationWarnings.InactiveSubscriptionWarning;
@@ -230,7 +230,7 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
-        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
+        if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
         {
             return null;
         }

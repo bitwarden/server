@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Organizations.Models;
@@ -238,7 +238,7 @@ public class OrganizationBillingService(
             };
 
             if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
+                !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
             {
                 customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
             }
