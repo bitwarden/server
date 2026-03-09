@@ -79,7 +79,7 @@ public class CloudOrganizationSignUpCommand(
             MaxCollections = plan.PasswordManager.MaxCollections,
             MaxStorageGb = (short)(plan.PasswordManager.BaseStorageGb + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
-            UseMyItems = plan.HasPolicies, // TODO: use the plan property when added (PM-32366)
+            UseMyItems = plan.HasMyItems,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
