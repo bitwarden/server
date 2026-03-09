@@ -11,11 +11,6 @@
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' == 'true'">annotations</Nullable>
     <Nullable Condition="'$(Nullable)' == '' and '$(IsTestProject)' != 'true'">enable</Nullable>
     <TreatWarningsAsErrors Condition="'$(TreatWarningsAsErrors)' == ''">true</TreatWarningsAsErrors>
-    <!--
-      Pomelo.EntityFrameworkCore.MySql 9.0.0 pins EF Core 9.x; suppress until Pomelo releases EF 10 support.
-      Another suppression exists in src/Infrastructure.EntityFramework/Infrastructure.EntityFramework.csproj
-    -->
-    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
