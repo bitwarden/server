@@ -89,7 +89,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -187,7 +187,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -213,7 +213,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -255,7 +255,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -321,7 +321,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -347,7 +347,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -372,7 +372,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -396,7 +396,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -421,7 +421,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -446,7 +446,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -471,7 +471,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -497,7 +497,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -524,7 +524,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -550,7 +550,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -575,7 +575,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -616,7 +616,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>());
         await _stripeAdapter.Received(1).FinalizeInvoiceAsync("inv_123", Arg.Any<InvoiceFinalizeOptions>());
@@ -652,7 +652,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>());
         await _stripeAdapter.DidNotReceive().FinalizeInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceFinalizeOptions>());
@@ -685,7 +685,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.DidNotReceive().GetInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceGetOptions>());
         await _stripeAdapter.DidNotReceive().FinalizeInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceFinalizeOptions>());
@@ -710,7 +710,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.DidNotReceive().GetInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceGetOptions>());
     }
@@ -822,7 +822,7 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var result = await _command.Run(organization, changeSet);
 
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(options => options.Items.Count == 3));

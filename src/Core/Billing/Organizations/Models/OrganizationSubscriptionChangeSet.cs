@@ -3,11 +3,32 @@ using OneOf;
 
 namespace Bit.Core.Billing.Organizations.Models;
 
+/// <summary>
+/// Adds a new line item to the subscription.
+/// </summary>
 public record AddItem(string PriceId, int Quantity);
+
+/// <summary>
+/// Replaces an existing line item's price (e.g. switching from monthly to annual billing).
+/// Optionally updates the quantity; if <c>null</c>, the current quantity is preserved.
+/// </summary>
 public record ChangeItemPrice(string CurrentPriceId, string UpdatedPriceId, int? Quantity);
+
+/// <summary>
+/// Removes a line item from the subscription.
+/// </summary>
 public record RemoveItem(string PriceId);
+
+/// <summary>
+/// Updates the quantity of an existing line item. Setting quantity to 0 deletes the item.
+/// </summary>
 public record UpdateItemQuantity(string PriceId, int Quantity);
 
+/// <summary>
+/// A union type representing a single change to apply to an organization's Stripe subscription.
+/// A change is considered "structural" (triggering immediate invoicing) if it adds, removes,
+/// or re-prices a line item, or sets a quantity to 0. Non-structural quantity updates use prorations.
+/// </summary>
 public class OrganizationSubscriptionChange(OneOf<AddItem, ChangeItemPrice, RemoveItem, UpdateItemQuantity> input)
     : OneOfBase<AddItem, ChangeItemPrice, RemoveItem, UpdateItemQuantity>(input)
 {
@@ -30,6 +51,11 @@ public class OrganizationSubscriptionChange(OneOf<AddItem, ChangeItemPrice, Remo
     public bool IsStructural => !IsItemQuantityUpdate || AsT3.Quantity == 0;
 }
 
+/// <summary>
+/// A collection of <see cref="OrganizationSubscriptionChange"/> items to apply atomically to
+/// an organization's Stripe subscription. Use the static factory methods for common single-change
+/// operations, or <see cref="Builder"/> for composing multiple changes.
+/// </summary>
 public record OrganizationSubscriptionChangeSet
 {
     public required IReadOnlyList<OrganizationSubscriptionChange> Changes { get; init; } = [];

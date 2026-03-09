@@ -37,6 +37,11 @@ public class UpdateOrganizationSubscriptionCommand(
     ILogger<UpdateOrganizationSubscriptionCommand> logger,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateOrganizationSubscriptionCommand>(logger), IUpdateOrganizationSubscriptionCommand
 {
+    private static readonly List<string> _validSubscriptionStatusesForUpdate =
+    [
+        SubscriptionStatus.Trialing, SubscriptionStatus.Active, SubscriptionStatus.PastDue
+    ];
+
     private readonly ILogger<UpdateOrganizationSubscriptionCommand> _logger = logger;
 
     protected override Conflict DefaultConflict =>
@@ -53,12 +58,7 @@ public class UpdateOrganizationSubscriptionCommand(
             return new BadRequest("We couldn't find your subscription.");
         }
 
-        var validSubscriptionStatusesForUpdate = new List<string>
-        {
-            SubscriptionStatus.Trialing, SubscriptionStatus.Active, SubscriptionStatus.PastDue
-        };
-
-        if (!validSubscriptionStatusesForUpdate.Contains(subscription.Status))
+        if (!_validSubscriptionStatusesForUpdate.Contains(subscription.Status))
         {
             _logger.LogWarning(
                 "{Command}: Tried to update organization ({OrganizationId}) subscription ({SubscriptionId}) with status ({SubscriptionStatus})",
