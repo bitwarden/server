@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Net;
+﻿using System.Net;
 using CoreIPAddressExtensions = Bit.Core.Utilities.IPAddressExtensions;
 
 namespace Bit.Icons.Extensions;
