@@ -19,6 +19,7 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -267,10 +268,13 @@ public class ProviderBillingService(
                 ]
         };
 
-        if (providerCustomer.Address is not { Country: CountryAbbreviations.UnitedStates })
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(providerCustomer.Address?.Country, providerCustomer.TaxExempt);
+        customerCreateOptions.TaxExempt = providerCustomer switch
         {
-            customerCreateOptions.TaxExempt = TaxExempt.Reverse;
-        }
+            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus } when
+                determinedTaxExemptStatus != customerTaxExemptStatus => determinedTaxExemptStatus,
+            _ => providerCustomer.TaxExempt
+        };
 
         var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
 
@@ -467,6 +471,7 @@ public class ProviderBillingService(
         TokenizedPaymentMethod paymentMethod,
         BillingAddress billingAddress)
     {
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country);
         var options = new CustomerCreateOptions
         {
             Address = new AddressOptions
@@ -494,7 +499,7 @@ public class ProviderBillingService(
                 ]
             },
             Metadata = new Dictionary<string, string> { { "region", globalSettings.BaseServiceUri.CloudRegion } },
-            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
+            TaxExempt = determinedTaxExemptStatus
         };
 
         if (billingAddress.TaxId != null)

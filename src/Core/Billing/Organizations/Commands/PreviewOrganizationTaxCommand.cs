@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
@@ -384,11 +385,23 @@ public class PreviewOrganizationTaxCommand(
             CustomerDetails = new InvoiceCustomerDetailsOptions
             {
                 Address = new AddressOptions { Country = country, PostalCode = postalCode },
-                TaxExempt = businessUse && country != CountryAbbreviations.UnitedStates
-                    ? TaxExempt.Reverse
-                    : TaxExempt.None
             }
         };
+
+        switch (businessUse)
+        {
+            case true:
+                var existingTaxExemptStatus = addressChoice.Match(
+                    customer => customer.TaxExempt,
+                    _ => null!);
+
+                var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(country, existingTaxExemptStatus);
+                options.CustomerDetails.TaxExempt = determinedTaxExemptStatus;
+                break;
+            default:
+                options.CustomerDetails.TaxExempt = TaxExempt.None;
+                break;
+        }
 
         var taxId = addressChoice.Match(
             customer =>

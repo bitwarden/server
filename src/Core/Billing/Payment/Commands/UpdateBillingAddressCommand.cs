@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -69,24 +70,23 @@ public class UpdateBillingAddressCommand(
         ISubscriber subscriber,
         BillingAddress billingAddress)
     {
-        var customer =
-            await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
-                new CustomerUpdateOptions
+        var determinedTaxExemptStatus = await GetDeterminedTaxExemptStatusAsync(subscriber.GatewayCustomerId!, billingAddress.Country);
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
+            new CustomerUpdateOptions
+            {
+                Address = new AddressOptions
                 {
-                    Address = new AddressOptions
-                    {
-                        Country = billingAddress.Country,
-                        PostalCode = billingAddress.PostalCode,
-                        Line1 = billingAddress.Line1,
-                        Line2 = billingAddress.Line2,
-                        City = billingAddress.City,
-                        State = billingAddress.State
-                    },
-                    Expand = ["subscriptions", "tax_ids"],
-                    TaxExempt = billingAddress.Country != Core.Constants.CountryAbbreviations.UnitedStates
-                        ? StripeConstants.TaxExempt.Reverse
-                        : StripeConstants.TaxExempt.None
-                });
+                    Country = billingAddress.Country,
+                    PostalCode = billingAddress.PostalCode,
+                    Line1 = billingAddress.Line1,
+                    Line2 = billingAddress.Line2,
+                    City = billingAddress.City,
+                    State = billingAddress.State
+                },
+                Expand = ["subscriptions", "tax_ids"],
+                TaxExempt = determinedTaxExemptStatus
+            });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
 
@@ -116,6 +116,13 @@ public class UpdateBillingAddressCommand(
         await Task.WhenAll(deleteExistingTaxIds);
 
         return BillingAddress.From(customer.Address, updatedTaxId);
+    }
+
+
+    private async Task<string> GetDeterminedTaxExemptStatusAsync(string customerId, string? billingCountry)
+    {
+        var existingCustomer = await stripeAdapter.GetCustomerAsync(customerId);
+        return TaxHelpers.DetermineTaxExemptStatus(billingCountry, existingCustomer.TaxExempt);
     }
 
     private async Task EnableAutomaticTaxAsync(

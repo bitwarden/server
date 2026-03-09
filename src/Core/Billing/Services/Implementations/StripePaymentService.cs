@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
@@ -119,14 +120,14 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            if (sub.Customer is
-                {
-                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: not StripeConstants.TaxExempt.Reverse
-                })
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address.Country, sub.Customer.TaxExempt);
+            switch (sub.Customer)
             {
-                await _stripeAdapter.UpdateCustomerAsync(sub.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                case { Address.Country: not null and not "" , TaxExempt: var customerTaxExemptStatus}
+                    when determinedTaxExemptStatus != customerTaxExemptStatus:
+                    await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
+                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                    break;
             }
 
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };

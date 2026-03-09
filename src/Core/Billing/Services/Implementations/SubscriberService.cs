@@ -603,23 +603,13 @@ public class SubscriberService(
 
         if (isBusinessUseSubscriber)
         {
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address.Country, customer.TaxExempt);
             switch (customer)
             {
-                case
-                {
-                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: not TaxExempt.Reverse
-                }:
+                case { Address.Country: not null and not "" , TaxExempt: var customerTaxExemptStatus}
+                    when determinedTaxExemptStatus != customerTaxExemptStatus:
                     await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
-                    break;
-                case
-                {
-                    Address.Country: Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: TaxExempt.Reverse
-                }:
-                    await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = TaxExempt.None });
+                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
                     break;
             }
 
