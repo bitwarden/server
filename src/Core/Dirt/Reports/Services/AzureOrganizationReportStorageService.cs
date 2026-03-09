@@ -30,6 +30,19 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
         _logger = logger;
     }
 
+    /// <summary>
+    /// Constructor for unit testing that accepts a pre-initialized container client,
+    /// bypassing the <see cref="InitAsync"/> network call to Azure Storage.
+    /// </summary>
+    internal AzureOrganizationReportStorageService(
+        BlobContainerClient containerClient,
+        ILogger<AzureOrganizationReportStorageService> logger)
+    {
+        _blobServiceClient = null!;
+        _containerClient = containerClient;
+        _logger = logger;
+    }
+
     public async Task<string> GetReportFileUploadUrlAsync(OrganizationReport report, ReportFile fileData)
     {
         await InitAsync();
@@ -104,7 +117,7 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
         }
     }
 
-    private static string BlobPath(OrganizationReport report, string fileId, string fileName)
+    internal static string BlobPath(OrganizationReport report, string fileId, string fileName)
     {
         var date = report.CreationDate.ToString("MM-dd-yyyy");
         return $"{report.OrganizationId}/{date}/{report.Id}/{fileId}/{fileName}";
