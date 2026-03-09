@@ -131,7 +131,7 @@ Returns the matching handler, or `None` if the policy type does not implement th
 
 ## Adding a New Policy Handler
 
-1. Create a class in `PolicyValidators/` implementing `IPolicyUpdateEvent` and any combination of the event interfaces above.
+1. Create a class in `PolicyValidators/` implementing any combination of the event interfaces above.
 2. Set `Type` to the appropriate `PolicyType`.
 3. Register the class as `IPolicyUpdateEvent` (and the legacy interfaces if needed) in `PolicyServiceCollectionExtensions.AddPolicyUpdateEvents()`.
 
