@@ -1337,120 +1337,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithPayPalCustomer_SetsDefaultIncompletePaymentBehavior(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        var mockSubscription = new Subscription
-        {
-            Id = "sub_123",
-            LatestInvoiceId = "in_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
-            },
-            Metadata = new Dictionary<string, string>()
-        };
-
-        var payPalCustomer = new Customer
-        {
-            Metadata = new Dictionary<string, string>
-            {
-                [Bit.Core.Billing.Utilities.BraintreeCustomerIdKey] = "bt_cus_123"
-            }
-        };
-
-        var mockPremiumPlans = CreateTestPremiumPlansList();
-        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
-
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
-        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
-        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(payPalCustomer);
-        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
-        _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(new Invoice { Id = "in_123" });
-        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
-        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
-        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
-        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
-
-        // Assert
-        Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            "sub_123",
-            Arg.Is<SubscriptionUpdateOptions>(opts =>
-                opts.PaymentBehavior == "default_incomplete"));
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_WithNonPayPalCustomer_DoesNotSetDefaultIncompletePaymentBehavior(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        var mockSubscription = new Subscription
-        {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
-            },
-            Metadata = new Dictionary<string, string>()
-        };
-
-        // Customer with no Braintree metadata
-        var stripeCustomer = new Customer { Metadata = new Dictionary<string, string>() };
-
-        var mockPremiumPlans = CreateTestPremiumPlansList();
-        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
-
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
-        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
-        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(stripeCustomer);
-        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
-        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
-        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
-        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
-        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
-
-        // Assert
-        Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            "sub_123",
-            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == null));
-        await _braintreeService.DidNotReceive().PayInvoice(Arg.Any<SubscriberId>(), Arg.Any<Invoice>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task Run_WithPayPalCustomer_PaysInvoiceViaBraintree(User user)
+    public async Task Run_WithPayPalCustomer_SetsDefaultIncompletePaymentBehaviorAndPaysInvoiceViaBraintree(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1485,12 +1372,9 @@ public class UpgradePremiumToOrganizationCommandTests
 
         var mockInvoice = new Invoice { Id = "in_123" };
 
-        var mockPremiumPlans = CreateTestPremiumPlansList();
-        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
-
         _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
-        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(payPalCustomer);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
         _stripeAdapter.UpdateInvoiceAsync("in_123", Arg.Any<InvoiceUpdateOptions>()).Returns(mockInvoice);
@@ -1507,13 +1391,23 @@ public class UpgradePremiumToOrganizationCommandTests
         Assert.True(result.IsT0);
         var organizationId = result.AsT0;
 
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == "default_incomplete"));
+
+        await _stripeAdapter.Received(1).UpdateInvoiceAsync(
+            "in_123",
+            Arg.Is<InvoiceUpdateOptions>(opts =>
+                opts.AutoAdvance == false &&
+                opts.Expand.Contains("customer")));
+
         await _braintreeService.Received(1).PayInvoice(
             Arg.Is<SubscriberId>(id => id.IsT0 && id.AsT0.Value == organizationId),
             mockInvoice);
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithPayPalCustomer_UpdatesInvoiceWithAutoAdvanceFalseBeforePaying(User user)
+    public async Task Run_WithNonPayPalCustomer_DoesNotPayViaPayPal(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1523,7 +1417,6 @@ public class UpgradePremiumToOrganizationCommandTests
         var mockSubscription = new Subscription
         {
             Id = "sub_123",
-            LatestInvoiceId = "in_123",
             Items = new StripeList<SubscriptionItem>
             {
                 Data = new List<SubscriptionItem>
@@ -1538,23 +1431,14 @@ public class UpgradePremiumToOrganizationCommandTests
             Metadata = new Dictionary<string, string>()
         };
 
-        var payPalCustomer = new Customer
-        {
-            Metadata = new Dictionary<string, string>
-            {
-                [Bit.Core.Billing.Utilities.BraintreeCustomerIdKey] = "bt_cus_123"
-            }
-        };
-
-        var mockPremiumPlans = CreateTestPremiumPlansList();
-        var mockPlan = CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually");
+        // Customer with no Braintree metadata
+        var stripeCustomer = new Customer { Metadata = new Dictionary<string, string>() };
 
         _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
-        _pricingClient.ListPremiumPlans().Returns(mockPremiumPlans);
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(mockPlan);
-        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(payPalCustomer);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(stripeCustomer);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
-        _stripeAdapter.UpdateInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceUpdateOptions>()).Returns(new Invoice { Id = "in_123" });
         _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
         _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
         _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
@@ -1566,11 +1450,10 @@ public class UpgradePremiumToOrganizationCommandTests
 
         // Assert
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).UpdateInvoiceAsync(
-            "in_123",
-            Arg.Is<InvoiceUpdateOptions>(opts =>
-                opts.AutoAdvance == false &&
-                opts.Expand.Contains("customer")));
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == null));
+        await _braintreeService.DidNotReceive().PayInvoice(Arg.Any<SubscriberId>(), Arg.Any<Invoice>());
     }
 
     [Theory, BitAutoData]
