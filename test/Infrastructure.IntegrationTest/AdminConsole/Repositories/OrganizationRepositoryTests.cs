@@ -365,6 +365,57 @@ public class OrganizationRepositoryTests
         Assert.Null(orgUserAfter.UserId);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetAbilityAsync_WithExistingOrganization_ReturnsCorrectAbility(
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        // Act
+        var result = await organizationRepository.GetAbilityAsync(organization.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organization.Id, result.Id);
+        Assert.True(result.UseEvents);
+        Assert.True(result.Use2fa);
+        Assert.False(result.Using2fa); // TwoFactorProviders is null in test helper
+        Assert.True(result.UsersGetPremium);
+        Assert.True(result.Enabled);
+        Assert.True(result.UseSso);
+        Assert.True(result.UseKeyConnector);
+        Assert.True(result.UseScim);
+        Assert.True(result.UseResetPassword);
+        Assert.True(result.UseCustomPermissions);
+        Assert.True(result.UsePolicies);
+        Assert.True(result.LimitCollectionCreation);
+        Assert.True(result.LimitCollectionDeletion);
+        Assert.True(result.LimitItemDeletion);
+        Assert.True(result.AllowAdminAccessToAllCollectionItems);
+        Assert.True(result.UseRiskInsights);
+        Assert.True(result.UseOrganizationDomains);
+        Assert.True(result.UseAdminSponsoredFamilies);
+        Assert.True(result.UseAutomaticUserConfirmation);
+        Assert.True(result.UseDisableSmAdsForUsers);
+        Assert.True(result.UsePhishingBlocker);
+        Assert.True(result.UseMyItems);
+
+        // Clean up
+        await organizationRepository.DeleteAsync(organization);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAbilityAsync_WithNonExistentOrganization_ReturnsNull(
+        IOrganizationRepository organizationRepository)
+    {
+        // Act
+        var result = await organizationRepository.GetAbilityAsync(Guid.NewGuid());
+
+        // Assert
+        Assert.Null(result);
+    }
+
     private static async Task<(User user, Organization organization, OrganizationUser organizationUser)>
         CreatePendingOrganizationWithUserAsync(
             IUserRepository userRepository,
