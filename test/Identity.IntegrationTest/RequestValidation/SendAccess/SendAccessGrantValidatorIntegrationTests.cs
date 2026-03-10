@@ -1,6 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Enums;
-using Bit.Core.Services;
+﻿using Bit.Core.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Identity.IdentityServer.Enums;
@@ -51,15 +49,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
     public async Task SendAccessGrant_MissingSendId_ReturnsInvalidRequest()
     {
         // Arrange
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
-                services.AddSingleton(featureService);
-            });
-        }).CreateClient();
+        var client = _factory.CreateClient();
 
         var requestBody = new FormUrlEncodedContent([
             new KeyValuePair<string, string>(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
