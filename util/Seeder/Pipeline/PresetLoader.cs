@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Data.Distributions;
+﻿using Bit.Core.Vault.Enums;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -75,8 +76,15 @@ internal static class PresetLoader
             builder.AddOwner();
         }
 
+        var density = ParseDensity(preset.Density);
+
         // Generator requires a domain and is needed for generated ciphers, personal ciphers, or folders
-        if (domain is not null && (preset.Ciphers?.Count > 0 || preset.PersonalCiphers?.CountPerUser > 0 || preset.Folders == true))
+        if (domain is not null && (
+            preset.Ciphers?.Count > 0 ||
+            preset.PersonalCiphers?.CountPerUser > 0 ||
+            preset.Folders == true ||
+            density?.FolderDistribution is not null ||
+            density?.PersonalCipherDistribution is not null))
         {
             builder.WithGenerator(domain);
         }
@@ -85,8 +93,6 @@ internal static class PresetLoader
         {
             builder.AddUsers(preset.Users.Count, preset.Users.RealisticStatusMix);
         }
-
-        var density = ParseDensity(preset.Density);
 
         if (preset.Groups is not null)
         {
@@ -98,9 +104,9 @@ internal static class PresetLoader
             builder.AddCollections(preset.Collections.Count, density);
         }
 
-        if (preset.Folders == true)
+        if (preset.Folders == true || density?.FolderDistribution is not null)
         {
-            builder.AddFolders();
+            builder.AddFolders(density);
         }
 
         if (preset.Ciphers?.Fixture is not null)
@@ -114,7 +120,11 @@ internal static class PresetLoader
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)
         {
-            builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser);
+            builder.AddPersonalCiphers(preset.PersonalCiphers.CountPerUser, density: density);
+        }
+        else if (density?.PersonalCipherDistribution is not null)
+        {
+            builder.AddPersonalCiphers(0, density: density);
         }
 
         builder.Validate();
@@ -139,6 +149,15 @@ internal static class PresetLoader
             PermissionDistribution = ParsePermissions(preset.Permissions),
             CipherSkew = ParseEnum(preset.CipherAssignment?.Skew, CipherCollectionSkew.Uniform),
             OrphanCipherRate = preset.CipherAssignment?.OrphanRate ?? 0,
+            MultiCollectionRate = preset.CipherAssignment?.MultiCollectionRate ?? 0,
+            MaxCollectionsPerCipher = preset.CipherAssignment?.MaxCollectionsPerCipher ?? 2,
+            UserCollectionMin = preset.UserCollections?.Min ?? 1,
+            UserCollectionMax = preset.UserCollections?.Max ?? 3,
+            UserCollectionShape = ParseEnum(preset.UserCollections?.Shape, CollectionFanOutShape.Uniform),
+            UserCollectionSkew = preset.UserCollections?.Skew ?? 0,
+            CipherTypeDistribution = ParseCipherTypes(preset.CipherTypes),
+            PersonalCipherDistribution = ParsePersonalCipherDistribution(preset.PersonalCiphers?.Shape),
+            FolderDistribution = ParseFolderDistribution(preset.Folders?.Shape),
         };
     }
 
@@ -165,6 +184,79 @@ internal static class PresetLoader
             (PermissionWeight.ReadWrite, readWrite),
             (PermissionWeight.Manage, manage),
             (PermissionWeight.HidePasswords, hidePasswords));
+    }
+
+    private static Distribution<CipherType>? ParseCipherTypes(SeedPresetCipherTypes? cipherTypes)
+    {
+        if (cipherTypes is null)
+        {
+            return null;
+        }
+
+        if (cipherTypes.Preset is not null)
+        {
+            return cipherTypes.Preset.ToLowerInvariant() switch
+            {
+                "realistic" => CipherTypeDistributions.Realistic,
+                "loginonly" => CipherTypeDistributions.LoginOnly,
+                "documentationheavy" => CipherTypeDistributions.DocumentationHeavy,
+                "developerfocused" => CipherTypeDistributions.DeveloperFocused,
+                _ => throw new InvalidOperationException(
+                    $"Unknown cipher type preset '{cipherTypes.Preset}'. Valid values: realistic, loginOnly, documentationHeavy, developerFocused."),
+            };
+        }
+
+        var login = cipherTypes.Login ?? 0;
+        var secureNote = cipherTypes.SecureNote ?? 0;
+        var card = cipherTypes.Card ?? 0;
+        var identity = cipherTypes.Identity ?? 0;
+        var sshKey = cipherTypes.SshKey ?? 0;
+
+        if (login + secureNote + card + identity + sshKey < 0.001)
+        {
+            return null;
+        }
+
+        return new Distribution<CipherType>(
+            (CipherType.Login, login),
+            (CipherType.SecureNote, secureNote),
+            (CipherType.Card, card),
+            (CipherType.Identity, identity),
+            (CipherType.SSHKey, sshKey));
+    }
+
+    private static Distribution<(int Min, int Max)>? ParsePersonalCipherDistribution(string? shape)
+    {
+        if (shape is null)
+        {
+            return null;
+        }
+
+        return shape.ToLowerInvariant() switch
+        {
+            "realistic" => PersonalCipherDistributions.Realistic,
+            "lightusage" => PersonalCipherDistributions.LightUsage,
+            "heavyusage" => PersonalCipherDistributions.HeavyUsage,
+            _ => throw new InvalidOperationException(
+                $"Unknown personal cipher distribution '{shape}'. Valid values: realistic, lightUsage, heavyUsage."),
+        };
+    }
+
+    private static Distribution<(int Min, int Max)>? ParseFolderDistribution(string? shape)
+    {
+        if (shape is null)
+        {
+            return null;
+        }
+
+        return shape.ToLowerInvariant() switch
+        {
+            "realistic" => FolderCountDistributions.Realistic,
+            "enterprise" => FolderCountDistributions.Enterprise,
+            "minimal" => FolderCountDistributions.Minimal,
+            _ => throw new InvalidOperationException(
+                $"Unknown folder distribution '{shape}'. Valid values: realistic, enterprise, minimal."),
+        };
     }
 
     private static T ParseEnum<T>(string? value, T defaultValue) where T : struct, Enum =>
