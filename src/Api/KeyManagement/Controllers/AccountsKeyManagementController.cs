@@ -19,6 +19,7 @@ using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
