@@ -57,6 +57,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public AccountsKeyManagementControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
+        _factory.UpdateConfiguration("globalSettings:selfHosted", "true");
         _factory.SubstituteService<IFeatureService>(featureService =>
         {
             featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration, Arg.Any<bool>())
