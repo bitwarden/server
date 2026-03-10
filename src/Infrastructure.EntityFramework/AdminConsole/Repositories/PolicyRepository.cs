@@ -259,7 +259,7 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         // Get organization users (both confirmed/accepted and invited)
         var orgUsersQuery = dbContext.OrganizationUsers
             .Where(ou => (ou.Status != OrganizationUserStatusType.Invited && ou.UserId == userId) ||
-                         (ou.Status == OrganizationUserStatusType.Invited && ou.Email == userEmail));
+                         (ou.Status == OrganizationUserStatusType.Invited && ou.Email == userEmail && userEmail != null));
 
         // Join with policies and organizations
         var query = from policy in dbContext.Policies
