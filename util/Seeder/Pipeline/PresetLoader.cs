@@ -259,6 +259,20 @@ internal static class PresetLoader
         };
     }
 
-    private static T ParseEnum<T>(string? value, T defaultValue) where T : struct, Enum =>
-        value is not null && Enum.TryParse<T>(value, ignoreCase: true, out var result) ? result : defaultValue;
+    private static T ParseEnum<T>(string? value, T defaultValue) where T : struct, Enum
+    {
+        if (value is null)
+        {
+            return defaultValue;
+        }
+
+        if (!Enum.TryParse<T>(value, ignoreCase: true, out var result))
+        {
+            var valid = string.Join(", ", Enum.GetNames<T>());
+            throw new InvalidOperationException(
+                $"Unknown {typeof(T).Name} '{value}'. Valid values: {valid}.");
+        }
+
+        return result;
+    }
 }
