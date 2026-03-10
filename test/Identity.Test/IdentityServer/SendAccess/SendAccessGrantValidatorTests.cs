@@ -18,28 +18,6 @@ namespace Bit.Identity.Test.IdentityServer.SendAccess;
 [SutProviderCustomize]
 public class SendAccessGrantValidatorTests
 {
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_FeatureFlagDisabled_ReturnsUnsupportedGrantType(
-        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        SutProvider<SendAccessGrantValidator> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(false);
-
-        var context = new ExtensionGrantValidationContext
-        {
-            Request = tokenRequest
-        };
-
-        // Act
-        await sutProvider.Sut.ValidateAsync(context);
-
-        // Assert
-        Assert.True(context.Result.IsError);
-        Assert.Equal(OidcConstants.TokenErrors.UnsupportedGrantType, context.Result.Error);
-    }
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_MissingSendId_ReturnsInvalidRequest(
@@ -47,10 +25,6 @@ public class SendAccessGrantValidatorTests
         SutProvider<SendAccessGrantValidator> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(true);
-
         var context = new ExtensionGrantValidationContext
         {
             Request = tokenRequest
@@ -70,10 +44,6 @@ public class SendAccessGrantValidatorTests
         SutProvider<SendAccessGrantValidator> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(true);
-
         var context = new ExtensionGrantValidationContext();
 
         tokenRequest.GrantType = CustomGrantTypes.SendAccess;
@@ -286,10 +256,6 @@ public class SendAccessGrantValidatorTests
         Guid sendId,
         ValidatedTokenRequest request)
     {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendAccess)
-            .Returns(true);
-
         var context = new ExtensionGrantValidationContext();
 
         request.GrantType = CustomGrantTypes.SendAccess;
