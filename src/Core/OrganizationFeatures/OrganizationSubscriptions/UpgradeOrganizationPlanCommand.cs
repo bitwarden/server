@@ -10,10 +10,12 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -40,6 +42,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IFeatureService _featureService;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IPricingClient _pricingClient;
+    private readonly IUpgradeOrganizationPlanVNextCommand _upgradeOrganizationPlanVNextCommand;
+    private readonly IUserRepository _userRepository;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -55,7 +59,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IOrganizationService organizationService,
         IFeatureService featureService,
         IOrganizationBillingService organizationBillingService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IUpgradeOrganizationPlanVNextCommand upgradeOrganizationPlanVNextCommand,
+        IUserRepository userRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -71,14 +77,32 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _featureService = featureService;
         _organizationBillingService = organizationBillingService;
         _pricingClient = pricingClient;
+        _upgradeOrganizationPlanVNextCommand = upgradeOrganizationPlanVNextCommand;
+        _userRepository = userRepository;
     }
 
-    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
+    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade, Guid? userId = null)
     {
         var organization = await GetOrgById(organizationId);
+
         if (organization == null)
         {
             throw new NotFoundException();
+        }
+
+        /*
+         * Billing is going to take over this entire command as part of our refactoring work around the
+         * organization subscription upgrade process.
+         */
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
+        {
+            var plan = await _pricingClient.GetPlanOrThrow(upgrade.Plan);
+            var result = await _upgradeOrganizationPlanVNextCommand.Run(
+                organization,
+                plan,
+                upgrade.Keys);
+            result.GetValueOrThrow();
+            return new Tuple<bool, string>(true, null);
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -230,7 +254,19 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var sale = OrganizationSale.From(organization, upgrade);
+            // Check if the user performing the upgrade is an owner of the organization
+            // This is used for discount validation - discounts only apply if the owner is upgrading
+            User owner = null;
+            if (userId.HasValue)
+            {
+                var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId.Value);
+                if (organizationUser != null && organizationUser.Type == OrganizationUserType.Owner)
+                {
+                    owner = await _userRepository.GetByIdAsync(organizationUser.UserId.Value);
+                }
+            }
+
+            var sale = OrganizationSale.From(organization, upgrade, owner);
             await _organizationBillingService.Finalize(sale);
         }
         else
@@ -259,7 +295,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseApi = newPlan.HasApi;
         organization.SelfHost = newPlan.HasSelfHost;
         organization.UsePolicies = newPlan.HasPolicies;
-        organization.UseMyItems = newPlan.HasPolicies; // TODO: use the plan property when added (PM-32366)
+        organization.UseMyItems = newPlan.HasMyItems;
         organization.MaxStorageGb = (short)(newPlan.PasswordManager.BaseStorageGb + upgrade.AdditionalStorageGb);
         organization.UseSso = newPlan.HasSso;
         organization.UseOrganizationDomains = newPlan.HasOrganizationDomains;

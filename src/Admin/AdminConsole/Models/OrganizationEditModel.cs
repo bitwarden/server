@@ -239,6 +239,7 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
                     HasResetPassword = p.HasResetPassword,
                     UsersGetPremium = p.UsersGetPremium,
                     HasCustomPermissions = p.HasCustomPermissions,
+                    HasMyItems = p.HasMyItems,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,

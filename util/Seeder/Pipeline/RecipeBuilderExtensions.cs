@@ -3,6 +3,7 @@ using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
 
@@ -125,9 +126,10 @@ public static class RecipeBuilderExtensions
     /// </summary>
     /// <param name="builder">The recipe builder</param>
     /// <param name="count">Number of groups to generate</param>
+    /// <param name="density">Optional density profile for membership distribution control</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
-    public static RecipeBuilder AddGroups(this RecipeBuilder builder, int count)
+    public static RecipeBuilder AddGroups(this RecipeBuilder builder, int count, DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -135,7 +137,7 @@ public static class RecipeBuilderExtensions
                 "Groups require users. Call UseRoster() or AddUsers() first.");
         }
 
-        builder.AddStep(_ => new CreateGroupsStep(count));
+        builder.AddStep(_ => new CreateGroupsStep(count, density));
         return builder;
     }
 
@@ -144,9 +146,10 @@ public static class RecipeBuilderExtensions
     /// </summary>
     /// <param name="builder">The recipe builder</param>
     /// <param name="count">Number of collections to generate</param>
+    /// <param name="density">Optional density profile for collection fan-out and permission control</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
-    public static RecipeBuilder AddCollections(this RecipeBuilder builder, int count)
+    public static RecipeBuilder AddCollections(this RecipeBuilder builder, int count, DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -154,7 +157,7 @@ public static class RecipeBuilderExtensions
                 "Collections require users. Call UseRoster() or AddUsers() first.");
         }
 
-        builder.AddStep(_ => CreateCollectionsStep.FromCount(count));
+        builder.AddStep(_ => CreateCollectionsStep.FromCount(count, density));
         return builder;
     }
 
@@ -178,9 +181,13 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
-    /// Generate folders for each user using a realistic distribution.
+    /// Generate folders for each user using a configurable distribution.
     /// </summary>
-    public static RecipeBuilder AddFolders(this RecipeBuilder builder)
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="density">Optional density profile for folder count distribution override</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
+    public static RecipeBuilder AddFolders(this RecipeBuilder builder, DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -189,7 +196,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasFolders = true;
-        builder.AddStep(_ => new GenerateFoldersStep());
+        builder.AddStep(_ => new GenerateFoldersStep(density));
         return builder;
     }
 
@@ -221,6 +228,7 @@ public static class RecipeBuilderExtensions
     /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
     /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
     /// <param name="assignFolders">When true, assigns ciphers to user folders round-robin.</param>
+    /// <param name="density">Optional density profile for cipher-to-collection assignment control</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when UseCiphers() was already called</exception>
     public static RecipeBuilder AddCiphers(
@@ -228,7 +236,8 @@ public static class RecipeBuilderExtensions
         int count,
         Distribution<CipherType>? typeDist = null,
         Distribution<PasswordStrength>? pwDist = null,
-        bool assignFolders = false)
+        bool assignFolders = false,
+        DensityProfile? density = null)
     {
         if (builder.HasFixtureCiphers)
         {
@@ -241,7 +250,7 @@ public static class RecipeBuilderExtensions
         {
             builder.HasCipherFolderAssignment = true;
         }
-        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders));
+        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders, density));
         return builder;
     }
 
@@ -252,12 +261,14 @@ public static class RecipeBuilderExtensions
     /// <param name="countPerUser">Number of personal ciphers per user</param>
     /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
     /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
+    /// <param name="density">Optional density profile for per-user personal cipher count distribution</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
     public static RecipeBuilder AddPersonalCiphers(
         this RecipeBuilder builder, int countPerUser,
         Distribution<CipherType>? typeDist = null,
-        Distribution<PasswordStrength>? pwDist = null)
+        Distribution<PasswordStrength>? pwDist = null,
+        DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -266,7 +277,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasPersonalCiphers = true;
-        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist));
+        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density));
         return builder;
     }
 

@@ -51,9 +51,10 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
             c.ArchivedDate = null;
         });
         // Will not log an event because the archive feature is limited to individual ciphers, and event logs only apply to organization ciphers.
-        // Add event logging here if this is expanded to organization ciphers in the future.
 
-        await _pushService.PushSyncCiphersAsync(unarchivingUserId);
+        // ExcludeCurrentContext to avoid double syncing when unarchiving a cipher
+
+        await _pushService.PushSyncCiphersAsync(unarchivingUserId, true);
 
         return unarchivingCiphers;
     }
