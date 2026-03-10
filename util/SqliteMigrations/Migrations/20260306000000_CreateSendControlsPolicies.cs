@@ -23,14 +23,14 @@ public partial class CreateSendControlsPolicies : Migration
                    COALESCE(ds.""OrganizationId"", so.""OrganizationId""),
                    20,
                    CASE WHEN IFNULL(ds.""Enabled"", 0) = 1 OR IFNULL(so.""Enabled"", 0) = 1 THEN 1 ELSE 0 END,
-                   '{""disableSend"":' ||
+                   '{{""disableSend"":' ||
                        CASE WHEN IFNULL(ds.""Enabled"", 0) = 1 THEN 'true' ELSE 'false' END ||
                    ',""disableHideEmail"":' ||
                        CASE WHEN so.""Data"" IS NOT NULL
                                  AND json_valid(so.""Data"") = 1
                                  AND json_extract(so.""Data"", '$.disableHideEmail') = 1
                             THEN 'true' ELSE 'false' END ||
-                   '}',
+                   '}}',
                    datetime('now'),
                    datetime('now')
             FROM (SELECT ""OrganizationId"", ""Enabled"", ""Data"" FROM ""Policy"" WHERE ""Type"" = 7) so
@@ -53,7 +53,7 @@ public partial class CreateSendControlsPolicies : Migration
                    ds.""OrganizationId"",
                    20,
                    ds.""Enabled"",
-                   '{""disableSend"":' || CASE WHEN ds.""Enabled"" = 1 THEN 'true' ELSE 'false' END || ',""disableHideEmail"":false}',
+                   '{{""disableSend"":' || CASE WHEN ds.""Enabled"" = 1 THEN 'true' ELSE 'false' END || ',""disableHideEmail"":false}}',
                    datetime('now'),
                    datetime('now')
             FROM (SELECT ""OrganizationId"", ""Enabled"" FROM ""Policy"" WHERE ""Type"" = 6) ds

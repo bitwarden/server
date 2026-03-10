@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260228000000_CreateSendControlsPolicies")]
+    [Migration("20260306000000_CreateSendControlsPolicies")]
     partial class CreateSendControlsPolicies
     {
         /// <inheritdoc />

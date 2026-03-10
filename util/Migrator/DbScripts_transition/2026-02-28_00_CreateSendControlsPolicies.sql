@@ -64,7 +64,7 @@ BEGIN
                 WHERE
                     ds.OrganizationId = so.OrganizationId 
                     AND ds.Type = @DisableSendType
-
+        )
     ) combined
     -- Skip orgs that already have a SendControls row
     WHERE NOT EXISTS (
