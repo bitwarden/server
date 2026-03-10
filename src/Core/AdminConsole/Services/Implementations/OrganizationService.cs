@@ -40,7 +40,6 @@ public class OrganizationService : IOrganizationService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IGroupRepository _groupRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
@@ -66,7 +65,6 @@ public class OrganizationService : IOrganizationService
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
         IEventService eventService,
@@ -90,7 +88,6 @@ public class OrganizationService : IOrganizationService
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _groupRepository = groupRepository;
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
         _eventService = eventService;
