@@ -1,12 +1,22 @@
 # Seeds
 
-Hand-crafted JSON fixtures for Bitwarden Seeder test data.
+Hand-crafted JSON fixtures and preset configurations for Bitwarden Seeder test data.
 
 ## Quick Start
 
-1. Create a JSON file in the right `fixtures/` subfolder
-2. Add the `$schema` line — your editor picks up validation automatically
+1. Pick a preset from the catalog below
+2. Run: `dotnet run -- seed --preset {name} --mangle`
 3. Build to verify: `dotnet build util/Seeder/Seeder.csproj`
+
+## Presets
+
+Presets wire everything together: org + roster + ciphers. Organized by purpose:
+
+| Folder | Purpose | CLI prefix | Example |
+|--------|---------|------------|---------|
+| `features/` | Test specific Bitwarden features (SSO, TDE, policies) | `features.` | `--preset features.sso-enterprise` |
+| `qa/` | Handcrafted fixture data for visual UI verification | `qa.` | `--preset qa.enterprise-basic` |
+| `validation/` | Algorithm verification for seeder development | `validation.` | `--preset validation.density-modeling-power-law-test` |
 
 ## Writing Fixtures
 
@@ -43,18 +53,6 @@ Vault items. Each item needs a `type` and `name`.
 
 See: `fixtures/ciphers/enterprise-basic.json`
 
-### Presets
-
-Presets **wire everything together**: org + roster + ciphers. You can reference fixtures by name or generate data with counts.
-
-Three styles:
-
-- **Fixture-based**: `enterprise-basic.json` — references org, roster, and cipher fixtures
-- **Generated**: `wonka-teams-small.json` — uses `count` parameters to create users, groups, collections, ciphers
-- **Feature-specific**: `tde-enterprise.json`, `policy-enterprise.json` — adds SSO config, policies
-
-Presets can also define inline orgs (name + domain right in the preset) instead of referencing a fixture — see `large-enterprise.json`.
-
 ## Naming Conventions
 
 | Element     | Pattern            | Example               |
@@ -72,36 +70,20 @@ Your editor validates against `$schema` automatically — errors show up as red 
 dotnet build util/Seeder/Seeder.csproj
 ```
 
-## QA Test Fixture Migration Matrix
+## QA Migration
 
-These Seeds consolidate test data previously found across the `bitwarden/test` repo.
-The table below maps existing QA fixtures to their Seeder equivalents.
+Mapping from legacy QA test fixtures to seeder presets:
 
-| QA Source (`test/Bitwarden.Web.Tests/TestData/SetupData/`) | Used By                           | Seeder Preset                       | Org Fixture         | Roster Fixture           | Cipher Fixture           |
-| ---------------------------------------------------------- | --------------------------------- | ----------------------------------- | ------------------- | ------------------------ | ------------------------ |
-| `CollectionPermissionsOrg.json`                            | Web, Extension                    | `collection-permissions-enterprise` | `cobalt-logistics`  | `collection-permissions` | `collection-permissions` |
-| `EnterpriseOrg.json`                                       | Web, Extension, Android, iOS, CLI | `enterprise-basic`                  | `redwood-analytics` | `enterprise-basic`       | `enterprise-basic`       |
-| `SsoOrg.json`                                              | Web                               | `sso-enterprise`                    | `verdant-health`    | `starter-team`           | `sso-vault`              |
-| `TDEOrg.json`                                              | Web, Extension, Android, iOS      | `tde-enterprise`                    | `obsidian-labs`     | `starter-team`           | `tde-vault`              |
-| _(Confluence: Policy Org guide)_                           | QA manual setup                   | `policy-enterprise`                 | `pinnacle-designs`  | `starter-team`           | —                        |
-| `FamiliesOrg.json`                                         | Web, Extension                    | `families-basic`                    | `adams-family`      | `family`                 | —                        |
+| Legacy Source | Seeder Preset |
+|--------------|---------------|
+| `CollectionPermissionsOrg.json` | `qa.collection-permissions-enterprise` |
+| `EnterpriseOrg.json` | `qa.enterprise-basic` |
+| `SsoOrg.json` | `features.sso-enterprise` |
+| `TDEOrg.json` | `features.tde-enterprise` |
+| Policy Org (Confluence) | `features.policy-enterprise` |
+| `FamiliesOrg.json` | `qa.families-basic` |
 
-### Not Yet Migrated
-
-| QA Source             | Used By                      | Status                                                                |
-| --------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| `FreeAccount.json`    | All 7 platforms              | Planned — `free-personal-vault` preset (separate PR due to file size) |
-| `PremiumAccount.json` | Web, Extension, Android, iOS | Planned — `premium-personal-vault` preset                             |
-| `SecretsManager.json` | Web                          | Planned — `secrets-manager-enterprise` preset                         |
-| `FreeOrg.json`        | Web                          | Planned — `free-org-basic` preset                                     |
-
-### Additional Sources
-
-| Source                             | Location                        | Status                                                                                                           |
-| ---------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `bw_importer.py`                   | `github.com/bitwarden/qa-tools` | Superseded by generation-based presets (`"ciphers": {"count": N}`)                                               |
-| `mass_org_manager.py`              | `github.com/bitwarden/qa-tools` | Superseded by roster fixtures with groups/members/collections                                                    |
-| Admin Console Testing Setup guides | Confluence QA space             | Codified as `collection-permissions-enterprise`, `policy-enterprise`, `sso-enterprise`, `tde-enterprise` presets |
+**Planned:** `qa.free-personal-vault`, `qa.premium-personal-vault`, `features.secrets-manager-enterprise`, `qa.free-org-basic`
 
 ## Security
 

@@ -815,7 +815,14 @@ public class UserService : UserManager<User>, IUserService
         var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
 
         var baseStorageGb = (short)premiumPlan.Storage.Provided;
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId, baseStorageGb);
+        var secret = await BillingHelpers.AdjustStorageAsync(
+            _paymentService,
+            null,
+            _featureService,
+            user,
+            storageAdjustmentGb,
+            premiumPlan.Storage.StripePriceId,
+            baseStorageGb);
         await SaveUserAsync(user);
         return secret;
     }
