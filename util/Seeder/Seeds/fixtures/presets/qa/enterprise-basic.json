@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schemas/preset.schema.json",
+  "$schema": "../../../schemas/preset.schema.json",
   "organization": {
     "fixture": "redwood-analytics",
     "planType": "enterprise-annually",

@@ -142,7 +142,6 @@ public static class FeatureFlagKeys
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
-    public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
 
     /* Architecture */
@@ -157,7 +156,6 @@ public static class FeatureFlagKeys
     public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
     public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
@@ -166,9 +164,9 @@ public static class FeatureFlagKeys
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
-    public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
     public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
+    public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
 
     /* Autofill Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
@@ -192,6 +190,7 @@ public static class FeatureFlagKeys
     public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
     public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
     public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
+    public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -222,10 +221,10 @@ public static class FeatureFlagKeys
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
+    public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
 
     /* Platform Team */
     public const string WebPush = "web-push";
@@ -262,6 +261,7 @@ public static class FeatureFlagKeys
     public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
+    public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
