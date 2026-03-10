@@ -212,11 +212,6 @@ internal static class PresetLoader
         var identity = cipherTypes.Identity ?? 0;
         var sshKey = cipherTypes.SshKey ?? 0;
 
-        if (login + secureNote + card + identity + sshKey < 0.001)
-        {
-            return null;
-        }
-
         return new Distribution<CipherType>(
             (CipherType.Login, login),
             (CipherType.SecureNote, secureNote),
