@@ -2,7 +2,10 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.Billing;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -21,6 +24,7 @@ using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using OneOf.Types;
 using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
@@ -387,6 +391,79 @@ public class UpgradeOrganizationPlanCommandTests
         await sutProvider.GetDependency<IOrganizationService>()
             .Received(1)
             .ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpgradePlan_FeatureFlagOn_OrganizationIsNull_Throws(
+        Guid organizationId,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns(Task.FromResult<Organization>(null));
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organizationId, upgrade));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpgradePlan_FeatureFlagOn_DelegatesToVNextCommand(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+
+        BillingCommandResult<None> successResult = new None();
+        sutProvider.GetDependency<IUpgradeOrganizationPlanVNextCommand>()
+            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys)
+            .Returns(successResult);
+
+        var result = await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+
+        Assert.True(result.Item1);
+        Assert.Null(result.Item2);
+        await sutProvider.GetDependency<IUpgradeOrganizationPlanVNextCommand>()
+            .Received(1)
+            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpgradePlan_FeatureFlagOn_VNextFailure_ThrowsBillingException(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(upgrade.Plan)
+            .Returns(MockPlans.Get(upgrade.Plan));
+
+        BillingCommandResult<None> failureResult = new BadRequest("Something went wrong");
+        sutProvider.GetDependency<IUpgradeOrganizationPlanVNextCommand>()
+            .Run(organization, MockPlans.Get(upgrade.Plan), upgrade.Keys)
+            .Returns(failureResult);
+
+        var exception = await Assert.ThrowsAsync<BillingException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+        Assert.Equal("Something went wrong", exception.Response);
     }
 
     [Theory]

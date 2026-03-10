@@ -1,7 +1,7 @@
 {
-  "$schema": "../../schemas/preset.schema.json",
+  "$schema": "../../../schemas/preset.schema.json",
   "organization": {
-    "fixture": "obsidian-labs",
+    "fixture": "verdant-health",
     "planType": "enterprise-annually",
     "seats": 10
   },
@@ -9,14 +9,14 @@
     "fixture": "starter-team"
   },
   "ciphers": {
-    "fixture": "tde-vault"
+    "fixture": "sso-vault"
   },
   "policies": {
     "enable": ["requireSso"]
   },
   "sso": {
-    "identifier": "obsidian-labs",
-    "encryptionType": "trustedDevices",
+    "identifier": "verdant-health",
+    "encryptionType": "masterPassword",
     "provider": "oidc"
   }
 }
