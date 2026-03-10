@@ -68,7 +68,7 @@ public class SendOrganizationInvitesCommandTests
 
         // Assert
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+            .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 1 &&
                 info.OrgUserTokenPairs.FirstOrDefault(x => x.OrgUser.Email == invite.Email).OrgUser == invite &&
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
@@ -106,7 +106,7 @@ public class SendOrganizationInvitesCommandTests
         await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization));
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+            .SendUpdatedOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.OrgUserTokenPairs.Count() == 1 &&
                 info.OrgUserTokenPairs.FirstOrDefault(x => x.OrgUser.Email == invite.Email).OrgUser == invite &&
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
@@ -119,7 +119,7 @@ public class SendOrganizationInvitesCommandTests
     [BitAutoData(PlanType.FamiliesAnnually)]
     [BitAutoData(PlanType.Free)]
     [BitAutoData(PlanType.Custom)]
-    public async Task SendInvitesAsync_WithFeatureFlagEnabled_CallsMailServiceWithNewTemplates(
+    public async Task SendInvitesAsync_CallsMailServiceWithNewTemplates(
         PlanType planType,
         Organization organization,
         OrganizationUser invite,
@@ -131,10 +131,6 @@ public class SendOrganizationInvitesCommandTests
         // Arrange
         organization.PlanType = planType;
         invite.OrganizationId = organization.Id;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
-            .Returns(true);
 
         sutProvider.GetDependency<IUserRepository>()
             .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
@@ -162,37 +158,6 @@ public class SendOrganizationInvitesCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendInvitesAsync_WithFeatureFlagDisabled_UsesLegacyMailService(
-        Organization organization,
-        OrganizationUser invite,
-        SutProvider<SendOrganizationInvitesCommand> sutProvider)
-    {
-        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
-            .Returns(false);
-
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-            {
-                ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-            });
-
-        // Act
-        await sutProvider.Sut.SendInvitesAsync(new SendInvitesRequest([invite], organization));
-
-        // Assert - verify legacy mail service is called, not new mailer
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Any<OrganizationInvitesInfo>());
-    }
-
-    [Theory, BitAutoData]
     public async Task SendInvitesAsync_WithInvitingUserId_PopulatesInviterEmail(
         Organization organization,
         OrganizationUser invite,
@@ -203,9 +168,6 @@ public class SendOrganizationInvitesCommandTests
 
         // Arrange
         organization.PlanType = PlanType.EnterpriseAnnually;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
-            .Returns(true);
 
         sutProvider.GetDependency<IUserRepository>()
             .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
@@ -242,9 +204,6 @@ public class SendOrganizationInvitesCommandTests
 
         // Arrange
         organization.PlanType = PlanType.EnterpriseAnnually;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
-            .Returns(true);
 
         sutProvider.GetDependency<IUserRepository>()
             .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())
@@ -278,9 +237,6 @@ public class SendOrganizationInvitesCommandTests
 
         // Arrange
         organization.PlanType = PlanType.EnterpriseAnnually;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate)
-            .Returns(true);
 
         sutProvider.GetDependency<IUserRepository>()
             .GetManyByEmailsAsync(Arg.Any<IEnumerable<string>>())

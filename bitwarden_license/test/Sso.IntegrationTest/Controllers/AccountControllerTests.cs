@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
@@ -56,36 +55,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         // Assert - Should fail because there's no external authentication cookie
         Assert.False(response.IsSuccessStatusCode);
         // The endpoint will throw an exception when authentication fails
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-    }
-
-    /*
-    * Test to verify behavior of /Account/ExternalCallback with PM24579 feature flag
-    */
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task ExternalCallback_WithPM24579FeatureFlag_AndNoAuthCookie_ReturnsError
-    (
-        bool featureFlagEnabled
-    )
-    {
-        // Arrange
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(featureFlagEnabled);
-                services.AddSingleton(featureService);
-            });
-        }).CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert
-        Assert.False(response.IsSuccessStatusCode);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
@@ -526,10 +495,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                services.AddSingleton(featureService);
-
                 // Mock organization repository
                 var orgRepo = Substitute.For<IOrganizationRepository>();
                 orgRepo.GetByIdAsync(organizationId).Returns(organization);
@@ -582,10 +547,10 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
-    * Test to verify /Account/ExternalCallback returns error for revoked org user when PM24579 feature flag is enabled.
+    * Test to verify /Account/ExternalCallback returns error for revoked org user.
     */
     [Fact]
-    public async Task ExternalCallback_WithRevokedOrgUser_WithPM24579FeatureFlagEnabled_ReturnsError()
+    public async Task ExternalCallback_WithRevokedOrgUser_ReturnsError()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
@@ -594,13 +559,6 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
             .WithOrganizationUser(orgUser =>
             {
                 orgUser.Status = OrganizationUserStatusType.Revoked;
-            })
-            .WithFeatureFlags(factoryService =>
-            {
-                factoryService.SubstituteService<IFeatureService>(srv =>
-                {
-                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                });
             })
             .BuildAsync();
 
@@ -618,97 +576,17 @@ public class AccountControllerTests(SsoApplicationFactory factory) : IClassFixtu
     }
 
     /*
-    * Test to verify /Account/ExternalCallback returns error for revoked org user when PM24579 feature flag is disabled.
-    */
-    [Fact]
-    public async Task ExternalCallback_WithRevokedOrgUserStatus_WithPM24579FeatureFlagDisabled_ReturnsError()
-    {
-        // Arrange
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithUser()
-            .WithOrganizationUser(orgUser =>
-            {
-                orgUser.Status = OrganizationUserStatusType.Revoked;
-            })
-            .WithFeatureFlags(factoryService =>
-            {
-                factoryService.SubstituteService<IFeatureService>(srv =>
-                {
-                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(false);
-                });
-            })
-            .BuildAsync();
-
-        var client = testData.Factory.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert - Should fail because user has invalid status
-        var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains(
-            $"Your access to organization {testData.Organization?.DisplayName()} has been revoked. Please contact your administrator for assistance.",
-            stringResponse);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-    }
-
-    /*
-    * Test to verify /Account/ExternalCallback returns error for invited org user when PM24579 feature flag is disabled.
-    */
-    [Fact]
-    public async Task ExternalCallback_WithInvitedOrgUserStatus_WithPM24579FeatureFlagDisabled_ReturnsError()
-    {
-        // Arrange
-        var testData = await new SsoTestDataBuilder()
-            .WithSsoConfig()
-            .WithUser()
-            .WithOrganizationUser(orgUser =>
-            {
-                orgUser.Status = OrganizationUserStatusType.Invited;
-            })
-            .WithFeatureFlags(factoryService =>
-            {
-                factoryService.SubstituteService<IFeatureService>(srv =>
-                {
-                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(false);
-                });
-            })
-            .BuildAsync();
-
-        var client = testData.Factory.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/Account/ExternalCallback");
-
-        // Assert - Should fail because user has invalid status
-        var stringResponse = await response.Content.ReadAsStringAsync();
-        Assert.Contains(
-        $"To accept your invite to {testData.Organization?.DisplayName()}, you must first log in using your master password. Once your invite has been accepted, you will be able to log in using SSO.",
-            stringResponse);
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-    }
-
-
-    /*
     * Test to verify /Account/ExternalCallback returns error when user is found via SSO
-    * but has no organization user record (with feature flag enabled).
+    * but has no organization user record.
     */
     [Fact]
-    public async Task ExternalCallback_WithSsoUser_AndNoOrgUser_WithFeatureFlagEnabled_ReturnsError()
+    public async Task ExternalCallback_WithSsoUser_AndNoOrgUser_ReturnsError()
     {
         // Arrange
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig()
             .WithUser()
             .WithSsoUser()
-            .WithFeatureFlags(factoryService =>
-            {
-                factoryService.SubstituteService<IFeatureService>(srv =>
-                {
-                    srv.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers).Returns(true);
-                });
-            })
             .BuildAsync();
 
         var client = testData.Factory.CreateClient();
