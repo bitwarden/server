@@ -33,7 +33,7 @@ public class KeyConnectorEnrollmentRequestModelTests
         var results = Validate(model);
 
         Assert.Contains(results,
-            r => r.ErrorMessage == "KeyConnectorKeyWrappedUserKey must be supplied when request body is provided.");
+            r => r.ErrorMessage == "KeyConnectorKeyWrappedUserKey is not a valid encrypted string.");
     }
 
     [Fact]
