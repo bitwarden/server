@@ -206,11 +206,6 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (string.IsNullOrWhiteSpace(model.KeyConnectorKeyWrappedUserKey))
-        {
-            throw new BadRequestException("KeyConnectorKeyWrappedUserKey must be supplied when request body is provided.");
-        }
-
         var result = await _userService.ConvertToKeyConnectorAsync(user, model.KeyConnectorKeyWrappedUserKey);
         if (result.Succeeded)
         {

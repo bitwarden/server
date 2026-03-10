@@ -487,28 +487,6 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostEnrollToKeyConnectorAsync_KeyConnectorKeyWrappedUserKeyMissing_ThrowsBadRequest(
-        SutProvider<AccountsKeyManagementController> sutProvider)
-    {
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
-            .Returns(new User());
-
-        var request = new KeyConnectorEnrollmentRequestModel
-        {
-            KeyConnectorKeyWrappedUserKey = " "
-        };
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.PostEnrollToKeyConnectorAsync(request));
-
-        Assert.Equal("KeyConnectorKeyWrappedUserKey must be supplied when request body is provided.",
-            exception.Message);
-        await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
-            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>());
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task PostEnrollToKeyConnectorAsync_ConvertToKeyConnectorFails_ThrowsBadRequestWithErrorResponse(
         SutProvider<AccountsKeyManagementController> sutProvider,
         User expectedUser,
