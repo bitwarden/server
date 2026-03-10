@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-namespace Bit.Server;
+﻿namespace Bit.Server;
 
 public class Program
 {
@@ -20,7 +17,7 @@ public class Program
                 builder.ConfigureKestrel((_, _) => { });
 
                 var webRoot = config.GetValue<string>("webRoot");
-                if (string.IsNullOrWhiteSpace(webRoot))
+                if (!string.IsNullOrWhiteSpace(webRoot))
                 {
                     builder.UseWebRoot(webRoot);
                 }
