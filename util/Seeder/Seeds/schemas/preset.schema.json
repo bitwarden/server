@@ -280,6 +280,112 @@
               "minimum": 0.0,
               "maximum": 1.0,
               "description": "Fraction of org ciphers with no collection assignment."
+            },
+            "multiCollectionRate": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Fraction of non-orphan ciphers assigned to more than one collection. Default: 0."
+            },
+            "maxCollectionsPerCipher": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "Maximum number of collections a multi-collection cipher can belong to. Default: 2."
+            }
+          }
+        },
+        "userCollections": {
+          "type": "object",
+          "description": "How many direct collections each user receives via CollectionUser records.",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Minimum direct collections per user. Default: 1."
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum direct collections per user. Default: 3."
+            },
+            "shape": {
+              "type": "string",
+              "enum": ["uniform", "powerLaw", "frontLoaded"],
+              "description": "Distribution shape for user-collection assignments. Default: uniform."
+            },
+            "skew": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Skew intensity for powerLaw shape. Ignored for uniform/frontLoaded. Default: 0."
+            }
+          }
+        },
+        "cipherTypes": {
+          "type": "object",
+          "description": "Cipher type distribution for generated ciphers. Use 'preset' for a named distribution or specify custom weights per type.",
+          "additionalProperties": false,
+          "properties": {
+            "preset": {
+              "type": "string",
+              "enum": ["realistic", "loginOnly", "documentationHeavy", "developerFocused"],
+              "description": "Named cipher type distribution. Mutually exclusive with custom weights."
+            },
+            "login": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for Login ciphers. All custom weights must sum to 1.0."
+            },
+            "secureNote": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for SecureNote ciphers."
+            },
+            "card": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for Card ciphers."
+            },
+            "identity": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for Identity ciphers."
+            },
+            "sshKey": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0,
+              "description": "Weight for SSH Key ciphers."
+            }
+          }
+        },
+        "personalCiphers": {
+          "type": "object",
+          "description": "Personal cipher count distribution per user. Overrides the top-level personalCiphers.countPerUser with a variable distribution.",
+          "additionalProperties": false,
+          "properties": {
+            "shape": {
+              "type": "string",
+              "enum": ["realistic", "lightUsage", "heavyUsage"],
+              "description": "Named distribution for personal cipher counts per user. Default: flat countPerUser."
+            }
+          }
+        },
+        "folders": {
+          "type": "object",
+          "description": "Folder count distribution per user. Overrides the default realistic distribution.",
+          "additionalProperties": false,
+          "properties": {
+            "shape": {
+              "type": "string",
+              "enum": ["realistic", "enterprise", "minimal"],
+              "description": "Named folder count distribution. Default: realistic."
             }
           }
         }
