@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -15,20 +14,19 @@ public interface IHasPaymentMethodQuery
 }
 
 public class HasPaymentMethodQuery(
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IHasPaymentMethodQuery
 {
     public async Task<bool> Run(ISubscriber subscriber)
     {
-        var hasUnverifiedBankAccount = await HasUnverifiedBankAccountAsync(subscriber);
-
         var customer = await subscriberService.GetCustomer(subscriber);
 
         if (customer == null)
         {
-            return hasUnverifiedBankAccount;
+            return false;
         }
+
+        var hasUnverifiedBankAccount = await HasUnverifiedBankAccountAsync(customer.Id);
 
         return
             !string.IsNullOrEmpty(customer.InvoiceSettings.DefaultPaymentMethodId) ||
@@ -37,21 +35,14 @@ public class HasPaymentMethodQuery(
             customer.Metadata.ContainsKey(MetadataKeys.BraintreeCustomerId);
     }
 
-    private async Task<bool> HasUnverifiedBankAccountAsync(
-        ISubscriber subscriber)
+    private async Task<bool> HasUnverifiedBankAccountAsync(string customerId)
     {
-        var setupIntentId = await setupIntentCache.GetSetupIntentIdForSubscriber(subscriber.Id);
-
-        if (string.IsNullOrEmpty(setupIntentId))
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
         {
-            return false;
-        }
-
-        var setupIntent = await stripeAdapter.GetSetupIntentAsync(setupIntentId, new SetupIntentGetOptions
-        {
-            Expand = ["payment_method"]
+            Customer = customerId,
+            Expand = ["data.payment_method"]
         });
 
-        return setupIntent.IsUnverifiedBankAccount();
+        return setupIntents?.Any(si => si.IsUnverifiedBankAccount()) ?? false;
     }
 }

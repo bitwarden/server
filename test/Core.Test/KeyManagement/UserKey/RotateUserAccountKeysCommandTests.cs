@@ -3,6 +3,7 @@ using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.KeyManagement.UserKey.Implementations;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
@@ -20,6 +21,13 @@ namespace Bit.Core.Test.KeyManagement.UserKey;
 [SutProviderCustomize]
 public class RotateUserAccountKeysCommandTests
 {
+    private static readonly string _mockEncryptedType2String =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private static readonly string _mockEncryptedType2String2 =
+        "2.06CDSJjTZaigYHUuswIq5A==|trxgZl2RCkYrrmCvGE9WNA==|w5p05eI5wsaYeSyWtsAPvBX63vj798kIMxBTfSB0BQg=";
+    private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
+    private static readonly string _mockEncryptedType7String2 = "7.Mi1iaXR3YXJkZW4tZGF0YQo=";
+
     [Theory, BitAutoData]
     public async Task RotateUserAccountKeysAsync_WrongOldMasterPassword_Rejects(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
@@ -144,7 +152,7 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model);
-        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "2.xxx";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = _mockEncryptedType2String;
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
@@ -157,7 +165,7 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model);
-        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "7.xxx";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = _mockEncryptedType7String;
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
@@ -228,7 +236,7 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model);
-        model.AccountKeys.SignatureKeyPairData.WrappedSigningKey = "2.xxx";
+        model.AccountKeys.SignatureKeyPairData.WrappedSigningKey = _mockEncryptedType2String;
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
@@ -256,7 +264,7 @@ public class RotateUserAccountKeysCommandTests
         var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
         SetV1ExistingUser(user, signatureRepository);
         SetV2ModelUser(model);
-        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "2.abc";
+        model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = _mockEncryptedType2String;
 
         var saveEncryptedDataActions = new List<Core.KeyManagement.UserKey.UpdateEncryptedDataForKeyRotation>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
@@ -389,7 +397,199 @@ public class RotateUserAccountKeysCommandTests
         }
     }
 
-    // Helper functions to set valid test parameters that match each other to the model and user. 
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithV2UpgradeToken_NoLogout(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        model.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Security stamp is not updated
+        Assert.Equal(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Token is stored on user
+        Assert.NotNull(user.V2UpgradeToken);
+        Assert.Contains(_mockEncryptedType7String, user.V2UpgradeToken);
+        Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
+
+        // Assert - Push notification sent with KeyRotation reason
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id, false, Enums.PushNotificationLogOutReason.KeyRotation);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithoutV2UpgradeToken_Logout(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        user.V2UpgradeToken = null;
+        model.V2UpgradeToken = null;
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Security stamp is updated
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Token is not stored on user
+        Assert.Null(user.V2UpgradeToken);
+
+        // Assert - Push notification sent without reason
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithExistingToken_WithoutNewToken_ClearsStaleToken(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+
+        // User has existing stale token from previous rotation
+        var staleToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+        user.V2UpgradeToken = staleToken.ToJson();
+
+        // Model does NOT provide new token
+        model.V2UpgradeToken = null;
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Stale token explicitly cleared
+        Assert.Null(user.V2UpgradeToken);
+
+        // Assert - Security stamp is updated (logout behavior)
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Push notification sent without reason (standard logout)
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_WithExistingToken_WithNewToken_UpdatesToken(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+
+        // User has existing token from previous rotation
+        var oldToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+        user.V2UpgradeToken = oldToken.ToJson();
+
+        // Model provides NEW token
+        model.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String2,
+            WrappedUserKey2 = _mockEncryptedType2String2
+        };
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Security stamp is not updated (no logout)
+        Assert.Equal(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Token contains new wrapped keys
+        Assert.NotNull(user.V2UpgradeToken);
+        Assert.Contains(_mockEncryptedType7String2, user.V2UpgradeToken);
+        Assert.Contains(_mockEncryptedType2String2, user.V2UpgradeToken);
+
+        // Assert - Token does NOT contain old wrapped keys
+        Assert.DoesNotContain(oldToken.WrappedUserKey1, user.V2UpgradeToken);
+        Assert.DoesNotContain(oldToken.WrappedUserKey2, user.V2UpgradeToken);
+
+        // Assert - Push notification sent with KeyRotation reason (no logout)
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id, false, Enums.PushNotificationLogOutReason.KeyRotation);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateUserAccountKeysAsync_V2User_WithV2UpgradeToken_IgnoresTokenAndLogsOut(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, RotateUserAccountKeysData model)
+    {
+        // Arrange
+        SetTestKdfAndSaltForUserAndModel(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model);
+
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        model.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
+
+        // Assert - Token is NOT stored (V2 users don't need upgrade token)
+        Assert.Null(user.V2UpgradeToken);
+
+        // Assert - Security stamp IS updated (full logout)
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
+
+        // Assert - Standard logout push, not KeyRotation reason
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id);
+    }
+
+    // Helper functions to set valid test parameters that match each other to the model and user.
     private static void SetTestKdfAndSaltForUserAndModel(User user, RotateUserAccountKeysData model)
     {
         user.Kdf = Enums.KdfType.Argon2id;
@@ -406,7 +606,7 @@ public class RotateUserAccountKeysCommandTests
 
     private static void SetV1ExistingUser(User user, IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
     {
-        user.PrivateKey = "2.abc";
+        user.PrivateKey = _mockEncryptedType2String;
         user.PublicKey = "public";
         user.SignedPublicKey = null;
         userSignatureKeyPairRepository.GetByUserIdAsync(user.Id).ReturnsNull();
@@ -414,23 +614,23 @@ public class RotateUserAccountKeysCommandTests
 
     private static void SetV2ExistingUser(User user, IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
     {
-        user.PrivateKey = "7.abc";
+        user.PrivateKey = _mockEncryptedType7String;
         user.PublicKey = "public";
         user.SignedPublicKey = "signed-public";
-        userSignatureKeyPairRepository.GetByUserIdAsync(user.Id).Returns(new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.abc", "verifying-key"));
+        userSignatureKeyPairRepository.GetByUserIdAsync(user.Id).Returns(new SignatureKeyPairData(SignatureAlgorithm.Ed25519, _mockEncryptedType7String, "verifying-key"));
     }
 
     private static void SetV1ModelUser(RotateUserAccountKeysData model)
     {
-        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("2.abc", "public", null);
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(_mockEncryptedType2String, "public", null);
         model.AccountKeys.SignatureKeyPairData = null;
         model.AccountKeys.SecurityStateData = null;
     }
 
     private static void SetV2ModelUser(RotateUserAccountKeysData model)
     {
-        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("7.abc", "public", "signed-public");
-        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, "7.abc", "verifying-key");
+        model.AccountKeys.PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(_mockEncryptedType7String, "public", "signed-public");
+        model.AccountKeys.SignatureKeyPairData = new SignatureKeyPairData(SignatureAlgorithm.Ed25519, _mockEncryptedType7String, "verifying-key");
         model.AccountKeys.SecurityStateData = new SecurityStateData
         {
             SecurityState = "abc",

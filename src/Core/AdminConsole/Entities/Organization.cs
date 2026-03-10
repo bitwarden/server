@@ -144,6 +144,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UsePhishingBlocker { get; set; }
 
+    /// <summary>
+    /// If set to true, My Items collections will be created automatically when the Organization Data Ownership
+    /// policy is enabled.
+    /// </summary>
+    public bool UseMyItems { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))
@@ -324,6 +330,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
         Use2fa = license.Use2fa;
         UseApi = license.UseApi;
         UsePolicies = license.UsePolicies;
+        UseMyItems = license.UseMyItems;
         UseSso = license.UseSso;
         UseKeyConnector = license.UseKeyConnector;
         UseScim = license.UseScim;

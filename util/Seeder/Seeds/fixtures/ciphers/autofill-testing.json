@@ -1,0 +1,214 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "Simple Login",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeBasicFormPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/login/simple", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Iframe Login",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeIframeBasicFormPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/login/iframe-login", "match": "startsWith" },
+          { "uri": "https://localhost/login-page-bare", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Sandboxed Iframe Login",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeSandboxedIframeBasicFormPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/login/iframe-sandboxed-login", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Bare Inputs Login",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeBareInputsPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/login/bare-inputs-login", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Hidden Login",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeHiddenFormPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/login/hidden-login", "match": "startsWith" }
+        ]
+      },
+      "fields": [
+        { "name": "email", "value": "bwplaywright@example.com", "type": "text" }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Input Constraints Login",
+      "login": {
+        "username": "bwplaywright@example.com",
+        "password": "123456",
+        "uris": [
+          { "uri": "https://localhost/forms/login/input-constraints-login", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Login Honeypot",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeLoginHoneypotPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/login/login-honeypot", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Multi-Step Email Username Login",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeMultiStepPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/multi-step/email-username-login", "match": "startsWith" }
+        ]
+      },
+      "fields": [
+        { "name": "email", "value": "bwplaywright@example.com", "type": "text" }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Security Code Multi Input",
+      "login": {
+        "uris": [
+          { "uri": "https://localhost/forms/login/security-code-multi-input", "match": "startsWith" }
+        ],
+        "totp": "ABCD EFGH IJKL MNOPsecurity-code-multi-input"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Shadow Root Inputs",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeShadowRootInputsPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/login/shadow-root-inputs", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Create Account",
+      "login": {
+        "username": "bwplaywright@example.com",
+        "password": "fakeCreateAccountPagePassword",
+        "uris": [
+          { "uri": "https://localhost/forms/create/create-account", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "identity",
+      "name": "NA Address - John Smith",
+      "identity": {
+        "firstName": "John",
+        "middleName": "M",
+        "lastName": "Smith",
+        "address1": "123 Main St",
+        "address2": "Apt 1",
+        "city": "New York",
+        "state": "NY",
+        "postalCode": "10001",
+        "country": "USA"
+      }
+    },
+    {
+      "type": "card",
+      "name": "Visa Test Card",
+      "card": {
+        "cardholderName": "John Smith",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "12",
+        "expYear": "2025",
+        "code": "123"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Simple Search",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeSimpleSearchPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/search/simple-search", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Inline Search",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeInlineSearchPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/search/inline-search", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Typeless Search",
+      "login": {
+        "username": "bwplaywright",
+        "password": "fakeTypelessSearchPassword",
+        "uris": [
+          { "uri": "https://localhost/forms/search/typeless-search", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Update Email",
+      "login": {
+        "username": "bwplaywright@example.com",
+        "password": "fakeUpdateEmailPagePassword",
+        "uris": [
+          { "uri": "https://localhost/forms/update/update-email", "match": "startsWith" }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Update Password",
+      "login": {
+        "username": "bwplaywright@example.com",
+        "password": "fakeUpdatePasswordPagePassword",
+        "uris": [
+          { "uri": "https://localhost/forms/update/update-password", "match": "startsWith" }
+        ]
+      }
+    }
+  ]
+}
