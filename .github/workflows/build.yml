@@ -232,7 +232,8 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           GHCR_TAG="${_GHCR_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
-          TAGS="${GHCR_TAG},${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          TAGS="${GHCR_TAG},${ACR_TAG}"
           echo "primary_tag=${GHCR_TAG}" >> "$GITHUB_OUTPUT"
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
@@ -318,6 +319,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Log in to ACR - production subscription
+        run: az acr login -n "$_AZ_REGISTRY" --only-show-errors
+
       - name: Make Docker stubs
         if: |
           github.event_name != 'pull_request'
@@ -362,6 +373,9 @@ jobs:
 
       - name: Log out from GHCR
         run: docker logout ghcr.io
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Upload Docker stub US artifact
         if: |
