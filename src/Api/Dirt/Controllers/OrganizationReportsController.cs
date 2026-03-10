@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
@@ -126,18 +127,13 @@ public class OrganizationReportsController : Controller
     [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> CreateOrganizationReportAsync(
         Guid organizationId,
-        [FromBody] AddOrganizationReportRequest request)
+        [FromBody] AddOrganizationReportRequestModel request)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
         {
             if (organizationId == Guid.Empty)
             {
                 throw new BadRequestException("Organization ID is required.");
-            }
-
-            if (request.OrganizationId != organizationId)
-            {
-                throw new BadRequestException("Organization ID in the request body must match the route parameter");
             }
 
             if (!request.FileSize.HasValue)
@@ -152,7 +148,7 @@ public class OrganizationReportsController : Controller
 
             await AuthorizeAsync(organizationId);
 
-            var report = await _createReportCommand.CreateAsync(request);
+            var report = await _createReportCommand.CreateAsync(request.ToData(organizationId));
             var fileData = report.GetReportFile()!;
 
             return Ok(new OrganizationReportFileResponseModel
@@ -168,12 +164,7 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
-        if (request.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
-        }
-
-        var v1Report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request);
+        var v1Report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request.ToData(organizationId));
         var response = v1Report == null ? null : new OrganizationReportResponseModel(v1Report);
         return Ok(response);
     }
@@ -226,7 +217,7 @@ public class OrganizationReportsController : Controller
             throw new BadRequestException("Invalid report ID");
         }
 
-        return Ok(v1Report);
+        return Ok(new OrganizationReportResponseModel(v1Report));
     }
 
     // UPDATE Whole Report
@@ -235,14 +226,11 @@ public class OrganizationReportsController : Controller
     public async Task<IActionResult> UpdateOrganizationReportAsync(
         Guid organizationId,
         Guid reportId,
-        [FromBody] UpdateOrganizationReportV2Request request)
+        [FromBody] UpdateOrganizationReportV2RequestModel request)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
         {
             await AuthorizeAsync(organizationId);
-
-            request.OrganizationId = organizationId;
-            request.ReportId = reportId;
 
             if (request.RequiresNewFileUpload)
             {
@@ -257,7 +245,8 @@ public class OrganizationReportsController : Controller
                 }
             }
 
-            var report = await _updateReportV2Command.UpdateAsync(request);
+            var coreRequest = request.ToData(organizationId, reportId);
+            var report = await _updateReportV2Command.UpdateAsync(coreRequest);
 
             if (request.RequiresNewFileUpload)
             {
@@ -276,11 +265,6 @@ public class OrganizationReportsController : Controller
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
-        }
-
-        if (request.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
         }
 
         var v1Request = new UpdateOrganizationReportRequest
@@ -325,7 +309,7 @@ public class OrganizationReportsController : Controller
         var summaryDataList = await _getOrganizationReportSummaryDataByDateRangeQuery
             .GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
 
-        return Ok(summaryDataList);
+        return Ok(summaryDataList.Select(s => new OrganizationReportSummaryDataResponseModel(s)));
     }
 
     [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
@@ -445,83 +429,55 @@ public class OrganizationReportsController : Controller
 
     // Removing post v2 launch
     [HttpPatch("{organizationId}/data/application/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId, [FromBody] UpdateOrganizationReportApplicationDataRequest request)
-    {
-        try
-        {
-            if (!await _currentContext.AccessReports(organizationId))
-            {
-                throw new NotFoundException();
-            }
-
-            if (request.OrganizationId != organizationId)
-            {
-                throw new BadRequestException("Organization ID in the request body must match the route parameter");
-            }
-
-            if (request.Id != reportId)
-            {
-                throw new BadRequestException("Report ID in the request body must match the route parameter");
-            }
-
-            var updatedReport = await _updateOrganizationReportApplicationDataCommand.UpdateOrganizationReportApplicationDataAsync(request);
-            var response = new OrganizationReportResponseModel(updatedReport);
-
-            return Ok(response);
-        }
-        catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))
-        {
-            throw;
-        }
-    }
-
-    [HttpGet("{organizationId}/data/application/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
-    {
-        try
-        {
-            if (!await _currentContext.AccessReports(organizationId))
-            {
-                throw new NotFoundException();
-            }
-
-            var applicationData = await _getOrganizationReportApplicationDataQuery.GetOrganizationReportApplicationDataAsync(organizationId, reportId);
-
-            if (applicationData == null)
-            {
-                throw new NotFoundException("Organization report application data not found.");
-            }
-
-            return Ok(applicationData);
-        }
-        catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))
-        {
-            throw;
-        }
-    }
-
-    [HttpPatch("{organizationId}/data/report/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportDataAsync(
+    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(
         Guid organizationId,
         Guid reportId,
-        [FromBody] UpdateOrganizationReportDataRequest request)
+        [FromBody] UpdateOrganizationReportApplicationDataRequestModel request)
     {
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        if (request.OrganizationId != organizationId)
+        var updatedReport = await _updateOrganizationReportApplicationDataCommand
+            .UpdateOrganizationReportApplicationDataAsync(request.ToData(organizationId, reportId));
+        var response = new OrganizationReportResponseModel(updatedReport);
+
+        return Ok(response);
+    }
+
+    [HttpGet("{organizationId}/data/application/{reportId}")]
+    public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
         {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
+            throw new NotFoundException();
         }
 
-        if (request.ReportId != reportId)
+        var applicationData = await _getOrganizationReportApplicationDataQuery
+            .GetOrganizationReportApplicationDataAsync(organizationId, reportId);
+
+        if (applicationData == null)
         {
-            throw new BadRequestException("Report ID in the request body must match the route parameter");
+            throw new NotFoundException("Organization report application data not found.");
         }
 
-        var updatedReport = await _updateOrganizationReportDataCommand.UpdateOrganizationReportDataAsync(request);
+        return Ok(new OrganizationReportApplicationDataResponseModel(applicationData));
+    }
+
+    [HttpPatch("{organizationId}/data/report/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportDataAsync(
+        Guid organizationId,
+        Guid reportId,
+        [FromBody] UpdateOrganizationReportDataRequestModel request)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var updatedReport = await _updateOrganizationReportDataCommand
+            .UpdateOrganizationReportDataAsync(request.ToData(organizationId, reportId));
         var response = new OrganizationReportResponseModel(updatedReport);
 
         return Ok(response);
@@ -542,27 +498,22 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException("Organization report data not found.");
         }
 
-        return Ok(reportData);
+        return Ok(new OrganizationReportDataResponseModel(reportData));
     }
 
     [HttpPatch("{organizationId}/data/summary/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(Guid organizationId, Guid reportId, [FromBody] UpdateOrganizationReportSummaryRequest request)
+    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(
+        Guid organizationId,
+        Guid reportId,
+        [FromBody] UpdateOrganizationReportSummaryRequestModel request)
     {
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        if (request.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Organization ID in the request body must match the route parameter");
-        }
-
-        if (request.ReportId != reportId)
-        {
-            throw new BadRequestException("Report ID in the request body must match the route parameter");
-        }
-        var updatedReport = await _updateOrganizationReportSummaryCommand.UpdateOrganizationReportSummaryAsync(request);
+        var updatedReport = await _updateOrganizationReportSummaryCommand
+            .UpdateOrganizationReportSummaryAsync(request.ToData(organizationId, reportId));
         var response = new OrganizationReportResponseModel(updatedReport);
 
         return Ok(response);
@@ -584,6 +535,6 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException("Report not found for the specified organization.");
         }
 
-        return Ok(summaryData);
+        return Ok(new OrganizationReportSummaryDataResponseModel(summaryData));
     }
 }
