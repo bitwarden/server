@@ -13,6 +13,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -584,6 +585,72 @@ public class UserServiceTests
         // Assert
         Assert.False(response);
         Assert.NotNull(user.TwoFactorProviders);
+    }
+
+    [Theory]
+    [BitAutoData("wrapped-user-key")]
+    [BitAutoData("2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=")]
+    public async Task ConvertToKeyConnectorAsync_WrappedUserKeyProvided_SetsWrappedUserKey(
+        string wrappedUserKey,
+        SutProvider<UserService> sutProvider,
+        User user)
+    {
+        // Arrange
+        user.UsesKeyConnector = false;
+        user.MasterPassword = "master-password";
+        user.Key = "old-key";
+        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
+
+        // Act
+        var result = await sutProvider.Sut.ConvertToKeyConnectorAsync(user, wrappedUserKey);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Null(user.MasterPassword);
+        Assert.Equal(wrappedUserKey, user.Key);
+        Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<User>(u =>
+                u == user &&
+                u.Key == wrappedUserKey &&
+                u.MasterPassword == null &&
+                u.UsesKeyConnector));
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConvertToKeyConnectorAsync_WrappedUserKeyNull_DoesNotOverwriteExistingKey(
+        SutProvider<UserService> sutProvider,
+        User user)
+    {
+        // Arrange
+        const string existingUserKey = "existing-user-key";
+        user.UsesKeyConnector = false;
+        user.MasterPassword = "master-password";
+        user.Key = existingUserKey;
+        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
+
+        // Act
+        var result = await sutProvider.Sut.ConvertToKeyConnectorAsync(user, null);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Null(user.MasterPassword);
+        Assert.Equal(existingUserKey, user.Key);
+        Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
+
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<User>(u =>
+                u == user &&
+                u.Key == existingUserKey &&
+                u.MasterPassword == null &&
+                u.UsesKeyConnector));
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
     }
 
     private static void SetupUserAndDevice(User user,
