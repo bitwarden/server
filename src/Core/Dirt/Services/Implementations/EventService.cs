@@ -152,8 +152,23 @@ public class EventService : IEventService
     public async Task LogCollectionEventsAsync(IEnumerable<(Collection collection, EventType type, DateTime? date)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
+        // Batch lookup provider IDs for all unique organization IDs upfront
+        var materializedEvents = events.ToList();
+        var uniqueOrgIds = materializedEvents
+            .Select(e => e.collection.OrganizationId)
+            .Distinct()
+            .Where(orgId => CanUseEvents(orgAbilities, orgId))
+            .ToList();
+
+        var providerIds = new Dictionary<Guid, Guid?>();
+        foreach (var orgId in uniqueOrgIds)
+        {
+            providerIds[orgId] = await GetProviderIdAsync(orgId);
+        }
+
         var eventMessages = new List<IEvent>();
-        foreach (var (collection, type, date) in events)
+        foreach (var (collection, type, date) in materializedEvents)
         {
             if (!CanUseEvents(orgAbilities, collection.OrganizationId))
             {
@@ -166,7 +181,7 @@ public class EventService : IEventService
                 CollectionId = collection.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                ProviderId = await GetProviderIdAsync(collection.OrganizationId),
+                ProviderId = providerIds.GetValueOrDefault(collection.OrganizationId),
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             });
         }
@@ -183,8 +198,23 @@ public class EventService : IEventService
     public async Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+
+        // Batch lookup provider IDs for all unique organization IDs upfront
+        var materializedEvents = events.ToList();
+        var uniqueOrgIds = materializedEvents
+            .Select(e => e.group.OrganizationId)
+            .Distinct()
+            .Where(orgId => CanUseEvents(orgAbilities, orgId))
+            .ToList();
+
+        var providerIds = new Dictionary<Guid, Guid?>();
+        foreach (var orgId in uniqueOrgIds)
+        {
+            providerIds[orgId] = await GetProviderIdAsync(orgId);
+        }
+
         var eventMessages = new List<IEvent>();
-        foreach (var (group, type, systemUser, date) in events)
+        foreach (var (group, type, systemUser, date) in materializedEvents)
         {
             if (!CanUseEvents(orgAbilities, group.OrganizationId))
             {
@@ -197,7 +227,7 @@ public class EventService : IEventService
                 GroupId = group.Id,
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
-                ProviderId = await GetProviderIdAsync(group.OrganizationId),
+                ProviderId = providerIds.GetValueOrDefault(group.OrganizationId),
                 SystemUser = systemUser,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
