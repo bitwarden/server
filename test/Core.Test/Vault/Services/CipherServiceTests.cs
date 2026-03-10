@@ -2575,4 +2575,54 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
     }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_NullCipher_ThrowsNotFoundException(
+        string attachmentId, SutProvider<CipherService> sutProvider)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentDownloadDataAsync(null, attachmentId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_AttachmentNotFound_ThrowsNotFoundException(
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipher = new Cipher { Id = Guid.NewGuid(), Attachments = null };
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentDownloadDataAsync(cipher, "nonexistent"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_ReturnsUrlFromStorageService(
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var attachmentId = Guid.NewGuid().ToString();
+        var expectedUrl = "https://example.com/download?token=abc";
+
+        var metaData = new CipherAttachment.MetaData
+        {
+            AttachmentId = attachmentId,
+            FileName = "test.txt",
+            Size = 100,
+        };
+
+        var cipher = new Cipher
+        {
+            Id = cipherId,
+            Attachments = System.Text.Json.JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, metaData } }),
+        };
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .GetAttachmentDownloadUrlAsync(cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(expectedUrl);
+
+        var result = await sutProvider.Sut.GetAttachmentDownloadDataAsync(cipher, attachmentId);
+
+        Assert.Equal(expectedUrl, result.Url);
+        Assert.Equal(attachmentId, result.Id);
+    }
 }
