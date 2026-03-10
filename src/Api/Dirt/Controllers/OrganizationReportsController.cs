@@ -83,6 +83,13 @@ public class OrganizationReportsController : Controller
     }
 
 
+    /// <summary>
+    /// Gets the most recent organization report for the specified organization.
+    /// When the Access Intelligence V2 feature flag is enabled, includes a presigned download URL
+    /// for the report file if one has been validated. Otherwise, returns the report metadata only.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <returns>An <see cref="OrganizationReportResponseModel"/>, or null if no reports exist.</returns>
     [HttpGet("{organizationId}/latest")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
     {
@@ -118,11 +125,16 @@ public class OrganizationReportsController : Controller
         return Ok(v1Response);
     }
 
-    /**
-    * Keeping post v2 launch of Access Intelligence
-    **/
-
-    // CREATE Whole Report
+    /// <summary>
+    /// Creates a new organization report for the specified organization.
+    /// When the Access Intelligence V2 feature flag is enabled, validates the file size and returns
+    /// a presigned upload URL for the report file along with the created report metadata.
+    /// Otherwise, creates the report with inline data.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="request">The request model containing report data and optional file metadata.</param>
+    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when V2 is enabled,
+    /// or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
     [HttpPost("{organizationId}")]
     [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> CreateOrganizationReportAsync(
@@ -169,7 +181,15 @@ public class OrganizationReportsController : Controller
         return Ok(response);
     }
 
-    // READ Whole Report BY IDs
+    /// <summary>
+    /// Gets a specific organization report by its report ID.
+    /// Validates that the report belongs to the specified organization.
+    /// When the Access Intelligence V2 feature flag is enabled, includes a presigned download URL
+    /// for the report file if one has been validated.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="reportId">The unique identifier of the report to retrieve.</param>
+    /// <returns>An <see cref="OrganizationReportResponseModel"/> matching the specified IDs.</returns>
     [HttpGet("{organizationId}/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
@@ -220,7 +240,17 @@ public class OrganizationReportsController : Controller
         return Ok(new OrganizationReportResponseModel(v1Report));
     }
 
-    // UPDATE Whole Report
+    /// <summary>
+    /// Updates an existing organization report for the specified organization.
+    /// When the Access Intelligence V2 feature flag is enabled and a new file upload is required,
+    /// validates the file size and returns a presigned upload URL.
+    /// Otherwise, updates the report metadata and inline data.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="reportId">The unique identifier of the report to update.</param>
+    /// <param name="request">The request model containing updated report data and optional file metadata.</param>
+    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when a new file is required,
+    /// or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
     [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
@@ -288,10 +318,10 @@ public class OrganizationReportsController : Controller
     /// evenly spaced across the date range, including the most recent entry.
     /// This allows the widget to show trends over time while ensuring the latest data point is always included.
     /// </summary>
-    /// <param name="organizationId"></param>
-    /// <param name="startDate"></param>
-    /// <param name="endDate"></param>
-    /// <returns></returns>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="startDate">The start of the date range to query.</param>
+    /// <param name="endDate">The end of the date range to query.</param>
+    /// <returns>A collection of <see cref="OrganizationReportSummaryDataResponseModel"/> entries spaced across the date range.</returns>
     [HttpGet("{organizationId}/data/summary")]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
@@ -312,6 +342,14 @@ public class OrganizationReportsController : Controller
         return Ok(summaryDataList.Select(s => new OrganizationReportSummaryDataResponseModel(s)));
     }
 
+    /// <summary>
+    /// Uploads a report data file for a self-hosted organization report via multipart form data.
+    /// Validates the uploaded file size against the expected size (with a 1 MB leeway) and marks
+    /// the report file as validated upon success. Requires the Access Intelligence V2 feature flag.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="reportId">The unique identifier of the report to attach the file to.</param>
+    /// <param name="reportFileId">The identifier of the report file entry to upload against.</param>
     [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
     [HttpPost("{organizationId}/{reportId}/file/report-data")]
     [SelfHosted(SelfHostedOnly = true)]
@@ -369,6 +407,14 @@ public class OrganizationReportsController : Controller
         await _organizationReportRepo.ReplaceAsync(report);
     }
 
+    /// <summary>
+    /// Handles Azure Event Grid webhook notifications for blob storage events.
+    /// When a <c>Microsoft.Storage.BlobCreated</c> event is received, validates the uploaded
+    /// report file against the corresponding organization report. Orphaned blobs (with no
+    /// matching report) are deleted. Requires the Access Intelligence V2 feature flag.
+    /// This endpoint is anonymous to allow Azure Event Grid to call it directly.
+    /// </summary>
+    /// <returns>An <see cref="ObjectResult"/> acknowledging the Event Grid event.</returns>
     [AllowAnonymous]
     [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
     [HttpPost("file/validate/azure")]
