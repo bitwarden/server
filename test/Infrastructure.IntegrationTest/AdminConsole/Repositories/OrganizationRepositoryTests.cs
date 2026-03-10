@@ -378,28 +378,28 @@ public class OrganizationRepositoryTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal(organization.Id, result.Id);
-        Assert.True(result.UseEvents);
-        Assert.True(result.Use2fa);
-        Assert.False(result.Using2fa); // TwoFactorProviders is null in test helper
-        Assert.True(result.UsersGetPremium);
-        Assert.True(result.Enabled);
-        Assert.True(result.UseSso);
-        Assert.True(result.UseKeyConnector);
-        Assert.True(result.UseScim);
-        Assert.True(result.UseResetPassword);
-        Assert.True(result.UseCustomPermissions);
-        Assert.True(result.UsePolicies);
-        Assert.True(result.LimitCollectionCreation);
-        Assert.True(result.LimitCollectionDeletion);
-        Assert.True(result.LimitItemDeletion);
-        Assert.True(result.AllowAdminAccessToAllCollectionItems);
-        Assert.True(result.UseRiskInsights);
-        Assert.True(result.UseOrganizationDomains);
-        Assert.True(result.UseAdminSponsoredFamilies);
-        Assert.True(result.UseAutomaticUserConfirmation);
-        Assert.True(result.UseDisableSmAdsForUsers);
-        Assert.True(result.UsePhishingBlocker);
-        Assert.True(result.UseMyItems);
+        Assert.Equal(organization.UseEvents, result.UseEvents);
+        Assert.Equal(organization.Use2fa, result.Use2fa);
+        Assert.Equal(organization.Use2fa && organization.TwoFactorProviders != null, result.Using2fa);
+        Assert.Equal(organization.UsersGetPremium, result.UsersGetPremium);
+        Assert.Equal(organization.Enabled, result.Enabled);
+        Assert.Equal(organization.UseSso, result.UseSso);
+        Assert.Equal(organization.UseKeyConnector, result.UseKeyConnector);
+        Assert.Equal(organization.UseScim, result.UseScim);
+        Assert.Equal(organization.UseResetPassword, result.UseResetPassword);
+        Assert.Equal(organization.UseCustomPermissions, result.UseCustomPermissions);
+        Assert.Equal(organization.UsePolicies, result.UsePolicies);
+        Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
+        Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
+        Assert.Equal(organization.LimitItemDeletion, result.LimitItemDeletion);
+        Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
+        Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
+        Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
+        Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+        Assert.Equal(organization.UseDisableSmAdsForUsers, result.UseDisableSmAdsForUsers);
+        Assert.Equal(organization.UsePhishingBlocker, result.UsePhishingBlocker);
+        Assert.Equal(organization.UseMyItems, result.UseMyItems);
 
         // Clean up
         await organizationRepository.DeleteAsync(organization);
