@@ -146,7 +146,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         }
     }
 
-    public async Task<OrganizationAbility> GetAbilityAsync(Guid organizationId)
+#nullable enable
+    public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -181,6 +182,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 }).SingleOrDefaultAsync();
         }
     }
+#nullable disable
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
