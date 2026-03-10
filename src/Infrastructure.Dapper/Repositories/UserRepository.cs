@@ -531,6 +531,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
                     KdfMemory = masterPasswordUnlockData.Kdf.Memory,
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
+                    // PM-28827 TODO after MasterPasswordSalt is added to the user column
+                    // MasterPasswordSalt = masterPasswordUnlockData.Salt;
                     Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
