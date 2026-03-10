@@ -170,10 +170,6 @@ server {
     proxy_pass http://scim:5000/;
   }
 {{/if}}
-{{#if EnableSeederApi}}
 
-  location /seeder/ {
-    proxy_pass http://seederapi:5000/;
-  }
-{{/if}}
+  include /etc/bitwarden/nginx/extra-locations/*.conf;
 }

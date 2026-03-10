@@ -97,9 +97,6 @@ public class Configuration
     [Description("Enable SCIM")]
     public bool EnableScim { get; set; } = false;
 
-    [Description("Enable Seeder API")]
-    public bool EnableSeederApi { get; set; } = false;
-
     [Description("Enable Built-In MSSQL Container Generation")]
     public bool EnableBuiltInMsSql { get; set; } = true;
 
