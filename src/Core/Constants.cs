@@ -220,10 +220,10 @@ public static class FeatureFlagKeys
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
+    public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
 
     /* Platform Team */
     public const string WebPush = "web-push";
