@@ -199,7 +199,6 @@ public class AccountsKeyManagementController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [SelfHosted(SelfHostedOnly = true)]
     [HttpPost("key-connector/enroll")]
     public async Task PostEnrollToKeyConnectorAsync([FromBody] KeyConnectorEnrollmentRequestModel model)
     {
