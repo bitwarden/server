@@ -1,4 +1,5 @@
-﻿using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 
 namespace Bit.Api.Dirt.Models.Request;
 
@@ -8,6 +9,7 @@ public class AddOrganizationReportRequestModel
     public string? ContentEncryptionKey { get; set; }
     public string? SummaryData { get; set; }
     public string? ApplicationData { get; set; }
+    [JsonPropertyName("metrics")]
     public OrganizationReportMetrics? ReportMetrics { get; set; }
     public long? FileSize { get; set; }
 
