@@ -162,7 +162,7 @@ public class UpcomingInvoiceHandler(
 
         if (isBusinessUse)
         {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address.Country, customer.TaxExempt);
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
             switch (customer)
             {
                 case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
@@ -455,7 +455,7 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address.Country, customer.TaxExempt);
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
         switch (customer)
         {
             case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }

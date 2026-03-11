@@ -123,7 +123,7 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address.Country, sub.Customer.TaxExempt);
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
             switch (sub.Customer)
             {
                 case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }

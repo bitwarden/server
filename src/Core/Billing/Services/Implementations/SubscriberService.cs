@@ -602,7 +602,7 @@ public class SubscriberService(
 
         if (isBusinessUseSubscriber)
         {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address.Country, customer.TaxExempt);
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
             switch (customer)
             {
                 case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
