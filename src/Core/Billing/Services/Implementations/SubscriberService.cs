@@ -627,8 +627,8 @@ public class SubscriberService(
             {
                 User => true,
                 Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
-                                             TaxHelpers.IsDirectTaxCountry(customer.Address.Country) || (customer.TaxIds?.Any() ?? false),
-                Provider => TaxHelpers.IsDirectTaxCountry(customer.Address.Country) || (customer.TaxIds?.Any() ?? false),
+                                             TaxHelpers.IsDirectTaxCountry(customer.Address?.Country) || (customer.TaxIds?.Any() ?? false),
+                Provider provider => TaxHelpers.IsDirectTaxCountry(customer.Address?.Country) || (customer.TaxIds?.Any() ?? false),
                 _ => false
             };
 
