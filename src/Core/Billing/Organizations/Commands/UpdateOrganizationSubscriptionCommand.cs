@@ -10,7 +10,6 @@ using Stripe;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 
-using static Core.Constants;
 using static StripeConstants;
 
 /// <summary>

@@ -14,8 +14,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
-using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 
 namespace Bit.Core.Billing.Premium.Commands;
 /// <summary>
