@@ -19,6 +19,7 @@ public class PaymentSucceededHandler(
     IOrganizationRepository organizationRepository,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserService userService,
+    IUserRepository userRepository,
     IOrganizationEnableCommand organizationEnableCommand,
     IPricingClient pricingClient,
     IPushNotificationAdapter pushNotificationAdapter)
@@ -115,6 +116,8 @@ public class PaymentSucceededHandler(
             }
 
             await userService.EnablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
+            var user = await userRepository.GetByIdAsync(userId.Value);
+            await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
         }
     }
 }

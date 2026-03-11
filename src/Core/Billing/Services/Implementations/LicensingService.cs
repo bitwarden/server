@@ -14,6 +14,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -36,6 +37,7 @@ public class LicensingService : ILicensingService
     private readonly ILogger<LicensingService> _logger;
     private readonly ILicenseClaimsFactory<Organization> _organizationLicenseClaimsFactory;
     private readonly ILicenseClaimsFactory<User> _userLicenseClaimsFactory;
+    private readonly IPushNotificationService _pushNotificationService;
 
     private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
 
@@ -47,7 +49,8 @@ public class LicensingService : ILicensingService
         ILogger<LicensingService> logger,
         IGlobalSettings globalSettings,
         ILicenseClaimsFactory<Organization> organizationLicenseClaimsFactory,
-        ILicenseClaimsFactory<User> userLicenseClaimsFactory)
+        ILicenseClaimsFactory<User> userLicenseClaimsFactory,
+        IPushNotificationService pushNotificationService)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -56,6 +59,7 @@ public class LicensingService : ILicensingService
         _globalSettings = globalSettings;
         _organizationLicenseClaimsFactory = organizationLicenseClaimsFactory;
         _userLicenseClaimsFactory = userLicenseClaimsFactory;
+        _pushNotificationService = pushNotificationService;
 
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
@@ -246,6 +250,8 @@ public class LicensingService : ILicensingService
         await _userRepository.ReplaceAsync(user);
 
         await _mailService.SendLicenseExpiredAsync(new List<string> { user.Email });
+
+        await _pushNotificationService.PushPremiumStatusChangedAsync(user);
     }
 
     public bool VerifyLicense(ILicense license)

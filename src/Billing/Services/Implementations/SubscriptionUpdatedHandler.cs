@@ -22,6 +22,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
@@ -37,6 +38,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IStripeFacade stripeFacade,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
+        IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationEnableCommand organizationEnableCommand,
         IOrganizationDisableCommand organizationDisableCommand,
@@ -52,6 +54,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeFacade = stripeFacade;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
+        _userRepository = userRepository;
         _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
         _organizationEnableCommand = organizationEnableCommand;
@@ -140,7 +143,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private Task DisableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
         subscriberId.Match(
-            userId => _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd),
+            async userId =>
+            {
+                await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
+                var user = await _userRepository.GetByIdAsync(userId.Value);
+                await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+            },
             async organizationId =>
             {
                 await _organizationDisableCommand.DisableAsync(organizationId.Value, currentPeriodEnd);
@@ -162,7 +170,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private Task EnableSubscriberAsync(SubscriberId subscriberId, DateTime? currentPeriodEnd) =>
         subscriberId.Match(
-            userId => _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd),
+            async userId =>
+            {
+                await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
+                var user = await _userRepository.GetByIdAsync(userId.Value);
+                await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+            },
             async organizationId =>
             {
                 await _organizationEnableCommand.EnableAsync(organizationId.Value, currentPeriodEnd);

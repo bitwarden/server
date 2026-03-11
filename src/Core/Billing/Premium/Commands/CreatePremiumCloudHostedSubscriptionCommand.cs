@@ -166,6 +166,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         await userService.SaveUserAsync(user);
         await pushNotificationService.PushSyncVaultAsync(user.Id);
+        await pushNotificationService.PushPremiumStatusChangedAsync(user);
 
         return new None();
     });

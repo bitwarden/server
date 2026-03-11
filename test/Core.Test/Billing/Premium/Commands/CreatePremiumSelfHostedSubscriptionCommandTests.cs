@@ -195,5 +195,7 @@ public class CreatePremiumSelfHostedSubscriptionCommandTests
         await _licensingService.Received(1).WriteUserLicenseAsync(user, license);
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushPremiumStatusChangedAsync(
+            Arg.Is<User>(u => u.Id == userId && u.Premium == true));
     }
 }

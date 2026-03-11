@@ -429,6 +429,21 @@ public interface IPushNotificationService
             },
             ExcludeCurrentContext = false,
         });
+
+    Task PushPremiumStatusChangedAsync(Entities.User user)
+        => PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.SyncPremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium,
+                PremiumExpirationDate = user.PremiumExpirationDate,
+            },
+            ExcludeCurrentContext = false,
+        });
     #endregion
 
     Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds);

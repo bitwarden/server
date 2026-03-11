@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -215,6 +215,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushPremiumStatusChangedAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Premium == true));
     }
 
     [Theory, BitAutoData]
@@ -250,7 +252,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
-        mockSubscription.Status = "active";
+        mockSubscription.Status = "incomplete";
         mockSubscription.LatestInvoiceId = "in_123";
 
         var mockInvoice = Substitute.For<Invoice>();
@@ -278,6 +280,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
         await _userService.Received(1).SaveUserAsync(user);
         await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushPremiumStatusChangedAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Premium == true));
     }
 
     [Theory, BitAutoData]

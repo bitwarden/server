@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
@@ -68,4 +69,7 @@ public class PushNotificationAdapter(
             },
             ExcludeCurrentContext = false,
         });
+
+    public Task NotifyPremiumStatusChangedAsync(User user) =>
+        pushNotificationService.PushPremiumStatusChangedAsync(user);
 }
