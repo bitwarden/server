@@ -17,7 +17,7 @@ namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly string _mockEncryptedString =
-        "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+        "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -200,7 +200,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         });
 
         var mockEncryptedString2 =
-            "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+            "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
         var request = new ProjectCreateRequestModel { Name = mockEncryptedString2 };
 
         var response = await _client.PutAsJsonAsync($"/projects/{initialProject.Id}", request);
@@ -215,7 +215,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var initialProject = await SetupProjectWithAccessAsync(permissionType);
 
         var mockEncryptedString2 =
-            "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+            "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
         var request = new ProjectUpdateRequestModel { Name = mockEncryptedString2 };
 
@@ -244,7 +244,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var request = new ProjectUpdateRequestModel
         {
             Name =
-                "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
+                "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
         };
 
         var response = await _client.PutAsJsonAsync("/projects/c53de509-4581-402c-8cbd-f26d2c516fba", request);
@@ -268,7 +268,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var request = new ProjectUpdateRequestModel
         {
             Name =
-                "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
+                "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
         };
 
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}", request);

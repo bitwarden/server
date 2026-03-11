@@ -31,7 +31,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private static readonly string _masterKeyWrappedUserKey =
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
-    private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
+    private static readonly string _mockEncryptedType7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGA==";
 
     private static readonly string _masterPasswordHash = "master_password_hash";
     private static readonly string _newMasterPasswordHash = "new_master_password_hash";

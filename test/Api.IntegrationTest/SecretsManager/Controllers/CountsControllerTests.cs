@@ -17,7 +17,7 @@ namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly string _mockEncryptedString =
-        "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+        "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
