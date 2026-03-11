@@ -80,7 +80,15 @@ public class UpgradePremiumToOrganizationCommand(
             return new BadRequest("User does not have an active Premium subscription.");
         }
 
-        var (currentSubscription, premiumPlans, passwordManagerItem) = await GetPremiumPlanAndSubscriptionDetailsAsync(user);
+        // Fetch the current Premium subscription from Stripe
+        var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+
+        // Fetch all premium plans to find which specific plan the user is on
+        var premiumPlans = await pricingClient.ListPremiumPlans();
+
+        // Find the password manager subscription item (seat, not storage) and match it to a plan
+        var passwordManagerItem = currentSubscription.Items.Data.FirstOrDefault(i =>
+            premiumPlans.Any(p => p.Seat.StripePriceId == i.Price.Id));
 
         if (passwordManagerItem == null)
         {
@@ -142,21 +150,6 @@ public class UpgradePremiumToOrganizationCommand(
 
         return organization.Id;
     });
-
-    private async Task<(Subscription currentSubscription, List<PremiumPlan> premiumPlans, SubscriptionItem? passwordManagerItem)> GetPremiumPlanAndSubscriptionDetailsAsync(User user)
-    {
-        // Fetch the current Premium subscription from Stripe
-        var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
-
-        // Fetch all premium plans to find which specific plan the user is on
-        var premiumPlans = await pricingClient.ListPremiumPlans();
-
-        // Find the password manager subscription item (seat, not storage) and match it to a plan
-        var passwordManagerItem = currentSubscription.Items.Data.FirstOrDefault(i =>
-            premiumPlans.Any(p => p.Seat.StripePriceId == i.Price.Id));
-
-        return (currentSubscription, premiumPlans, passwordManagerItem);
-    }
 
     private List<SubscriptionItemOptions> BuildSubscriptionItemOptions(
         Subscription currentSubscription,
