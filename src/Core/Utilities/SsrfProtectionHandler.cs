@@ -12,9 +12,24 @@ namespace Bit.Core.Utilities;
 /// This handler performs DNS resolution on the request URI, validates that none of the
 /// resolved addresses are internal, and then rewrites the request to connect directly
 /// to the validated IP while preserving the original Host header for TLS/SNI.
+///
+/// It also handles HTTP redirects manually so that each redirect hop is validated
+/// against SSRF rules. Callers should ensure AllowAutoRedirect is disabled on the
+/// primary handler to prevent the inner handler from following redirects without validation.
 /// </summary>
 public class SsrfProtectionHandler : DelegatingHandler
 {
+    private const int _maxRedirects = 10;
+
+    private static readonly HashSet<HttpStatusCode> _redirectStatusCodes =
+    [
+        HttpStatusCode.MovedPermanently,   // 301
+        HttpStatusCode.Found,              // 302
+        HttpStatusCode.SeeOther,           // 303
+        HttpStatusCode.TemporaryRedirect,  // 307
+        (HttpStatusCode)308                // 308 Permanent Redirect
+    ];
+
     private readonly ILogger<SsrfProtectionHandler> _logger;
 
     public SsrfProtectionHandler(ILogger<SsrfProtectionHandler> logger)
@@ -31,7 +46,49 @@ public class SsrfProtectionHandler : DelegatingHandler
             throw new SsrfProtectionException("Request URI is null.");
         }
 
-        var uri = request.RequestUri;
+        var response = await ValidateAndSendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        // Manually follow redirects with SSRF validation on each hop
+        var redirectCount = 0;
+        while (_redirectStatusCodes.Contains(response.StatusCode) &&
+               response.Headers.Location is not null &&
+               redirectCount < _maxRedirects)
+        {
+            redirectCount++;
+
+            var redirectUri = response.Headers.Location.IsAbsoluteUri
+                ? response.Headers.Location
+                : new Uri(request.RequestUri!, response.Headers.Location);
+
+            // Only allow http/https redirects
+            if (redirectUri.Scheme != Uri.UriSchemeHttp && redirectUri.Scheme != Uri.UriSchemeHttps)
+            {
+                _logger.LogWarning(
+                    "SSRF protection blocked redirect to non-HTTP scheme {Scheme}",
+                    redirectUri.Scheme);
+                break;
+            }
+
+            // Determine the method for the redirected request
+            var redirectMethod = GetRedirectMethod(request.Method, response.StatusCode);
+
+            response.Dispose();
+
+            using var redirectRequest = new HttpRequestMessage(redirectMethod, redirectUri);
+            response = await ValidateAndSendAsync(redirectRequest, cancellationToken).ConfigureAwait(false);
+        }
+
+        return response;
+    }
+
+    /// <summary>
+    /// Validates the request URI against SSRF rules and sends the request via the inner handler.
+    /// </summary>
+    private async Task<HttpResponseMessage> ValidateAndSendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var uri = request.RequestUri!;
         var host = uri.Host;
 
         // Resolve the host to IP addresses
@@ -78,6 +135,21 @@ public class SsrfProtectionHandler : DelegatingHandler
         request.RequestUri = builder.Uri;
 
         return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Determines the HTTP method to use for a redirect based on the original method and status code.
+    /// </summary>
+    private static HttpMethod GetRedirectMethod(HttpMethod originalMethod, HttpStatusCode statusCode)
+    {
+        // 307 and 308 preserve the original method
+        if (statusCode is HttpStatusCode.TemporaryRedirect or (HttpStatusCode)308)
+        {
+            return originalMethod;
+        }
+
+        // 301, 302, 303 change POST to GET per RFC 7231
+        return HttpMethod.Get;
     }
 
     /// <summary>

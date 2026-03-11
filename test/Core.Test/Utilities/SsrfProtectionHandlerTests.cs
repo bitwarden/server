@@ -17,13 +17,24 @@ public class SsrfProtectionHandlerTests
     private class TestInnerHandler : HttpMessageHandler
     {
         public HttpRequestMessage? LastRequest { get; private set; }
+        public List<HttpRequestMessage> AllRequests { get; } = [];
+        private readonly Queue<HttpResponseMessage> _responses = new();
+
+        public void EnqueueResponse(HttpResponseMessage response)
+        {
+            _responses.Enqueue(response);
+        }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             LastRequest = request;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            AllRequests.Add(request);
+            var response = _responses.Count > 0
+                ? _responses.Dequeue()
+                : new HttpResponseMessage(HttpStatusCode.OK);
+            return Task.FromResult(response);
         }
     }
 
@@ -122,5 +133,147 @@ public class SsrfProtectionHandlerTests
 
         await Assert.ThrowsAsync<SsrfProtectionException>(
             () => client.GetAsync(url));
+    }
+
+    [Fact]
+    public async Task SendAsync_RedirectToInternalIp_ThrowsSsrfProtectionException()
+    {
+        // Simulates an attacker-controlled domain redirecting to the AWS metadata endpoint
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.Found);
+        redirectResponse.Headers.Location = new Uri("http://169.254.169.254/latest/meta-data/");
+        inner.EnqueueResponse(redirectResponse);
+
+        await Assert.ThrowsAsync<SsrfProtectionException>(
+            () => client.GetAsync("http://8.8.8.8/attacker"));
+    }
+
+    [Fact]
+    public async Task SendAsync_RedirectToPublicIp_Succeeds()
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.Found);
+        redirectResponse.Headers.Location = new Uri("http://1.1.1.1/final");
+        inner.EnqueueResponse(redirectResponse);
+
+        var response = await client.GetAsync("http://8.8.8.8/start");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, inner.AllRequests.Count);
+    }
+
+    [Fact]
+    public async Task SendAsync_RedirectToLocalhost_ThrowsSsrfProtectionException()
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.MovedPermanently);
+        redirectResponse.Headers.Location = new Uri("http://127.0.0.1/admin");
+        inner.EnqueueResponse(redirectResponse);
+
+        await Assert.ThrowsAsync<SsrfProtectionException>(
+            () => client.GetAsync("http://8.8.8.8/redirect-to-localhost"));
+    }
+
+    [Fact]
+    public async Task SendAsync_MultipleRedirectsToPublicIps_Succeeds()
+    {
+        var (client, inner) = CreateClient();
+
+        var redirect1 = new HttpResponseMessage(HttpStatusCode.Found);
+        redirect1.Headers.Location = new Uri("http://1.1.1.1/hop2");
+        inner.EnqueueResponse(redirect1);
+
+        var redirect2 = new HttpResponseMessage(HttpStatusCode.Found);
+        redirect2.Headers.Location = new Uri("http://52.20.30.40/hop3");
+        inner.EnqueueResponse(redirect2);
+
+        // Final response is OK (default from TestInnerHandler)
+
+        var response = await client.GetAsync("http://8.8.8.8/start");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(3, inner.AllRequests.Count);
+    }
+
+    [Fact]
+    public async Task SendAsync_RedirectChainEventuallyHitsInternalIp_ThrowsSsrfProtectionException()
+    {
+        var (client, inner) = CreateClient();
+
+        var redirect1 = new HttpResponseMessage(HttpStatusCode.Found);
+        redirect1.Headers.Location = new Uri("http://1.1.1.1/hop2");
+        inner.EnqueueResponse(redirect1);
+
+        var redirect2 = new HttpResponseMessage(HttpStatusCode.Found);
+        redirect2.Headers.Location = new Uri("http://10.0.0.1/internal");
+        inner.EnqueueResponse(redirect2);
+
+        await Assert.ThrowsAsync<SsrfProtectionException>(
+            () => client.GetAsync("http://8.8.8.8/start"));
+    }
+
+    [Fact]
+    public async Task SendAsync_RelativeRedirect_ResolvesAgainstOriginalUri()
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.Found);
+        redirectResponse.Headers.Location = new Uri("/new-path", UriKind.Relative);
+        inner.EnqueueResponse(redirectResponse);
+
+        var response = await client.GetAsync("http://8.8.8.8/original");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, inner.AllRequests.Count);
+    }
+
+    [Fact]
+    public async Task SendAsync_NonHttpRedirectScheme_StopsFollowing()
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.Found);
+        redirectResponse.Headers.Location = new Uri("ftp://8.8.8.8/file");
+        inner.EnqueueResponse(redirectResponse);
+
+        var response = await client.GetAsync("http://8.8.8.8/start");
+
+        // Should return the redirect response itself, not follow it
+        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        Assert.Single(inner.AllRequests);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.MovedPermanently)]  // 301
+    [InlineData(HttpStatusCode.Found)]             // 302
+    [InlineData(HttpStatusCode.SeeOther)]          // 303
+    public async Task SendAsync_301_302_303_Redirect_ChangesPostToGet(HttpStatusCode redirectCode)
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(redirectCode);
+        redirectResponse.Headers.Location = new Uri("http://1.1.1.1/final");
+        inner.EnqueueResponse(redirectResponse);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "http://8.8.8.8/start");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, inner.AllRequests.Count);
+        Assert.Equal(HttpMethod.Get, inner.AllRequests[1].Method);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TemporaryRedirect)] // 307
+    public async Task SendAsync_307_Redirect_PreservesOriginalMethod(HttpStatusCode redirectCode)
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(redirectCode);
+        redirectResponse.Headers.Location = new Uri("http://1.1.1.1/final");
+        inner.EnqueueResponse(redirectResponse);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "http://8.8.8.8/start");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, inner.AllRequests.Count);
+        Assert.Equal(HttpMethod.Post, inner.AllRequests[1].Method);
     }
 }
