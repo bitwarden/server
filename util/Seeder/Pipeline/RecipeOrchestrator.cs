@@ -82,7 +82,7 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
 
         if (options.Ciphers > 0)
         {
-            builder.AddFolders();
+            builder.AddFolders(options.Density);
             builder.AddCiphers(options.Ciphers, options.CipherTypeDistribution, options.PasswordDistribution, density: options.Density);
         }
 

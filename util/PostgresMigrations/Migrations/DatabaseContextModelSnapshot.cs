@@ -1154,6 +1154,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ReportFile")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -2005,6 +2008,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("MasterPasswordHint")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");

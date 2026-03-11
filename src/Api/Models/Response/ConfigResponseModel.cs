@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Text.Json.Serialization;
+
 using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -44,7 +46,8 @@ public class ConfigResponseModel : ResponseModel
             Api = globalSettings.BaseServiceUri.Api,
             Identity = globalSettings.BaseServiceUri.Identity,
             Notifications = globalSettings.BaseServiceUri.Notifications,
-            Sso = globalSettings.BaseServiceUri.Sso
+            Sso = globalSettings.BaseServiceUri.Sso,
+            FillAssistRules = globalSettings.BaseServiceUri.FillAssistRules
         };
         FeatureStates = featureService.GetAll();
         var webPushEnabled = FeatureStates.TryGetValue(FeatureFlagKeys.WebPush, out var webPushEnabledValue) ? (bool)webPushEnabledValue : false;
@@ -71,6 +74,8 @@ public class EnvironmentConfigResponseModel
     public string Identity { get; set; }
     public string Notifications { get; set; }
     public string Sso { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string FillAssistRules { get; set; }
 }
 
 public class PushSettings
