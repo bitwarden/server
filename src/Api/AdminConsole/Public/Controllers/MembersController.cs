@@ -176,7 +176,7 @@ public class MembersController : Controller
         }
 
         var invite = model.ToOrganizationUserInvite();
-        if (_featureService.IsEnabled(FeatureFlagKeys.CommandResultRefactor))
+        if (_featureService.IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor))
         {
             return await PostInviteUserAsync_vNext(model, organization!, hasStandaloneSecretsManager);
         }

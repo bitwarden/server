@@ -404,11 +404,11 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task Post_CustomMember_WithCommandResultRefactor_Success()
+    public async Task Post_CustomMember_WithPublicMembersInviteRefactor_Success()
     {
         var featureService = _factory.GetService<IFeatureService>();
         featureService
-            .IsEnabled(FeatureFlagKeys.CommandResultRefactor)
+            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
             .Returns(true);
 
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
@@ -444,11 +444,11 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task Post_UserMember_WithCommandResultRefactor_Success()
+    public async Task Post_UserMember_WithPublicMembersInviteRefactor_Success()
     {
         var featureService = _factory.GetService<IFeatureService>();
         featureService
-            .IsEnabled(FeatureFlagKeys.CommandResultRefactor)
+            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
             .Returns(true);
 
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";

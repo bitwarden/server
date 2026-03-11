@@ -39,7 +39,9 @@ public class UpdateOrganizationSubscriptionCommand(
 {
     private static readonly List<string> _validSubscriptionStatusesForUpdate =
     [
-        SubscriptionStatus.Trialing, SubscriptionStatus.Active, SubscriptionStatus.PastDue
+        SubscriptionStatus.Trialing,
+        SubscriptionStatus.Active,
+        SubscriptionStatus.PastDue
     ];
 
     private readonly ILogger<UpdateOrganizationSubscriptionCommand> _logger = logger;
