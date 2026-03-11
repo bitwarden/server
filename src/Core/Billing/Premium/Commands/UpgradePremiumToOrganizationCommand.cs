@@ -348,13 +348,10 @@ public class UpgradePremiumToOrganizationCommand(
 
     private async Task PayInvoiceUsingPayPalAsync(Subscription subscription, Guid organizationId)
     {
-        var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
-        {
-            AutoAdvance = false,
-            Expand = ["customer"]
-        });
+        var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId,
+            new InvoiceUpdateOptions { AutoAdvance = false, Expand = ["customer"] });
 
-        await braintreeService.PayInvoice(new UserId(organizationId), invoice);
+        await braintreeService.PayInvoice(new OrganizationId(organizationId), invoice);
     }
 
     /// <summary>

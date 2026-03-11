@@ -1347,7 +1347,7 @@ public class UpgradePremiumToOrganizationCommandTests
                 opts.Expand.Contains("customer")));
 
         await _braintreeService.Received(1).PayInvoice(
-            Arg.Is<SubscriberId>(id => id.IsT0 && id.AsT0.Value == organizationId),
+            Arg.Is<SubscriberId>(id => id.IsOrganizationId && id.AsT1.Value == organizationId),
             mockInvoice);
     }
 
