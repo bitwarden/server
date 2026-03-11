@@ -119,13 +119,12 @@ public class UpgradePremiumToOrganizationCommandTests
 
     private static List<PremiumPlan> CreateTestPremiumPlansList()
     {
-        return new List<PremiumPlan>
-        {
-            // Current available plan
+        return
+        [
             CreateTestPremiumPlan(available: true),
             // Legacy plan from 2020
             CreateTestPremiumPlan("premium-annually-2020", "personal-storage-gb-annually-2020", available: false)
-        };
+        ];
     }
 
 
@@ -225,15 +224,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -301,15 +300,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -370,15 +369,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>
             {
@@ -431,21 +430,22 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium_legacy",
                         Price = new Price { Id = "premium-annually-2020" }, // Legacy price ID
                         CurrentPeriodEnd = currentPeriodEnd
                     },
-                    new SubscriptionItem
+
+                    new SubscriptionItem()
                     {
                         Id = "si_storage_legacy",
                         Price = new Price { Id = "personal-storage-gb-annually-2020" }, // Legacy storage price ID
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -500,21 +500,22 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_premium",
                         Price = new Price { Id = "premium-annually" },
                         CurrentPeriodEnd = currentPeriodEnd
                     },
+
                     new SubscriptionItem
                     {
                         Id = "si_other_product",
                         Price = new Price { Id = "some-other-product-id" }, // Non-premium item
                         CurrentPeriodEnd = currentPeriodEnd
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -568,15 +569,15 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
+                Data =
+                [
+                    new SubscriptionItem()
                     {
                         Id = "si_other",
                         Price = new Price { Id = "some-other-product" }, // Not a premium plan
                         CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1)
                     }
-                }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -609,14 +610,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -665,14 +662,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -719,14 +712,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -772,14 +761,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -831,14 +816,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -890,14 +871,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -943,14 +920,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -997,14 +970,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1048,14 +1017,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem() { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1106,14 +1071,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1159,14 +1120,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1228,14 +1185,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1286,14 +1239,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1350,14 +1299,10 @@ public class UpgradePremiumToOrganizationCommandTests
             LatestInvoiceId = "in_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1419,14 +1364,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };
@@ -1469,14 +1410,10 @@ public class UpgradePremiumToOrganizationCommandTests
             Id = "sub_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data = new List<SubscriptionItem>
-                {
-                    new SubscriptionItem
-                    {
-                        Id = "si_premium",
-                        Price = new Price { Id = "premium-annually" }
-                    }
-                }
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
             },
             Metadata = new Dictionary<string, string>()
         };

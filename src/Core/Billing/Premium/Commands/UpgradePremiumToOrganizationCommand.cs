@@ -103,16 +103,18 @@ public class UpgradePremiumToOrganizationCommand(
             organizationId, user, organizationName, publicKey, encryptedPrivateKey, targetPlan, currentSubscription.Id);
 
         // Update customer billing address for tax calculation
-        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, new CustomerUpdateOptions
-        {
-            Address = new AddressOptions
+        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId,
+            new CustomerUpdateOptions
             {
-                Country = billingAddress.Country,
-                PostalCode = billingAddress.PostalCode
-            },
-            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
-        });
-
+                Address = new AddressOptions
+                {
+                    Country = billingAddress.Country,
+                    PostalCode = billingAddress.PostalCode
+                },
+                TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates
+                    ? TaxExempt.Reverse
+                    : TaxExempt.None
+            });
 
         await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions);
 
@@ -376,11 +378,7 @@ public class UpgradePremiumToOrganizationCommand(
         if (taxId.Code == TaxIdType.SpanishNIF)
         {
             await stripeAdapter.CreateTaxIdAsync(customerId,
-                new TaxIdCreateOptions
-                {
-                    Type = TaxIdType.EUVAT,
-                    Value = $"ES{taxId.Value}"
-                });
+                new TaxIdCreateOptions { Type = TaxIdType.EUVAT, Value = $"ES{taxId.Value}" });
         }
     }
 }
