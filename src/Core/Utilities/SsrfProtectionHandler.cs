@@ -32,6 +32,14 @@ public class SsrfProtectionHandler : DelegatingHandler
 
     private readonly ILogger<SsrfProtectionHandler> _logger;
 
+    /// <summary>
+    /// When <c>true</c> (default), the handler follows HTTP redirects and validates each hop
+    /// against SSRF rules. When <c>false</c>, the handler validates the initial request only
+    /// and returns redirect responses as-is to the caller. Set to <c>false</c> for clients
+    /// that implement their own redirect-following logic (e.g., Icons).
+    /// </summary>
+    public bool FollowRedirects { get; set; } = true;
+
     public SsrfProtectionHandler(ILogger<SsrfProtectionHandler> logger)
     {
         _logger = logger;
@@ -46,7 +54,19 @@ public class SsrfProtectionHandler : DelegatingHandler
             throw new SsrfProtectionException("Request URI is null.");
         }
 
+        // Track the current URI and method across hops. ValidateAndSendAsync rewrites
+        // the request URI to a resolved IP, so we must preserve the original hostname-based
+        // URI for correct relative redirect resolution and the current method for correct
+        // method transitions (e.g., POST→301→GET→307 should preserve GET, not the original POST).
+        var currentUri = request.RequestUri!;
+        var currentMethod = request.Method;
+
         var response = await ValidateAndSendAsync(request, cancellationToken).ConfigureAwait(false);
+
+        if (!FollowRedirects)
+        {
+            return response;
+        }
 
         // Manually follow redirects with SSRF validation on each hop
         var redirectCount = 0;
@@ -58,7 +78,7 @@ public class SsrfProtectionHandler : DelegatingHandler
 
             var redirectUri = response.Headers.Location.IsAbsoluteUri
                 ? response.Headers.Location
-                : new Uri(request.RequestUri!, response.Headers.Location);
+                : new Uri(currentUri, response.Headers.Location);
 
             // Only allow http/https redirects
             if (redirectUri.Scheme != Uri.UriSchemeHttp && redirectUri.Scheme != Uri.UriSchemeHttps)
@@ -70,12 +90,17 @@ public class SsrfProtectionHandler : DelegatingHandler
             }
 
             // Determine the method for the redirected request
-            var redirectMethod = GetRedirectMethod(request.Method, response.StatusCode);
+            var redirectMethod = GetRedirectMethod(currentMethod, response.StatusCode);
 
             response.Dispose();
 
             using var redirectRequest = new HttpRequestMessage(redirectMethod, redirectUri);
             response = await ValidateAndSendAsync(redirectRequest, cancellationToken).ConfigureAwait(false);
+
+            // Update tracking for next iteration — use the pre-rewrite URI
+            // (redirectUri is not mutated by ValidateAndSendAsync)
+            currentUri = redirectUri;
+            currentMethod = redirectMethod;
         }
 
         return response;

@@ -28,7 +28,7 @@ public static class ServiceCollectionExtension
         {
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-        }).AddSsrfProtection();
+        }).AddSsrfProtection(followRedirects: false);
 
         // The CreatePasswordUri handler wants similar headers as Icons to portray coming from a browser but
         // needs to follow redirects to get the final URL.

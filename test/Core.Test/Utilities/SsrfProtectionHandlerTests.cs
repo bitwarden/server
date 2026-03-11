@@ -41,12 +41,13 @@ public class SsrfProtectionHandlerTests
     /// <summary>
     /// Creates an SsrfProtectionHandler wrapping a TestInnerHandler for testing purposes.
     /// </summary>
-    private (HttpClient client, TestInnerHandler inner) CreateClient()
+    private (HttpClient client, TestInnerHandler inner) CreateClient(bool followRedirects = true)
     {
         var inner = new TestInnerHandler();
         var handler = new SsrfProtectionHandler(_logger)
         {
-            InnerHandler = inner
+            InnerHandler = inner,
+            FollowRedirects = followRedirects
         };
         var client = new HttpClient(handler);
         return (client, inner);
@@ -275,5 +276,98 @@ public class SsrfProtectionHandlerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(2, inner.AllRequests.Count);
         Assert.Equal(HttpMethod.Post, inner.AllRequests[1].Method);
+    }
+
+    [Fact]
+    public async Task SendAsync_FollowRedirectsFalse_ReturnsRedirectResponseWithoutFollowing()
+    {
+        var (client, inner) = CreateClient(followRedirects: false);
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.Found);
+        redirectResponse.Headers.Location = new Uri("http://1.1.1.1/final");
+        inner.EnqueueResponse(redirectResponse);
+
+        var response = await client.GetAsync("http://8.8.8.8/start");
+
+        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        Assert.Single(inner.AllRequests);
+    }
+
+    [Fact]
+    public async Task SendAsync_FollowRedirectsFalse_StillValidatesInitialRequest()
+    {
+        var (client, _) = CreateClient(followRedirects: false);
+
+        await Assert.ThrowsAsync<SsrfProtectionException>(
+            () => client.GetAsync("http://127.0.0.1/admin"));
+    }
+
+    [Fact]
+    public async Task SendAsync_FollowRedirectsFalse_RedirectToInternalIp_ReturnsRedirectWithoutBlocking()
+    {
+        // When followRedirects is false, the handler doesn't follow the redirect at all,
+        // so it never sees the internal IP. The caller is responsible for validating
+        // redirect targets (e.g., Icons' FollowRedirectsAsync creates new requests
+        // that go through SsrfProtectionHandler again).
+        var (client, inner) = CreateClient(followRedirects: false);
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.Found);
+        redirectResponse.Headers.Location = new Uri("http://169.254.169.254/latest/meta-data/");
+        inner.EnqueueResponse(redirectResponse);
+
+        var response = await client.GetAsync("http://8.8.8.8/start");
+
+        Assert.Equal(HttpStatusCode.Found, response.StatusCode);
+        Assert.Single(inner.AllRequests);
+    }
+
+    [Fact]
+    public async Task SendAsync_RelativeRedirectAfterAbsoluteRedirect_ResolvesAgainstCurrentHost()
+    {
+        // Chain: 8.8.8.8 -> 302 http://1.1.1.1/hop2 -> 302 /relative
+        // The relative redirect should resolve against 1.1.1.1 (the current hop),
+        // not 8.8.8.8 (the original request which got IP-rewritten by ValidateAndSendAsync).
+        var (client, inner) = CreateClient();
+
+        var redirect1 = new HttpResponseMessage(HttpStatusCode.Found);
+        redirect1.Headers.Location = new Uri("http://1.1.1.1/hop2");
+        inner.EnqueueResponse(redirect1);
+
+        var redirect2 = new HttpResponseMessage(HttpStatusCode.Found);
+        redirect2.Headers.Location = new Uri("/relative-path", UriKind.Relative);
+        inner.EnqueueResponse(redirect2);
+
+        // Final response is OK (default from TestInnerHandler)
+
+        var response = await client.GetAsync("http://8.8.8.8/start");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(3, inner.AllRequests.Count);
+        // The third request should have resolved /relative-path against 1.1.1.1
+        Assert.Equal("1.1.1.1", inner.AllRequests[2].Headers.Host);
+    }
+
+    [Fact]
+    public async Task SendAsync_Post301ThenGet307_PreservesGetFromIntermediateHop()
+    {
+        // Chain: POST -> 301 (changes to GET) -> 307 (should preserve GET, not original POST)
+        var (client, inner) = CreateClient();
+
+        var redirect1 = new HttpResponseMessage(HttpStatusCode.MovedPermanently);
+        redirect1.Headers.Location = new Uri("http://1.1.1.1/hop2");
+        inner.EnqueueResponse(redirect1);
+
+        var redirect2 = new HttpResponseMessage(HttpStatusCode.TemporaryRedirect);
+        redirect2.Headers.Location = new Uri("http://52.20.30.40/hop3");
+        inner.EnqueueResponse(redirect2);
+
+        // Final response is OK (default from TestInnerHandler)
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "http://8.8.8.8/start");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(3, inner.AllRequests.Count);
+        Assert.Equal(HttpMethod.Post, inner.AllRequests[0].Method); // original
+        Assert.Equal(HttpMethod.Get, inner.AllRequests[1].Method);  // 301 changed POST→GET
+        Assert.Equal(HttpMethod.Get, inner.AllRequests[2].Method);  // 307 preserves GET (not original POST)
     }
 }
