@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
         services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
         services.AddTransient<ISendAuthenticationMethodValidator<NeverAuthenticate>, SendNeverAuthenticateRequestValidator>();
+        services.AddTransient<ISendAuthenticationMethodValidator<SendInaccessible>, SendInaccessibleRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services

@@ -12,6 +12,7 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 public class SendAccessGrantValidator(
     ISendAuthenticationQuery _sendAuthenticationQuery,
     ISendAuthenticationMethodValidator<NeverAuthenticate> _sendNeverAuthenticateValidator,
+    ISendAuthenticationMethodValidator<SendInaccessible> _sendInaccessibleValidator,
     ISendAuthenticationMethodValidator<ResourcePassword> _sendPasswordRequestValidator,
     ISendAuthenticationMethodValidator<EmailOtp> _sendEmailOtpRequestValidator) : IExtensionGrantValidator
 {
@@ -40,6 +41,10 @@ public class SendAccessGrantValidator(
             case NeverAuthenticate never:
                 // null send scenario.
                 context.Result = await _sendNeverAuthenticateValidator.ValidateRequestAsync(context, never, sendIdGuid);
+                return;
+            case SendInaccessible inaccessible:
+                // send exists but is not accessible (expired, disabled, max access exceeded, or past deletion date).
+                context.Result = await _sendInaccessibleValidator.ValidateRequestAsync(context, inaccessible, sendIdGuid);
                 return;
             case NotAuthenticated:
                 // automatically issue access token
