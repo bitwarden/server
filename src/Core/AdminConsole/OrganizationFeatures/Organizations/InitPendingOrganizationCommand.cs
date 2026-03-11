@@ -28,7 +28,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IEventService _eventService;
-    private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
@@ -46,7 +45,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
             IFeatureService featureService,
             IPolicyRequirementQuery policyRequirementQuery,
             IEventService eventService,
-            IMailService mailService,
             IUserRepository userRepository,
             IPushNotificationService pushNotificationService,
             IPushRegistrationService pushRegistrationService,
@@ -63,7 +61,6 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
         _eventService = eventService;
-        _mailService = mailService;
         _userRepository = userRepository;
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
@@ -268,14 +265,7 @@ public class InitPendingOrganizationCommand : IInitPendingOrganizationCommand
     {
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
-        {
-            await _sendOrganizationConfirmationCommand.SendConfirmationAsync(org, user.Email, orgUser.AccessSecretsManager);
-        }
-        else
-        {
-            await _mailService.SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
-        }
+        await _sendOrganizationConfirmationCommand.SendConfirmationAsync(org, user.Email, orgUser.AccessSecretsManager);
 
         await _pushNotificationService.PushSyncOrgKeysAsync(user.Id);
 
