@@ -124,7 +124,9 @@ public class CreateCollectionsStepTests
     [Fact]
     public void BuildCollectionUsers_AllCollectionIdsAreValid()
     {
-        var result = CreateCollectionsStep.BuildCollectionUsers(_collectionIds, _userIds, 10);
+        var step = CreateStep(CollectionFanOutShape.Uniform, min: 1, max: 3);
+
+        var result = step.BuildCollectionUsers(_collectionIds, _userIds, 10);
 
         Assert.All(result, cu => Assert.Contains(cu.CollectionId, _collectionIds));
     }
@@ -132,7 +134,9 @@ public class CreateCollectionsStepTests
     [Fact]
     public void BuildCollectionUsers_AssignsOneToThreeCollectionsPerUser()
     {
-        var result = CreateCollectionsStep.BuildCollectionUsers(_collectionIds, _userIds, 10);
+        var step = CreateStep(CollectionFanOutShape.Uniform, min: 1, max: 3);
+
+        var result = step.BuildCollectionUsers(_collectionIds, _userIds, 10);
 
         var perUser = result.GroupBy(cu => cu.OrganizationUserId).ToList();
         Assert.All(perUser, group => Assert.InRange(group.Count(), 1, 3));
@@ -141,7 +145,9 @@ public class CreateCollectionsStepTests
     [Fact]
     public void BuildCollectionUsers_RespectsDirectUserCount()
     {
-        var result = CreateCollectionsStep.BuildCollectionUsers(_collectionIds, _userIds, 5);
+        var step = CreateStep(CollectionFanOutShape.Uniform, min: 1, max: 3);
+
+        var result = step.BuildCollectionUsers(_collectionIds, _userIds, 5);
 
         var distinctUsers = result.Select(cu => cu.OrganizationUserId).Distinct().ToList();
         Assert.Equal(5, distinctUsers.Count);
@@ -201,6 +207,67 @@ public class CreateCollectionsStepTests
         Assert.Equal(1, step.ComputeFanOut(3, 10, 1, 3));
     }
 
+    [Fact]
+    public void ComputeCollectionsPerUser_Uniform_CyclesThroughRange()
+    {
+        var step = CreateUserCollectionStep(CollectionFanOutShape.Uniform, min: 1, max: 5);
+
+        Assert.Equal(1, step.ComputeCollectionsPerUser(0, 100, 1, 5));
+        Assert.Equal(2, step.ComputeCollectionsPerUser(1, 100, 1, 5));
+        Assert.Equal(5, step.ComputeCollectionsPerUser(4, 100, 1, 5));
+        Assert.Equal(1, step.ComputeCollectionsPerUser(5, 100, 1, 5));
+    }
+
+    [Fact]
+    public void ComputeCollectionsPerUser_PowerLaw_FirstUserGetsMax()
+    {
+        var step = CreateUserCollectionStep(CollectionFanOutShape.PowerLaw, min: 1, max: 50, skew: 0.7);
+
+        Assert.Equal(50, step.ComputeCollectionsPerUser(0, 1000, 1, 50));
+    }
+
+    [Fact]
+    public void ComputeCollectionsPerUser_PowerLaw_LastUsersGetMin()
+    {
+        var step = CreateUserCollectionStep(CollectionFanOutShape.PowerLaw, min: 1, max: 50, skew: 0.7);
+
+        Assert.Equal(1, step.ComputeCollectionsPerUser(999, 1000, 1, 50));
+    }
+
+    [Fact]
+    public void ComputeCollectionsPerUser_PowerLaw_DecaysMonotonically()
+    {
+        var step = CreateUserCollectionStep(CollectionFanOutShape.PowerLaw, min: 1, max: 25, skew: 0.6);
+
+        var prev = step.ComputeCollectionsPerUser(0, 500, 1, 25);
+        for (var i = 1; i < 500; i++)
+        {
+            var current = step.ComputeCollectionsPerUser(i, 500, 1, 25);
+            Assert.True(current <= prev, $"Index {i}: {current} > {prev}");
+            prev = current;
+        }
+    }
+
+    [Fact]
+    public void ComputeCollectionsPerUser_FrontLoaded_FirstTenPercentGetMax()
+    {
+        var step = CreateUserCollectionStep(CollectionFanOutShape.FrontLoaded, min: 1, max: 20);
+
+        Assert.Equal(20, step.ComputeCollectionsPerUser(0, 100, 1, 20));
+        Assert.Equal(20, step.ComputeCollectionsPerUser(9, 100, 1, 20));
+        Assert.Equal(1, step.ComputeCollectionsPerUser(10, 100, 1, 20));
+        Assert.Equal(1, step.ComputeCollectionsPerUser(99, 100, 1, 20));
+    }
+
+    [Fact]
+    public void ComputeCollectionsPerUser_RangeOfOne_ReturnsMin()
+    {
+        var step = CreateUserCollectionStep(CollectionFanOutShape.PowerLaw, min: 3, max: 3, skew: 0.8);
+
+        Assert.Equal(3, step.ComputeCollectionsPerUser(0, 100, 3, 3));
+        Assert.Equal(3, step.ComputeCollectionsPerUser(99, 100, 3, 3));
+    }
+
     private static CreateCollectionsStep CreateStep(CollectionFanOutShape shape, int min, int max)
     {
         var density = new DensityProfile
@@ -208,6 +275,19 @@ public class CreateCollectionsStepTests
             FanOutShape = shape,
             CollectionFanOutMin = min,
             CollectionFanOutMax = max
+        };
+        return CreateCollectionsStep.FromCount(0, density);
+    }
+
+    private static CreateCollectionsStep CreateUserCollectionStep(
+        CollectionFanOutShape shape, int min, int max, double skew = 0)
+    {
+        var density = new DensityProfile
+        {
+            UserCollectionShape = shape,
+            UserCollectionMin = min,
+            UserCollectionMax = max,
+            UserCollectionSkew = skew
         };
         return CreateCollectionsStep.FromCount(0, density);
     }

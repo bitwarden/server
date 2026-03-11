@@ -373,9 +373,5 @@ public class InitPendingOrganizationCommandTests
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(request.User.Id)
             .Returns(new List<Device>());
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
-            .Returns(true);
     }
 }

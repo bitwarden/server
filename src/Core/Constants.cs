@@ -142,7 +142,6 @@ public static class FeatureFlagKeys
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
-    public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
     public const string CommandResultRefactor = "pm-23401-commandresult-refactor";
 
@@ -161,7 +160,6 @@ public static class FeatureFlagKeys
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
-    public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
@@ -192,6 +190,7 @@ public static class FeatureFlagKeys
     public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
     public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
     public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
+    public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -222,10 +221,10 @@ public static class FeatureFlagKeys
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
+    public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
 
     /* Platform Team */
     public const string WebPush = "web-push";

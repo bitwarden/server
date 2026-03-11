@@ -1498,8 +1498,50 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
         return new AttachmentResponseModel(result);
+    }
+
+    /// <summary>
+    /// Serves a locally stored attachment file using a time-limited, signed token.
+    /// This endpoint replaces direct static file access for self-hosted environments
+    /// to ensure that only authorized users can download attachment files.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("attachment/download")]
+    public async Task<IActionResult> DownloadAttachmentAsync([FromQuery] string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new NotFoundException();
+        }
+
+        (Guid cipherId, string attachmentId) = _attachmentStorageService.ParseAttachmentDownloadToken(token);
+
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var attachments = cipher.GetAttachments();
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
+        {
+            throw new NotFoundException();
+        }
+
+        var stream = await _attachmentStorageService.GetAttachmentReadStreamAsync(cipher, attachmentData);
+        if (stream == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return File(stream, "application/octet-stream", attachmentData.FileName);
     }
 
     [HttpPost("{id}/attachment/{attachmentId}/share")]
