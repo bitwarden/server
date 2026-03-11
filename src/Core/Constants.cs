@@ -151,10 +151,6 @@ public static class FeatureFlagKeys
     public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
 
     /* Auth Team */
-    public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
-    public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
-    public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
-    public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
