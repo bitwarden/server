@@ -148,7 +148,7 @@ public class ConfirmOrganizationUserCommandTests
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, key, confirmingUser.Id);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email);
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>().Received(1).SendConfirmationAsync(org, user.Email, orgUser.AccessSecretsManager);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
         await sutProvider.GetDependency<IPushRegistrationService>()
             .Received(1)
@@ -409,7 +409,7 @@ public class ConfirmOrganizationUserCommandTests
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, "key", confirmingUser.Id);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>().Received(1).SendConfirmationAsync(org, user.Email, orgUser.AccessSecretsManager);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
@@ -452,7 +452,7 @@ public class ConfirmOrganizationUserCommandTests
         await sutProvider.Sut.ConfirmUserAsync(orgUser.OrganizationId, orgUser.Id, "key", confirmingUser.Id);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>().Received(1).SendConfirmationAsync(org, user.Email, orgUser.AccessSecretsManager);
         await organizationUserRepository.Received(1).ReplaceManyAsync(Arg.Is<List<OrganizationUser>>(users => users.Contains(orgUser) && users.Count == 1));
     }
 
@@ -725,8 +725,8 @@ public class ConfirmOrganizationUserCommandTests
         // Assert
         await sutProvider.GetDependency<IEventService>()
             .Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Confirmed);
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1).SendOrganizationConfirmedEmailAsync(org.DisplayName(), user.Email, orgUser.AccessSecretsManager);
+        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
+            .Received(1).SendConfirmationAsync(org, user.Email, orgUser.AccessSecretsManager);
     }
 
     [Theory, BitAutoData]
@@ -932,54 +932,6 @@ public class ConfirmOrganizationUserCommandTests
         Assert.Empty(result[0].Item2);
         Assert.Empty(result[1].Item2);
         Assert.Equal(new OtherOrganizationDoesNotAllowOtherMembership().Message, result[2].Item2);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOn_CallsSendOrganizationConfirmationCommand(
-        Organization org,
-        string userEmail,
-        SutProvider<ConfirmOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        const bool accessSecretsManager = true;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(org, userEmail, accessSecretsManager);
-
-        // Assert - verify new mailer is called, not legacy mail service
-        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
-            .Received(1)
-            .SendConfirmationAsync(org, userEmail, accessSecretsManager);
-        await sutProvider.GetDependency<IMailService>()
-            .DidNotReceiveWithAnyArgs()
-            .SendOrganizationConfirmedEmailAsync(default, default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SendOrganizationConfirmedEmailAsync_WithFeatureFlagOff_UsesLegacyMailService(
-        Organization org,
-        string userEmail,
-        SutProvider<ConfirmOrganizationUserCommand> sutProvider)
-    {
-        // Arrange
-        const bool accessSecretsManager = false;
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail)
-            .Returns(false);
-
-        // Act
-        await sutProvider.Sut.SendOrganizationConfirmedEmailAsync(org, userEmail, accessSecretsManager);
-
-        // Assert
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationConfirmedEmailAsync(org.DisplayName(), userEmail, accessSecretsManager);
-        await sutProvider.GetDependency<ISendOrganizationConfirmationCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .SendConfirmationAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
