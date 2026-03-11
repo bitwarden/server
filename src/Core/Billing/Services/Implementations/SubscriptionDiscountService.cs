@@ -34,16 +34,13 @@ public class SubscriptionDiscountService(
     }
 
     /// <inheritdoc />
-    public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType)
+    public async Task<bool> ValidateDiscountEligibilityForUserAsync(User user, IReadOnlyList<string> couponIds, DiscountTierType tierType)
     {
-        var discount = await subscriptionDiscountRepository.GetByStripeCouponIdAsync(coupon);
-        if (discount == null || !IsDiscountActive(discount))
-        {
-            return false;
-        }
-
-        var tierEligibility = await GetTierEligibilityAsync(user, discount);
-        return tierEligibility is not null && tierEligibility[tierType];
+        var eligibleDiscounts = await GetEligibleDiscountsAsync(user);
+        var eligibilityByStripeCouponId = eligibleDiscounts.ToDictionary(d => d.Discount.StripeCouponId);
+        return couponIds.All(id =>
+            eligibilityByStripeCouponId.TryGetValue(id, out var eligibility) &&
+            eligibility.TierEligibility[tierType]);
     }
 
     /// <summary>
