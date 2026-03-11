@@ -84,7 +84,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
-    private readonly IAdminRecoverAccountValidator _adminRecoverAccountValidator;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -116,7 +115,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
-        IAdminRecoverAccountValidator adminRecoverAccountValidator,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
@@ -152,7 +150,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
-        _adminRecoverAccountValidator = adminRecoverAccountValidator;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
     }
 
@@ -550,36 +547,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        // Map to internal request record
+        // Map to internal request record and execute
         var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
-
-        // Validate
-        var validationResult = await _adminRecoverAccountValidator.ValidateAsync(commandRequest);
-        if (validationResult.IsError)
-        {
-            var error = validationResult.AsError;
-            return error switch
-            {
-                NotFoundError notFound => TypedResults.NotFound(new ErrorResponseModel(notFound.Message)),
-                BadRequestError badRequest => TypedResults.BadRequest(new ErrorResponseModel(badRequest.Message)),
-                _ => TypedResults.Json(new ErrorResponseModel(error.Message), statusCode: StatusCodes.Status500InternalServerError)
-            };
-        }
-
-        // Execute
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(commandRequest);
-        if (result.Succeeded)
-        {
-            return TypedResults.Ok();
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        return TypedResults.BadRequest(ModelState);
+        return Handle(await _adminRecoverAccountCommand.RecoverAccountAsync(commandRequest));
     }
 #nullable disable
 

@@ -1,5 +1,4 @@
-﻿using Bit.Core.Exceptions;
-using Microsoft.AspNetCore.Identity;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Results;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
@@ -14,8 +13,6 @@ public interface IAdminRecoverAccountCommand
     /// clearing their two-factor authentication methods.
     /// </summary>
     /// <param name="request">The recovery request containing the organization, user, and action flags.</param>
-    /// <returns>An IdentityResult indicating success or failure of the password update (if applicable).</returns>
-    /// <exception cref="BadRequestException">When organization settings, policy, or user state is invalid.</exception>
-    /// <exception cref="NotFoundException">When the user does not exist.</exception>
-    Task<IdentityResult> RecoverAccountAsync(RecoverAccountRequest request);
+    /// <returns>A <see cref="CommandResult"/> indicating success or containing an error.</returns>
+    Task<CommandResult> RecoverAccountAsync(RecoverAccountRequest request);
 }

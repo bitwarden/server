@@ -1,22 +1,25 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Identity;
+using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
 public class AdminRecoverAccountCommand(
+    IAdminRecoverAccountValidator validator,
     IOrganizationRepository organizationRepository,
     IUserRepository userRepository,
     IMailService mailService,
@@ -30,23 +33,40 @@ public class AdminRecoverAccountCommand(
     IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
     TimeProvider timeProvider) : IAdminRecoverAccountCommand
 {
-    public async Task<IdentityResult> RecoverAccountAsync(RecoverAccountRequest request)
+    public async Task<CommandResult> RecoverAccountAsync(RecoverAccountRequest request)
     {
+        // Validate
+        var validationResult = await validator.ValidateAsync(request);
+        if (validationResult.IsError)
+        {
+            return validationResult.AsError;
+        }
+
         var org = await organizationRepository.GetByIdAsync(request.OrgId);
+        if (org == null)
+        {
+            return new OrganizationNotFoundError();
+        }
 
         var user = await userRepository.GetByIdAsync(request.OrganizationUser.UserId!.Value);
+        if (user == null)
+        {
+            return new UserNotFoundError();
+        }
 
         // Password reset
         if (request.ResetMasterPassword)
         {
-            var result = await userService.UpdatePasswordHash(user!, request.NewMasterPasswordHash!);
+            var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);
             if (!result.Succeeded)
             {
-                return result;
+                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+                return new PasswordUpdateFailedError(errorMessage);
             }
 
-            user!.RevisionDate = user.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
-            user.LastPasswordChangeDate = user.RevisionDate;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+            user.RevisionDate = user.AccountRevisionDate = now;
+            user.LastPasswordChangeDate = now;
             user.ForcePasswordReset = true;
             user.Key = request.Key;
 
@@ -56,12 +76,12 @@ public class AdminRecoverAccountCommand(
         // 2FA reset
         if (request.ResetTwoFactor)
         {
-            await resetUserTwoFactorCommand.ResetAsync(user!);
+            await resetUserTwoFactorCommand.ResetAsync(user);
         }
 
         // Email notification
         await mailService.SendAdminResetPasswordEmailAsync(
-            user!.Email, user.Name, org!.DisplayName(),
+            user.Email, user.Name, org.DisplayName(),
             request.ResetMasterPassword, request.ResetTwoFactor);
 
         // Event logging
@@ -86,7 +106,7 @@ public class AdminRecoverAccountCommand(
             await CheckPoliciesOnTwoFactorRemovalAsync(user);
         }
 
-        return IdentityResult.Success;
+        return new None();
     }
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)

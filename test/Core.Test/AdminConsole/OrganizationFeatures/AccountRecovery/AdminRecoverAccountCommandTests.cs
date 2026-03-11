@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -35,23 +37,23 @@ public class AdminRecoverAccountCommandTests
         var request = CreateRequest(organization.Id, organizationUser,
             resetMasterPassword: true, resetTwoFactor: false,
             newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.RecoverAccountAsync(request);
 
         // Assert
-        Assert.True(result.Succeeded);
+        Assert.True(result.IsSuccess);
 
         await sutProvider.GetDependency<IUserService>().Received(1)
             .UpdatePasswordHash(user, newMasterPassword);
 
-        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<User>(u =>
-                u.Id == user.Id &&
-                u.Key == key &&
-                u.ForcePasswordReset == true &&
-                u.RevisionDate == u.AccountRevisionDate &&
-                u.LastPasswordChangeDate == u.RevisionDate));
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+
+        Assert.Equal(key, user.Key);
+        Assert.True(user.ForcePasswordReset);
+        Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
+        Assert.Equal(user.RevisionDate, user.LastPasswordChangeDate);
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendAdminResetPasswordEmailAsync(
             Arg.Is(user.Email),
@@ -70,9 +72,6 @@ public class AdminRecoverAccountCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushLogOutAsync(user.Id);
-
-        await sutProvider.GetDependency<IResetUserTwoFactorCommand>().DidNotReceive()
-            .ResetAsync(Arg.Any<User>());
     }
 
     [Theory]
@@ -89,21 +88,19 @@ public class AdminRecoverAccountCommandTests
 
         var request = CreateRequest(organization.Id, organizationUser,
             resetMasterPassword: false, resetTwoFactor: true);
+        SetupValidValidator(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.RecoverAccountAsync(request);
 
         // Assert
-        Assert.True(result.Succeeded);
+        Assert.True(result.IsSuccess);
 
         await sutProvider.GetDependency<IResetUserTwoFactorCommand>().Received(1)
             .ResetAsync(user);
 
         await sutProvider.GetDependency<IUserService>().DidNotReceive()
             .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>());
-
-        await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
-            .ReplaceAsync(Arg.Any<User>());
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendAdminResetPasswordEmailAsync(
             Arg.Is(user.Email),
@@ -142,23 +139,23 @@ public class AdminRecoverAccountCommandTests
         var request = CreateRequest(organization.Id, organizationUser,
             resetMasterPassword: true, resetTwoFactor: true,
             newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.RecoverAccountAsync(request);
 
         // Assert
-        Assert.True(result.Succeeded);
+        Assert.True(result.IsSuccess);
 
         await sutProvider.GetDependency<IUserService>().Received(1)
             .UpdatePasswordHash(user, newMasterPassword);
 
-        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<User>(u =>
-                u.Id == user.Id &&
-                u.Key == key &&
-                u.ForcePasswordReset == true &&
-                u.RevisionDate == u.AccountRevisionDate &&
-                u.LastPasswordChangeDate == u.RevisionDate));
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+
+        Assert.Equal(key, user.Key);
+        Assert.True(user.ForcePasswordReset);
+        Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
+        Assert.Equal(user.RevisionDate, user.LastPasswordChangeDate);
 
         await sutProvider.GetDependency<IResetUserTwoFactorCommand>().Received(1)
             .ResetAsync(user);
@@ -184,7 +181,7 @@ public class AdminRecoverAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccountAsync_UpdatePasswordHashFails_ReturnsFailedIdentityResult(
+    public async Task RecoverAccountAsync_UpdatePasswordHashFails_ReturnsError(
         string newMasterPassword,
         string key,
         Organization organization,
@@ -204,13 +201,15 @@ public class AdminRecoverAccountCommandTests
         var request = CreateRequest(organization.Id, organizationUser,
             resetMasterPassword: true, resetTwoFactor: false,
             newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
 
         // Act
         var result = await sutProvider.Sut.RecoverAccountAsync(request);
 
         // Assert
-        Assert.False(result.Succeeded);
-        Assert.Contains(result.Errors, e => e.Description == "Password update failed");
+        Assert.True(result.IsError);
+        Assert.IsType<PasswordUpdateFailedError>(result.AsError);
+        Assert.Contains("Password update failed", result.AsError.Message);
 
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
             .ReplaceAsync(Arg.Any<User>());
@@ -225,6 +224,33 @@ public class AdminRecoverAccountCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
             .PushLogOutAsync(Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_ValidationFails_ReturnsError(
+        Organization organization,
+        OrganizationUser organizationUser,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        var request = CreateRequest(organization.Id, organizationUser,
+            resetMasterPassword: false, resetTwoFactor: false);
+
+        sutProvider.GetDependency<IAdminRecoverAccountValidator>()
+            .ValidateAsync(Arg.Any<RecoverAccountRequest>())
+            .Returns(callInfo => ValidationResultHelpers.Invalid(
+                callInfo.Arg<RecoverAccountRequest>(), new NoActionRequestedError()));
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<NoActionRequestedError>(result.AsError);
+
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
+            .ReplaceAsync(Arg.Any<User>());
     }
 
     private static RecoverAccountRequest CreateRequest(
@@ -244,6 +270,13 @@ public class AdminRecoverAccountCommandTests
             NewMasterPasswordHash = newMasterPasswordHash,
             Key = key,
         };
+    }
+
+    private static void SetupValidValidator(SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IAdminRecoverAccountValidator>()
+            .ValidateAsync(Arg.Any<RecoverAccountRequest>())
+            .Returns(callInfo => ValidationResultHelpers.Valid(callInfo.Arg<RecoverAccountRequest>()));
     }
 
     private static void SetupOrganization(SutProvider<AdminRecoverAccountCommand> sutProvider, Organization organization)

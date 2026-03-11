@@ -15,7 +15,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
@@ -597,7 +596,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_WhenRecoverAccountSucceeds_ReturnsOk(
+    public async Task PutRecoverAccount_WhenRecoverAccountSucceeds_ReturnsNoContent(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -609,16 +608,13 @@ public class OrganizationUsersControllerTests
                 organizationUser,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<IAdminRecoverAccountValidator>()
-            .ValidateAsync(Arg.Any<RecoverAccountRequest>())
-            .Returns(callInfo => ValidationResultHelpers.Valid(callInfo.Arg<RecoverAccountRequest>()));
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
             .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
-            .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
+            .Returns(new Bit.Core.AdminConsole.Utilities.v2.Results.CommandResult(new OneOf.Types.None()));
 
         var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
-        Assert.IsType<Ok>(result);
+        Assert.IsType<NoContent>(result);
         await sutProvider.GetDependency<IAdminRecoverAccountCommand>().Received(1)
             .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>());
     }
@@ -637,16 +633,13 @@ public class OrganizationUsersControllerTests
                 organizationUser,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<IAdminRecoverAccountValidator>()
-            .ValidateAsync(Arg.Any<RecoverAccountRequest>())
-            .Returns(callInfo => ValidationResultHelpers.Valid(callInfo.Arg<RecoverAccountRequest>()));
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
             .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
-            .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Failed(new Microsoft.AspNetCore.Identity.IdentityError { Description = "Error message" }));
+            .Returns(new Bit.Core.AdminConsole.Utilities.v2.Results.CommandResult(new PasswordUpdateFailedError("Error message")));
 
         var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model);
 
-        Assert.IsType<BadRequest<ModelStateDictionary>>(result);
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
     [Theory]

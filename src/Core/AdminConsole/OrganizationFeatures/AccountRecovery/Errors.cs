@@ -10,3 +10,5 @@ public record PolicyNotEnabledError() : BadRequestError("Organization does not h
 public record InvalidOrgUserError() : BadRequestError("Organization User not valid.");
 public record UserNotFoundError() : NotFoundError("User not found.");
 public record KeyConnectorUserError() : BadRequestError("Cannot reset password of a user with Key Connector.");
+public record PasswordUpdateFailedError(string ErrorMessage) : BadRequestError(ErrorMessage);
+public record OrganizationNotFoundError() : NotFoundError("Organization not found.");
