@@ -37,7 +37,27 @@ public class EfMigrationTesterService : IMigrationTesterService
         DeleteMigrationHistory();
 
         var migrator = _databaseContext.GetService<IMigrator>();
-        migrator.Migrate(_migrationName);
+
+        if (_databaseType == SupportedDatabaseProviders.Sqlite)
+        {
+            // SQLite doesn't support DropColumn, so we can't use Migrate() which
+            // reverts subsequent migrations (calling their Down() methods).
+            // Instead, generate and execute only the target migration's Up() SQL.
+            var migrationsAssembly = _databaseContext.GetService<IMigrationsAssembly>();
+            var migrations = migrationsAssembly.Migrations.Keys.ToList();
+            var targetMigrationId = migrations.SingleOrDefault(m => m.EndsWith(_migrationName))
+                ?? throw new InvalidOperationException(
+                    $"Migration '{_migrationName}' was not found in the migrations assembly.");
+            var targetIndex = migrations.IndexOf(targetMigrationId);
+            var previousMigrationId = targetIndex > 0 ? migrations[targetIndex - 1] : "0";
+
+            var script = migrator.GenerateScript(previousMigrationId, targetMigrationId);
+            _databaseContext.Database.ExecuteSqlRaw(script);
+        }
+        else
+        {
+            migrator.Migrate(_migrationName);
+        }
     }
 
     /// <summary>

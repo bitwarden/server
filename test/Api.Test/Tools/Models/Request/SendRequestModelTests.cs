@@ -2,6 +2,7 @@
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
 using Bit.Core.Exceptions;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.Helpers;
@@ -114,5 +115,67 @@ public class SendRequestModelTests
         Exception ex = Record.Exception(() => send.ValidateEdit());
 
         Assert.Null(ex);
+    }
+
+    [Fact]
+    public void UpdateSend_WithExistingPasswordAuth_WhenNoAuthInRequest_PreservesPasswordAuth()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Text = new SendTextModel { Hidden = false, Text = "encrypted_text" },
+            Type = SendType.Text,
+        };
+
+        var existingSend = new Send
+        {
+            Type = SendType.Text,
+            Password = "existing_hashed_password",
+            AuthType = AuthType.Password,
+            Emails = null,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
+
+        Assert.Equal(AuthType.Password, updatedSend.AuthType);
+        Assert.Equal("existing_hashed_password", updatedSend.Password);
+        Assert.Null(updatedSend.Emails);
+    }
+
+    [Fact]
+    public void UpdateSend_WithExistingEmailAuth_WhenNoAuthInRequest_ClearsEmailsAndSetsAuthTypeNone()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Text = new SendTextModel { Hidden = false, Text = "encrypted_text" },
+            Type = SendType.Text,
+        };
+
+        var existingSend = new Send
+        {
+            Type = SendType.Text,
+            Emails = "old@example.com",
+            AuthType = AuthType.Email,
+            Password = null,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
+
+        Assert.Equal(AuthType.None, updatedSend.AuthType);
+        Assert.Null(updatedSend.Emails);
+        Assert.Null(updatedSend.Password);
     }
 }
