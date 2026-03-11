@@ -85,7 +85,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             var requirement = await _policyRequirementQuery
                 .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
 
-            if (requirement.GrantorCannotGrantEmergencyAccess())
+            if (requirement.GrantorCannotInviteToEmergencyAccess())
             {
                 throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
             }
@@ -154,7 +154,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             var requirement = await _policyRequirementQuery
                 .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
 
-            if (requirement.GranteeCannotBeGrantedEmergencyAccess())
+            if (requirement.GranteeCannotAcceptEmergencyAccess())
             {
                 throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
             }
@@ -191,7 +191,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         return emergencyAccess;
     }
 
-    // TODO: remove with PM-31327 when we migrate to the command. 
+    // TODO: remove with PM-31327 when we migrate to the command.
     public async Task DeleteAsync(Guid emergencyAccessId, Guid userId)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);

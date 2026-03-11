@@ -20,20 +20,20 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 public class AutomaticUserConfirmationPolicyRequirement(IEnumerable<PolicyDetails> policyDetails) : IPolicyRequirement
 {
     /// <summary>
-    /// Returns true if the user cannot grant emergency access because they are in an
+    /// Returns true if the user cannot accept emergency access because they are in an
     /// auto-confirm organization with status Accepted, Confirmed, or Revoked.
     /// </summary>
-    public bool GrantorCannotGrantEmergencyAccess() => policyDetails.Any(p =>
+    public bool GrantorCannotInviteToEmergencyAccess() => policyDetails.Any(p =>
         p.OrganizationUserStatus is
             OrganizationUserStatusType.Accepted or
             OrganizationUserStatusType.Confirmed or
             OrganizationUserStatusType.Revoked);
 
     /// <summary>
-    /// Returns true if the user cannot be granted emergency access because they are in an
+    /// Returns true if the user cannot accept emergency access because they are in an
     /// auto-confirm organization with status Accepted, Confirmed, or Revoked.
     /// </summary>
-    public bool GranteeCannotBeGrantedEmergencyAccess() => policyDetails.Any(p =>
+    public bool GranteeCannotAcceptEmergencyAccess() => policyDetails.Any(p =>
         p.OrganizationUserStatus is
             OrganizationUserStatusType.Accepted or
             OrganizationUserStatusType.Confirmed or
