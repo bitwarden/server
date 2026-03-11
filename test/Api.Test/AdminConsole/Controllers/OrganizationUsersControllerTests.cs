@@ -342,6 +342,72 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetResetPasswordDetails_WhenOrganizationUserNotFound_ThrowsNotFound(
+        Guid orgId, Guid orgUserId,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns((OrganizationUser)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetResetPasswordDetails_WhenOrganizationIdMismatch_ThrowsNotFound(
+        Guid orgId, Guid orgUserId, OrganizationUser organizationUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = Guid.NewGuid(); // Different org ID
+        organizationUser.UserId = Guid.NewGuid();
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetResetPasswordDetails_WhenUserIdIsNull_ThrowsNotFound(
+        Guid orgId, Guid orgUserId, OrganizationUser organizationUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = orgId;
+        organizationUser.UserId = null;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetResetPasswordDetails_WhenValid_ReturnsDetails(
+        Guid orgId, Guid orgUserId, OrganizationUser organizationUser, User user, Organization org,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = orgId;
+        organizationUser.UserId = user.Id;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id).Returns(user);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
+
+        // Act
+        var response = await sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId);
+
+        // Assert
+        Assert.Equal(organizationUser.Id, response.OrganizationUserId);
+        Assert.Equal(user.Kdf, response.Kdf);
+        Assert.Equal(user.KdfIterations, response.KdfIterations);
+        Assert.Equal(org.PrivateKey, response.EncryptedPrivateKey);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task DeleteAccount_WhenCurrentUserNotFound_ReturnsUnauthorizedResult(
         Guid orgId, Guid id, SutProvider<OrganizationUsersController> sutProvider)
     {

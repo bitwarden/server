@@ -11,10 +11,11 @@ internal static class UserSeeder
 {
     internal const string DefaultPassword = "asdfasdfasdf";
 
-    internal static User Create(
+    internal static (User user, UserKeys keys) Create(
         string email,
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService,
+        string? name = null,
         bool emailVerified = true,
         bool premium = false,
         UserKeys? keys = null,
@@ -28,6 +29,7 @@ internal static class UserSeeder
         var user = new User
         {
             Id = CoreHelpers.GenerateComb(),
+            Name = name ?? mangledEmail.Split('@')[0],
             Email = mangledEmail,
             EmailVerified = emailVerified,
             MasterPassword = null,
@@ -43,6 +45,6 @@ internal static class UserSeeder
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
 
-        return user;
+        return (user, keys);
     }
 }

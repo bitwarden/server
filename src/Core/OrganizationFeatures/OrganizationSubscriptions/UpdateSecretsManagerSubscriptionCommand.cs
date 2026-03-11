@@ -3,6 +3,8 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -27,6 +29,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
+    private readonly IFeatureService _featureService;
+    private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -37,7 +41,9 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         IGlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
         IApplicationCacheService applicationCacheService,
-        IEventService eventService)
+        IEventService eventService,
+        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
+        IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
@@ -48,6 +54,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _organizationRepository = organizationRepository;
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
+        _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
+        _featureService = featureService;
     }
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
@@ -61,19 +69,56 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private async Task FinalizeSubscriptionAdjustmentAsync(SecretsManagerSubscriptionUpdate update)
     {
-        if (update.SmSeatsChanged)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
         {
-            await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase);
+            var builder = OrganizationSubscriptionChangeSet.Builder();
 
-            // TODO: call ReferenceEventService - see AC-1481
+            if (update.SmSeatsChanged)
+            {
+                builder.UpdateItemQuantity(
+                    update.Plan.SecretsManager.StripeSeatPlanId,
+                    update.SmSeatsExcludingBase);
+            }
+
+            if (update.SmServiceAccountsChanged)
+            {
+                if (update.Organization.SmServiceAccounts > update.Plan.SecretsManager.BaseServiceAccount)
+                {
+                    builder.UpdateItemQuantity(
+                        update.Plan.SecretsManager.StripeServiceAccountPlanId,
+                        update.SmServiceAccountsExcludingBase);
+                }
+                else
+                {
+                    builder.AddItem(
+                        update.Plan.SecretsManager.StripeServiceAccountPlanId,
+                        update.SmServiceAccountsExcludingBase);
+                }
+            }
+
+            var changeSet = builder.Build();
+            if (changeSet.Changes.Any())
+            {
+                var result = await _updateOrganizationSubscriptionCommand.Run(update.Organization, changeSet);
+                result.GetValueOrThrow();
+            }
         }
-
-        if (update.SmServiceAccountsChanged)
+        else
         {
-            await _paymentService.AdjustServiceAccountsAsync(update.Organization, update.Plan,
-                update.SmServiceAccountsExcludingBase);
+            if (update.SmSeatsChanged)
+            {
+                await _paymentService.AdjustSmSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase);
 
-            // TODO: call ReferenceEventService - see AC-1481
+                // TODO: call ReferenceEventService - see AC-1481
+            }
+
+            if (update.SmServiceAccountsChanged)
+            {
+                await _paymentService.AdjustServiceAccountsAsync(update.Organization, update.Plan,
+                    update.SmServiceAccountsExcludingBase);
+
+                // TODO: call ReferenceEventService - see AC-1481
+            }
         }
 
         var organization = update.Organization;

@@ -29,6 +29,30 @@ public class ProviderRepository : Repository<Provider, Models.Provider.Provider,
         await base.DeleteAsync(provider);
     }
 
+    public async Task<Provider> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var provider = await GetDbSet(dbContext)
+                .Where(e => e.GatewayCustomerId == gatewayCustomerId)
+                .FirstOrDefaultAsync();
+            return Mapper.Map<Provider>(provider);
+        }
+    }
+
+    public async Task<Provider> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var provider = await GetDbSet(dbContext)
+                .Where(e => e.GatewaySubscriptionId == gatewaySubscriptionId)
+                .FirstOrDefaultAsync();
+            return Mapper.Map<Provider>(provider);
+        }
+    }
+
     public async Task<Provider> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
