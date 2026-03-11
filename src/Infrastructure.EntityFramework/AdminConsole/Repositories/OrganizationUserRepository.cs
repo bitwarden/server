@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
@@ -350,7 +351,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
 #nullable enable
-    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithSharedCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -359,7 +360,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = from ou in dbContext.OrganizationUsers
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
                         join c in dbContext.Collections on cu.CollectionId equals c.Id
-                        where ou.Id == id && c.Type != CollectionType.DefaultUserCollection
+                        where ou.Id == id && c.Type == CollectionType.SharedCollection
                         select cu;
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
@@ -407,7 +408,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from ou in dbContext.OrganizationUsers
-                        where userIds.Contains(ou.Id)
+                        where ou.UserId.HasValue && userIds.Contains(ou.UserId.Value)
                         select ou;
             return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
         }
@@ -438,7 +439,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeSharedCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -448,7 +449,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                                where ou.OrganizationId == organizationId
                                select ou).ToListAsync();
 
-            if (!includeCollections && !includeGroups)
+            if (!includeSharedCollections && !includeGroups)
             {
                 return users;
             }
@@ -467,12 +468,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                     .GroupBy(g => g.OrganizationUserId).ToList();
             }
 
-            if (includeCollections)
+            if (includeSharedCollections)
             {
                 collections = (await (from cu in dbContext.CollectionUsers
                                       join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
                                       join c in dbContext.Collections on cu.CollectionId equals c.Id
-                                      where c.Type != CollectionType.DefaultUserCollection
+                                      where c.Type == CollectionType.SharedCollection
                                       select cu).ToListAsync())
                     .GroupBy(c => c.OrganizationUserId).ToList();
             }
@@ -506,7 +507,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(
-        Guid organizationId, bool includeGroups, bool includeCollections)
+        Guid organizationId, bool includeGroups, bool includeSharedCollections)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -541,7 +542,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             ? ou.GroupUsers.Select(gu => gu.GroupId).ToList()
                             : new List<Guid>(),
 
-                        Collections = includeCollections
+                        Collections = includeSharedCollections
                             ? ou.CollectionUsers
                                 .Where(cu => cu.Collection.Type == CollectionType.SharedCollection)
                                 .Select(cu => new CollectionAccessSelection
@@ -977,6 +978,30 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var entity = await view.Run(dbContext).SingleOrDefaultAsync(ou => ou.OrganizationId == organizationId && ou.UserId == userId);
             return entity;
         }
+    }
+
+    public Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(Core.Entities.OrganizationUser organizationUser)
+    {
+        return async (DbConnection connection, DbTransaction transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            dbContext.Database.SetDbConnection(connection);
+            await dbContext.Database.UseTransactionAsync(transaction);
+
+            var efOrganizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUser.Id);
+            if (efOrganizationUser is null)
+            {
+                throw new InvalidOperationException($"OrganizationUser {organizationUser.Id} was not found during owner confirmation.");
+            }
+
+            efOrganizationUser.Status = organizationUser.Status;
+            efOrganizationUser.UserId = organizationUser.UserId;
+            efOrganizationUser.Key = organizationUser.Key;
+            efOrganizationUser.Email = organizationUser.Email;
+
+            await dbContext.SaveChangesAsync();
+        };
     }
 #nullable disable
 

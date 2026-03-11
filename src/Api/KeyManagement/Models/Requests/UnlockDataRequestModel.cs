@@ -14,4 +14,5 @@ public class UnlockDataRequestModel
     public required IEnumerable<ResetPasswordWithOrgIdRequestModel> OrganizationAccountRecoveryUnlockData { get; set; }
     public required IEnumerable<WebAuthnLoginRotateKeyRequestModel> PasskeyUnlockData { get; set; }
     public required IEnumerable<OtherDeviceKeysUpdateRequestModel> DeviceKeyUnlockData { get; set; }
+    public V2UpgradeTokenRequestModel? V2UpgradeToken { get; set; }
 }

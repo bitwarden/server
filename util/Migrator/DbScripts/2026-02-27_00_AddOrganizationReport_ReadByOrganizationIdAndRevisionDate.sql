@@ -1,0 +1,26 @@
+DROP PROC IF EXISTS [dbo].[OrganizationReport_GetSummariesByDateRange]
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_ReadByOrganizationIdAndRevisionDate]
+    @OrganizationId UNIQUEIDENTIFIER,
+    @StartDate DATETIME2(7),
+    @EndDate DATETIME2(7)
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        [OrganizationId],
+        [ContentEncryptionKey],
+        [SummaryData],
+        [RevisionDate]
+    FROM 
+        [dbo].[OrganizationReportView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+        AND [RevisionDate] >= @StartDate
+        AND [RevisionDate] <= @EndDate
+    ORDER BY
+        [RevisionDate] DESC
+END
+GO

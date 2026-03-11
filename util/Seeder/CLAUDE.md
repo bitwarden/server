@@ -4,7 +4,7 @@
 
 **For detailed pattern descriptions (Factories, Recipes, Models, Scenes, Queries, Data), read `README.md`.**
 
-**For detailed usages of the Seeder library, read `util/DbSeederUtility/README.md` and `util/SeederApi/README.md`**
+**For detailed usages of the Seeder library, read `util/SeederUtility/README.md` and `util/SeederApi/README.md`**
 
 ## Commands
 
@@ -24,11 +24,51 @@ dotnet test test/SeederApi.IntegrationTest/ --filter "FullyQualifiedName~TestMet
 ```
 Need to create test data?
 ├─ ONE entity with encryption? → Factory
-├─ MANY entities as cohesive operation? → Recipe
-├─ Complete test scenario with ID mangling for SeederApi? → Scene
+├─ MANY entities as cohesive operation? → Recipe or Pipeline
+├─ Flexible preset-based seeding? → Pipeline (RecipeBuilder + Steps)
+├─ Complete test scenario with ID mangling? → Scene
 ├─ READ existing seeded data? → Query
 └─ Data transformation SDK ↔ Server? → Model
 ```
+
+## Pipeline Architecture
+
+**Modern pattern for composable fixture-based and generated seeding.**
+
+**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
+
+**Key actors**:
+
+- **RecipeBuilder**: Fluent API with dependency validation
+- **IStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.)
+- **SeederContext**: Shared mutable state bag (NOT thread-safe)
+- **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
+- **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
+
+**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+
+See `Pipeline/` folder for implementation.
+
+## Density Profiles
+
+Steps accept an optional `DensityProfile` that controls relationship patterns between users, groups, collections, and ciphers. When null, steps use the original round-robin behavior. When present, steps branch into density-aware algorithms.
+
+**Key files**:
+
+- `Options/DensityProfile.cs` — strongly-typed options (public class)
+- `Models/SeedPresetDensity.cs` — JSON preset deserialization targets (internal records)
+- `Data/Enums/MembershipDistributionShape.cs` — Uniform, PowerLaw, MegaGroup
+- `Data/Enums/CollectionFanOutShape.cs` — Uniform, PowerLaw, FrontLoaded
+- `Data/Enums/CipherCollectionSkew.cs` — Uniform, HeavyRight
+- `Data/Distributions/PermissionDistributions.cs` — 11 named distributions by org tier
+
+**Backward compatibility contract**: `DensityProfile? == null` MUST produce identical output to the original code. Every step guards this with `if (_density == null) { /* original path */ }`.
+
+**Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
+
+**Presets**: Organized into `features/`, `qa/`, `scale/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
+
+**Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
 ## The Recipe Contract
 
@@ -55,7 +95,7 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 ## Data Flow
 
 ```
-CipherViewDto → Rust SDK encrypt_cipher → EncryptedCipherDto → TransformToServer → Server Cipher Entity
+CipherViewDto → Rust SDK encrypt_cipher → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
 Shared logic: `CipherEncryption.cs`, `EncryptedCipherDtoExtensions.cs`
@@ -74,11 +114,11 @@ Before modifying SDK integration, run `RustSdkCipherTests` to validate roundtrip
 Same domain = same seed = reproducible data:
 
 ```csharp
-_seed = options.Seed ?? StableHash.ToInt32(options.Domain);
+var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
 
 ## Security Reminders
 
-- Test password: `asdfasdfasdf`
+- Default test password: `asdfasdfasdf` (overridable via `--password` CLI flag or `SeederSettings`)
 - Never commit database dumps with seeded data
 - Seeded keys are for testing only
