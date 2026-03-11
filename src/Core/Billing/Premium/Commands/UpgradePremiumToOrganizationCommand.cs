@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -202,7 +203,7 @@ public class UpgradePremiumToOrganizationCommand(
                 Country = billingAddress.Country,
                 PostalCode = billingAddress.PostalCode
             },
-            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
+            TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country)
         });
 
         // Add tax ID to customer for accurate tax calculation if provided

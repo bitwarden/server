@@ -3,6 +3,7 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -161,15 +162,16 @@ public class UpdateOrganizationSubscriptionCommand(
 
     private async Task ReconcileTaxExemptionAsync(Customer customer)
     {
-        if (customer is
-            {
-                Address.Country: not CountryAbbreviations.UnitedStates,
-                TaxExempt: not TaxExempt.Reverse
-            })
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
+        switch (customer)
         {
-            await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
+            case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                when determinedTaxExemptStatus != customerTaxExemptStatus:
+                await stripeAdapter.UpdateCustomerAsync(customer.Id,
+                    new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                break;
         }
+
     }
 
     private static OneOf<SubscriptionItemOptions, BadRequest> ValidateItemAddition(
