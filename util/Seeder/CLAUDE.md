@@ -66,7 +66,9 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
 
-**Validation presets**: `Seeds/fixtures/presets/validation/` contains presets that verify density algorithms produce correct distributions. See the README in that folder for queries and expected results.
+**Presets**: Organized into `features/`, `qa/`, `scale/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
+
+**Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
 ## The Recipe Contract
 
@@ -93,7 +95,7 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 ## Data Flow
 
 ```
-CipherViewDto → Rust SDK encrypt_cipher → EncryptedCipherDto → TransformToServer → Server Cipher Entity
+CipherViewDto → Rust SDK encrypt_cipher → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
 Shared logic: `CipherEncryption.cs`, `EncryptedCipherDtoExtensions.cs`
@@ -112,7 +114,7 @@ Before modifying SDK integration, run `RustSdkCipherTests` to validate roundtrip
 Same domain = same seed = reproducible data:
 
 ```csharp
-_seed = options.Seed ?? StableHash.ToInt32(options.Domain);
+var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
 
 ## Security Reminders
