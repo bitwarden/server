@@ -1,0 +1,127 @@
+@model SubscriptionDiscountPagedModel
+@{
+    ViewData["Title"] = "Discounts";
+}
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1>Discounts</h1>
+        </div>
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fa fa-plus"></i> Import Discount
+            </a>
+        </div>
+    </div>
+
+    @if (Model.Items.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Stripe Coupon ID</th>
+                        <th>Name</th>
+                        <th>Discount</th>
+                        <th>Duration</th>
+                        <th>Only New Users?</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var discount in Model.Items)
+                    {
+                        var dateRange = $"{discount.StartDate.ToString("MM/dd/yyyy")} - {discount.EndDate.ToString("MM/dd/yyyy")}";
+                        <tr>
+                            <td><code>@discount.StripeCouponId</code></td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@discount.Id">
+                                    @discount.Name
+                                </a>
+                            </td>
+                            <td>@discount.DiscountDisplay</td>
+                            <td>
+                                @discount.Duration
+                                @if (discount.DurationInMonths.HasValue)
+                                {
+                                    <text>(@discount.DurationInMonths months)</text>
+                                }
+                            </td>
+                            <td>
+                                @if (discount.IsRestrictedToNewUsersOnly)
+                                {
+                                    <i class="fa fa-check"></i>
+                                }
+                            </td>
+                            <td>
+                                @if (discount.IsActive)
+                                {
+                                    <span class="badge bg-success" title="@dateRange">Active</span>
+                                }
+                                else if (DateTime.UtcNow < discount.StartDate)
+                                {
+                                    <span class="badge bg-secondary" title="@dateRange">Scheduled</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger" title="@dateRange">Expired</span>
+                                }
+                            </td>
+                            <td>@discount.CreationDate.ToString("MM/dd/yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <nav>
+            <ul class="pagination">
+                @if (Model.PreviousPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@Model.PreviousPage.Value"
+                           asp-route-count="@Model.Count">
+                            Previous
+                        </a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1">Previous</a>
+                    </li>
+                }
+
+                <li class="page-item active">
+                    <span class="page-link">Page @Model.Page</span>
+                </li>
+
+                @if (Model.NextPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@Model.NextPage.Value"
+                           asp-route-count="@Model.Count">
+                            Next
+                        </a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1">Next</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            No subscription discounts found. <a asp-action="Create">Import one from Stripe</a>.
+        </div>
+    }
+</div>

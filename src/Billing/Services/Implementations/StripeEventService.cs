@@ -1,7 +1,4 @@
 ﻿using Bit.Billing.Constants;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Stripe;
 
@@ -9,9 +6,6 @@ namespace Bit.Billing.Services.Implementations;
 
 public class StripeEventService(
     GlobalSettings globalSettings,
-    IOrganizationRepository organizationRepository,
-    IProviderRepository providerRepository,
-    ISetupIntentCache setupIntentCache,
     IStripeFacade stripeFacade)
     : IStripeEventService
 {
@@ -90,6 +84,11 @@ public class StripeEventService(
 
     public async Task<bool> ValidateCloudRegion(Event stripeEvent)
     {
+        if (EventTypeAppliesToAllRegions(stripeEvent.Type))
+        {
+            return true;
+        }
+
         var serverRegion = globalSettings.BaseServiceUri.CloudRegion;
 
         var customerExpansion = new List<string> { "customer" };
@@ -116,7 +115,7 @@ public class StripeEventService(
                 (await GetCustomer(stripeEvent, true)).Metadata,
 
             HandledStripeWebhook.SetupIntentSucceeded =>
-                await GetCustomerMetadataFromSetupIntentSucceededEvent(stripeEvent),
+                (await GetSetupIntent(stripeEvent, true, customerExpansion)).Customer?.Metadata,
 
             _ => null
         };
@@ -143,34 +142,17 @@ public class StripeEventService(
 
             return customer?.Metadata;
         }
-
-        async Task<Dictionary<string, string>?> GetCustomerMetadataFromSetupIntentSucceededEvent(Event localStripeEvent)
-        {
-            var setupIntent = await GetSetupIntent(localStripeEvent);
-
-            var subscriberId = await setupIntentCache.GetSubscriberIdForSetupIntent(setupIntent.Id);
-            if (subscriberId == null)
-            {
-                return null;
-            }
-
-            var organization = await organizationRepository.GetByIdAsync(subscriberId.Value);
-            if (organization is { GatewayCustomerId: not null })
-            {
-                var organizationCustomer = await stripeFacade.GetCustomer(organization.GatewayCustomerId);
-                return organizationCustomer.Metadata;
-            }
-
-            var provider = await providerRepository.GetByIdAsync(subscriberId.Value);
-            if (provider is not { GatewayCustomerId: not null })
-            {
-                return null;
-            }
-
-            var providerCustomer = await stripeFacade.GetCustomer(provider.GatewayCustomerId);
-            return providerCustomer.Metadata;
-        }
     }
+
+    /// <summary>
+    /// Returns true for event types that should be processed by all cloud regions.
+    /// </summary>
+    private static bool EventTypeAppliesToAllRegions(string eventType) => eventType switch
+    {
+        // Business rules say that coupons are allowed to be imported into multiple regions, so coupon deleted events are not region-segmented
+        HandledStripeWebhook.CouponDeleted => true,
+        _ => false
+    };
 
     private static T Extract<T>(Event stripeEvent)
         => stripeEvent.Data.Object is not T type

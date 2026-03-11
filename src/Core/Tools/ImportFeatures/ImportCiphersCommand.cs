@@ -74,7 +74,13 @@ public class ImportCiphersCommand : IImportCiphersCommand
 
             if (cipher.UserId.HasValue && cipher.Favorite)
             {
-                cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"true\"}}";
+                cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":true}}";
+            }
+
+            if (cipher.UserId.HasValue && cipher.ArchivedDate.HasValue)
+            {
+                cipher.Archives = $"{{\"{cipher.UserId.Value.ToString().ToUpperInvariant()}\":\"" +
+                                  $"{cipher.ArchivedDate.Value:yyyy-MM-ddTHH:mm:ss.fffffffZ}\"}}";
             }
         }
 
@@ -135,10 +141,16 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        // Init. ids for ciphers
         foreach (var cipher in ciphers)
         {
+            // Init. ids for ciphers
             cipher.SetNewId();
+
+            if (cipher.ArchivedDate.HasValue)
+            {
+                cipher.Archives = $"{{\"{importingUserId.ToString().ToUpperInvariant()}\":\"" +
+                                  $"{cipher.ArchivedDate.Value:yyyy-MM-ddTHH:mm:ss.fffffffZ}\"}}";
+            }
         }
 
         var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();

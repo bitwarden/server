@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -22,6 +21,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
@@ -79,9 +79,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using StackExchange.Redis;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Constants = Bit.Core.Constants;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -169,7 +170,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddKeyManagementServices();
         services.AddNotificationCenterServices();
         services.AddPlatformServices();
@@ -291,19 +292,16 @@ public static class ServiceCollectionExtensions
         services.AddOptionality();
         services.AddTokenizers();
 
-        services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }
         else
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, NoOpApplicationCacheMessaging>();
         }
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
@@ -471,11 +469,6 @@ public static class ServiceCollectionExtensions
                 addAuthorization.Invoke(config);
             });
         }
-
-        if (environment.IsDevelopment())
-        {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-        }
     }
 
     public static void AddCustomDataProtectionServices(
@@ -598,10 +591,24 @@ public static class ServiceCollectionExtensions
                 }
             }
         }
-        if (options.KnownProxies.Count > 1)
+
+        if (!string.IsNullOrWhiteSpace(globalSettings.KnownNetworks))
+        {
+            var proxyNetworks = globalSettings.KnownNetworks.Split(',');
+            foreach (var proxyNetwork in proxyNetworks)
+            {
+                if (Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                {
+                    options.KnownNetworks.Add(ipn);
+                }
+            }
+        }
+
+        if (options.KnownProxies.Count > 1 || options.KnownNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }
+
         app.UseForwardedHeaders(options);
     }
 
@@ -665,7 +672,6 @@ public static class ServiceCollectionExtensions
                     Constants.BrowserExtensions.OperaId
                  };
             }
-
         });
     }
 
@@ -852,19 +858,9 @@ public static class ServiceCollectionExtensions
         });
 
         // Add security requirement
-        config.AddSecurityRequirement(new OpenApiSecurityRequirement
+        config.AddSecurityRequirement((document) => new OpenApiSecurityRequirement
         {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = serverId
-                    },
-                },
-                [ApiScopes.ApiOrganization]
-            }
+            [new OpenApiSecuritySchemeReference(serverId, document)] = [ApiScopes.ApiOrganization]
         });
     }
 }

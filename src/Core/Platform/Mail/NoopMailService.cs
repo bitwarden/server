@@ -78,7 +78,17 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendUpdatedOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendUpdatedOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         return Task.FromResult(0);
     }
@@ -95,11 +105,6 @@ public class NoopMailService : IMailService
     }
 
     public Task SendSendEmailOtpEmailAsync(string email, string token, string subject)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendSendEmailOtpEmailv2Async(string email, string token, string subject)
     {
         return Task.FromResult(0);
     }

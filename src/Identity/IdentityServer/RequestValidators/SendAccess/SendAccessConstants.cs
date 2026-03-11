@@ -69,21 +69,9 @@ public static class SendAccessConstants
         /// </summary>
         public const string EmailRequired = "email_required";
         /// <summary>
-        /// Represents the error code indicating that an email address is invalid.
-        /// </summary>
-        public const string EmailInvalid = "email_invalid";
-        /// <summary>
         /// Represents the status indicating that both email and OTP are required, and the OTP has been sent.
         /// </summary>
-        public const string EmailOtpSent = "email_and_otp_required_otp_sent";
-        /// <summary>
-        /// Represents the status indicating that both email and OTP are required, and the OTP is invalid.
-        /// </summary>
-        public const string EmailOtpInvalid = "otp_invalid";
-        /// <summary>
-        /// For what ever reason the OTP was not able to be generated
-        /// </summary>
-        public const string OtpGenerationFailed = "otp_generation_failed";
+        public const string EmailAndOtpRequired = "email_and_otp_required";
     }
 
     /// <summary>

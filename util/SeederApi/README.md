@@ -38,7 +38,7 @@ The API will start on the configured port (typically `http://localhost:5000`).
 ### Seeding Data
 
 Send a POST request to `/seed` with a scene template name and optional arguments. Include the `X-Play-Id` header to
-track the seeded data for later cleanup:
+track the seeded data for later cleanup. You need to set the password argument to a master password for the mock user account that is at least 8-characters. You should always use an email address with a top-level domain of example.com (see RFC 2606 — guaranteed unresolvable for more details).
 
 ```bash
 curl -X POST http://localhost:5000/seed \
@@ -47,7 +47,8 @@ curl -X POST http://localhost:5000/seed \
   -d '{
     "template": "SingleUserScene",
     "arguments": {
-      "email": "test@example.com"
+      "email": "test@example.com",
+      "password": "REPLACE_ME"
     }
   }'
 ```

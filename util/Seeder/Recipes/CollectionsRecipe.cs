@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using LinqToDB.Data;
 using LinqToDB.EntityFrameworkCore;
 
 namespace Bit.Seeder.Recipes;
@@ -14,7 +15,7 @@ public class CollectionsRecipe(DatabaseContext db)
     /// <param name="collections">The number of collections to add.</param>
     /// <param name="organizationUserIds">The IDs of the users to create relationships with.</param>
     /// <param name="maxUsersWithRelationships">The maximum number of users to create relationships with.</param>
-    public List<Guid> AddToOrganization(Guid organizationId, int collections, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
+    public List<Guid> Seed(Guid organizationId, int collections, List<Guid> organizationUserIds, int maxUsersWithRelationships = 1000)
     {
         var collectionList = CreateAndSaveCollections(organizationId, collections);
 
@@ -65,7 +66,7 @@ public class CollectionsRecipe(DatabaseContext db)
 
         if (collectionUsers.Any())
         {
-            db.BulkCopy(collectionUsers);
+            db.BulkCopy(new BulkCopyOptions { TableName = nameof(Core.Entities.CollectionUser) }, collectionUsers);
         }
     }
 

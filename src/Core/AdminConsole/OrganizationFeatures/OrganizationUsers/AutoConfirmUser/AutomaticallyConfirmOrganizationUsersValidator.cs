@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimed
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -20,7 +19,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     IPolicyRequirementQuery policyRequirementQuery,
     IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
     IUserService userService,
-    IPolicyRepository policyRepository) : IAutomaticallyConfirmOrganizationUsersValidator
+    IPolicyQuery policyQuery) : IAutomaticallyConfirmOrganizationUsersValidator
 {
     public async Task<ValidationResult<AutomaticallyConfirmOrganizationUserValidationRequest>> ValidateAsync(
         AutomaticallyConfirmOrganizationUserValidationRequest request)
@@ -74,7 +73,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
     }
 
     private async Task<bool> OrganizationHasAutomaticallyConfirmUsersPolicyEnabledAsync(AutomaticallyConfirmOrganizationUserValidationRequest request) =>
-        await policyRepository.GetByOrganizationIdTypeAsync(request.OrganizationId, PolicyType.AutomaticUserConfirmation) is { Enabled: true }
+        (await policyQuery.RunAsync(request.OrganizationId, PolicyType.AutomaticUserConfirmation)).Enabled
         && request.Organization is { UseAutomaticUserConfirmation: true };
 
     private async Task<bool> OrganizationUserConformsToTwoFactorRequiredPolicyAsync(AutomaticallyConfirmOrganizationUserValidationRequest request)

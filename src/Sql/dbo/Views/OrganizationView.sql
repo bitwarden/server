@@ -63,6 +63,7 @@ SELECT
     [SyncSeats],
     [UseAutomaticUserConfirmation],
     [UsePhishingBlocker],
-    [UseDisableSmAdsForUsers]
+    [UseDisableSmAdsForUsers],
+    [UseMyItems]
 FROM
     [dbo].[Organization]

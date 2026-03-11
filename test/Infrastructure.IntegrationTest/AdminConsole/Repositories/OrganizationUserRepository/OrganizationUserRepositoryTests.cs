@@ -430,7 +430,7 @@ public class OrganizationUserRepositoryTests
 
         // Get organization users with collections included
         var organizationUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(
-            organization.Id, includeGroups: false, includeCollections: true);
+            organization.Id, includeGroups: false, includeSharedCollections: true);
 
         Assert.NotNull(organizationUsers);
         Assert.Single(organizationUsers);
@@ -442,6 +442,83 @@ public class OrganizationUserRepositoryTests
         Assert.Single(orgUserWithCollections.Collections);
         Assert.Equal(regularCollection.Id, orgUserWithCollections.Collections.First().Id);
         Assert.DoesNotContain(orgUserWithCollections.Collections, c => c.Id == defaultCollection.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdWithSharedCollectionsAsync_ExcludesDefaultCollections(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = user.Email,
+            Plan = "Test",
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        // Create a shared collection
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Shared Collection",
+            Type = CollectionType.SharedCollection
+        });
+
+        // Create a default user collection
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Default Collection",
+            Type = CollectionType.DefaultUserCollection,
+            DefaultUserCollectionEmail = user.Email
+        });
+
+        // Assign the organization user to both collections
+        await organizationUserRepository.ReplaceAsync(orgUser, new List<CollectionAccessSelection>
+        {
+            new CollectionAccessSelection
+            {
+                Id = sharedCollection.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            },
+            new CollectionAccessSelection
+            {
+                Id = defaultCollection.Id,
+                ReadOnly = false,
+                HidePasswords = false,
+                Manage = true
+            }
+        });
+
+        // Get organization user details with collections
+        var (orgUserDetails, collections) = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUser.Id);
+
+        Assert.NotNull(orgUserDetails);
+        Assert.NotNull(collections);
+
+        // Should only include the shared collection, not the default collection
+        Assert.Single(collections);
+        Assert.Equal(sharedCollection.Id, collections.First().Id);
+        Assert.DoesNotContain(collections, c => c.Id == defaultCollection.Id);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -597,136 +674,6 @@ public class OrganizationUserRepositoryTests
         // Organization without SSO should have null SSO properties
         Assert.Null(orgWithoutSsoDetails.SsoEnabled);
         Assert.Null(orgWithoutSsoDetails.SsoConfig);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithVerifiedDomain_WithOneMatchingEmailDomain_ReturnsSingle(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
-    {
-        var id = Guid.NewGuid();
-        var domainName = $"{id}.example.com";
-
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@x-{domainName}", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var user3 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@{domainName}.example.com", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
-            PrivateKey = "privatekey",
-            UsePolicies = false,
-            UseSso = false,
-            UseKeyConnector = false,
-            UseScim = false,
-            UseGroups = false,
-            UseDirectory = false,
-            UseEvents = false,
-            UseTotp = false,
-            Use2fa = false,
-            UseApi = false,
-            UseResetPassword = false,
-            UseSecretsManager = false,
-            SelfHost = false,
-            UsersGetPremium = false,
-            UseCustomPermissions = false,
-            Enabled = true,
-            UsePasswordManager = false,
-            LimitCollectionCreation = false,
-            LimitCollectionDeletion = false,
-            LimitItemDeletion = false,
-            AllowAdminAccessToAllCollectionItems = false,
-            UseRiskInsights = false,
-            UseAdminSponsoredFamilies = false,
-            UsePhishingBlocker = false,
-            UseDisableSmAdsForUsers = false,
-        });
-
-        var organizationDomain = new OrganizationDomain
-        {
-            OrganizationId = organization.Id,
-            DomainName = domainName,
-            Txt = "btw+12345",
-        };
-        organizationDomain.SetVerifiedDate();
-        organizationDomain.SetNextRunDate(12);
-        organizationDomain.SetJobRunCount();
-        await organizationDomainRepository.CreateAsync(organizationDomain);
-
-        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.Owner,
-            ResetPasswordKey = "resetpasswordkey1",
-            AccessSecretsManager = false
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-            ResetPasswordKey = "resetpasswordkey1",
-            AccessSecretsManager = false
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            UserId = user3.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-            ResetPasswordKey = "resetpasswordkey1",
-            AccessSecretsManager = false
-        });
-
-        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
-
-        Assert.NotNull(responseModel);
-        Assert.Single(responseModel);
-        Assert.Equal(orgUser1.Id, responseModel.Single().Id);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -965,7 +912,7 @@ public class OrganizationUserRepositoryTests
 
         await organizationUserRepository.CreateManyAsync(orgUserCollection);
 
-        var orgUser1 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[0].OrganizationUser.Id);
+        var orgUser1 = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUserCollection[0].OrganizationUser.Id);
         var group1Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[0].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[0].OrganizationUser.Id, orgUser1.OrganizationUser.Id);
 
@@ -976,13 +923,13 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(group1.Id, group1Database.First());
 
 
-        var orgUser2 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[1].OrganizationUser.Id);
+        var orgUser2 = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUserCollection[1].OrganizationUser.Id);
         var group2Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[1].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[1].OrganizationUser.Id, orgUser2.OrganizationUser.Id);
         Assert.Equal(collection2.Id, orgUser2.Collections.First().Id);
         Assert.Equal(group2.Id, group2Database.First());
 
-        var orgUser3 = await organizationUserRepository.GetDetailsByIdWithCollectionsAsync(orgUserCollection[2].OrganizationUser.Id);
+        var orgUser3 = await organizationUserRepository.GetDetailsByIdWithSharedCollectionsAsync(orgUserCollection[2].OrganizationUser.Id);
         var group3Database = await groupRepository.GetManyIdsByUserIdAsync(orgUserCollection[2].OrganizationUser.Id);
         Assert.Equal(orgUserCollection[2].OrganizationUser.Id, orgUser3.OrganizationUser.Id);
         Assert.Equal(collection3.Id, orgUser3.Collections.First().Id);
@@ -1058,7 +1005,7 @@ public class OrganizationUserRepositoryTests
             AccessSecretsManager = true
         });
 
-        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: false, includeCollections: false);
+        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: false, includeSharedCollections: false);
 
         Assert.NotNull(responseModel);
         Assert.Equal(2, responseModel.Count);
@@ -1213,7 +1160,7 @@ public class OrganizationUserRepositoryTests
 
         await organizationUserRepository.CreateManyAsync(createOrgUserWithCollections);
 
-        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: true, includeCollections: true);
+        var responseModel = await organizationUserRepository.GetManyDetailsByOrganizationAsync_vNext(organization.Id, includeGroups: true, includeSharedCollections: true);
 
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
@@ -1235,70 +1182,6 @@ public class OrganizationUserRepositoryTests
         Assert.Contains(user1Result.Collections, c => c.Id == collection1.Id);
         Assert.Contains(user1Result.Collections, c => c.Id == collection2.Id);
         Assert.DoesNotContain(user1Result.Collections, c => c.Id == defaultUserCollection.Id);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task GetManyByOrganizationWithClaimedDomainsAsync_WithNoVerifiedDomain_ReturnsEmpty(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
-    {
-        var id = Guid.NewGuid();
-        var domainName = $"{id}.example.com";
-        var requestTime = DateTime.UtcNow;
-
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Id = CoreHelpers.GenerateComb(),
-            Name = "Test User 1",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            CreationDate = requestTime,
-            RevisionDate = requestTime,
-            AccountRevisionDate = requestTime
-        });
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Id = CoreHelpers.GenerateComb(),
-            Name = $"Test Org {id}",
-            BillingEmail = user1.Email,
-            Plan = "Test",
-            Enabled = true,
-            CreationDate = requestTime,
-            RevisionDate = requestTime
-        });
-
-        // Create domain but do NOT verify it
-        var organizationDomain = new OrganizationDomain
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            DomainName = domainName,
-            Txt = "btw+12345",
-            CreationDate = requestTime
-        };
-        organizationDomain.SetNextRunDate(12);
-        // Note: NOT calling SetVerifiedDate()
-        await organizationDomainRepository.CreateAsync(organizationDomain);
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.Owner,
-            CreationDate = requestTime,
-            RevisionDate = requestTime
-        });
-
-        var responseModel = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organization.Id);
-
-        Assert.NotNull(responseModel);
-        Assert.Empty(responseModel);
     }
 
     [DatabaseTheory, DatabaseData]

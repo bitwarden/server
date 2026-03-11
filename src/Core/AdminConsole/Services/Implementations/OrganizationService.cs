@@ -14,12 +14,13 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -49,7 +50,7 @@ public class OrganizationService : IOrganizationService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
@@ -66,6 +67,7 @@ public class OrganizationService : IOrganizationService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -76,7 +78,7 @@ public class OrganizationService : IOrganizationService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
@@ -92,8 +94,7 @@ public class OrganizationService : IOrganizationService
         IPricingClient pricingClient,
         IPolicyRequirementQuery policyRequirementQuery,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IStripeAdapter stripeAdapter
-    )
+        IStripeAdapter stripeAdapter, IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -103,7 +104,7 @@ public class OrganizationService : IOrganizationService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
@@ -120,6 +121,7 @@ public class OrganizationService : IOrganizationService
         _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
         _stripeAdapter = stripeAdapter;
+        _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -148,8 +150,14 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional storage.");
         }
 
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
-            plan.PasswordManager.StripeStoragePlanId, plan.PasswordManager.BaseStorageGb);
+        var secret = await BillingHelpers.AdjustStorageAsync(
+            _paymentService,
+            _updateOrganizationSubscriptionCommand,
+            _featureService,
+            organization,
+            storageAdjustmentGb,
+            plan.PasswordManager.StripeStoragePlanId,
+            plan.PasswordManager.BaseStorageGb);
         await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
@@ -296,7 +304,19 @@ public class OrganizationService : IOrganizationService
         _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
             nameof(AdjustSeatsAsync), additionalSeats, organization.Id);
 
-        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
+        string paymentIntentClientSecret = null;
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
+        {
+            var changeSet = OrganizationSubscriptionChangeSet.UpdatePasswordManagerSeats(plan, additionalSeats);
+            var result = await _updateOrganizationSubscriptionCommand.Run(organization, changeSet);
+            result.GetValueOrThrow();
+        }
+        else
+        {
+            paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
+        }
+
         organization.Seats = (short?)newSeatTotal;
 
         _logger.LogInformation("{Method}: Invoking _organizationRepository.ReplaceAsync with {Seats} seats for Organization ({OrganizationID})", nameof(AdjustSeatsAsync), organization.Seats, organization.Id); ;
@@ -507,7 +527,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, invitingUserId);
 
         if (systemUser.HasValue)
         {
@@ -527,7 +547,8 @@ public class OrganizationService : IOrganizationService
     private async
         Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)>
         SaveUsersSendInvitesAsync(Guid organizationId,
-            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+            IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+            Guid? invitingUserId)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -679,7 +700,7 @@ public class OrganizationService : IOrganizationService
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
 
-            await SendInvitesAsync(allOrgUsers, organization);
+            await SendInvitesAsync(allOrgUsers, organization, invitingUserId);
         }
         catch (Exception e)
         {
@@ -718,40 +739,15 @@ public class OrganizationService : IOrganizationService
         return (allOrgUsers, events);
     }
 
-    public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId,
-        Guid? invitingUserId,
-        IEnumerable<Guid> organizationUsersId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
-        _logger.LogUserInviteStateDiagnostics(orgUsers);
+    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization, Guid? invitingUserId = null) =>
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization, initOrganization: false, invitingUserId: invitingUserId));
 
-        var org = await GetOrgById(organizationId);
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-        foreach (var orgUser in orgUsers)
-        {
-            if (orgUser.Status != OrganizationUserStatusType.Invited || orgUser.OrganizationId != organizationId)
-            {
-                result.Add(Tuple.Create(orgUser, "User invalid."));
-                continue;
-            }
-
-            await SendInviteAsync(orgUser, org, false);
-            result.Add(Tuple.Create(orgUser, ""));
-        }
-
-        return result;
-    }
-
-
-    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
-        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
-
-    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization) =>
+    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization, Guid? invitingUserId = null) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
             users: [orgUser],
             organization: organization,
-            initOrganization: initOrganization));
+            initOrganization: initOrganization,
+            invitingUserId: invitingUserId));
 
     public async Task<(bool canScale, string failureReason)> CanScaleAsync(
         Organization organization,
@@ -862,9 +858,8 @@ public class OrganizationService : IOrganizationService
         }
 
         // Make sure the organization has the policy enabled
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organizationId, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled)
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }

@@ -1,6 +1,4 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Caches.Implementations;
-using Bit.Core.Billing.Licenses;
+﻿using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
@@ -29,7 +27,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITaxService, TaxService>();
         services.AddTransient<IOrganizationBillingService, OrganizationBillingService>();
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
-        services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
         services.AddLicenseServices();
         services.AddLicenseOperations();
@@ -45,6 +42,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
         services.AddTransient<IReinstateSubscriptionCommand, ReinstateSubscriptionCommand>();
         services.AddTransient<IBraintreeService, BraintreeService>();
+        services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
+        services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
@@ -59,6 +58,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICreatePremiumCloudHostedSubscriptionCommand, CreatePremiumCloudHostedSubscriptionCommand>();
         services.AddScoped<ICreatePremiumSelfHostedSubscriptionCommand, CreatePremiumSelfHostedSubscriptionCommand>();
         services.AddTransient<IPreviewPremiumTaxCommand, PreviewPremiumTaxCommand>();
+        services.AddScoped<IPreviewPremiumUpgradeProrationCommand, PreviewPremiumUpgradeProrationCommand>();
         services.AddScoped<IUpdatePremiumStorageCommand, UpdatePremiumStorageCommand>();
         services.AddScoped<IUpgradePremiumToOrganizationCommand, UpgradePremiumToOrganizationCommand>();
     }

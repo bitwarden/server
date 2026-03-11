@@ -86,12 +86,12 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
             var parameters = new
             {
                 OrganizationId = organizationId,
-                StartDate = startDate,
-                EndDate = endDate
+                StartDate = startDate.ToUniversalTime(),
+                EndDate = endDate.ToUniversalTime()
             };
 
             var results = await connection.QueryAsync<OrganizationReportSummaryDataResponse>(
-                $"[{Schema}].[OrganizationReport_GetSummariesByDateRange]",
+                $"[{Schema}].[OrganizationReport_ReadByOrganizationIdAndRevisionDate]",
                 parameters,
                 commandType: CommandType.StoredProcedure);
 

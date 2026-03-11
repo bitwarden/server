@@ -20,7 +20,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bogus" Version="35.*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="..\..\Program.cs" />
   </ItemGroup>
 
+  <!-- Embed seed data JSON files as assembly resources -->
+  <ItemGroup>
+    <EmbeddedResource Include="Seeds\fixtures\**\*.json" />
+  </ItemGroup>
+
+  <!-- Allow integration tests to access internal seeders for validation -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SeederApi.IntegrationTest" />
+  </ItemGroup>
 </Project>

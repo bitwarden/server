@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System.Globalization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ namespace Bit.Core.Utilities;
 public static class LoggerFactoryExtensions
 {
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="hostBuilder"></param>
     /// <returns></returns>
@@ -21,10 +22,12 @@ public static class LoggerFactoryExtensions
                 return;
             }
 
+            IConfiguration loggingConfiguration;
+
             // If they have begun using the new settings location, use that
             if (!string.IsNullOrEmpty(context.Configuration["Logging:PathFormat"]))
             {
-                logging.AddFile(context.Configuration.GetSection("Logging"));
+                loggingConfiguration = context.Configuration.GetSection("Logging");
             }
             else
             {
@@ -40,28 +43,35 @@ public static class LoggerFactoryExtensions
                 var projectName = loggingOptions.ProjectName
                     ?? context.HostingEnvironment.ApplicationName;
 
+                string pathFormat;
+
                 if (loggingOptions.LogRollBySizeLimit.HasValue)
                 {
-                    var pathFormat = loggingOptions.LogDirectoryByProject
+                    pathFormat = loggingOptions.LogDirectoryByProject
                         ? Path.Combine(loggingOptions.LogDirectory, projectName, "log.txt")
                         : Path.Combine(loggingOptions.LogDirectory, $"{projectName.ToLowerInvariant()}.log");
-
-                    logging.AddFile(
-                        pathFormat: pathFormat,
-                        fileSizeLimitBytes: loggingOptions.LogRollBySizeLimit.Value
-                    );
                 }
                 else
                 {
-                    var pathFormat = loggingOptions.LogDirectoryByProject
+                    pathFormat = loggingOptions.LogDirectoryByProject
                         ? Path.Combine(loggingOptions.LogDirectory, projectName, "{Date}.txt")
                         : Path.Combine(loggingOptions.LogDirectory, $"{projectName.ToLowerInvariant()}_{{Date}}.log");
-
-                    logging.AddFile(
-                        pathFormat: pathFormat
-                    );
                 }
+
+                // We want to rely on Serilog using the configuration section to have customization of the log levels
+                // so we make a custom configuration source for them based on the legacy values and allow overrides from
+                // the new location.
+                loggingConfiguration = new ConfigurationBuilder()
+                    .AddInMemoryCollection(new Dictionary<string, string?>
+                    {
+                        {"PathFormat", pathFormat},
+                        {"FileSizeLimitBytes", loggingOptions.LogRollBySizeLimit?.ToString(CultureInfo.InvariantCulture)}
+                    })
+                    .AddConfiguration(context.Configuration.GetSection("Logging"))
+                    .Build();
             }
+
+            logging.AddFile(loggingConfiguration);
         });
     }
 

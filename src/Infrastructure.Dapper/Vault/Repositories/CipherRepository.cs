@@ -248,7 +248,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            return results;
+            return DateTime.SpecifyKind(results, DateTimeKind.Utc);
         }
     }
 
@@ -595,7 +595,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            return results;
+            return DateTime.SpecifyKind(results, DateTimeKind.Utc);
         }
     }
 
@@ -608,7 +608,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            return results;
+            return DateTime.SpecifyKind(results, DateTimeKind.Utc);
         }
     }
 
@@ -621,7 +621,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 new { Ids = ids.ToGuidIdArrayTVP(), OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
-            return results;
+            return DateTime.SpecifyKind(results, DateTimeKind.Utc);
         }
     }
 

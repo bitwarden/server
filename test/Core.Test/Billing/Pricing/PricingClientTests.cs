@@ -2,6 +2,7 @@
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -445,6 +446,181 @@ public class PricingClientTests
 
     #endregion
 
+    #region ListPremiumPlans Tests
+
+    [Fact]
+    public async Task ListPremiumPlans_Success_ReturnsPremiumPlans()
+    {
+        // Arrange
+        var mockHttp = new MockHttpMessageHandler();
+        var plansJson = $@"[
+            {CreatePremiumPlanJson("Premium", true, null, 10M, "price_premium", 4M, "price_storage", 1)},
+            {CreatePremiumPlanJson("Premium Legacy", false, 2019, 10M, "price_premium_legacy", 4M, "price_storage_legacy", 1)}
+        ]";
+
+        mockHttp.When(HttpMethod.Get, "*/plans/premium")
+            .Respond("application/json", plansJson);
+
+        var featureService = Substitute.For<IFeatureService>();
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
+
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(featureService, globalSettings, httpClient, logger);
+
+        // Act
+        var result = await pricingClient.ListPremiumPlans();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Equal("Premium", result[0].Name);
+        Assert.True(result[0].Available);
+        Assert.Null(result[0].LegacyYear);
+        Assert.Equal(10M, result[0].Seat.Price);
+        Assert.Equal("price_premium", result[0].Seat.StripePriceId);
+        Assert.Equal(4M, result[0].Storage.Price);
+        Assert.Equal("price_storage", result[0].Storage.StripePriceId);
+        Assert.Equal(1, result[0].Storage.Provided);
+        Assert.Equal("Premium Legacy", result[1].Name);
+        Assert.False(result[1].Available);
+        Assert.Equal(2019, result[1].LegacyYear);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ListPremiumPlans_WhenSelfHosted_ReturnsEmptyList(
+        SutProvider<PricingClient> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<GlobalSettings>().SelfHosted = true;
+
+        // Act
+        var result = await sutProvider.Sut.ListPremiumPlans();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ListPremiumPlans_WhenPricingServiceReturnsError_ThrowsBillingException()
+    {
+        // Arrange
+        var mockHttp = new MockHttpMessageHandler();
+        mockHttp.When(HttpMethod.Get, "*/plans/premium")
+            .Respond(HttpStatusCode.InternalServerError);
+
+        var featureService = Substitute.For<IFeatureService>();
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
+
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(featureService, globalSettings, httpClient, logger);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BillingException>(() =>
+            pricingClient.ListPremiumPlans());
+    }
+
+    #endregion
+
+    #region GetAvailablePremiumPlan Tests
+
+    [Fact]
+    public async Task GetAvailablePremiumPlan_WithAvailablePlan_ReturnsIt()
+    {
+        // Arrange
+        var mockHttp = new MockHttpMessageHandler();
+        var plansJson = $@"[
+            {CreatePremiumPlanJson("Premium Legacy", false, 2019, 10M, "price_legacy", 4M, "price_storage_legacy", 1)},
+            {CreatePremiumPlanJson("Premium", true, null, 10M, "price_premium", 4M, "price_storage", 1)}
+        ]";
+
+        mockHttp.When(HttpMethod.Get, "*/plans/premium")
+            .Respond("application/json", plansJson);
+
+        var featureService = Substitute.For<IFeatureService>();
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
+
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(featureService, globalSettings, httpClient, logger);
+
+        // Act
+        var result = await pricingClient.GetAvailablePremiumPlan();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Premium", result.Name);
+        Assert.True(result.Available);
+    }
+
+    [Fact]
+    public async Task GetAvailablePremiumPlan_WithNoAvailablePlan_ThrowsNotFoundException()
+    {
+        // Arrange
+        var mockHttp = new MockHttpMessageHandler();
+        var plansJson = $@"[
+            {CreatePremiumPlanJson("Premium Legacy", false, 2019, 10M, "price_legacy", 4M, "price_storage_legacy", 1)}
+        ]";
+
+        mockHttp.When(HttpMethod.Get, "*/plans/premium")
+            .Respond("application/json", plansJson);
+
+        var featureService = Substitute.For<IFeatureService>();
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
+
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(featureService, globalSettings, httpClient, logger);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            pricingClient.GetAvailablePremiumPlan());
+    }
+
+    [Fact]
+    public async Task GetAvailablePremiumPlan_WithEmptyList_ThrowsNotFoundException()
+    {
+        // Arrange
+        var mockHttp = new MockHttpMessageHandler();
+        mockHttp.When(HttpMethod.Get, "*/plans/premium")
+            .Respond("application/json", "[]");
+
+        var featureService = Substitute.For<IFeatureService>();
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
+
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(featureService, globalSettings, httpClient, logger);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            pricingClient.GetAvailablePremiumPlan());
+    }
+
+    #endregion
+
     private static string CreatePlanJson(
         string lookupKey,
         string name,
@@ -468,6 +644,34 @@ public class PricingClientTests
             ""additionalData"": {{
                 ""nameLocalizationKey"": ""{lookupKey}Name"",
                 ""descriptionLocalizationKey"": ""{lookupKey}Description""
+            }}
+        }}";
+    }
+
+    private static string CreatePremiumPlanJson(
+        string name,
+        bool available,
+        int? legacyYear,
+        decimal seatPrice,
+        string seatStripePriceId,
+        decimal storagePrice,
+        string storageStripePriceId,
+        int storageProvided)
+    {
+        var legacyYearJson = legacyYear.HasValue ? legacyYear.Value.ToString() : "null";
+        return $@"{{
+            ""name"": ""{name}"",
+            ""available"": {available.ToString().ToLower()},
+            ""legacyYear"": {legacyYearJson},
+            ""seat"": {{
+                ""stripePriceId"": ""{seatStripePriceId}"",
+                ""price"": {seatPrice},
+                ""provided"": 0
+            }},
+            ""storage"": {{
+                ""stripePriceId"": ""{storageStripePriceId}"",
+                ""price"": {storagePrice},
+                ""provided"": {storageProvided}
             }}
         }}";
     }

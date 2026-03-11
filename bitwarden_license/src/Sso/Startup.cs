@@ -8,7 +8,6 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer.Services;
-using Microsoft.IdentityModel.Logging;
 using Stripe;
 
 namespace Bit.Sso;
@@ -91,20 +90,15 @@ public class Startup
 
     public void Configure(
         IApplicationBuilder app,
-        IWebHostEnvironment env,
+        IWebHostEnvironment environment,
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        if (env.IsDevelopment() || globalSettings.SelfHosted)
-        {
-            IdentityModelEventSource.ShowPII = true;
-        }
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
-        if (!env.IsDevelopment())
+        if (!environment.IsDevelopment())
         {
             var uri = new Uri(globalSettings.BaseServiceUri.Sso);
             app.Use(async (ctx, next) =>
@@ -120,7 +114,7 @@ public class Startup
             app.UseForwardedHeaders(globalSettings);
         }
 
-        if (env.IsDevelopment())
+        if (environment.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
             app.UseCookiePolicy();
