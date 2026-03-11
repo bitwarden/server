@@ -159,9 +159,6 @@ public class UpgradePremiumToOrganizationCommand(
     {
         var isNonSeatBasedPmPlan = targetPlan.HasNonSeatBasedPasswordManagerPlan();
 
-        // if the target plan is non-seat-based, set seats to the base seats of the target plan, otherwise set to 1
-        var initialSeats = isNonSeatBasedPmPlan ? targetPlan.PasswordManager.BaseSeats : 1;
-
         // Build the list of subscription item updates
         var options = new List<SubscriptionItemOptions>();
 
@@ -175,19 +172,14 @@ public class UpgradePremiumToOrganizationCommand(
         }
 
         // Add new organization subscription items
-        options.Add(isNonSeatBasedPmPlan
-            ? new SubscriptionItemOptions
-            {
-                Id = passwordManagerItem.Id,
-                Price = targetPlan.PasswordManager.StripePlanId,
-                Quantity = 1
-            }
-            : new SubscriptionItemOptions
-            {
-                Id = passwordManagerItem.Id,
-                Price = targetPlan.PasswordManager.StripeSeatPlanId,
-                Quantity = initialSeats
-            });
+        options.Add(new SubscriptionItemOptions
+        {
+            Id = passwordManagerItem.Id,
+            Price = isNonSeatBasedPmPlan
+                ? targetPlan.PasswordManager.StripePlanId
+                : targetPlan.PasswordManager.StripeSeatPlanId,
+            Quantity = 1
+        });
 
         return options;
     }
