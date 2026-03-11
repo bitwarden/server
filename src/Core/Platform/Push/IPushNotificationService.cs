@@ -433,7 +433,7 @@ public interface IPushNotificationService
     Task PushPremiumStatusChangedAsync(Entities.User user)
         => PushAsync(new PushNotification<PremiumStatusPushNotification>
         {
-            Type = PushType.SyncPremiumStatusChanged,
+            Type = PushType.PremiumStatusChanged,
             Target = NotificationTarget.User,
             TargetId = user.Id,
             Payload = new PremiumStatusPushNotification

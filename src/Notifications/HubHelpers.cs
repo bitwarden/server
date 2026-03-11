@@ -246,6 +246,18 @@ public class HubHelpers
                 await _hubContext.Clients.User(autoConfirmNotification.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, autoConfirmNotification, cancellationToken);
                 break;
+            case PushType.PremiumStatusChanged:
+                var premiumStatusNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<PremiumStatusPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                if (premiumStatusNotification is null)
+                {
+                    break;
+                }
+
+                await _hubContext.Clients.User(premiumStatusNotification.Payload.UserId.ToString())
+                    .SendAsync(_receiveMessageMethod, premiumStatusNotification, cancellationToken);
+                break;
             default:
                 _logger.LogWarning("Notification type '{NotificationType}' has not been registered in HubHelpers and will not be pushed as as result", notification.Type);
                 break;

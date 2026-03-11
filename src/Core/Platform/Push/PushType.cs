@@ -104,5 +104,5 @@ public enum PushType : byte
     AutoConfirm = 26,
 
     [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.PremiumStatusPushNotification))]
-    SyncPremiumStatusChanged = 27,
+    PremiumStatusChanged = 27,
 }
