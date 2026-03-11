@@ -260,7 +260,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -338,7 +338,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Families Org", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.FamiliesAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -404,7 +404,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -473,7 +473,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -543,7 +543,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -638,7 +638,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -688,7 +688,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -738,7 +738,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -787,7 +787,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -842,7 +842,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -897,7 +897,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -946,7 +946,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -996,7 +996,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "test-public-key", "test-encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _organizationRepository.Received(1).CreateAsync(
             Arg.Is<Organization>(org =>
@@ -1044,7 +1044,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -1097,7 +1097,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -1154,7 +1154,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
         Assert.NotEqual(Guid.Empty, organizationId);
 
@@ -1218,7 +1218,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
             Arg.Is<CustomerUpdateOptions>(options =>
@@ -1273,7 +1273,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
             Arg.Is<CustomerUpdateOptions>(options =>
@@ -1333,7 +1333,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         var organizationId = result.AsT0;
 
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
@@ -1390,7 +1390,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             "sub_123",
             Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == null));
@@ -1444,7 +1444,7 @@ public class UpgradePremiumToOrganizationCommandTests
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", "Default Collection", PlanType.TeamsAnnually, billingAddress);
 
         // Assert
-        Assert.True(result.IsT0);
+        Assert.True(result.Success);
 
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             "cus_123",
