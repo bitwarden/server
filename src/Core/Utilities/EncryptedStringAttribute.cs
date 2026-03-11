@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Buffers.Text;
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 
 #nullable enable
@@ -110,7 +111,7 @@ public class EncryptedStringAttribute : ValidationAttribute
             if (requiredPieces == 1)
             {
                 // Only one more part is needed so don't split and check the chunk
-                if (rest.IsEmpty || !IsValidBase64(rest))
+                if (rest.IsEmpty || !Base64.IsValid(rest))
                 {
                     return false;
                 }
@@ -127,7 +128,7 @@ public class EncryptedStringAttribute : ValidationAttribute
                 }
 
                 // Is the required chunk valid base 64?
-                if (chunk.IsEmpty || !IsValidBase64(chunk))
+                if (chunk.IsEmpty || !Base64.IsValid(chunk))
                 {
                     return false;
                 }
@@ -139,29 +140,5 @@ public class EncryptedStringAttribute : ValidationAttribute
 
         // No more parts are required, so check there are no extra parts
         return rest.IndexOf('|') == -1;
-    }
-
-    // System.Buffers.Text.Base64.IsValid enforces canonical padding (non-zero unused bits are rejected)
-    // starting with .NET 9. Bitwarden clients may produce non-canonical base64 for random encrypted bytes,
-    // so we validate only character set, length, and padding structure.
-    private static bool IsValidBase64(ReadOnlySpan<char> value)
-    {
-        if (value.IsEmpty || value.Length % 4 != 0) return false;
-
-        var paddingCount = 0;
-        if (value[^1] == '=') paddingCount++;
-        if (value[^2] == '=') paddingCount++;
-
-        for (int i = 0; i < value.Length - paddingCount; i++)
-        {
-            char c = value[i];
-            if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-                  (c >= '0' && c <= '9') || c == '+' || c == '/'))
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 }
