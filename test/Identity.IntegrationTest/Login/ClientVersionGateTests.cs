@@ -13,7 +13,7 @@ namespace Bit.Identity.IntegrationTest.Login;
 public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
 {
     private readonly IdentityApplicationFactory _factory;
-    private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+    private const string DefaultEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     public ClientVersionGateTests(IdentityApplicationFactory factory)
     {

@@ -7,7 +7,7 @@ namespace Bit.Api.Test.KeyManagement.Models.Request;
 public class V2UpgradeTokenRequestModelTests
 {
     private const string _validWrappedKey1 = "7.AOs41Hd8OQiCPXjyJKCiDA==";
-    private const string _validWrappedKey2 = "2.BPt52Ie9PQjDQYkzKLDjEA==|P7PIiu3V3iKHCTOHojnKng==|jE44t9C79D9KiZZiTb5W2uBskwMs9fFbHrPW8CSp6Kk=";
+    private const string _validWrappedKey2 = "2.BPt52Ie9PQjDQYkzKLDjEB==|P7PIiu3V3iKHCTOHojnKnh==|jE44t9C79D9KiZZiTb5W2uBskwMs9fFbHrPW8CSp6Kl=";
 
     [Fact]
     public void Validate_WithValidEncStrings_ReturnsNoErrors()

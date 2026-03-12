@@ -9,7 +9,7 @@ namespace Bit.Api.Test.KeyManagement.Models.Request;
 public class MasterPasswordUnlockDataModelTests
 {
 
-    readonly string _mockEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzw==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+    readonly string _mockEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     [Theory]
     [InlineData(KdfType.PBKDF2_SHA256, 5000, null, null)]
