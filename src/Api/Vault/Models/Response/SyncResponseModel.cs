@@ -87,7 +87,14 @@ public class SyncResponseModel() : ResponseModel("sync")
                     Salt = user.Email.ToLowerInvariant()
                 }
                 : null,
-            WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null
+            WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null,
+            V2UpgradeToken = V2UpgradeTokenData.FromJson(user.V2UpgradeToken) is { } tokenData
+                ? new V2UpgradeTokenResponseModel
+                {
+                    WrappedUserKey1 = tokenData.WrappedUserKey1,
+                    WrappedUserKey2 = tokenData.WrappedUserKey2
+                }
+                : null
         };
     }
 
