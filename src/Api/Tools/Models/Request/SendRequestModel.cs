@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Api.Tools.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -247,28 +246,35 @@ public class SendRequestModel
         existingSend.ExpirationDate = ExpirationDate;
         existingSend.DeletionDate = DeletionDate.Value;
         existingSend.MaxAccessCount = MaxAccessCount;
-
-        if (!string.IsNullOrWhiteSpace(Emails))
-        {
-            // normalize encoding
-            var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
-            existingSend.Emails = string.Join(",", emails);
-            existingSend.Password = null;
-        }
-        else if (!string.IsNullOrWhiteSpace(Password))
-        {
-            existingSend.Password = authorizationService.HashPassword(Password);
-            existingSend.Emails = null;
-        }
-        else if (existingSend.AuthType == Core.Tools.Enums.AuthType.Email)
-        {
-            existingSend.Emails = null;
-            existingSend.Password = null;
-        }
-
-        existingSend.AuthType = SendUtilities.InferAuthType(existingSend);
         existingSend.Disabled = Disabled.GetValueOrDefault();
         existingSend.HideEmail = HideEmail.GetValueOrDefault();
+
+        if (existingSend.AuthType == Core.Tools.Enums.AuthType.Password &&
+            AuthType == Core.Tools.Enums.AuthType.Password)
+        {
+            // when password protected Sends are edited, DO NOT re-hash the existing password hash
+            return existingSend;
+        }
+
+        existingSend.AuthType = AuthType;
+        switch (AuthType)
+        {
+            case Core.Tools.Enums.AuthType.Email:
+                var emails = string.IsNullOrWhiteSpace(Emails) ? [] : Emails.Split(',', RemoveEmptyEntries | TrimEntries);
+                existingSend.Emails = string.Join(",", emails);
+                existingSend.Password = null;
+                break;
+            case Core.Tools.Enums.AuthType.Password:
+                existingSend.Password = authorizationService.HashPassword(Password);
+                existingSend.Emails = null;
+                break;
+            case Core.Tools.Enums.AuthType.None:
+                existingSend.Emails = null;
+                existingSend.Password = null;
+                break;
+            default:
+                throw new BadRequestException("You cannot save a Send having an invalid or null AuthType");
+        }
 
         return existingSend;
     }
