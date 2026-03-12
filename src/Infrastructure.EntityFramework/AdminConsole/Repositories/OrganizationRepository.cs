@@ -161,7 +161,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     Use2fa = e.Use2fa,
                     UseEvents = e.UseEvents,
                     UsersGetPremium = e.UsersGetPremium,
-                    Using2fa = e.Use2fa && e.TwoFactorProviders != null,
+                    Using2fa = e.Use2fa && e.TwoFactorProviders != null && e.TwoFactorProviders != "{}",
                     UseSso = e.UseSso,
                     UseKeyConnector = e.UseKeyConnector,
                     UseResetPassword = e.UseResetPassword,
