@@ -79,12 +79,10 @@ public class SendAccessGrantValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_SendInaccessibleMethod_CallsInaccessibleValidator(
+    public async Task ValidateAsync_SendInaccessibleMethod_ReturnsInvalidSendId(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider,
-        SendInaccessible sendInaccessible,
-        Guid sendId,
-        GrantValidationResult expectedResult)
+        Guid sendId)
     {
         // Arrange
         var context = SetupTokenRequest(
@@ -94,20 +92,18 @@ public class SendAccessGrantValidatorTests
 
         sutProvider.GetDependency<ISendAuthenticationQuery>()
             .GetAuthenticationMethod(sendId)
-            .Returns(sendInaccessible);
-
-        sutProvider.GetDependency<ISendAuthenticationMethodValidator<SendInaccessible>>()
-            .ValidateRequestAsync(context, sendInaccessible, sendId)
-            .Returns(expectedResult);
+            .Returns(new SendInaccessible());
 
         // Act
         await sutProvider.Sut.ValidateAsync(context);
 
         // Assert
-        Assert.Equal(expectedResult, context.Result);
-        await sutProvider.GetDependency<ISendAuthenticationMethodValidator<SendInaccessible>>()
-            .Received(1)
-            .ValidateRequestAsync(context, sendInaccessible, sendId);
+        Assert.True(context.Result.IsError);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
+        Assert.Equal(SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, context.Result.ErrorDescription);
+        var customResponse = context.Result.CustomResponse as Dictionary<string, object>;
+        Assert.NotNull(customResponse);
+        Assert.Equal(SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, customResponse[SendAccessConstants.SendAccessError]);
     }
 
     [Theory, BitAutoData]
@@ -268,7 +264,7 @@ public class SendAccessGrantValidatorTests
     public void GrantType_ReturnsCorrectType()
     {
         // Arrange & Act
-        var validator = new SendAccessGrantValidator(null!, null!, null!, null!, null!);
+        var validator = new SendAccessGrantValidator(null!, null!, null!, null!);
 
         // Assert
         Assert.Equal(CustomGrantTypes.SendAccess, ((IExtensionGrantValidator)validator).GrantType);
