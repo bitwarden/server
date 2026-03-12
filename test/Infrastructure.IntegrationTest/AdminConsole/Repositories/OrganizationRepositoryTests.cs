@@ -380,7 +380,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(organization.Id, result.Id);
         Assert.Equal(organization.UseEvents, result.UseEvents);
         Assert.Equal(organization.Use2fa, result.Use2fa);
-        Assert.Equal(organization.Use2fa && organization.TwoFactorProviders != null, result.Using2fa);
+        Assert.Equal(organization.Use2fa && organization.TwoFactorProviders != null && organization.TwoFactorProviders != "{}", result.Using2fa);
         Assert.Equal(organization.UsersGetPremium, result.UsersGetPremium);
         Assert.Equal(organization.Enabled, result.Enabled);
         Assert.Equal(organization.UseSso, result.UseSso);
