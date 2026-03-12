@@ -149,38 +149,14 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 #nullable enable
     public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            return await GetDbSet(dbContext)
-                .Where(e => e.Id == organizationId)
-                .Select(e => new OrganizationAbility
-                {
-                    Enabled = e.Enabled,
-                    Id = e.Id,
-                    Use2fa = e.Use2fa,
-                    UseEvents = e.UseEvents,
-                    UsersGetPremium = e.UsersGetPremium,
-                    Using2fa = e.Use2fa && e.TwoFactorProviders != null && e.TwoFactorProviders != "{}",
-                    UseSso = e.UseSso,
-                    UseKeyConnector = e.UseKeyConnector,
-                    UseResetPassword = e.UseResetPassword,
-                    UseScim = e.UseScim,
-                    UseCustomPermissions = e.UseCustomPermissions,
-                    UsePolicies = e.UsePolicies,
-                    LimitCollectionCreation = e.LimitCollectionCreation,
-                    LimitCollectionDeletion = e.LimitCollectionDeletion,
-                    LimitItemDeletion = e.LimitItemDeletion,
-                    AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                    UseRiskInsights = e.UseRiskInsights,
-                    UseOrganizationDomains = e.UseOrganizationDomains,
-                    UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
-                    UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation,
-                    UseDisableSmAdsForUsers = e.UseDisableSmAdsForUsers,
-                    UsePhishingBlocker = e.UsePhishingBlocker,
-                    UseMyItems = e.UseMyItems
-                }).SingleOrDefaultAsync();
-        }
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        return await GetDbSet(dbContext)
+            .Where(e => e.Id == organizationId)
+            .Select(e => new OrganizationAbility(e))
+            .SingleOrDefaultAsync();
     }
 #nullable disable
 
