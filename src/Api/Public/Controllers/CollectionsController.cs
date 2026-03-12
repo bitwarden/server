@@ -67,8 +67,9 @@ public class CollectionsController : Controller
     {
         var collections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(_currentContext.OrganizationId.Value);
 
-        var collectionResponses = collections.Select(c =>
-            new CollectionResponseModel(c.Item1, c.Item2.Groups));
+        var collectionResponses = collections
+            .Where(c => c.Item1.Type != CollectionType.DefaultUserCollection)
+            .Select(c => new CollectionResponseModel(c.Item1, c.Item2.Groups));
 
         var response = new ListResponseModel<CollectionResponseModel>(collectionResponses);
         return new JsonResult(response);

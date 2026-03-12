@@ -74,7 +74,9 @@ public class OrganizationResponseModel : ResponseModel
         UseOrganizationDomains = organization.UseOrganizationDomains;
         UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
         UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation;
+        UseDisableSmAdsForUsers = organization.UseDisableSmAdsForUsers;
         UsePhishingBlocker = organization.UsePhishingBlocker;
+        UseMyItems = organization.UseMyItems;
     }
 
     public Guid Id { get; set; }
@@ -124,7 +126,9 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseOrganizationDomains { get; set; }
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
+    public bool UseDisableSmAdsForUsers { get; set; }
     public bool UsePhishingBlocker { get; set; }
+    public bool UseMyItems { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

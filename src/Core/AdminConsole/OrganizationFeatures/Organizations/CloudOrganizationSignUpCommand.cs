@@ -2,10 +2,8 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -37,7 +35,6 @@ public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationBillingService organizationBillingService,
     IStripePaymentService paymentService,
-    IPolicyService policyService,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     IApplicationCacheService applicationCacheService,
@@ -82,6 +79,7 @@ public class CloudOrganizationSignUpCommand(
             MaxCollections = plan.PasswordManager.MaxCollections,
             MaxStorageGb = (short)(plan.PasswordManager.BaseStorageGb + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
+            UseMyItems = plan.HasMyItems,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
             UseEvents = plan.HasEvents,
@@ -99,8 +97,8 @@ public class CloudOrganizationSignUpCommand(
             ReferenceData = signup.Owner.ReferenceData,
             Enabled = true,
             LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
+            PublicKey = signup.Keys?.PublicKey,
+            PrivateKey = signup.Keys?.WrappedPrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
@@ -252,11 +250,11 @@ public class CloudOrganizationSignUpCommand(
             }
         }
 
-        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
+        var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
+        var error = singleOrgRequirement.CanCreateOrganization();
+        if (error is not null)
         {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                          "which has a policy that prohibits you from being a member of any other organization.");
+            throw new BadRequestException(error.Message);
         }
     }
 

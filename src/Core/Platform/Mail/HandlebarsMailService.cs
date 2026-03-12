@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -9,10 +7,12 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.Auth;
@@ -215,26 +215,6 @@ public class HandlebarsMailService : IMailService
         var model = new DefaultEmailOtpViewModel
         {
             Token = token,
-            TheDate = requestDateTime.ToLongDateString(),
-            TheTime = requestDateTime.ToShortTimeString(),
-            TimeZone = _utcTimeZoneDisplay,
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName,
-        };
-        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
-        message.MetaData.Add("SendGridBypassListManagement", true);
-        // TODO - PM-25380 change to string constant
-        message.Category = "SendEmailOtp";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
-    public async Task SendSendEmailOtpEmailv2Async(string email, string token, string subject)
-    {
-        var message = CreateDefaultMessage(subject, email);
-        var requestDateTime = DateTime.UtcNow;
-        var model = new DefaultEmailOtpViewModel
-        {
-            Token = token,
             Expiry = "5", // This should be configured through the OTPDefaultTokenProviderOptions but for now we will hardcode it to 5 minutes.
             TheDate = requestDateTime.ToLongDateString(),
             TheTime = requestDateTime.ToShortTimeString(),
@@ -242,7 +222,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmailv2", model);
+        await AddMessageContentAsync(message, "Auth.SendAccessEmailOtpEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         // TODO - PM-25380 change to string constant
         message.Category = "SendEmailOtp";
@@ -409,6 +389,65 @@ public class HandlebarsMailService : IMailService
 
             return new MailQueueMessage(message, "OrganizationUserInvited", model);
         }
+    }
+
+    public async Task SendUpdatedOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
+    {
+        var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
+        {
+            Debug.Assert(orgUserTokenPair.OrgUser.Email is not null);
+
+            var userHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUserTokenPair.OrgUser.Id];
+            var organizationName = orgInvitesInfo.OrganizationName;
+
+            var (subject, templateName, buttonText) = GetUpdatedInviteTemplateInfo(
+                orgInvitesInfo.PlanType, userHasExistingUser, organizationName);
+
+            var url = BuildInvitationUrl(orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token);
+            var expirationDate = $"{orgUserTokenPair.Token.ExpirationDate.ToLongDateString()} {orgUserTokenPair.Token.ExpirationDate.ToShortTimeString()} UTC";
+
+            var message = CreateDefaultMessage(subject, orgUserTokenPair.OrgUser.Email);
+
+            return new MailQueueMessage(message, templateName, new
+            {
+                OrganizationName = organizationName,
+                Email = orgUserTokenPair.OrgUser.Email,
+                ExpirationDate = expirationDate,
+                Url = url,
+                ButtonText = buttonText,
+                InviterEmail = orgInvitesInfo.InviterEmail,
+                CurrentYear = DateTime.UtcNow.Year.ToString()
+            });
+        });
+
+        await EnqueueMailAsync(messageModels);
+    }
+
+    public async Task SendUpdatedOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
+    {
+        var organizationName = organization.DisplayName();
+        var webVaultUrl = accessSecretsManager
+            ? _globalSettings.BaseServiceUri.VaultWithHashAndSecretManagerProduct
+            : _globalSettings.BaseServiceUri.VaultWithHash;
+
+        var templateName = IsEnterpriseOrTeamsPlan(organization.PlanType)
+            ? "AdminConsole.OrganizationConfirmation.OrganizationConfirmationEnterpriseTeamsView"
+            : "AdminConsole.OrganizationConfirmation.OrganizationConfirmationFamilyFreeView";
+
+        var message = CreateDefaultMessage($"You can now access items from {organizationName}", userEmail);
+
+        var queueMessage = new MailQueueMessage(message, templateName, new
+        {
+            OrganizationName = organizationName,
+            TitleFirst = "You're confirmed as a member of ",
+            TitleSecondBold = organizationName,
+            TitleThird = "!",
+            WebVaultUrl = webVaultUrl,
+            CurrentYear = DateTime.UtcNow.Year.ToString()
+        });
+        queueMessage.Category = "OrganizationUserConfirmed";
+
+        await EnqueueMailAsync(queueMessage);
     }
 
     public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
@@ -653,16 +692,19 @@ public class HandlebarsMailService : IMailService
     public async Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
-            CreateMessage(email, emailList.Organization)));
+            CreateMessage(email, emailList.Organization, emailList.DomainName)));
         return;
 
-        MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
-            new(CreateDefaultMessage($"Your Bitwarden account is claimed by {org.DisplayName()}", emailAddress),
+        MailQueueMessage CreateMessage(string emailAddress, Organization org, string domainName) =>
+            new(CreateDefaultMessage($"Important update to your Bitwarden account", emailAddress),
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Your Bitwarden account is claimed by {org.DisplayName()}",
-                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
+                    TitleFirst = $"Important update to your<br>Bitwarden account",
+                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false),
+                    DomainName = domainName,
+                    EmailDomain = emailAddress.Split('@').LastOrDefault() ?? "",
+                    UserEmail = emailAddress
                 });
     }
 
@@ -742,6 +784,103 @@ public class HandlebarsMailService : IMailService
 
     private Task EnqueueMailAsync(IEnumerable<IMailQueueMessage> queueMessages) =>
         _mailEnqueuingService.EnqueueManyAsync(queueMessages, SendEnqueuedMailMessageAsync);
+
+    private static (string Subject, string TemplateName, string ButtonText) GetUpdatedInviteTemplateInfo(
+        PlanType planType, bool userHasExistingUser, string organizationName)
+    {
+        const string newUserSubject = "set up a Bitwarden account for you";
+        const string newUserButton = "Finish account setup";
+        const string existingUserSubject = "invited you to their Bitwarden organization";
+        const string existingUserButton = "Accept invitation";
+
+        if (IsEnterpriseOrTeamsPlan(planType))
+        {
+            return userHasExistingUser
+                ? ($"{organizationName} {existingUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteEnterpriseTeamsExistingUserView",
+                    existingUserButton)
+                : ($"{organizationName} {newUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteEnterpriseTeamsNewUserView",
+                    newUserButton);
+        }
+
+        if (IsFamiliesPlan(planType))
+        {
+            return userHasExistingUser
+                ? ($"{organizationName} {existingUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteFamiliesExistingUserView",
+                    existingUserButton)
+                : ($"{organizationName} {newUserSubject}",
+                    "AdminConsole.OrganizationInvite.OrganizationInviteFamiliesNewUserView",
+                    newUserButton);
+        }
+
+        return (userHasExistingUser
+                ? "You have been invited to a Bitwarden Organization"
+                : "You have been invited to Bitwarden Password Manager",
+            "AdminConsole.OrganizationInvite.OrganizationInviteFreeView",
+            existingUserButton);
+    }
+
+    private static bool IsEnterpriseOrTeamsPlan(PlanType planType)
+    {
+        return planType switch
+        {
+            PlanType.TeamsMonthly2019 or
+            PlanType.TeamsAnnually2019 or
+            PlanType.TeamsMonthly2020 or
+            PlanType.TeamsAnnually2020 or
+            PlanType.TeamsMonthly2023 or
+            PlanType.TeamsAnnually2023 or
+            PlanType.TeamsStarter2023 or
+            PlanType.TeamsMonthly or
+            PlanType.TeamsAnnually or
+            PlanType.TeamsStarter or
+            PlanType.EnterpriseMonthly2019 or
+            PlanType.EnterpriseAnnually2019 or
+            PlanType.EnterpriseMonthly2020 or
+            PlanType.EnterpriseAnnually2020 or
+            PlanType.EnterpriseMonthly2023 or
+            PlanType.EnterpriseAnnually2023 or
+            PlanType.EnterpriseMonthly or
+            PlanType.EnterpriseAnnually or
+            PlanType.Custom => true,
+            _ => false
+        };
+    }
+
+    private static bool IsFamiliesPlan(PlanType planType)
+    {
+        return planType switch
+        {
+            PlanType.FamiliesAnnually2019 or
+            PlanType.FamiliesAnnually2025 or
+            PlanType.FamiliesAnnually => true,
+            _ => false
+        };
+    }
+
+    private string BuildInvitationUrl(OrganizationInvitesInfo orgInvitesInfo, OrganizationUser orgUser, ExpiringToken token)
+    {
+        var baseUrl = $"{_globalSettings.BaseServiceUri.VaultWithHash}/accept-organization";
+        var queryParams = new List<string>
+        {
+            $"organizationId={orgUser.OrganizationId}",
+            $"organizationUserId={orgUser.Id}",
+            $"email={WebUtility.UrlEncode(orgUser.Email)}",
+            $"organizationName={WebUtility.UrlEncode(orgInvitesInfo.OrganizationName)}",
+            $"token={WebUtility.UrlEncode(token.Token)}",
+            $"initOrganization={orgInvitesInfo.InitOrganization}",
+            $"orgUserHasExistingUser={orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id]}"
+        };
+
+        if (orgInvitesInfo.OrgSsoEnabled && orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled)
+        {
+            queryParams.Add($"orgSsoIdentifier={orgInvitesInfo.OrgSsoIdentifier}");
+        }
+
+        return $"{baseUrl}?{string.Join("&", queryParams)}";
+    }
 
     private MailMessage CreateDefaultMessage(string subject, string toEmail)
     {
@@ -1040,6 +1179,11 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
     {
+        if (string.IsNullOrEmpty(emergencyAccess.Email))
+        {
+            throw new BadRequestException("Emergency Access not valid.");
+        }
+
         var message = CreateDefaultMessage($"Emergency Access Contact Invite", emergencyAccess.Email);
         var model = new EmergencyAccessInvitedViewModel
         {

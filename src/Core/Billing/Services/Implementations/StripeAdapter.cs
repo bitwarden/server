@@ -27,6 +27,8 @@ public class StripeAdapter : IStripeAdapter
     private readonly TestClockService _testClockService;
     private readonly CustomerBalanceTransactionService _customerBalanceTransactionService;
     private readonly RegistrationService _taxRegistrationService;
+    private readonly CouponService _couponService;
+    private readonly ProductService _productService;
 
     public StripeAdapter()
     {
@@ -44,6 +46,8 @@ public class StripeAdapter : IStripeAdapter
         _testClockService = new TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
         _taxRegistrationService = new RegistrationService();
+        _couponService = new CouponService();
+        _productService = new ProductService();
     }
 
     /**************
@@ -94,7 +98,7 @@ public class StripeAdapter : IStripeAdapter
     /*************
      ** INVOICE **
      *************/
-    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options) =>
+    public Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options = null) =>
         _invoiceService.GetAsync(id, options);
 
     public async Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options)
@@ -116,6 +120,9 @@ public class StripeAdapter : IStripeAdapter
         return invoices;
     }
 
+    public Task<Invoice> CreateInvoiceAsync(InvoiceCreateOptions options) =>
+        _invoiceService.CreateAsync(options);
+
     public Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options) =>
         _invoiceService.CreatePreviewAsync(options);
 
@@ -125,10 +132,10 @@ public class StripeAdapter : IStripeAdapter
     public Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options) =>
         _invoiceService.UpdateAsync(id, options);
 
-    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options) =>
+    public Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options = null) =>
         _invoiceService.FinalizeInvoiceAsync(id, options);
 
-    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options) =>
+    public Task<Invoice> SendInvoiceAsync(string id, InvoiceSendOptions options = null) =>
         _invoiceService.SendInvoiceAsync(id, options);
 
     public Task<Invoice> PayInvoiceAsync(string id, InvoicePayOptions options = null) =>
@@ -192,6 +199,9 @@ public class StripeAdapter : IStripeAdapter
     public Task<SetupIntent> GetSetupIntentAsync(string id, SetupIntentGetOptions options = null) =>
         _setupIntentService.GetAsync(id, options);
 
+    public Task<SetupIntent> UpdateSetupIntentAsync(string id, SetupIntentUpdateOptions options = null) =>
+        _setupIntentService.UpdateAsync(id, options);
+
     /*******************
      ** MISCELLANEOUS **
      *******************/
@@ -206,4 +216,22 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Card> DeleteCardAsync(string customerId, string cardId, CardDeleteOptions options = null) =>
         _cardService.DeleteAsync(customerId, cardId, options);
+
+    /************
+     ** COUPON **
+     ************/
+    public Task<Coupon> GetCouponAsync(string couponId, CouponGetOptions options = null) =>
+        _couponService.GetAsync(couponId, options);
+
+    /*************
+     ** PRODUCT **
+     *************/
+    public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
+        (await _productService.ListAsync(options)).Data;
+
+    /****************
+     ** SUBSCRIPTION **
+     ****************/
+    public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
+        _subscriptionService.ListAsync(options);
 }

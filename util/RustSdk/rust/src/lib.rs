@@ -1,4 +1,7 @@
 #![allow(clippy::missing_safety_doc)]
+
+mod cipher;
+
 use std::{
     ffi::{c_char, CStr, CString},
     num::NonZeroU32,
@@ -7,9 +10,8 @@ use std::{
 use base64::{engine::general_purpose::STANDARD, Engine};
 
 use bitwarden_crypto::{
-    AsymmetricCryptoKey, AsymmetricPublicCryptoKey, BitwardenLegacyKeyBytes, HashPurpose, Kdf,
-    KeyEncryptable, MasterKey, RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey,
-    UnsignedSharedKey, UserKey,
+    BitwardenLegacyKeyBytes, HashPurpose, Kdf, KeyEncryptable, MasterKey, PrivateKey, PublicKey,
+    RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey, UnsignedSharedKey, UserKey,
 };
 
 #[no_mangle]
@@ -20,9 +22,6 @@ pub unsafe extern "C" fn generate_user_keys(
     let email = CStr::from_ptr(email).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
 
-    println!("Generating keys for {email}");
-    println!("Password: {password}");
-
     let kdf = Kdf::PBKDF2 {
         iterations: NonZeroU32::new(5_000).unwrap(),
     };
@@ -31,8 +30,6 @@ pub unsafe extern "C" fn generate_user_keys(
 
     let master_password_hash =
         master_key.derive_master_key_hash(password.as_bytes(), HashPurpose::ServerAuthorization);
-
-    println!("Master password hash: {}", master_password_hash);
 
     let (user_key, encrypted_user_key) = master_key.make_user_key().unwrap();
 
@@ -82,7 +79,7 @@ WjyxP5ZvXu7U96jaJRI8PFMoE06WeVYcdIzrID2HvqH+w0UQJFrLJ/0Mn4stFAEz
 XKZBokBGnjFnTnKcs7nv/O8=
 -----END PRIVATE KEY-----";
 
-    let private_key = AsymmetricCryptoKey::from_pem(RSA_PRIVATE_KEY).unwrap();
+    let private_key = PrivateKey::from_pem(RSA_PRIVATE_KEY).unwrap();
     let public_key = private_key.to_public_key().to_der().unwrap();
 
     let p = private_key.to_der().unwrap();
@@ -127,8 +124,11 @@ pub unsafe extern "C" fn generate_user_organization_key(
     let organization_key = STANDARD.decode(organization_key).unwrap();
 
     let encapsulation_key =
-        AsymmetricPublicCryptoKey::from_der(&SpkiPublicKeyBytes::from(user_public_key)).unwrap();
+        PublicKey::from_der(&SpkiPublicKeyBytes::from(user_public_key)).unwrap();
 
+    // The Seeder uses unsigned key encapsulation for test data generation.
+    // When the SDK removes this deprecated API, migrate to signed encapsulation.
+    #[allow(deprecated)]
     let encrypted_key = UnsignedSharedKey::encapsulate_key_unsigned(
         &SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(organization_key)).unwrap(),
         &encapsulation_key,

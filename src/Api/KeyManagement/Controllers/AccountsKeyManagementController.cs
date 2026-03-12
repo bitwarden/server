@@ -47,6 +47,7 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator;
     private readonly IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> _deviceValidator;
     private readonly IKeyConnectorConfirmationDetailsQuery _keyConnectorConfirmationDetailsQuery;
+    private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
 
     public AccountsKeyManagementController(IUserService userService,
         IFeatureService featureService,
@@ -62,8 +63,10 @@ public class AccountsKeyManagementController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator,
-        IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator)
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
+            webAuthnKeyValidator,
+        IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator,
+        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
     {
         _userService = userService;
         _featureService = featureService;
@@ -79,6 +82,7 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator = webAuthnKeyValidator;
         _deviceValidator = deviceValidator;
         _keyConnectorConfirmationDetailsQuery = keyConnectorConfirmationDetailsQuery;
+        _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -117,6 +121,7 @@ public class AccountsKeyManagementController : Controller
             OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
             WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
             DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
+            V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
 
             Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
@@ -146,7 +151,40 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+        if (model.IsV2Request())
+        {
+            // V2 account registration
+            await _setKeyConnectorKeyCommand.SetKeyConnectorKeyForUserAsync(user, model.ToKeyConnectorKeysData());
+        }
+        else
+        {
+            // V1 account registration
+            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
+            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key!, model.OrgIdentifier);
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
+    }
+
+    [HttpPost("convert-to-key-connector")]
+    public async Task PostConvertToKeyConnectorAsync()
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _userService.ConvertToKeyConnectorAsync(user, null);
         if (result.Succeeded)
         {
             return;
@@ -160,8 +198,8 @@ public class AccountsKeyManagementController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("convert-to-key-connector")]
-    public async Task PostConvertToKeyConnectorAsync()
+    [HttpPost("key-connector/enroll")]
+    public async Task PostEnrollToKeyConnectorAsync([FromBody] KeyConnectorEnrollmentRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -169,7 +207,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user);
+        var result = await _userService.ConvertToKeyConnectorAsync(user, model.KeyConnectorKeyWrappedUserKey);
         if (result.Succeeded)
         {
             return;

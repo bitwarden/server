@@ -1,10 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
@@ -20,17 +19,12 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 /// </ul>
 /// </summary>
 public class AutomaticUserConfirmationPolicyEventHandler(
+    IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator,
     IOrganizationUserRepository organizationUserRepository,
-    IProviderUserRepository providerUserRepository)
-    : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
+    : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
-
-    private const string _usersNotCompliantWithSingleOrgErrorMessage =
-        "All organization users must be compliant with the Single organization policy before enabling the Automatically confirm invited users policy. Please remove users who are members of multiple organizations.";
-
-    private const string _providerUsersExistErrorMessage =
-        "The organization has users with the Provider user type. Please remove provider users before enabling the Automatically confirm invited users policy.";
 
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
@@ -43,52 +37,33 @@ public class AutomaticUserConfirmationPolicyEventHandler(
             return string.Empty;
         }
 
-        return await ValidateEnablingPolicyAsync(policyUpdate.OrganizationId);
+        return (await validator.IsOrganizationCompliantAsync(
+            new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId)))
+            .Match(
+                error => error.Message,
+                _ => string.Empty);
     }
 
     public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
         await ValidateAsync(savePolicyModel.PolicyUpdate, currentPolicy);
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) =>
-        Task.CompletedTask;
-
-    private async Task<string> ValidateEnablingPolicyAsync(Guid organizationId)
+    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        var organizationUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-
-        var singleOrgValidationError = await ValidateUserComplianceWithSingleOrgAsync(organizationId, organizationUsers);
-        if (!string.IsNullOrWhiteSpace(singleOrgValidationError))
-        {
-            return singleOrgValidationError;
-        }
-
-        var providerValidationError = await ValidateNoProviderUsersAsync(organizationUsers);
-        if (!string.IsNullOrWhiteSpace(providerValidationError))
-        {
-            return providerValidationError;
-        }
-
-        return string.Empty;
+        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    private async Task<string> ValidateUserComplianceWithSingleOrgAsync(Guid organizationId,
-        ICollection<OrganizationUserUserDetails> organizationUsers)
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        var hasNonCompliantUser = (await organizationUserRepository.GetManyByManyUsersAsync(
-                organizationUsers.Select(ou => ou.UserId!.Value)))
-            .Any(uo => uo.OrganizationId != organizationId
-                       && uo.Status != OrganizationUserStatusType.Invited);
+        var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
+        var policyAlreadyEnabled = currentPolicy is { Enabled: true };
+        if (isNotEnablingPolicy || policyAlreadyEnabled)
+        {
+            return;
+        }
 
-        return hasNonCompliantUser ? _usersNotCompliantWithSingleOrgErrorMessage : string.Empty;
-    }
+        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(policyUpdate.OrganizationId, null);
+        var orgUserIds = orgUsers.Where(w => w.UserId != null).Select(s => s.UserId!.Value).ToList();
 
-    private async Task<string> ValidateNoProviderUsersAsync(ICollection<OrganizationUserUserDetails> organizationUsers)
-    {
-        var userIds = organizationUsers.Where(x => x.UserId is not null)
-            .Select(x => x.UserId!.Value);
-
-        return (await providerUserRepository.GetManyByManyUsersAsync(userIds)).Count != 0
-            ? _providerUsersExistErrorMessage
-            : string.Empty;
+        await deleteEmergencyAccessCommand.DeleteAllByUserIdsAsync(orgUserIds);
     }
 }

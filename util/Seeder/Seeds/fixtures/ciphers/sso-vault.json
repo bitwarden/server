@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "Cipher-20606",
+      "login": {
+        "username": "Cipher-20606",
+        "password": "password"
+      }
+    }
+  ]
+}

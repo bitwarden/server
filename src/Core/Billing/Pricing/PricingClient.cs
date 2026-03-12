@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing.Organizations;
 using Bit.Core.Exceptions;
@@ -12,7 +11,6 @@ namespace Bit.Core.Billing.Pricing;
 
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Premium.Plan;
-using Purchasable = Premium.Purchasable;
 
 public class PricingClient(
     IFeatureService featureService,
@@ -99,14 +97,6 @@ public class PricingClient(
             return [];
         }
 
-        var fetchPremiumPriceFromPricingService =
-            featureService.IsEnabled(FeatureFlagKeys.PM26793_FetchPremiumPriceFromPricingService);
-
-        if (!fetchPremiumPriceFromPricingService)
-        {
-            return [CurrentPremiumPlan];
-        }
-
         var response = await httpClient.GetAsync("plans/premium");
 
         if (response.IsSuccessStatusCode)
@@ -164,12 +154,4 @@ public class PricingClient(
         return plan;
     }
 
-    private static PremiumPlan CurrentPremiumPlan => new()
-    {
-        Name = "Premium",
-        Available = true,
-        LegacyYear = null,
-        Seat = new Purchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
-        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal, Provided = 1 }
-    };
 }

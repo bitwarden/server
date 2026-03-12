@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -14,6 +14,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using NSubstitute;
 using Xunit;
+using EmergencyAccessEntity = Bit.Core.Auth.Entities.EmergencyAccess;
 
 namespace Bit.Core.Test.Auth.UserFeatures.Registration;
 
@@ -104,8 +106,13 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Id = Guid.NewGuid();
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.Id = Guid.NewGuid();
         organization.Name = "Test Organization";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -132,6 +139,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
+
         var expectedError = new IdentityError();
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -159,8 +172,13 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.PlanType = planType;
         organization.Name = "Enterprise Org";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -190,6 +208,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
+
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
@@ -218,7 +242,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
@@ -241,9 +270,16 @@ public class RegisterUserCommandTests
     [BitAutoData(true, "sampleInitiationPath")]
     [BitAutoData(true, "Secrets Manager trial")]
     public async Task RegisterUserViaOrganizationInviteToken_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(false);
 
@@ -267,10 +303,9 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        twoFactorPolicy.Enabled = true;
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
-            .Returns(twoFactorPolicy);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
@@ -286,9 +321,9 @@ public class RegisterUserCommandTests
             .Received(1)
             .GetByIdAsync(orgUserId);
 
-        await sutProvider.GetDependency<IPolicyRepository>()
+        await sutProvider.GetDependency<IPolicyQuery>()
             .Received(1)
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+            .RunAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
 
         sutProvider.GetDependency<IUserService>()
             .Received(1)
@@ -348,6 +383,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(true);
 
@@ -386,6 +427,12 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration.Returns(false);
 
@@ -431,7 +478,8 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromDifferentOrg_ThrowsBadRequestException(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
@@ -454,14 +502,14 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Mock the new overload that excludes the organization - it should return true (domain IS blocked by another org)
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", orgUser.OrganizationId)
             .Returns(true);
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -472,7 +520,8 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_BlockedDomainFromSameOrg_Succeeds(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId)
+        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
         // Arrange
         user.Email = "user@company-domain.com";
@@ -496,10 +545,6 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Mock the new overload - it should return false (domain is NOT blocked by OTHER orgs)
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("company-domain.com", orgUser.OrganizationId)
@@ -508,6 +553,10 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         // Act
         var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
@@ -528,6 +577,10 @@ public class RegisterUserCommandTests
         user.Email = "user@example.com";
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
@@ -632,6 +685,12 @@ public class RegisterUserCommandTests
     public async Task RegisterUserViaEmailVerificationToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
@@ -709,6 +768,12 @@ public class RegisterUserCommandTests
         string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
@@ -726,7 +791,7 @@ public class RegisterUserCommandTests
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_Succeeds(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
-        EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        EmergencyAccessEntity emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -767,7 +832,7 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        string masterPasswordHash, EmergencyAccessEntity emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
         user.Email = $"test+{Guid.NewGuid()}@example.com";
@@ -799,6 +864,12 @@ public class RegisterUserCommandTests
         string masterPasswordHash, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
@@ -919,6 +990,8 @@ public class RegisterUserCommandTests
         User user, string masterPasswordHash, Guid providerUserId)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
         // Start with plaintext
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
         var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
@@ -937,6 +1010,10 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IDataProtectionProvider>()
             .CreateProtector("ProviderServiceDataProtector")
             .Returns(mockDataProtector);
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
 
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
@@ -963,10 +1040,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -989,10 +1062,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "user@allowed-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("allowed-domain.com")
@@ -1026,8 +1095,13 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         organization.PlanType = planType;
         organization.Name = "Family Org";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organization.Id)
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -1059,10 +1133,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1090,10 +1160,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1112,16 +1178,12 @@ public class RegisterUserCommandTests
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_BlockedDomain_ThrowsBadRequestException(
         SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
-        EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        EmergencyAccessEntity emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
     {
         // Arrange
         user.Email = "user@blocked-domain.com";
         emergencyAccess.Email = user.Email;
         emergencyAccess.Id = acceptEmergencyAccessId;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
@@ -1171,10 +1233,6 @@ public class RegisterUserCommandTests
         sutProvider.GetDependency<IGlobalSettings>()
             .OrganizationInviteExpirationHours.Returns(120); // 5 days
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
             .Returns(true);
@@ -1201,10 +1259,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "invalid-email-format";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUser(user));
@@ -1219,10 +1273,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "invalid-email-format";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
             .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
@@ -1245,11 +1295,17 @@ public class RegisterUserCommandTests
         OrganizationUser orgUser,
         string orgInviteToken,
         string masterPasswordHash,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
@@ -1259,9 +1315,9 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
-            .Returns((Policy)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(orgUser.OrganizationId)
@@ -1297,10 +1353,15 @@ public class RegisterUserCommandTests
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         Organization organization = new Organization
         {
             Name = null
         };
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user)
@@ -1331,12 +1392,18 @@ public class RegisterUserCommandTests
         OrganizationUser orgUser,
         string masterPasswordHash,
         string orgInviteToken,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy,
         SutProvider<RegisterUserCommand> sutProvider)
     {
         // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
         user.ReferenceData = null;
         orgUser.Email = user.Email;
         organization.PlanType = PlanType.EnterpriseAnnually;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
 
         sutProvider.GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
@@ -1346,9 +1413,9 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
-            .Returns((Policy)null);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(orgUser.OrganizationId)
@@ -1392,10 +1459,6 @@ public class RegisterUserCommandTests
         // Arrange
         user.Email = "user@blocked-domain.com";
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
-
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", organization.Id)
             .Returns(true);
@@ -1414,10 +1477,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "user@company-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         // Domain is claimed by THIS organization, so it should be allowed
         sutProvider.GetDependency<IOrganizationDomainRepository>()
@@ -1446,10 +1505,6 @@ public class RegisterUserCommandTests
     {
         // Arrange
         user.Email = "user@unclaimed-domain.com";
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.BlockClaimedDomainAccountCreation)
-            .Returns(true);
 
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("unclaimed-domain.com", organization.Id)

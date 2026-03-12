@@ -224,6 +224,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("INTEGER");
 
@@ -231,6 +234,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UseMyItems")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseOrganizationDomains")
@@ -268,75 +274,14 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
+
                     b.HasIndex("Id", "Enabled")
                         .HasAnnotation("Npgsql:IndexInclude", new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegration", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Configuration")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("OrganizationId", "Type")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("OrganizationIntegration", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegrationConfiguration", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Configuration")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("EventType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Filters")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("OrganizationIntegrationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Template")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationIntegrationId");
-
-                    b.ToTable("OrganizationIntegrationConfiguration", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
@@ -416,9 +361,11 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("GatewayCustomerId")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("GatewaySubscriptionId")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -437,6 +384,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -618,7 +569,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte>("Type")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("WaitTimeDays")
+                    b.Property<short>("WaitTimeDays")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -968,6 +919,69 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("ProviderPlan", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.SubscriptionDiscount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("AmountOff")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AudienceType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DurationInMonths")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("PercentOff")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeCouponId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StripeProductIds")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StripeCouponId")
+                        .IsUnique();
+
+                    b.HasIndex("StartDate", "EndDate")
+                        .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("SubscriptionDiscount", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationApplication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -999,6 +1013,71 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("OrganizationApplication", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Configuration")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("OrganizationId", "Type")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationIntegration", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegrationConfiguration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Configuration")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("EventType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Filters")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationIntegrationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Template")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationIntegrationId");
+
+                    b.ToTable("OrganizationIntegrationConfiguration", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReport", b =>
@@ -1057,6 +1136,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReportFile")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RevisionDate")
@@ -1613,12 +1695,51 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("OrganizationUser", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlayId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("PlayId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("PlayItem", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Send", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("AccessCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte?>("AuthType")
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("CipherId")
@@ -1637,7 +1758,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
+                        .HasMaxLength(4000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpirationDate")
@@ -1871,6 +1992,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("INTEGER");
 
@@ -1926,6 +2051,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("INTEGER");
 
@@ -1934,6 +2062,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2300,7 +2432,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ArchivedDate")
+                    b.Property<string>("Archives")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Attachments")
@@ -2590,28 +2722,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasDiscriminator().HasValue("user_service_account");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegration", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegrationConfiguration", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegration", "OrganizationIntegration")
-                        .WithMany()
-                        .HasForeignKey("OrganizationIntegrationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("OrganizationIntegration");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2788,6 +2898,28 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegration", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegrationConfiguration", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegration", "OrganizationIntegration")
+                        .WithMany()
+                        .HasForeignKey("OrganizationIntegrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrganizationIntegration");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReport", b =>
@@ -2980,6 +3112,23 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("OrganizationUsers")
                         .HasForeignKey("UserId");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayItem", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Organization");
 

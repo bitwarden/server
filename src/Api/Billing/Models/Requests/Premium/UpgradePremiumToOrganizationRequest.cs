@@ -1,0 +1,52 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using Bit.Api.Billing.Models.Requests.Payment;
+using Bit.Core.Billing.Enums;
+
+namespace Bit.Api.Billing.Models.Requests.Premium;
+
+public class UpgradePremiumToOrganizationRequest
+{
+    [Required]
+    public string OrganizationName { get; set; } = null!;
+
+    [Required]
+    public string Key { get; set; } = null!;
+
+    [Required]
+    public string PublicKey { get; set; } = null!;
+
+    [Required]
+    public string EncryptedPrivateKey { get; set; } = null!;
+
+    public string? CollectionName { get; set; }
+
+    [Required]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public required ProductTierType TargetProductTierType { get; set; }
+
+    [Required]
+    public required CheckoutBillingAddressRequest BillingAddress { get; set; }
+
+    private PlanType PlanType
+    {
+        get
+        {
+            if (TargetProductTierType is not (ProductTierType.Families or ProductTierType.Teams or ProductTierType.Enterprise))
+            {
+                throw new InvalidOperationException($"Cannot upgrade Premium subscription to {TargetProductTierType} plan.");
+            }
+
+            return TargetProductTierType switch
+            {
+                ProductTierType.Families => PlanType.FamiliesAnnually,
+                ProductTierType.Teams => PlanType.TeamsAnnually,
+                ProductTierType.Enterprise => PlanType.EnterpriseAnnually,
+                _ => throw new InvalidOperationException($"Unexpected ProductTierType: {TargetProductTierType}")
+            };
+        }
+    }
+
+    public (string OrganizationName, string Key, string PublicKey, string EncryptedPrivateKey, string? CollectionName, PlanType PlanType, Core.Billing.Payment.Models.BillingAddress BillingAddress) ToDomain() =>
+        (OrganizationName, Key, PublicKey, EncryptedPrivateKey, CollectionName, PlanType, BillingAddress.ToDomain());
+}

@@ -2,7 +2,7 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -45,7 +45,7 @@ public class AccountController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IUserService _userService;
     private readonly II18nService _i18nService;
     private readonly UserManager<User> _userManager;
@@ -54,7 +54,6 @@ public class AccountController : Controller
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly IFeatureService _featureService;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -67,7 +66,7 @@ public class AccountController : Controller
         ISsoConfigRepository ssoConfigRepository,
         ISsoUserRepository ssoUserRepository,
         IUserRepository userRepository,
-        IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         IUserService userService,
         II18nService i18nService,
         UserManager<User> userManager,
@@ -75,8 +74,7 @@ public class AccountController : Controller
         Core.Services.IEventService eventService,
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
-        IRegisterUserCommand registerUserCommand,
-        IFeatureService featureService)
+        IRegisterUserCommand registerUserCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -88,7 +86,7 @@ public class AccountController : Controller
         _userRepository = userRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _ssoUserRepository = ssoUserRepository;
-        _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _userService = userService;
         _i18nService = i18nService;
         _userManager = userManager;
@@ -97,7 +95,6 @@ public class AccountController : Controller
         _dataProtector = dataProtector;
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
-        _featureService = featureService;
     }
 
     [HttpGet]
@@ -266,27 +263,13 @@ public class AccountController : Controller
     [HttpGet]
     public async Task<IActionResult> ExternalCallback()
     {
-        // Feature flag (PM-24579): Prevent SSO on existing non-compliant users.
-        var preventOrgUserLoginIfStatusInvalid =
-            _featureService.IsEnabled(FeatureFlagKeys.PM24579_PreventSsoOnExistingNonCompliantUsers);
-
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
             AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
 
-        if (preventOrgUserLoginIfStatusInvalid)
+        if (!result.Succeeded)
         {
-            if (!result.Succeeded)
-            {
-                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
-            }
-        }
-        else
-        {
-            if (result?.Succeeded != true)
-            {
-                throw new Exception(_i18nService.T("ExternalAuthenticationError"));
-            }
+            throw new Exception(_i18nService.T("ExternalAuthenticationError"));
         }
 
         // See if the user has logged in with this SSO provider before and has already been provisioned.
@@ -318,70 +301,34 @@ public class AccountController : Controller
 #nullable restore
 
             possibleSsoLinkedUser = resolvedUser;
-
-            if (preventOrgUserLoginIfStatusInvalid)
-            {
-                organization = foundOrganization;
-                orgUser = foundOrCreatedOrgUser;
-            }
+            organization = foundOrganization;
+            orgUser = foundOrCreatedOrgUser;
         }
 
-        if (preventOrgUserLoginIfStatusInvalid)
+        User resolvedSsoLinkedUser = possibleSsoLinkedUser
+                                              ?? throw new Exception(_i18nService.T("UserShouldBeFound"));
+
+        await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, resolvedSsoLinkedUser);
+
+        // This allows us to collect any additional claims or properties
+        // for the specific protocols used and store them in the local auth cookie.
+        // this is typically used to store data needed for signout from those protocols.
+        var additionalLocalClaims = new List<Claim>();
+        var localSignInProps = new AuthenticationProperties
         {
-            User resolvedSsoLinkedUser = possibleSsoLinkedUser
-                                                  ?? throw new Exception(_i18nService.T("UserShouldBeFound"));
+            IsPersistent = true,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
+        };
+        ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
 
-            await PreventOrgUserLoginIfStatusInvalidAsync(organization, provider, orgUser, resolvedSsoLinkedUser);
-
-            // This allows us to collect any additional claims or properties
-            // for the specific protocols used and store them in the local auth cookie.
-            // this is typically used to store data needed for signout from those protocols.
-            var additionalLocalClaims = new List<Claim>();
-            var localSignInProps = new AuthenticationProperties
+        // Issue authentication cookie for user
+        await HttpContext.SignInAsync(
+            new IdentityServerUser(resolvedSsoLinkedUser.Id.ToString())
             {
-                IsPersistent = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
-            };
-            ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
-
-            // Issue authentication cookie for user
-            await HttpContext.SignInAsync(
-                new IdentityServerUser(resolvedSsoLinkedUser.Id.ToString())
-                {
-                    DisplayName = resolvedSsoLinkedUser.Email,
-                    IdentityProvider = provider,
-                    AdditionalClaims = additionalLocalClaims.ToArray()
-                }, localSignInProps);
-        }
-        else
-        {
-            // PM-24579: remove this else block with feature flag removal.
-            // Either the user already authenticated with the SSO provider, or we've just provisioned them.
-            // Either way, we have associated the SSO login with a Bitwarden user.
-            // We will now sign the Bitwarden user in.
-            if (possibleSsoLinkedUser != null)
-            {
-                // This allows us to collect any additional claims or properties
-                // for the specific protocols used and store them in the local auth cookie.
-                // this is typically used to store data needed for signout from those protocols.
-                var additionalLocalClaims = new List<Claim>();
-                var localSignInProps = new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
-                };
-                ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
-
-                // Issue authentication cookie for user
-                await HttpContext.SignInAsync(
-                    new IdentityServerUser(possibleSsoLinkedUser.Id.ToString())
-                    {
-                        DisplayName = possibleSsoLinkedUser.Email,
-                        IdentityProvider = provider,
-                        AdditionalClaims = additionalLocalClaims.ToArray()
-                    }, localSignInProps);
-            }
-        }
+                DisplayName = resolvedSsoLinkedUser.Email,
+                IdentityProvider = provider,
+                AdditionalClaims = additionalLocalClaims.ToArray()
+            }, localSignInProps);
 
         // Delete temporary cookie used during external authentication
         await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
@@ -462,6 +409,7 @@ public class AccountController : Controller
         // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
         var provider = result.Properties.Items["scheme"];
+        //Todo: Validate provider is a valid GUID with TryParse instead. When this is invalid it throws an exception
         var orgId = new Guid(provider);
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
         if (ssoConfig == null || !ssoConfig.Enabled)
@@ -615,7 +563,7 @@ public class AccountController : Controller
 
             // Since we're in the auto-provisioning logic, this means that the user exists, but they have not
             // authenticated with the org's SSO provider before now (otherwise we wouldn't be auto-provisioning them).
-            // We've verified that the user is Accepted or Confnirmed, so we can create an SsoUser link and proceed
+            // We've verified that the user is Accepted or Confirmed, so we can create an SsoUser link and proceed
             // with authentication.
             await CreateSsoUserRecordAsync(providerUserId, guaranteedExistingUser.Id, organization.Id, guaranteedOrgUser);
 
@@ -680,27 +628,14 @@ public class AccountController : Controller
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
 
-        /*
-            The feature flag is checked here so that we can send the new MJML welcome email templates.
-            The other organization invites flows have an OrganizationUser allowing the RegisterUserCommand the ability
-            to fetch the Organization. The old method RegisterUser(User) here does not have that context, so we need
-            to use a new method RegisterSSOAutoProvisionedUserAsync(User, Organization) to send the correct email.
-            [PM-28057]: Prefer RegisterSSOAutoProvisionedUserAsync for SSO auto-provisioned users.
-            TODO: Remove Feature flag: PM-28221
-        */
-        if (_featureService.IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates))
-        {
-            await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(newUser, organization);
-        }
-        else
-        {
-            await _registerUserCommand.RegisterUser(newUser);
-        }
+        // Always use RegisterSSOAutoProvisionedUserAsync to ensure organization context is available
+        // for domain validation (BlockClaimedDomainAccountCreation policy) and welcome emails.
+        // The feature flag logic for welcome email templates is handled internally by RegisterUserCommand.
+        await _registerUserCommand.RegisterSSOAutoProvisionedUserAsync(newUser, organization);
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
-        var twoFactorPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.TwoFactorAuthentication);
-        if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
+        var twoFactorPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.TwoFactorAuthentication);
+        if (twoFactorPolicy.Enabled)
         {
             newUser.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
             {

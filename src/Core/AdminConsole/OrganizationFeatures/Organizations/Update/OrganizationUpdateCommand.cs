@@ -39,8 +39,20 @@ public class OrganizationUpdateCommand(
         var originalBillingEmail = organization.BillingEmail;
 
         // Apply updates to organization
-        organization.UpdateDetails(request);
-        organization.BackfillPublicPrivateKeys(request);
+        // These values may or may not be sent by the client depending on the operation being performed.
+        // Skip any values not provided.
+        if (request.Name is not null)
+        {
+            organization.Name = request.Name;
+        }
+
+        if (request.BillingEmail is not null)
+        {
+            organization.BillingEmail = request.BillingEmail.ToLowerInvariant().Trim();
+        }
+
+        organization.BackfillPublicPrivateKeys(request.Keys);
+
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
         // Update billing information in Stripe if required
@@ -56,7 +68,7 @@ public class OrganizationUpdateCommand(
     /// </summary>
     private async Task<Organization> UpdateSelfHostedAsync(Organization organization, OrganizationUpdateRequest request)
     {
-        organization.BackfillPublicPrivateKeys(request);
+        organization.BackfillPublicPrivateKeys(request.Keys);
         await organizationService.ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
         return organization;
     }
