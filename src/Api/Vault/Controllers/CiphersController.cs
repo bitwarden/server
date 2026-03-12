@@ -697,10 +697,15 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
-        var cipher = await GetByIdAsync(id, user.Id);
         var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
         return response;
     }
