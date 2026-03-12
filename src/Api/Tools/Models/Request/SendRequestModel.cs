@@ -274,7 +274,7 @@ public class SendRequestModel
                 existingSend.Password = null;
                 break;
             default:
-                throw new BadRequestException("You cannot save a Send having an invalid or null AuthType");
+                throw new BadRequestException("You cannot save a Send having an invalid AuthType");
         }
 
         return existingSend;
