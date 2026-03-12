@@ -121,8 +121,6 @@ public class PaymentSucceededHandler(
             {
                 await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
             }
-
-            
         }
     }
 }

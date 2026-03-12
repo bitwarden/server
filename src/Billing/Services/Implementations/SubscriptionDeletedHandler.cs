@@ -88,11 +88,10 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         {
             await _userService.DisablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
             var user = await _userRepository.GetByIdAsync(userId.Value);
-            if(user != null)
+            if (user != null)
             {
                 await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
             }
-            
         }
     }
 
