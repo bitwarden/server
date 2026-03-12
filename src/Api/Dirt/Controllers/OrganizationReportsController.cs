@@ -106,7 +106,7 @@ public class OrganizationReportsController : Controller
             var response = new OrganizationReportResponseModel(latestReport);
 
             var fileData = latestReport.GetReportFile();
-            if (fileData is { Validated: true })
+            if (fileData != null)
             {
                 response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
             }
@@ -162,10 +162,11 @@ public class OrganizationReportsController : Controller
 
             var report = await _createReportCommand.CreateAsync(request.ToData(organizationId));
             var fileData = report.GetReportFile()!;
+            var reportFileUploadUrl = await _storageService.GetReportFileUploadUrlAsync(report, fileData);
 
             return Ok(new OrganizationReportFileResponseModel
             {
-                ReportFileUploadUrl = await _storageService.GetReportFileUploadUrlAsync(report, fileData),
+                ReportFileUploadUrl = reportFileUploadUrl,
                 ReportResponse = new OrganizationReportResponseModel(report),
                 FileUploadType = _storageService.FileUploadType
             });
