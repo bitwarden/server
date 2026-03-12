@@ -43,14 +43,15 @@ public class RevokeOrganizationUserCommand(
     private async Task<RevokeOrganizationUsersValidationRequest> CreateValidationRequestsAsync(
         RevokeOrganizationUsersRequest request)
     {
-        var organizationUserToRevoke = await organizationUserRepository
-            .GetManyAsync(request.OrganizationUserIdsToRevoke);
+        var organizationUserToRevoke = (await organizationUserRepository
+            .GetManyAsync(request.OrganizationUserIdsToRevoke))
+            .Where(x => x.OrganizationId == request.OrganizationId)
+            .ToArray();
 
         return new RevokeOrganizationUsersValidationRequest(
             request.OrganizationId,
-            request.OrganizationUserIdsToRevoke,
-            request.PerformedBy,
-            organizationUserToRevoke);
+            organizationUserToRevoke,
+            request.PerformedBy);
     }
 
     private async Task RevokeValidUsersAsync(ICollection<OrganizationUser> validUsers)
