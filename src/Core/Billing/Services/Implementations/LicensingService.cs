@@ -12,7 +12,9 @@ using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -251,7 +253,18 @@ public class LicensingService : ILicensingService
 
         await _mailService.SendLicenseExpiredAsync(new List<string> { user.Email });
 
-        await _pushNotificationService.PushPremiumStatusChangedAsync(user);
+        await _pushNotificationService.PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.PremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium,
+            },
+            ExcludeCurrentContext = false,
+        });
     }
 
     public bool VerifyLicense(ILicense license)

@@ -138,5 +138,4 @@ public class PremiumStatusPushNotification
 {
     public Guid UserId { get; set; }
     public bool Premium { get; set; }
-    public DateTime? PremiumExpirationDate { get; set; }
 }

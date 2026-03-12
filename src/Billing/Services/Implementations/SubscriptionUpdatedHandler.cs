@@ -147,7 +147,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             {
                 await _userService.DisablePremiumAsync(userId.Value, currentPeriodEnd);
                 var user = await _userRepository.GetByIdAsync(userId.Value);
-                await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+                if (user != null)
+                {
+                    await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+                }
             },
             async organizationId =>
             {
@@ -174,7 +177,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             {
                 await _userService.EnablePremiumAsync(userId.Value, currentPeriodEnd);
                 var user = await _userRepository.GetByIdAsync(userId.Value);
-                await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+                if (user != null)
+                {
+                    await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+                }
             },
             async organizationId =>
             {

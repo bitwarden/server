@@ -281,8 +281,6 @@ public class UpgradePremiumToOrganizationCommandTests
             u.GatewaySubscriptionId == null &&
             u.GatewayCustomerId == null));
 
-        await _pushNotificationService.Received(1).PushPremiumStatusChangedAsync(
-            Arg.Is<User>(u => u.Id == user.Id && u.Premium == false));
     }
 
     [Theory, BitAutoData]

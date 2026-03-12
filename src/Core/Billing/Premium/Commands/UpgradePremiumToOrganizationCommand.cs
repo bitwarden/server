@@ -7,6 +7,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -281,7 +282,18 @@ public class UpgradePremiumToOrganizationCommand(
         user.RevisionDate = DateTime.UtcNow;
         await userService.SaveUserAsync(user);
 
-        await pushNotificationService.PushPremiumStatusChangedAsync(user);
+        await pushNotificationService.PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.PremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium,
+            },
+            ExcludeCurrentContext = false,
+        });
 
         return organization.Id;
     });

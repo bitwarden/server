@@ -323,7 +323,6 @@ public class HubHelpersTest
         return pushNotificationData.Type == type &&
                pushNotificationData.ContextId == contextId &&
                expected.UserId == pushNotificationData.Payload.UserId &&
-               expected.Premium == pushNotificationData.Payload.Premium &&
-               expected.PremiumExpirationDate == pushNotificationData.Payload.PremiumExpirationDate;
+               expected.Premium == pushNotificationData.Payload.Premium;
     }
 }

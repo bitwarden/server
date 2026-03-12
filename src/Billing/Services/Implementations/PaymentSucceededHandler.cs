@@ -110,14 +110,19 @@ public class PaymentSucceededHandler(
         }
         else if (userId.HasValue)
         {
-            if (subscription.Items.All(i => i.Plan.Id != IStripeEventUtilityService.PremiumPlanId))
+            if (subscription.Items.All(i => i.Price.Id is not IStripeEventUtilityService.PremiumPlanId and not IStripeEventUtilityService.PremiumPlanIdAppStore))
             {
                 return;
             }
 
             await userService.EnablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
             var user = await userRepository.GetByIdAsync(userId.Value);
-            await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
+            if (user != null)
+            {
+                await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+            }
+
+            
         }
     }
 }

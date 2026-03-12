@@ -61,7 +61,6 @@ public class CreatePremiumSelfHostedSubscriptionCommand(
 
         await userService.SaveUserAsync(user);
         await pushNotificationService.PushSyncVaultAsync(user.Id);
-        await pushNotificationService.PushPremiumStatusChangedAsync(user);
 
         return new None();
     });

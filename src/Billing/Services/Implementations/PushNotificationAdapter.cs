@@ -71,5 +71,16 @@ public class PushNotificationAdapter(
         });
 
     public Task NotifyPremiumStatusChangedAsync(User user) =>
-        pushNotificationService.PushPremiumStatusChangedAsync(user);
+        pushNotificationService.PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.PremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium
+            },
+            ExcludeCurrentContext = false,
+        });
 }
