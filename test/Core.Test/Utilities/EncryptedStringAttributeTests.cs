@@ -35,6 +35,9 @@ public class EncryptedStringAttributeTests
     }
 
     [Theory]
+    [InlineData("Test")] // Plain text injection attack - DoS vulnerability regression test
+    [InlineData("Hello World")] // Plain text injection attack
+    [InlineData("SecretPassword123")] // Plain text injection attack
     [InlineData("")] // Empty string
     [InlineData(".")] // Split Character but two empty parts
     [InlineData("|")] // One encrypted part split character but empty parts
