@@ -99,7 +99,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility { Id = cipherDetails.OrganizationId.Value } } });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.PutCollections_vNext(id, model);
@@ -115,7 +115,7 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsForAnyArgs(cipherDetails);
 
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns((ICollection<CollectionCipher>)new List<CollectionCipher>());
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(new Dictionary<Guid, OrganizationAbility> { { cipherDetails.OrganizationId.Value, new OrganizationAbility { Id = cipherDetails.OrganizationId.Value } } });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value).Returns(new OrganizationAbility { Id = cipherDetails.OrganizationId.Value });
 
         var result = await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -2004,11 +2004,8 @@ public class CiphersControllerTests
             .Returns(sharedCipher);
 
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                { organizationId, new OrganizationAbility { Id = organizationId } }
-            });
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
 
         var result = await sutProvider.Sut.PutShare(cipherId, model);
 
@@ -2082,11 +2079,8 @@ public class CiphersControllerTests
             .Returns(sharedCipher);
 
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                { organizationId, new OrganizationAbility { Id = organizationId } }
-            });
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
 
         var result = await sutProvider.Sut.PutShare(cipherId, model);
 
@@ -2161,11 +2155,8 @@ public class CiphersControllerTests
             .Returns(sharedCipher);
 
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
-            .Returns(new Dictionary<Guid, OrganizationAbility>
-            {
-                { organizationId, new OrganizationAbility { Id = organizationId } }
-            });
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId });
 
         var result = await sutProvider.Sut.PutShare(cipherId, model);
 
