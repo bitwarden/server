@@ -28,7 +28,7 @@ Need to create test data?
 ├─ Flexible preset-based seeding? → Pipeline (RecipeBuilder + Steps)
 ├─ Complete test scenario with ID mangling? → Scene
 ├─ READ existing seeded data? → Query
-└─ Data transformation SDK ↔ Server? → Model
+└─ Data transformation plaintext ↔ encrypted? → Model
 ```
 
 ## Pipeline Architecture
@@ -66,7 +66,9 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
 
-**Validation presets**: `Seeds/fixtures/presets/validation/` contains presets that verify density algorithms produce correct distributions. See the README in that folder for queries and expected results.
+**Presets**: Organized into `features/`, `qa/`, `scale/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
+
+**Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
 
 ## The Recipe Contract
 
@@ -93,26 +95,23 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 ## Data Flow
 
 ```
-CipherViewDto → Rust SDK encrypt_cipher → EncryptedCipherDto → TransformToServer → Server Cipher Entity
+CipherViewDto → JSON + [EncryptProperty] field paths → encrypt_fields (Rust FFI, bitwarden_crypto) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
 Shared logic: `CipherEncryption.cs`, `EncryptedCipherDtoExtensions.cs`
 
-## Rust SDK Version Alignment
+## Rust Crypto Dependency
 
-| Component   | Version Source                            |
-| ----------- | ----------------------------------------- |
-| Server Shim | `util/RustSdk/rust/Cargo.toml` git rev    |
-| Clients     | `@bitwarden/sdk-internal` in clients repo |
+The Rust shim (`util/RustSdk/rust/`) depends only on `bitwarden_crypto`. It does **not** depend on `bitwarden_vault` — the seeder drives field selection via `[EncryptProperty]` attributes, not SDK cipher types.
 
-Before modifying SDK integration, run `RustSdkCipherTests` to validate roundtrip encryption.
+Before modifying encryption integration, run `RustSdkCipherTests` to validate roundtrip encryption.
 
 ## Deterministic Data Generation
 
 Same domain = same seed = reproducible data:
 
 ```csharp
-_seed = options.Seed ?? StableHash.ToInt32(options.Domain);
+var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
 
 ## Security Reminders
