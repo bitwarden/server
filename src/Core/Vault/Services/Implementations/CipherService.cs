@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -1153,11 +1154,15 @@ public class CipherService : ICipherService
         Guid userId) where T : CipherDetails
     {
         var user = await _userService.GetUserByIdAsync(userId);
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
-        var filteredCiphers = ciphers
+        var groupedCiphers = ciphers
             .Where(c => cipherIdsSet.Contains(c.Id))
             .GroupBy(c => c.OrganizationId)
+            .ToList();
+
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(groupedCiphers);
+
+        var filteredCiphers = groupedCiphers
             .SelectMany(group =>
             {
                 var organizationAbility = group.Key.HasValue &&
@@ -1169,5 +1174,17 @@ public class CipherService : ICipherService
             .ToList();
 
         return filteredCiphers;
+    }
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync<T>(IEnumerable<IGrouping<Guid?, T>> groupedCiphers) where T : CipherDetails
+    {
+        var organizationIds = groupedCiphers
+            .Select(group => group.Key)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToList();
+
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(organizationIds);
+        return organizationAbilities;
     }
 }
