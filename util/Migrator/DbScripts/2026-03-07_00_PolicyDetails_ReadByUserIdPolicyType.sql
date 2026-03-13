@@ -44,14 +44,14 @@ BEGIN
             AND @UserEmail IS NOT NULL
     ),
     Providers AS
-      (
-          SELECT
-              OrganizationId
-          FROM
-              [dbo].[UserProviderAccessView]
-          WHERE
-              UserId = @UserId
-      )
+    (
+        SELECT
+            OrganizationId
+        FROM
+            [dbo].[UserProviderAccessView]
+        WHERE
+            UserId = @UserId
+    )
     SELECT
         OU.[Id] AS OrganizationUserId,
         P.[OrganizationId],
