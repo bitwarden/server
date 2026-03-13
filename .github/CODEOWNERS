@@ -11,8 +11,8 @@
 **/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
 **/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
 
-# Dev environment Docker-related files
-.devcontainer/** @bitwarden/dept-bre
+# Multiple owners
+.devcontainer/**
 dev/docker-compose.yml @bitwarden/dept-bre
 
 # Scanning tools
