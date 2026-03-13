@@ -8,8 +8,6 @@ public class EncryptedStringAttributeTests
 {
     [Theory]
     [InlineData(null)]
-    [InlineData("lGD=|Y3Q=")] // Non-canonical = padding (D=000011, trailing 2 bits=11)
-    [InlineData("0.lB==|Y3Q=")] // Non-canonical == padding (B=000001, trailing 4 bits=0001)
     [InlineData("aXY=|Y3Q=")] // Valid AesCbc256_B64
     [InlineData("aXY=|Y3Q=|cnNhQ3Q=")] // Valid AesCbc128_HmacSha256_B64
     [InlineData("Rsa2048_OaepSha256_B64.cnNhQ3Q=")]
@@ -27,6 +25,11 @@ public class EncryptedStringAttributeTests
     [InlineData("Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha256_HmacSha256_B64 as a string
     [InlineData("6.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha1_HmacSha256_B64 as a number
     [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")]
+    [InlineData("0.AAAA|Y3Q=")] // Unpadded IV with padded CT
+    [InlineData("lGD=|lGD=")] // Non-canonical = padding on both pieces (headerless)
+    [InlineData("lB==|Y3Q=|AAAA")] // Non-canonical == padding headerless (3 pieces)
+    [InlineData("2.lGD=|lGD=|lGD=")] // Non-canonical = padding on all three pieces
+    [InlineData("0.AAAA|QmFzZTY0UGFydB==")] // Unpadded IV, non-canonical == in longer piece (exercises prefix validation)
     public void IsValid_ReturnsTrue_WhenValid(string? input)
     {
         var sut = new EncryptedStringAttribute();
@@ -67,6 +70,9 @@ public class EncryptedStringAttributeTests
     [InlineData("Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_HmacSha256_B64 as a string
     [InlineData("6.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_HmacSha256_B64 as a number
     [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_HmacSha256_B64 as a string
+    [InlineData("0.AA!!AB==|Y3Q=")] // Invalid char in prefix with non-canonical last char
+    [InlineData("0.AAAAB==|Y3Q=")] // Piece length not multiple of 4
+    [InlineData("0.====|Y3Q=")] // Padding-only piece
     public void IsValid_ReturnsFalse_WhenInvalid(string input)
     {
         var sut = new EncryptedStringAttribute();
