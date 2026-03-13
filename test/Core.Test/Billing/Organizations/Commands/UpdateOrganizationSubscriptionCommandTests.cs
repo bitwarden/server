@@ -825,13 +825,45 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_SwissCustomer_WithManualReverseSet_DoesNotUpdateTaxExemption()
+    public async Task Run_SwissCustomer_WithReverse_UpdatesTaxExemptToNone()
     {
         var customer = new Customer
         {
             Id = "cus_123",
             Address = new Address { Country = "CH" },
             TaxExempt = TaxExempt.Reverse
+        };
+
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(customer: customer, items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        await _command.Run(organization, changeSet);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(customer.Id,
+            Arg.Is<CustomerUpdateOptions>(options =>
+                options.TaxExempt == TaxExempt.None));
+    }
+
+    [Theory]
+    [InlineData("CH")]
+    [InlineData("US")]
+    [InlineData("DE")]
+    public async Task Run_CustomerWithExemptStatus_DoesNotUpdateTaxExemption(string country)
+    {
+        // "exempt" is a manual designation (e.g. non-profit) and must never be overwritten automatically.
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Address = new Address { Country = country },
+            TaxExempt = TaxExempt.Exempt
         };
 
         var organization = CreateOrganization();
