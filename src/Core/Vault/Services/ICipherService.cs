@@ -3,7 +3,6 @@
 
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
-
 namespace Bit.Core.Vault.Services;
 
 public interface ICipherService
