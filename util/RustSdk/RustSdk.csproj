@@ -26,7 +26,7 @@
     <Content Include="./rust/target/release/libsdk*.so">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
-      <Link>runtimes/linux-x64/native/libsdk.so</Link>
+      <Link>runtimes/linux-arm64/native/libsdk.so</Link>
     </Content>
     <Content Include="./rust/target/release/libsdk*.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -49,7 +49,7 @@
       <Content Include="./rust/target/release/libsdk*.so">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         <PackageCopyToOutput>true</PackageCopyToOutput>
-        <Link>runtimes/linux-x64/native/libsdk.so</Link>
+        <Link>runtimes/linux-arm64/native/libsdk.so</Link>
       </Content>
       <Content Include="./rust/target/release/libsdk*.dll">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>

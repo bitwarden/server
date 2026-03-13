@@ -11,6 +11,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\SharedWeb\SharedWeb.csproj" />
       <ProjectReference Include="..\Seeder\Seeder.csproj" />
+      <ProjectReference Include="..\SqliteMigrations\SqliteMigrations.csproj" />
     </ItemGroup>
 
 </Project>
