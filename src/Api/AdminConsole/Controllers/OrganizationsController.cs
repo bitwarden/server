@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -10,13 +11,14 @@ using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -44,6 +46,7 @@ public class OrganizationsController : Controller
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
@@ -68,6 +71,7 @@ public class OrganizationsController : Controller
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
+        IPolicyQuery policyQuery,
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
@@ -91,6 +95,7 @@ public class OrganizationsController : Controller
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
+        _policyQuery = policyQuery;
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
@@ -167,10 +172,14 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-        var autoEnrollEnabledForOrganization = resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id);
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
+        {
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
+        }
 
-        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, autoEnrollEnabledForOrganization);
+        var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
+        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
     }
 
     [HttpPost("")]
