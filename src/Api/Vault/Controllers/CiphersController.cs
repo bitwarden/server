@@ -1388,8 +1388,12 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
-        var attachments = cipher?.GetAttachments();
+        if (cipher == null || !cipher.Edit)
+        {
+            throw new NotFoundException();
+        }
 
+        var attachments = cipher.GetAttachments();
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
         {
             throw new NotFoundException();
@@ -1415,8 +1419,13 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
-        var attachments = cipher?.GetAttachments();
-        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
+        if (cipher == null || !cipher.Edit)
+        {
+            throw new NotFoundException();
+        }
+
+        var attachments = cipher.GetAttachments();
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData) || attachmentData.Validated)
         {
             throw new NotFoundException();
         }
