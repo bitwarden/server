@@ -13,7 +13,7 @@
 
 # Multiple owners
 .devcontainer/**
-dev/docker-compose.yml @bitwarden/dept-bre
+dev/docker-compose.yml
 
 # Scanning tools
 .checkmarx/ @bitwarden/team-appsec
