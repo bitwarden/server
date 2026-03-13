@@ -458,6 +458,12 @@ public class CipherService : ICipherService
             await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
+        // Clean up attachment files from storage
+        foreach (var cipher in deletingCiphers)
+        {
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+
         var events = deletingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Deleted, null));
         foreach (var eventsBatch in events.Chunk(100))
@@ -492,7 +498,17 @@ public class CipherService : ICipherService
         {
             throw new NotFoundException();
         }
+
+        // Fetch cipher IDs before DB deletion so we can clean up attachment storage
+        var orgCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
+
+        foreach (var cipher in orgCiphers)
+        {
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+
         await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
