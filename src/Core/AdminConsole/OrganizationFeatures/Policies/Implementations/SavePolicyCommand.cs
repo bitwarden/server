@@ -6,13 +6,14 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class SavePolicyCommand : ISavePolicyCommand
 {
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IEventService _eventService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
@@ -20,7 +21,8 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IPostSavePolicySideEffect _postSavePolicySideEffect;
     private readonly IPushNotificationService _pushNotificationService;
 
-    public SavePolicyCommand(IApplicationCacheService applicationCacheService,
+    public SavePolicyCommand(
+        IOrganizationRepository organizationRepository,
         IEventService eventService,
         IPolicyRepository policyRepository,
         IEnumerable<IPolicyValidator> policyValidators,
@@ -28,7 +30,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         IPostSavePolicySideEffect postSavePolicySideEffect,
         IPushNotificationService pushNotificationService)
     {
-        _applicationCacheService = applicationCacheService;
+        _organizationRepository = organizationRepository;
         _eventService = eventService;
         _policyRepository = policyRepository;
         _timeProvider = timeProvider;
@@ -49,7 +51,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
     public async Task<Policy> SaveAsync(PolicyUpdate policyUpdate)
     {
-        var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
+        var org = await _organizationRepository.GetByIdAsync(policyUpdate.OrganizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization not found");

@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "extraKnownMarketplaces": {
     "bitwarden-marketplace": {
       "source": {

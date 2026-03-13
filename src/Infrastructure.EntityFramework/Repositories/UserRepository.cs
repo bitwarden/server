@@ -10,8 +10,6 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
@@ -254,6 +252,12 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
         userEntity.AccountRevisionDate = user.AccountRevisionDate;
         userEntity.RevisionDate = user.RevisionDate;
+
+        userEntity.SignedPublicKey = user.SignedPublicKey;
+        userEntity.SecurityState = user.SecurityState;
+        userEntity.SecurityVersion = user.SecurityVersion;
+
+        userEntity.V2UpgradeToken = user.V2UpgradeToken;
 
         await dbContext.SaveChangesAsync();
 
@@ -557,7 +561,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
-
+            userEntity.MasterPasswordSalt = masterPasswordUnlockData.Salt;
             await dbContext.SaveChangesAsync();
         };
     }

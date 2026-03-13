@@ -35,7 +35,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
             var email = $"user{i}@{domain}";
             var mangledEmail = context.GetMangler().Mangle(email);
             var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password);
-            var user = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password);
+            var (user, _) = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password);
 
             var status = statusDistribution.Select(i, count);
 

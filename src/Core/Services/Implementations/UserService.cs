@@ -522,7 +522,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user)
+    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey = null)
     {
         var identityResult = CheckCanUseKeyConnector(user);
         if (identityResult != null)
@@ -533,6 +533,11 @@ public class UserService : UserManager<User>, IUserService
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
         user.MasterPassword = null;
         user.UsesKeyConnector = true;
+
+        if (!string.IsNullOrWhiteSpace(keyConnectorKeyWrappedUserKey))
+        {
+            user.Key = keyConnectorKeyWrappedUserKey;
+        }
 
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
@@ -581,7 +586,8 @@ public class UserService : UserManager<User>, IUserService
         // Org User must be confirmed and have a ResetPasswordKey
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.Status != OrganizationUserStatusType.Confirmed ||
-            orgUser.OrganizationId != orgId || string.IsNullOrEmpty(orgUser.ResetPasswordKey) ||
+            orgUser.OrganizationId != orgId ||
+            !orgUser.IsEnrolledInAccountRecovery() ||
             !orgUser.UserId.HasValue)
         {
             throw new BadRequestException("Organization User not valid");
@@ -800,7 +806,14 @@ public class UserService : UserManager<User>, IUserService
         var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
 
         var baseStorageGb = (short)premiumPlan.Storage.Provided;
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb, premiumPlan.Storage.StripePriceId, baseStorageGb);
+        var secret = await BillingHelpers.AdjustStorageAsync(
+            _paymentService,
+            null,
+            _featureService,
+            user,
+            storageAdjustmentGb,
+            premiumPlan.Storage.StripePriceId,
+            baseStorageGb);
         await SaveUserAsync(user);
         return secret;
     }
@@ -922,12 +935,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        return user.Premium || await HasPremiumFromOrganization(user);
+        return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<bool> HasPremiumFromOrganization(User user)
@@ -938,25 +946,7 @@ public class UserService : UserManager<User>, IUserService
             return false;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PremiumAccessQuery))
-        {
-            return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
-        }
-
-        // orgUsers in the Invited status are not associated with a userId yet, so this will get
-        // orgUsers in Accepted and Confirmed states only
-        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId.Value);
-
-        if (!orgUsers.Any())
-        {
-            return false;
-        }
-
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        return orgUsers.Any(ou =>
-            orgAbilities.TryGetValue(ou.OrganizationId, out var orgAbility) &&
-            orgAbility.UsersGetPremium &&
-            orgAbility.Enabled);
+        return await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
     }
 
     public async Task<string> GenerateSignInTokenAsync(User user, string purpose)

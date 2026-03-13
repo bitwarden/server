@@ -19,7 +19,7 @@ using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class OrganizationEditModel : OrganizationViewModel
+public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
 {
     private readonly List<Plan> _plans;
 
@@ -109,6 +109,7 @@ public class OrganizationEditModel : OrganizationViewModel
         UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
         UseDisableSmAdsForUsers = org.UseDisableSmAdsForUsers;
         UsePhishingBlocker = org.UsePhishingBlocker;
+        UseMyItems = org.UseMyItems;
 
         _plans = plans;
     }
@@ -202,6 +203,8 @@ public class OrganizationEditModel : OrganizationViewModel
 
     [Display(Name = "Automatic User Confirmation")]
     public bool UseAutomaticUserConfirmation { get; set; }
+    [Display(Name = "Create My Items for organization ownership")]
+    public bool UseMyItems { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
@@ -236,6 +239,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     HasResetPassword = p.HasResetPassword,
                     UsersGetPremium = p.UsersGetPremium,
                     HasCustomPermissions = p.HasCustomPermissions,
+                    HasMyItems = p.HasMyItems,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,
@@ -335,6 +339,18 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
         existingOrganization.UseDisableSmAdsForUsers = UseDisableSmAdsForUsers;
         existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
+        existingOrganization.UseMyItems = UseMyItems;
         return existingOrganization;
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (UseMyItems && !UsePolicies)
+        {
+            var displayName = nameof(UseMyItems).GetDisplayAttribute<OrganizationEditModel>()?.GetName() ?? nameof(UseMyItems);
+            yield return new ValidationResult(
+                $"The {displayName} feature requires Policies to be enabled.",
+                [nameof(UseMyItems)]);
+        }
     }
 }

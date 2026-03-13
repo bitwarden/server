@@ -241,6 +241,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("tinyint(1)");
 
@@ -1146,6 +1149,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("ReportFile")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
@@ -1997,6 +2003,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
@@ -2051,6 +2061,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("longtext");
 
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("tinyint(1)");

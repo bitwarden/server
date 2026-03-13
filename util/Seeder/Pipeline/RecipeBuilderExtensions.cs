@@ -1,6 +1,10 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Models;
+using Bit.Seeder.Options;
+using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
 
 namespace Bit.Seeder.Pipeline;
@@ -12,15 +16,17 @@ namespace Bit.Seeder.Pipeline;
 public static class RecipeBuilderExtensions
 {
     /// <summary>
-    /// Use an organization from embedded fixtures.
+    /// Use an organization from embedded fixtures with optional plan/seats overrides from the preset.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
     /// <param name="fixture">Organization fixture name without extension</param>
+    /// <param name="planType">Optional plan type override (from preset)</param>
+    /// <param name="seats">Optional seats override (from preset)</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder UseOrganization(this RecipeBuilder builder, string fixture)
+    public static RecipeBuilder UseOrganization(this RecipeBuilder builder, string fixture, string? planType = null, int? seats = null)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture));
+        builder.AddStep(_ => CreateOrganizationStep.FromFixture(fixture, planType, seats));
         return builder;
     }
 
@@ -31,11 +37,12 @@ public static class RecipeBuilderExtensions
     /// <param name="name">Organization display name</param>
     /// <param name="domain">Organization domain (used for email generation)</param>
     /// <param name="seats">Number of user seats</param>
+    /// <param name="planType">Billing plan type (defaults to EnterpriseAnnually)</param>
     /// <returns>The builder for fluent chaining</returns>
-    public static RecipeBuilder CreateOrganization(this RecipeBuilder builder, string name, string domain, int seats)
+    public static RecipeBuilder CreateOrganization(this RecipeBuilder builder, string name, string domain, int? seats = null, PlanType planType = PlanType.EnterpriseAnnually)
     {
         builder.HasOrg = true;
-        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats));
+        builder.AddStep(_ => CreateOrganizationStep.FromParams(name, domain, seats, planType));
         return builder;
     }
 
@@ -71,8 +78,9 @@ public static class RecipeBuilderExtensions
     /// <param name="builder">The recipe builder</param>
     /// <param name="fixture">Roster fixture name without extension</param>
     /// <returns>The builder for fluent chaining</returns>
+    /// <param name="reader">Seed reader for peeking the roster fixture to detect owner declarations</param>
     /// <exception cref="InvalidOperationException">Thrown when AddUsers() was already called</exception>
-    public static RecipeBuilder UseRoster(this RecipeBuilder builder, string fixture)
+    public static RecipeBuilder UseRoster(this RecipeBuilder builder, string fixture, ISeedReader reader)
     {
         if (builder.HasGeneratedUsers)
         {
@@ -81,6 +89,13 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasRosterUsers = true;
+
+        var roster = reader.Read<SeedRoster>($"rosters.{fixture}");
+        if (roster.Users.Any(u => string.Equals(u.Role, "owner", StringComparison.OrdinalIgnoreCase)))
+        {
+            builder.HasRosterOwner = true;
+        }
+
         builder.AddStep(_ => new CreateRosterStep(fixture));
         return builder;
     }
@@ -111,9 +126,10 @@ public static class RecipeBuilderExtensions
     /// </summary>
     /// <param name="builder">The recipe builder</param>
     /// <param name="count">Number of groups to generate</param>
+    /// <param name="density">Optional density profile for membership distribution control</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
-    public static RecipeBuilder AddGroups(this RecipeBuilder builder, int count)
+    public static RecipeBuilder AddGroups(this RecipeBuilder builder, int count, DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -121,7 +137,7 @@ public static class RecipeBuilderExtensions
                 "Groups require users. Call UseRoster() or AddUsers() first.");
         }
 
-        builder.AddStep(_ => new CreateGroupsStep(count));
+        builder.AddStep(_ => new CreateGroupsStep(count, density));
         return builder;
     }
 
@@ -130,9 +146,10 @@ public static class RecipeBuilderExtensions
     /// </summary>
     /// <param name="builder">The recipe builder</param>
     /// <param name="count">Number of collections to generate</param>
+    /// <param name="density">Optional density profile for collection fan-out and permission control</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
-    public static RecipeBuilder AddCollections(this RecipeBuilder builder, int count)
+    public static RecipeBuilder AddCollections(this RecipeBuilder builder, int count, DensityProfile? density = null)
     {
         if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
         {
@@ -140,7 +157,7 @@ public static class RecipeBuilderExtensions
                 "Collections require users. Call UseRoster() or AddUsers() first.");
         }
 
-        builder.AddStep(_ => CreateCollectionsStep.FromCount(count));
+        builder.AddStep(_ => CreateCollectionsStep.FromCount(count, density));
         return builder;
     }
 
@@ -160,6 +177,26 @@ public static class RecipeBuilderExtensions
         }
 
         builder.AddStep(_ => CreateCollectionsStep.FromStructure(structure));
+        return builder;
+    }
+
+    /// <summary>
+    /// Generate folders for each user using a configurable distribution.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="density">Optional density profile for folder count distribution override</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
+    public static RecipeBuilder AddFolders(this RecipeBuilder builder, DensityProfile? density = null)
+    {
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        {
+            throw new InvalidOperationException(
+                "Folders require users. Call UseRoster() or AddUsers() first.");
+        }
+
+        builder.HasFolders = true;
+        builder.AddStep(_ => new GenerateFoldersStep(density));
         return builder;
     }
 
@@ -190,13 +227,17 @@ public static class RecipeBuilderExtensions
     /// <param name="count">Number of ciphers to generate</param>
     /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
     /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
+    /// <param name="assignFolders">When true, assigns ciphers to user folders round-robin.</param>
+    /// <param name="density">Optional density profile for cipher-to-collection assignment control</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when UseCiphers() was already called</exception>
     public static RecipeBuilder AddCiphers(
         this RecipeBuilder builder,
         int count,
         Distribution<CipherType>? typeDist = null,
-        Distribution<PasswordStrength>? pwDist = null)
+        Distribution<PasswordStrength>? pwDist = null,
+        bool assignFolders = false,
+        DensityProfile? density = null)
     {
         if (builder.HasFixtureCiphers)
         {
@@ -205,7 +246,38 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasGeneratedCiphers = true;
-        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist));
+        if (assignFolders)
+        {
+            builder.HasCipherFolderAssignment = true;
+        }
+        builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders, density));
+        return builder;
+    }
+
+    /// <summary>
+    /// Generate personal ciphers for each user, encrypted with their individual symmetric key.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="countPerUser">Number of personal ciphers per user</param>
+    /// <param name="typeDist">Distribution of cipher types. Uses realistic defaults if null.</param>
+    /// <param name="pwDist">Distribution of password strengths. Uses realistic defaults if null.</param>
+    /// <param name="density">Optional density profile for per-user personal cipher count distribution</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
+    public static RecipeBuilder AddPersonalCiphers(
+        this RecipeBuilder builder, int countPerUser,
+        Distribution<CipherType>? typeDist = null,
+        Distribution<PasswordStrength>? pwDist = null,
+        DensityProfile? density = null)
+    {
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        {
+            throw new InvalidOperationException(
+                "Personal ciphers require users. Call UseRoster() or AddUsers() first.");
+        }
+
+        builder.HasPersonalCiphers = true;
+        builder.AddStep(_ => new GeneratePersonalCiphersStep(countPerUser, typeDist, pwDist, density));
         return builder;
     }
 
@@ -223,16 +295,34 @@ public static class RecipeBuilderExtensions
                 "Organization is required. Call UseOrganization() or CreateOrganization().");
         }
 
-        if (!builder.HasOwner)
+        if (!builder.HasOwner && !builder.HasRosterOwner)
         {
             throw new InvalidOperationException(
-                "Owner is required. Call AddOwner().");
+                "Owner is required. Call AddOwner() or declare a user with role 'owner' in the roster.");
         }
 
         if (builder.HasGeneratedCiphers && !builder.HasGenerator)
         {
             throw new InvalidOperationException(
                 "Generated ciphers require a generator. Call WithGenerator() first.");
+        }
+
+        if (builder.HasPersonalCiphers && !builder.HasGenerator)
+        {
+            throw new InvalidOperationException(
+                "Personal ciphers require a generator. Call WithGenerator() first.");
+        }
+
+        if (builder.HasFolders && !builder.HasGenerator)
+        {
+            throw new InvalidOperationException(
+                "Folders require a generator. Call WithGenerator() first.");
+        }
+
+        if (builder.HasCipherFolderAssignment && !builder.HasFolders)
+        {
+            throw new InvalidOperationException(
+                "Cipher folder assignment requires folders. Set 'folders: true' or call AddFolders() first.");
         }
 
         return builder;
