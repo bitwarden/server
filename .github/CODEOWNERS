@@ -11,10 +11,6 @@
 **/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
 **/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
 
-# Multiple owners
-.devcontainer/**
-dev/docker-compose.yml
-
 # Scanning tools
 .checkmarx/ @bitwarden/team-appsec
 
@@ -116,6 +112,8 @@ util/RustSdk @bitwarden/team-sdk-sme
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
+.devcontainer/**
+dev/docker-compose.yml
 
 # Claude related files
 .claude/ @bitwarden/team-ai-sme
