@@ -1,6 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Api.KeyManagement.Enums;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.KeyManagement.Validators;
@@ -149,6 +150,31 @@ public class AccountsKeyManagementController : Controller
         throw new BadRequestException(ModelState);
     }
 
+    [HttpPost("key-management/rotate-user-keys")]
+    public async Task RotateUserKeysAsync([FromBody] RotateUserKeysRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var unlockMethod = request.UnlockMethodData.GetUnlockMethod();
+        switch (unlockMethod)
+        {
+            case UnlockMethod.MasterPassword:
+                await MasterPasswordRotateUserAccountKeysAsync(request, user);
+                break;
+            case UnlockMethod.Tde:
+                throw new NotImplementedException("TDE not implemented");
+            case UnlockMethod.KeyConnector:
+                throw new NotImplementedException("Key connector not implemented");
+            default:
+                throw new ArgumentOutOfRangeException(nameof(unlockMethod), unlockMethod, null);
+        }
+    }
+
+
     [HttpPost("set-key-connector-key")]
     public async Task PostSetKeyConnectorKeyAsync([FromBody] SetKeyConnectorKeyRequestModel model)
     {
@@ -216,5 +242,37 @@ public class AccountsKeyManagementController : Controller
 
         var details = await _keyConnectorConfirmationDetailsQuery.Run(orgSsoIdentifier, user.Id);
         return new KeyConnectorConfirmationDetailsResponseModel(details);
+    }
+
+    private async Task MasterPasswordRotateUserAccountKeysAsync(RotateUserKeysRequestModel request, User user)
+    {
+        ArgumentNullException.ThrowIfNull(request.UnlockMethodData.MasterPasswordUnlockData);
+        var dataModel = new MasterPasswordRotateUserAccountKeysData
+        {
+            MasterPasswordUnlockData = request.UnlockMethodData.MasterPasswordUnlockData.ToData(),
+            BaseData = await ToBaseDataModelAsync(request, user),
+        };
+
+        await _rotateUserAccountKeysCommand.MasterPasswordRotateUserAccountKeysAsync(user, dataModel);
+    }
+
+    private async Task<BaseRotateUserAccountKeysData> ToBaseDataModelAsync(RotateUserKeysRequestModel request, User user)
+    {
+        return new BaseRotateUserAccountKeysData
+        {
+            AccountKeys = request.WrappedAccountCryptographicState.ToAccountKeysData(),
+            EmergencyAccesses =
+                await _emergencyAccessValidator.ValidateAsync(user, request.UnlockData.EmergencyAccessUnlockData),
+            OrganizationUsers =
+                await _organizationUserValidator.ValidateAsync(user,
+                    request.UnlockData.OrganizationAccountRecoveryUnlockData),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, request.UnlockData.PasskeyUnlockData),
+            DeviceKeys = await _deviceValidator.ValidateAsync(user, request.UnlockData.DeviceKeyUnlockData),
+            V2UpgradeToken = request.UnlockData.V2UpgradeToken?.ToData(),
+
+            Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
+            Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
+            Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
+        };
     }
 }
