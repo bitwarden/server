@@ -597,14 +597,14 @@ public static class ServiceCollectionExtensions
             var proxyNetworks = globalSettings.KnownNetworks.Split(',');
             foreach (var proxyNetwork in proxyNetworks)
             {
-                if (Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                if (System.Net.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
                 {
-                    options.KnownNetworks.Add(ipn);
+                    options.KnownIPNetworks.Add(ipn);
                 }
             }
         }
 
-        if (options.KnownProxies.Count > 1 || options.KnownNetworks.Count > 1)
+        if (options.KnownProxies.Count > 1 || options.KnownIPNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }

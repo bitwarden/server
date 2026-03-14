@@ -62,7 +62,7 @@ public class LicensingService : ILicensingService
             "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
         if (_globalSettings.SelfHosted)
         {
-            _certificate = CoreHelpers.GetEmbeddedCertificateAsync(environment.IsDevelopment() ? "licensing_dev.cer" : "licensing.cer", null)
+            _certificate = CoreHelpers.GetEmbeddedCertificateAsync(environment.IsDevelopment() ? "licensing_dev.cer" : "licensing.cer")
                 .GetAwaiter().GetResult();
         }
         else if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&

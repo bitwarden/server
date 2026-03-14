@@ -111,7 +111,7 @@ public class EncryptedStringAttribute : ValidationAttribute
             if (requiredPieces == 1)
             {
                 // Only one more part is needed so don't split and check the chunk
-                if (rest.IsEmpty || !Base64.IsValid(rest))
+                if (rest.IsEmpty || !IsValidBase64Permissive(rest))
                 {
                     return false;
                 }
@@ -128,7 +128,7 @@ public class EncryptedStringAttribute : ValidationAttribute
                 }
 
                 // Is the required chunk valid base 64?
-                if (chunk.IsEmpty || !Base64.IsValid(chunk))
+                if (chunk.IsEmpty || !IsValidBase64Permissive(chunk))
                 {
                     return false;
                 }
@@ -140,5 +140,59 @@ public class EncryptedStringAttribute : ValidationAttribute
 
         // No more parts are required, so check there are no extra parts
         return rest.IndexOf('|') == -1;
+    }
+
+    private const string _base64Chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    private static int Base64CharValue(char c) => c switch
+    {
+        >= 'A' and <= 'Z' => c - 'A',
+        >= 'a' and <= 'z' => c - 'a' + 26,
+        >= '0' and <= '9' => c - '0' + 52,
+        '+' => 62,
+        '/' => 63,
+        _ => -1,
+    };
+
+    /// <summary>
+    /// Validates base64 permissively — accepts non-zero trailing bits before padding.
+    /// Fast path uses SIMD-accelerated Base64.IsValid; slow path normalizes trailing
+    /// bits and re-validates.
+    /// </summary>
+    private static bool IsValidBase64Permissive(ReadOnlySpan<char> value)
+    {
+        if (Base64.IsValid(value))
+            return true;
+
+        // Check if non-canonical trailing bits are the only issue
+        if (value.IsEmpty || value.Length % 4 != 0)
+            return false;
+
+        var padCount = 0;
+        if (value[^1] == '=') { padCount++; if (value[^2] == '=') padCount++; }
+        if (padCount == 0)
+            return false; // no padding → strict was right to reject
+
+        var lastDataIdx = value.Length - padCount - 1;
+        var charVal = Base64CharValue(value[lastDataIdx]);
+        if (charVal < 0)
+            return false;
+
+        // 4 trailing bits for == padding, 2 for = padding
+        var trailingBits = padCount == 2 ? 4 : 2;
+        var canonical = charVal & ~((1 << trailingBits) - 1);
+        if (canonical == charVal)
+            return false; // already canonical — something else is wrong
+
+        // Validate prefix (before last 4-char block) with SIMD
+        if (value.Length > 4 && !Base64.IsValid(value[..^4]))
+            return false;
+
+        // Validate last block with normalized character
+        Span<char> lastBlock = stackalloc char[4];
+        value[^4..].CopyTo(lastBlock);
+        lastBlock[4 - padCount - 1] = _base64Chars[canonical];
+        return Base64.IsValid(lastBlock);
     }
 }

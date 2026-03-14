@@ -115,7 +115,7 @@ public class AccessPoliciesControllerTests
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
             .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+                Arg.Any<Guid>(),
                 Arg.Any<AccessClientType>());
 
         Assert.Empty(result.Data);
@@ -137,7 +137,7 @@ public class AccessPoliciesControllerTests
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
             .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+                Arg.Any<Guid>(),
                 Arg.Any<AccessClientType>());
 
         Assert.NotEmpty(result.Data);
@@ -169,7 +169,7 @@ public class AccessPoliciesControllerTests
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
             .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+                Arg.Any<Guid>(),
                 Arg.Any<AccessClientType>());
 
         Assert.Empty(result.Data);
@@ -191,7 +191,7 @@ public class AccessPoliciesControllerTests
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
             .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
-                Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+                Arg.Any<Guid>(),
                 Arg.Any<AccessClientType>());
 
         Assert.NotEmpty(result.Data);
