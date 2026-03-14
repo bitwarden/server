@@ -262,6 +262,40 @@ public class SsrfProtectionHandlerTests
     }
 
     [Theory]
+    [InlineData(HttpStatusCode.MovedPermanently)]  // 301
+    [InlineData(HttpStatusCode.Found)]             // 302
+    public async Task SendAsync_301_302_Redirect_PreservesNonPostMethod(HttpStatusCode redirectCode)
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(redirectCode);
+        redirectResponse.Headers.Location = new Uri("http://1.1.1.1/final");
+        inner.EnqueueResponse(redirectResponse);
+
+        var request = new HttpRequestMessage(HttpMethod.Head, "http://8.8.8.8/start");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, inner.AllRequests.Count);
+        Assert.Equal(HttpMethod.Head, inner.AllRequests[1].Method);
+    }
+
+    [Fact]
+    public async Task SendAsync_303_Redirect_ChangesNonPostMethodToGet()
+    {
+        var (client, inner) = CreateClient();
+        var redirectResponse = new HttpResponseMessage(HttpStatusCode.SeeOther);
+        redirectResponse.Headers.Location = new Uri("http://1.1.1.1/final");
+        inner.EnqueueResponse(redirectResponse);
+
+        var request = new HttpRequestMessage(HttpMethod.Head, "http://8.8.8.8/start");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, inner.AllRequests.Count);
+        Assert.Equal(HttpMethod.Get, inner.AllRequests[1].Method);
+    }
+
+    [Theory]
     [InlineData(HttpStatusCode.TemporaryRedirect)] // 307
     public async Task SendAsync_307_Redirect_PreservesOriginalMethod(HttpStatusCode redirectCode)
     {

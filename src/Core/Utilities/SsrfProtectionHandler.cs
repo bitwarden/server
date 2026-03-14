@@ -173,8 +173,19 @@ public class SsrfProtectionHandler : DelegatingHandler
             return originalMethod;
         }
 
-        // 301, 302, 303 change POST to GET per RFC 7231
-        return HttpMethod.Get;
+        // 303 always changes to GET per RFC 7231
+        if (statusCode == HttpStatusCode.SeeOther)
+        {
+            return HttpMethod.Get;
+        }
+
+        // 301, 302: only POST changes to GET (historical browser behavior codified in RFC 7231)
+        if (originalMethod == HttpMethod.Post)
+        {
+            return HttpMethod.Get;
+        }
+
+        return originalMethod;
     }
 
     /// <summary>
