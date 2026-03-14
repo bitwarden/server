@@ -1,0 +1,43 @@
+<mjml>
+    <mj-head>
+        <mj-include path="../../components/head.mjml" />
+        <mj-style>
+            .body-link { color: #175ddc; text-decoration: underline; }
+        </mj-style>
+    </mj-head>
+
+    <mj-body>
+        <mj-include path="../../components/logo.mjml" />
+
+        <mj-wrapper background-color="#fff" border="1px solid #e9e9e9"
+                    css-class="border-fix" padding="0">
+            <mj-section>
+                <mj-column>
+                    <mj-text>
+                        Your organization, {{OrganizationName}}, is no longer managed by {{ProviderName}}. Please update your billing information.
+                    </mj-text>
+
+                    <mj-text>
+                        To maintain your subscription, update your organization billing information by navigating to the web vault -> Organization -> Billing ->
+                        <a href="{{{PaymentMethodUrl}}}" target="_blank" clicktracking="off" class="body-link">Payment Method</a>.
+                    </mj-text>
+
+                    <mj-text>
+                        For more information, please refer to the following help article:
+                        <a href="https://bitwarden.com/help/update-billing-info/#update-billing-information-for-organizations" target="_blank" clicktracking="off" class="body-link">Update billing information for organizations</a>
+                    </mj-text>
+
+                    <mj-button href="{{{PaymentMethodUrl}}}" border-radius="5px">
+                        Add payment method
+                    </mj-button>
+                </mj-column>
+            </mj-section>
+        </mj-wrapper>
+
+        <mj-wrapper>
+            <mj-bw-learn-more-footer />
+        </mj-wrapper>
+
+        <mj-include path="../../components/footer.mjml" />
+    </mj-body>
+</mjml>
