@@ -17,6 +17,18 @@ public class MailQueueMessage : IMailQueueMessage
     [JsonConverter(typeof(HandlebarsObjectJsonConverter))]
     public object Model { get; set; }
 
+    /// <summary>
+    /// Indicates if this is an IMailer message (uses view rendering) vs HandlebarsMailService message (uses template rendering).
+    /// True for IMailer messages, false or null for HandlebarsMailService messages.
+    /// </summary>
+    public bool IsMailerMessage { get; set; }
+
+    /// <summary>
+    /// Additional metadata for delivery (e.g., SendGridBypassListManagement).
+    /// Used by both IMailer and HandlebarsMailService messages.
+    /// </summary>
+    public IDictionary<string, object> MetaData { get; set; }
+
     public MailQueueMessage() { }
 
     public MailQueueMessage(MailMessage message, string templateName, object model)
