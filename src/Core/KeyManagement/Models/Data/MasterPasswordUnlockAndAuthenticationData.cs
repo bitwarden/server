@@ -18,10 +18,15 @@ public class MasterPasswordUnlockAndAuthenticationData
     /// </summary>
     public required string MasterKeyEncryptedUserKey { get; set; }
     public string? MasterPasswordHint { get; set; }
+    public string? MasterPasswordSalt { get; set; }
 
     public bool ValidateForUser(User user)
     {
         if (KdfType != user.Kdf || KdfMemory != user.KdfMemory || KdfParallelism != user.KdfParallelism || KdfIterations != user.KdfIterations)
+        {
+            return false;
+        }
+        else if (MasterPasswordSalt != user.GetMasterPasswordSalt())
         {
             return false;
         }

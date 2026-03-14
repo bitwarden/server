@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadManyAccountRecoveryDetailsByOrganizationUserIds]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManyAccountRecoveryDetailsByOrganizationUserIds]
     @OrganizationId UNIQUEIDENTIFIER,
     @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY
 AS
@@ -23,3 +23,4 @@ BEGIN
         ON U.[Id] = OU.[UserId]
     WHERE OU.[OrganizationId] = @OrganizationId
 END
+GO
