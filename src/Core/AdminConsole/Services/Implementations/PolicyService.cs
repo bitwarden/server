@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -90,13 +91,35 @@ public class PolicyService : IPolicyService
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
-        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        return organizationUserPolicyDetails.Where(o =>
-            (!orgAbilities.TryGetValue(o.OrganizationId, out var orgAbility) || orgAbility.UsePolicies) &&
-            o.PolicyEnabled &&
-            !excludedUserTypes.Contains(o.OrganizationUserType) &&
-            o.OrganizationUserStatus >= minStatus &&
-            !o.IsProvider);
+
+        var filteredPolicyDetails = organizationUserPolicyDetails
+            .Where(o => !o.IsProvider)
+            .Where(o => o.OrganizationUserStatus >= minStatus)
+            .Where(o => !excludedUserTypes.Contains(o.OrganizationUserType))
+            .Where(o => o.PolicyEnabled)
+            .ToList();
+
+        var orgAbilities = await GetOrganizationAbilitiesAsync(filteredPolicyDetails);
+
+        return filteredPolicyDetails.Where(userPolicyDetails =>
+        {
+            if (orgAbilities.TryGetValue(userPolicyDetails.OrganizationId, out var orgAbility) && !orgAbility.UsePolicies)
+            {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(List<OrganizationUserPolicyDetails> filteredPolicyDetails)
+    {
+        var orgIds = filteredPolicyDetails
+            .Select(o => o.OrganizationId)
+            .Distinct()
+            .ToList();
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+        return orgAbilities;
     }
 
     private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)
