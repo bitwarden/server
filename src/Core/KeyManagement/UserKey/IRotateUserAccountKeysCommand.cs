@@ -2,7 +2,7 @@
 #nullable disable
 
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 
@@ -14,13 +14,13 @@ namespace Bit.Core.KeyManagement.UserKey;
 public interface IRotateUserAccountKeysCommand
 {
     /// <summary>
-    /// Sets a new user key and updates all encrypted data.
+    /// Sets a new user key and updates all encrypted data and data associated with a password change.
     /// </summary>
-    /// <param name="model">All necessary information for rotation. If data is not included, this will lead to the change being rejected.</param>
+    /// <param name="model">All necessary information for rotation and password change. If data is not included, this will lead to the change being rejected.</param>
     /// <returns>An IdentityResult for verification of the master password hash</returns>
     /// <exception cref="ArgumentNullException">User must be provided.</exception>
     /// <exception cref="InvalidOperationException">User KDF settings and email must match the model provided settings.</exception>
-    Task<IdentityResult> RotateUserAccountKeysAsync(User user, RotateUserAccountKeysData model);
+    Task<IdentityResult> PasswordChangeAndRotateUserAccountKeysAsync(User user, PasswordChangeAndRotateUserAccountKeysData model);
 }
 
 /// <summary>
