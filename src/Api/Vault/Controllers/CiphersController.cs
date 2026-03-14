@@ -14,6 +14,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -91,9 +92,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
 
-        return new CipherResponseModel(cipher, user, organizationAbilities, _globalSettings);
+        return new CipherResponseModel(cipher, user, organizationAbility, _globalSettings);
     }
 
     [HttpGet("{id}/admin")]
@@ -122,9 +123,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
-        return new CipherDetailsResponseModel(cipher, user, organizationAbilities, _globalSettings, collectionCiphers);
+        return new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphers);
     }
 
     [HttpGet("{id}/full-details")]
@@ -147,13 +148,12 @@ public class CiphersController : Controller
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        var responses = ciphers.Select(cipher => new CipherDetailsResponseModel(
+        var responses = await Task.WhenAll(ciphers.Select(async cipher => new CipherDetailsResponseModel(
             cipher,
             user,
-            organizationAbilities,
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings,
-            collectionCiphersGroupDict)).ToList();
+            collectionCiphersGroupDict)));
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
 
@@ -179,11 +179,7 @@ public class CiphersController : Controller
         }
 
         await _cipherService.SaveDetailsAsync(cipher, user.Id, model.LastKnownRevisionDate, null, cipher.OrganizationId.HasValue);
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
         return response;
     }
 
@@ -274,11 +270,7 @@ public class CiphersController : Controller
 
         await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), user.Id, model.LastKnownRevisionDate, collectionIds);
 
-        var response = new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
         return response;
     }
 
@@ -373,13 +365,9 @@ public class CiphersController : Controller
         }
 
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
         var responses = ciphers.Select(cipher =>
-            new CipherDetailsResponseModel(
-                cipher,
-                user,
-                organizationAbilities,
-                _globalSettings));
+            new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings));
 
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
@@ -718,12 +706,7 @@ public class CiphersController : Controller
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
-        var updatedCipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(
-            updatedCipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
         return response;
     }
 
@@ -762,11 +745,7 @@ public class CiphersController : Controller
             model.CollectionIds.Select(c => new Guid(c)), user.Id, model.Cipher.LastKnownRevisionDate);
 
         var sharedCipher = await GetByIdAsync(id, user.Id);
-        var response = new CipherResponseModel(
-            sharedCipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+        var response = new CipherResponseModel(sharedCipher, user, await GetOrganizationAbilityAsync(sharedCipher), _globalSettings);
         return response;
     }
 
@@ -794,12 +773,7 @@ public class CiphersController : Controller
         var updatedCipher = await GetByIdAsync(id, user.Id);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
 
-        return new CipherDetailsResponseModel(
-            updatedCipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings,
-            collectionCiphers);
+        return new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers);
     }
 
     [HttpPost("{id}/collections")]
@@ -832,12 +806,7 @@ public class CiphersController : Controller
             Unavailable = updatedCipher is null,
             Cipher = updatedCipher is null
                 ? null
-                : new CipherDetailsResponseModel(
-                    updatedCipher,
-                    user,
-                    await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-                    _globalSettings,
-                    collectionCiphers)
+                : new CipherDetailsResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings, collectionCiphers)
         };
         return response;
     }
@@ -920,11 +889,8 @@ public class CiphersController : Controller
             throw new BadRequestException("Cipher was not archived. Ensure the provided ID is correct and you have permission to archive it.");
         }
 
-        return new CipherResponseModel(archivedCipherOrganizationDetails.First(),
-            await _userService.GetUserByPrincipalAsync(User),
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings
-        );
+        var archivedCipher = archivedCipherOrganizationDetails.First();
+        return new CipherResponseModel(archivedCipher, await _userService.GetUserByPrincipalAsync(User), await GetOrganizationAbilityAsync(archivedCipher), _globalSettings);
     }
 
     [HttpPut("archive")]
@@ -948,12 +914,8 @@ public class CiphersController : Controller
             throw new BadRequestException("No ciphers were archived. Ensure the provided IDs are correct and you have permission to archive them.");
         }
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        var responses = archivedCiphers.Select(c => new CipherResponseModel(c,
-            user,
-            organizationAbilities,
-            _globalSettings
-        ));
+        var responses = await Task.WhenAll(archivedCiphers.Select(async cipher =>
+            new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings)));
 
         return new ListResponseModel<CipherResponseModel>(responses);
     }
@@ -1128,9 +1090,10 @@ public class CiphersController : Controller
             throw new BadRequestException("Cipher was not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
         }
 
-        return new CipherResponseModel(unarchivedCipherDetails.First(),
+        var unarchivedCipher = unarchivedCipherDetails.First();
+        return new CipherResponseModel(unarchivedCipher,
             await _userService.GetUserByPrincipalAsync(User),
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+            await GetOrganizationAbilityAsync(unarchivedCipher),
             _globalSettings
         );
     }
@@ -1146,7 +1109,6 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
         var cipherIdsToUnarchive = new HashSet<Guid>(model.Ids);
 
@@ -1157,7 +1119,7 @@ public class CiphersController : Controller
             throw new BadRequestException("Ciphers were not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
         }
 
-        var responses = unarchivedCipherOrganizationDetails.Select(c => new CipherResponseModel(c, user, organizationAbilities, _globalSettings));
+        var responses = await Task.WhenAll(unarchivedCipherOrganizationDetails.Select(async cipher => new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings)));
 
         return new ListResponseModel<CipherResponseModel>(responses);
     }
@@ -1176,7 +1138,7 @@ public class CiphersController : Controller
         return new CipherResponseModel(
             cipher,
             user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
     }
 
@@ -1369,15 +1331,17 @@ public class CiphersController : Controller
 
         var (attachmentId, uploadUrl) = await _cipherService.CreateAttachmentForDelayedUploadAsync(cipher,
             request.Key, request.FileName, request.FileSize, request.AdminRequest, user.Id, request.LastKnownRevisionDate);
+
+        var cipherDetails = (CipherDetails)cipher;
         return new AttachmentUploadDataResponseModel
         {
             AttachmentId = attachmentId,
             Url = uploadUrl,
             FileUploadType = _attachmentStorageService.FileUploadType,
             CipherResponse = request.AdminRequest ? null : new CipherResponseModel(
-                (CipherDetails)cipher,
+                cipherDetails,
                 user,
-                await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+                await GetOrganizationAbilityAsync(cipherDetails),
                 _globalSettings),
             CipherMiniResponse = request.AdminRequest ? new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp) : null,
         };
@@ -1470,7 +1434,7 @@ public class CiphersController : Controller
         return new CipherResponseModel(
             cipher,
             user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
     }
 
@@ -1713,4 +1677,14 @@ public class CiphersController : Controller
 
         return lastKnownRevisionDate;
     }
+
+    private async Task<OrganizationAbility> GetOrganizationAbilityAsync(CipherDetails cipher)
+    {
+        if (cipher.OrganizationId.HasValue)
+        {
+            return await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
+        }
+        return null;
+    }
+
 }
