@@ -260,6 +260,9 @@ public static class FeatureFlagKeys
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
     public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
 
+    /* Secrets Manager Team */
+    public const string SecretVersioning = "sm-secret-versioning";
+
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
