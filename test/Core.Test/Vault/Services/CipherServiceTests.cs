@@ -1802,6 +1802,12 @@ public class CipherServiceTests
             .Received(1)
             .DeleteByIdsOrganizationIdAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == cipherIds.Count() &&
                 ids.All(id => cipherIds.Contains(id))), organizationId);
+        foreach (var cipher in ciphers)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
@@ -1840,6 +1846,12 @@ public class CipherServiceTests
             .Received(1)
             .DeleteAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == cipherIds.Count() &&
                 ids.All(id => cipherIds.Contains(id))), deletingUserId);
+        foreach (var cipher in ciphers)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
@@ -1978,6 +1990,39 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushSyncCiphersAsync(deletingUserId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PurgeAsync_WithOrganizationId_DeletesCiphersAndAttachments(
+        Organization org, List<Cipher> ciphers, SutProvider<CipherService> sutProvider)
+    {
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = org.Id;
+        }
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(org);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(ciphers);
+
+        await sutProvider.Sut.PurgeAsync(org.Id);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteByOrganizationIdAsync(org.Id);
+        foreach (var cipher in ciphers)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
     [Theory]

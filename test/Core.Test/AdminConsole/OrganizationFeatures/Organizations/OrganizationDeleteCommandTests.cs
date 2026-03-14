@@ -8,6 +8,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -19,15 +21,25 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 public class OrganizationDeleteCommandTests
 {
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_Success(Organization organization, SutProvider<OrganizationDeleteCommand> sutProvider)
+    public async Task Delete_Success(Organization organization, List<Cipher> ciphers,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(ciphers);
 
         await sutProvider.Sut.DeleteAsync(organization);
 
         await organizationRepository.Received().DeleteAsync(organization);
         await applicationCacheService.Received().DeleteOrganizationAbilityAsync(organization.Id);
+        foreach (var cipher in ciphers)
+        {
+            await attachmentStorageService.Received(1).DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
