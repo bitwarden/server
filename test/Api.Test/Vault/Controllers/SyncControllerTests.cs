@@ -33,6 +33,7 @@ using Xunit;
 namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(SyncController))]
+[MeterCustomize]
 [SutProviderCustomize]
 public class SyncControllerTests
 {
