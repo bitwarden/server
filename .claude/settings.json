@@ -10,5 +10,9 @@
         "repo": "bitwarden/ai-plugins"
       }
     }
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }
