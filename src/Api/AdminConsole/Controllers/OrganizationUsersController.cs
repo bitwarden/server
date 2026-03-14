@@ -526,9 +526,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
 #nullable enable
-    [HttpPut("{id}/reset-password")]
+    [HttpPut("{id}/recover-account")]
+    [HttpPut("{id}/reset-password")] // backward compat alias — remove after clients migrate
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
@@ -546,19 +547,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
-        if (result.Succeeded)
-        {
-            return TypedResults.Ok();
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        return TypedResults.BadRequest(ModelState);
+        // Map to internal request record and execute
+        var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+        return Handle(await _adminRecoverAccountCommand.RecoverAccountAsync(commandRequest));
     }
 #nullable disable
 

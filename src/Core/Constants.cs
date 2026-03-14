@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
+    public const string AdminResetTwoFactor = "pm-15489-admin-reset-two-factor";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
 
     /* Architecture */

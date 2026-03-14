@@ -88,6 +88,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
             Key = "encrypted-recovery-key"
         };
@@ -98,7 +99,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     [Fact]
@@ -115,6 +116,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
             Key = "encrypted-recovery-key"
         };
@@ -171,6 +173,7 @@ public class OrganizationUsersControllerPutResetPasswordTests : IClassFixture<Ap
 
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
+            ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
             Key = "encrypted-recovery-key"
         };
