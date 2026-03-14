@@ -22,6 +22,8 @@ public static class HostBuilderExtensions
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true)
                 .AddJsonFile("appsettings.SelfHosted.json", optional: true, reloadOnChange: true);
 
+            config.AddKeyPerFile(hostingContext.Configuration);
+
             if (env.IsDevelopment())
             {
                 var appAssembly = Assembly.Load(new AssemblyName(env.ApplicationName));
