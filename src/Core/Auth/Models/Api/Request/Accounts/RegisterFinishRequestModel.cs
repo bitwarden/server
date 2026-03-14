@@ -133,18 +133,11 @@ public class RegisterFinishRequestModel : IValidatableObject
                 [nameof(MasterPasswordAuthentication.MasterPasswordAuthenticationHash), nameof(MasterPasswordHash)]);
         }
 
-        // 2. Validate kdf settings.
-        if (MasterPasswordUnlock != null)
+        // 2. Validate kdf settings, kdf equality, and salt equality between authentication and unlock.
+        if (MasterPasswordUnlock != null && MasterPasswordAuthentication != null)
         {
-            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordUnlock.ToData().Kdf))
-            {
-                yield return validationResult;
-            }
-        }
-
-        if (MasterPasswordAuthentication != null)
-        {
-            foreach (var validationResult in KdfSettingsValidator.Validate(MasterPasswordAuthentication.ToData().Kdf))
+            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
+                MasterPasswordAuthentication.ToData(), MasterPasswordUnlock.ToData()))
             {
                 yield return validationResult;
             }
@@ -188,7 +181,7 @@ public class RegisterFinishRequestModel : IValidatableObject
             yield return new ValidationResult($"{nameof(MasterPasswordAuthentication)} not found on RequestModel", [nameof(MasterPasswordAuthentication)]);
         }
 
-        // 3. Lastly, validate access token type and presence. Must be done last because of yield break.
+        // 4. Lastly, validate access token type and presence. Must be done last because of yield break.
         RegisterFinishTokenType tokenType;
         var tokenTypeResolved = true;
         try
