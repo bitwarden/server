@@ -7,6 +7,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -136,6 +137,7 @@ public class UpgradePremiumToOrganizationCommandTests
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
     private readonly ICollectionRepository _collectionRepository = Substitute.For<ICollectionRepository>();
     private readonly IApplicationCacheService _applicationCacheService = Substitute.For<IApplicationCacheService>();
+    private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
     private readonly UpgradePremiumToOrganizationCommand _command;
 
@@ -150,7 +152,8 @@ public class UpgradePremiumToOrganizationCommandTests
             _organizationUserRepository,
             _organizationApiKeyRepository,
             _collectionRepository,
-            _applicationCacheService);
+            _applicationCacheService,
+            _pushNotificationService);
     }
 
     private static Core.Billing.Payment.Models.BillingAddress CreateTestBillingAddress() =>
@@ -277,6 +280,7 @@ public class UpgradePremiumToOrganizationCommandTests
             u.Premium == false &&
             u.GatewaySubscriptionId == null &&
             u.GatewayCustomerId == null));
+
     }
 
     [Theory, BitAutoData]

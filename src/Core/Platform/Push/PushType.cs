@@ -102,4 +102,7 @@ public enum PushType : byte
 
     [NotificationInfo("@bitwarden/team-admin-console-dev", typeof(Models.AutoConfirmPushNotification))]
     AutoConfirm = 26,
+
+    [NotificationInfo("@bitwarden/team-billing-dev", typeof(Models.PremiumStatusPushNotification))]
+    PremiumStatusChanged = 27,
 }

@@ -7,7 +7,9 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -55,7 +57,8 @@ public class UpgradePremiumToOrganizationCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     ICollectionRepository collectionRepository,
-    IApplicationCacheService applicationCacheService)
+    IApplicationCacheService applicationCacheService,
+    IPushNotificationService pushNotificationService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -278,6 +281,19 @@ public class UpgradePremiumToOrganizationCommand(
         user.GatewayCustomerId = null;
         user.RevisionDate = DateTime.UtcNow;
         await userService.SaveUserAsync(user);
+
+        await pushNotificationService.PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.PremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium,
+            },
+            ExcludeCurrentContext = false,
+        });
 
         return organization.Id;
     });

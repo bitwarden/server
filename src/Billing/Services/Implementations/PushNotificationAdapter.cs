@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
@@ -65,6 +66,20 @@ public class PushNotificationAdapter(
             {
                 OrganizationId = organization.Id,
                 Enabled = organization.Enabled,
+            },
+            ExcludeCurrentContext = false,
+        });
+
+    public Task NotifyPremiumStatusChangedAsync(User user) =>
+        pushNotificationService.PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.PremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium
             },
             ExcludeCurrentContext = false,
         });
