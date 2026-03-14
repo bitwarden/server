@@ -7,7 +7,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -20,7 +19,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -107,7 +105,6 @@ public class UserServiceTests
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
 
         Assert.False(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
@@ -120,7 +117,6 @@ public class UserServiceTests
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
         sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
@@ -227,7 +223,6 @@ public class UserServiceTests
         Organization organization1, Guid organizationUserId1,
         Organization organization2, Guid organizationUserId2)
     {
-        // Arrange
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Email] = new() { Enabled = true }
@@ -235,83 +230,6 @@ public class UserServiceTests
         organization1.Enabled = organization2.Enabled = true;
         organization1.UseSso = organization2.UseSso = true;
 
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)
-            .Returns(
-            [
-                new OrganizationUserPolicyDetails
-                {
-                    OrganizationId = organization1.Id,
-                    OrganizationUserId = organizationUserId1,
-                    PolicyType = PolicyType.TwoFactorAuthentication,
-                    PolicyEnabled = true
-                },
-                new OrganizationUserPolicyDetails
-                {
-                    OrganizationId = organization2.Id,
-                    OrganizationUserId = organizationUserId2,
-                    PolicyType = PolicyType.TwoFactorAuthentication,
-                    PolicyEnabled = true
-                }
-            ]);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization1.Id)
-            .Returns(organization1);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization2.Id)
-            .Returns(organization2);
-        var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>(), JsonHelpers.LegacyEnumKeyResolver);
-
-        // Act
-        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-
-        // Assert
-        await sutProvider.GetDependency<IUserRepository>()
-            .Received(1)
-            .ReplaceAsync(Arg.Is<User>(u => u.Id == user.Id && u.TwoFactorProviders == expectedSavedProviders));
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
-
-        // Revoke the user from the first organization
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .Received(1)
-            .RevokeNonCompliantOrganizationUsersAsync(
-                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization1.Id &&
-                    r.OrganizationUsers.First().Id == organizationUserId1 &&
-                    r.OrganizationUsers.First().OrganizationId == organization1.Id));
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization1.DisplayName(), user.Email);
-
-        // Remove the user from the second organization
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .Received(1)
-            .RevokeNonCompliantOrganizationUsersAsync(
-                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization2.Id &&
-                    r.OrganizationUsers.First().Id == organizationUserId2 &&
-                    r.OrganizationUsers.First().OrganizationId == organization2.Id));
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization2.DisplayName(), user.Email);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_WithPolicyRequirementsEnabled_WhenOrganizationHas2FAPolicyEnabled_DisablingAllProviders_RevokesUserAndSendsEmail(
-        SutProvider<UserService> sutProvider, User user,
-        Organization organization1, Guid organizationUserId1,
-        Organization organization2, Guid organizationUserId2)
-    {
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new() { Enabled = true }
-        });
-        organization1.Enabled = organization2.Enabled = true;
-        organization1.UseSso = organization2.UseSso = true;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
             .Returns(new RequireTwoFactorPolicyRequirement(
@@ -372,61 +290,11 @@ public class UserServiceTests
     public async Task DisableTwoFactorProviderAsync_UserHasOneProviderEnabled_DoesNotRevokeUserFromOrganization(
         SutProvider<UserService> sutProvider, User user, Organization organization)
     {
-        // Arrange
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Email] = new() { Enabled = true },
             [TwoFactorProviderType.Remember] = new() { Enabled = true }
         });
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)
-            .Returns(
-            [
-                new OrganizationUserPolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.TwoFactorAuthentication,
-                    PolicyEnabled = true
-                }
-            ]);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(true);
-        var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Remember] = new() { Enabled = true }
-        }, JsonHelpers.LegacyEnumKeyResolver);
-
-        // Act
-        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-
-        // Assert
-        await sutProvider.GetDependency<IUserRepository>()
-            .Received(1)
-            .ReplaceAsync(Arg.Is<User>(u => u.Id == user.Id && u.TwoFactorProviders == expectedSavedProviders));
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .RevokeNonCompliantOrganizationUsersAsync(default);
-        await sutProvider.GetDependency<IMailService>()
-            .DidNotReceiveWithAnyArgs()
-            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_WithPolicyRequirementsEnabled_UserHasOneProviderEnabled_DoesNotRevokeUserFromOrganization(
-        SutProvider<UserService> sutProvider, User user, Organization organization)
-    {
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new() { Enabled = true },
-            [TwoFactorProviderType.Remember] = new() { Enabled = true }
-        });
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
             .Returns(new RequireTwoFactorPolicyRequirement(
@@ -553,6 +421,10 @@ public class UserServiceTests
         // Arrange
         var recoveryCode = "1234";
         user.TwoFactorRecoveryCode = recoveryCode;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
 
         // Act
         var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
