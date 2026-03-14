@@ -42,11 +42,9 @@ public class GetOrganizationReportApplicationDataQueryTests
     [Theory]
     [BitAutoData]
     public async Task GetOrganizationReportApplicationDataAsync_WithEmptyOrganizationId_ShouldThrowBadRequestException(
+        Guid reportId,
         SutProvider<GetOrganizationReportApplicationDataQuery> sutProvider)
     {
-        // Arrange
-        var reportId = Guid.NewGuid();
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.GetOrganizationReportApplicationDataAsync(Guid.Empty, reportId));
@@ -59,11 +57,9 @@ public class GetOrganizationReportApplicationDataQueryTests
     [Theory]
     [BitAutoData]
     public async Task GetOrganizationReportApplicationDataAsync_WithEmptyReportId_ShouldThrowBadRequestException(
+        Guid organizationId,
         SutProvider<GetOrganizationReportApplicationDataQuery> sutProvider)
     {
-        // Arrange
-        var organizationId = Guid.NewGuid();
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.GetOrganizationReportApplicationDataAsync(organizationId, Guid.Empty));
