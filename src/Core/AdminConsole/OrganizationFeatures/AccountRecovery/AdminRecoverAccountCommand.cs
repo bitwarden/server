@@ -1,158 +1,78 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
-using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using OneOf.Types;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
-public class AdminRecoverAccountCommand(
-    IAdminRecoverAccountValidator validator,
-    IOrganizationRepository organizationRepository,
+public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepository,
+    IPolicyQuery policyQuery,
     IUserRepository userRepository,
     IMailService mailService,
     IEventService eventService,
     IPushNotificationService pushNotificationService,
     IUserService userService,
-    IResetUserTwoFactorCommand resetUserTwoFactorCommand,
-    IFeatureService featureService,
-    IPolicyRequirementQuery policyRequirementQuery,
-    IPolicyService policyService,
-    IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
     TimeProvider timeProvider) : IAdminRecoverAccountCommand
 {
-    public async Task<CommandResult> RecoverAccountAsync(RecoverAccountRequest request)
+    public async Task<IdentityResult> RecoverAccountAsync(Guid orgId,
+        OrganizationUser organizationUser, string newMasterPassword, string key)
     {
-        // Validate
-        var validationResult = await validator.ValidateAsync(request);
-        if (validationResult.IsError)
+        // Org must be able to use reset password
+        var org = await organizationRepository.GetByIdAsync(orgId);
+        if (org == null || !org.UseResetPassword)
         {
-            return validationResult.AsError;
+            throw new BadRequestException("Organization does not allow password reset.");
         }
 
-        var org = await organizationRepository.GetByIdAsync(request.OrgId);
-        if (org == null)
+        // Enterprise policy must be enabled
+        var resetPasswordPolicy = await policyQuery.RunAsync(orgId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
-            return new OrganizationNotFoundError();
+            throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }
 
-        var user = await userRepository.GetByIdAsync(request.OrganizationUser.UserId!.Value);
+        // Org User must be confirmed and have a ResetPasswordKey
+        if (organizationUser == null ||
+            organizationUser.Status != OrganizationUserStatusType.Confirmed ||
+            organizationUser.OrganizationId != orgId ||
+            !organizationUser.IsEnrolledInAccountRecovery() ||
+            !organizationUser.UserId.HasValue)
+        {
+            throw new BadRequestException("Organization User not valid");
+        }
+
+        var user = await userService.GetUserByIdAsync(organizationUser.UserId.Value);
         if (user == null)
         {
-            return new UserNotFoundError();
+            throw new NotFoundException();
         }
 
-        // Password reset
-        if (request.ResetMasterPassword)
+        if (user.UsesKeyConnector)
         {
-            var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);
-            if (!result.Succeeded)
-            {
-                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
-                return new PasswordUpdateFailedError(errorMessage);
-            }
-
-            var now = timeProvider.GetUtcNow().UtcDateTime;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastPasswordChangeDate = now;
-            user.ForcePasswordReset = true;
-            user.Key = request.Key;
-
-            await userRepository.ReplaceAsync(user);
+            throw new BadRequestException("Cannot reset password of a user with Key Connector.");
         }
 
-        // 2FA reset
-        if (request.ResetTwoFactor)
+        var result = await userService.UpdatePasswordHash(user, newMasterPassword);
+        if (!result.Succeeded)
         {
-            await resetUserTwoFactorCommand.ResetAsync(user);
+            return result;
         }
 
-        // Email notification
-        await mailService.SendAdminResetPasswordEmailAsync(
-            user.Email, user.Name, org.DisplayName(),
-            request.ResetMasterPassword, request.ResetTwoFactor);
+        user.RevisionDate = user.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
+        user.LastPasswordChangeDate = user.RevisionDate;
+        user.ForcePasswordReset = true;
+        user.Key = key;
 
-        // Event logging
-        if (request.ResetMasterPassword)
-        {
-            await eventService.LogOrganizationUserEventAsync(
-                request.OrganizationUser, EventType.OrganizationUser_AdminResetPassword);
-        }
-
-        if (request.ResetTwoFactor)
-        {
-            await eventService.LogOrganizationUserEventAsync(
-                request.OrganizationUser, EventType.OrganizationUser_AdminResetTwoFactor);
-        }
-
-        // Push logout
+        await userRepository.ReplaceAsync(user);
+        await mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName(), true, false);
+        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminResetPassword);
         await pushNotificationService.PushLogOutAsync(user.Id);
 
-        // Policy compliance — revoke user from orgs with RequireTwoFactor policy
-        if (request.ResetTwoFactor)
-        {
-            await CheckPoliciesOnTwoFactorRemovalAsync(user);
-        }
-
-        return new None();
-    }
-
-    private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
-    {
-        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (!requirement.OrganizationsRequiringTwoFactor.Any())
-            {
-                return;
-            }
-
-            var organizationIds = requirement.OrganizationsRequiringTwoFactor.Select(o => o.OrganizationId).ToList();
-            var organizations = await organizationRepository.GetManyByIdsAsync(organizationIds);
-            var organizationLookup = organizations.ToDictionary(org => org.Id);
-
-            var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor
-                .Where(o => organizationLookup.ContainsKey(o.OrganizationId))
-                .Select(async o =>
-                {
-                    var organization = organizationLookup[o.OrganizationId];
-                    await revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                        new RevokeOrganizationUsersRequest(
-                            o.OrganizationId,
-                            [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
-                            new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                    await mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-                }).ToArray();
-
-            await Task.WhenAll(revokeOrgUserTasks);
-
-            return;
-        }
-
-        var twoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
-
-        var legacyRevokeOrgUserTasks = twoFactorPolicies.Select(async p =>
-        {
-            var organization = await organizationRepository.GetByIdAsync(p.OrganizationId);
-            await revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                new RevokeOrganizationUsersRequest(
-                    p.OrganizationId,
-                    [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
-                    new SystemUser(EventSystemUser.TwoFactorDisabled)));
-            await mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization!.DisplayName(), user.Email);
-        }).ToArray();
-
-        await Task.WhenAll(legacyRevokeOrgUserTasks);
+        return IdentityResult.Success;
     }
 }

@@ -14,6 +14,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
@@ -84,6 +85,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
+    private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -115,6 +117,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
+        AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
@@ -150,6 +153,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
+        _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
     }
 
@@ -547,9 +551,26 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        // Map to internal request record and execute
-        var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
-        return Handle(await _adminRecoverAccountCommand.RecoverAccountAsync(commandRequest));
+        if (_featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
+        {
+            var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+            return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
+        }
+
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+            orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
+        if (result.Succeeded)
+        {
+            return TypedResults.Ok();
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        await Task.Delay(2000);
+        return TypedResults.BadRequest(ModelState);
     }
 #nullable disable
 

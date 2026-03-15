@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.AdminConsole.Utilities.v2;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 
 public record NoActionRequestedError() : BadRequestError("At least one recovery action must be requested.");
 public record MissingPasswordFieldsError() : BadRequestError("Master password hash and key are required when resetting master password.");

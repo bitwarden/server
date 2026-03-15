@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
+using Bit.Core.Entities;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 
 public record RecoverAccountRequest
 {

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.OrganizationAuth;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Import;
@@ -148,7 +149,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
         services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
         services.AddScoped<IAdminRecoverAccountCommand, AdminRecoverAccountCommand>();
-        services.AddScoped<IAdminRecoverAccountValidator, AdminRecoverAccountValidator>();
+        services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountCommand, AccountRecoveryV2.AdminRecoverAccountCommand>();
+        services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountValidator, AccountRecoveryV2.AdminRecoverAccountValidator>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
 

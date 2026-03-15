@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 
 public interface IAdminRecoverAccountValidator
 {
