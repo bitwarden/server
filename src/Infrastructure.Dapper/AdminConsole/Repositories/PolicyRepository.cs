@@ -88,4 +88,19 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
             return results.ToList();
         }
     }
+
+    public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<PolicyDetails>(
+            $"[{Schema}].[PolicyDetails_ReadByUserIdPolicyType]",
+            new
+            {
+                UserId = userId,
+                PolicyType = (byte)policyType
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
 }
