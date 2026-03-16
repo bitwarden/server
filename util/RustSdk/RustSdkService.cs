@@ -78,34 +78,6 @@ public class RustSdkService
         }
     }
 
-    public static unsafe string EncryptCipher(string cipherViewJson, string symmetricKeyBase64)
-    {
-        var cipherViewBytes = StringToRustString(cipherViewJson);
-        var keyBytes = StringToRustString(symmetricKeyBase64);
-
-        fixed (byte* cipherViewPtr = cipherViewBytes)
-        fixed (byte* keyPtr = keyBytes)
-        {
-            var resultPtr = NativeMethods.encrypt_cipher(cipherViewPtr, keyPtr);
-
-            return ParseResponse(resultPtr);
-        }
-    }
-
-    public static unsafe string DecryptCipher(string cipherJson, string symmetricKeyBase64)
-    {
-        var cipherBytes = StringToRustString(cipherJson);
-        var keyBytes = StringToRustString(symmetricKeyBase64);
-
-        fixed (byte* cipherPtr = cipherBytes)
-        fixed (byte* keyPtr = keyBytes)
-        {
-            var resultPtr = NativeMethods.decrypt_cipher(cipherPtr, keyPtr);
-
-            return ParseResponse(resultPtr);
-        }
-    }
-
     /// <summary>
     /// Encrypts a plaintext string using the provided symmetric key.
     /// Returns an EncString in format "2.{iv}|{data}|{mac}".
@@ -119,6 +91,44 @@ public class RustSdkService
         fixed (byte* keyPtr = keyBytes)
         {
             var resultPtr = NativeMethods.encrypt_string(plaintextPtr, keyPtr);
+
+            return ParseResponse(resultPtr);
+        }
+    }
+
+    /// <summary>
+    /// Decrypts an EncString using the provided symmetric key.
+    /// </summary>
+    public static unsafe string DecryptString(string encString, string symmetricKeyBase64)
+    {
+        var encStringBytes = StringToRustString(encString);
+        var keyBytes = StringToRustString(symmetricKeyBase64);
+
+        fixed (byte* encStringPtr = encStringBytes)
+        fixed (byte* keyPtr = keyBytes)
+        {
+            var resultPtr = NativeMethods.decrypt_string(encStringPtr, keyPtr);
+
+            return ParseResponse(resultPtr);
+        }
+    }
+
+    /// <summary>
+    /// Encrypts specified fields in a JSON object. Field paths use dot notation
+    /// with [*] for array elements (e.g. "login.uris[*].uri").
+    /// Returns the modified JSON with matching string fields encrypted as EncStrings.
+    /// </summary>
+    public static unsafe string EncryptFields(string json, string fieldPathsJson, string symmetricKeyBase64)
+    {
+        var jsonBytes = StringToRustString(json);
+        var pathsBytes = StringToRustString(fieldPathsJson);
+        var keyBytes = StringToRustString(symmetricKeyBase64);
+
+        fixed (byte* jsonPtr = jsonBytes)
+        fixed (byte* pathsPtr = pathsBytes)
+        fixed (byte* keyPtr = keyBytes)
+        {
+            var resultPtr = NativeMethods.encrypt_fields(jsonPtr, pathsPtr, keyPtr);
 
             return ParseResponse(resultPtr);
         }

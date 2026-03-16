@@ -30,7 +30,7 @@ public class SendAuthorizationService : ISendAuthorizationService
         var now = DateTime.UtcNow;
         if (send == null || send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
             send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now || send.Disabled ||
-            send.DeletionDate < now)
+            send.DeletionDate <= now)
         {
             return SendAccessResult.Denied;
         }
