@@ -10,7 +10,7 @@ namespace Bit.Api.Billing.Controllers;
 [Route("accounts/billing")]
 [Authorize("Application")]
 public class AccountsBillingController(
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IUserService userService,
     IPaymentHistoryService paymentHistoryService) : Controller
 {

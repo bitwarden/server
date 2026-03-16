@@ -10,10 +10,10 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -121,7 +121,7 @@ public class ProviderBillingControllerTests
             }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().InvoiceListAsync(Arg.Is<StripeInvoiceListOptions>(
+        sutProvider.GetDependency<IStripeAdapter>().ListInvoicesAsync(Arg.Is<StripeInvoiceListOptions>(
             options =>
                 options.Customer == provider.GatewayCustomerId)).Returns(invoices);
 
@@ -301,7 +301,7 @@ public class ProviderBillingControllerTests
             Status = "unpaid"
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+        stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
                 options.Expand.Contains("discounts") &&
@@ -318,7 +318,7 @@ public class ProviderBillingControllerTests
             Attempted = true
         };
 
-        stripeAdapter.InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(
+        stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(
                 options => options.Query == $"subscription:'{subscription.Id}' status:'open'"))
             .Returns([overdueInvoice]);
 
@@ -351,7 +351,7 @@ public class ProviderBillingControllerTests
             var plan = MockPlans.Get(providerPlan.PlanType);
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
             var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
-            sutProvider.GetDependency<IStripeAdapter>().PriceGetAsync(priceId)
+            sutProvider.GetDependency<IStripeAdapter>().GetPriceAsync(priceId)
                 .Returns(new Price
                 {
                     UnitAmountDecimal = plan.PasswordManager.ProviderPortalSeatPrice * 100
@@ -459,13 +459,13 @@ public class ProviderBillingControllerTests
             Status = "active"
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+        stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
                 options.Expand.Contains("discounts") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
-        stripeAdapter.InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(
+        stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(
                 options => options.Query == $"subscription:'{subscription.Id}' status:'open'"))
             .Returns([]);
 
@@ -498,7 +498,7 @@ public class ProviderBillingControllerTests
             var plan = MockPlans.Get(providerPlan.PlanType);
             sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
             var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
-            sutProvider.GetDependency<IStripeAdapter>().PriceGetAsync(priceId)
+            sutProvider.GetDependency<IStripeAdapter>().GetPriceAsync(priceId)
                 .Returns(new Price
                 {
                     UnitAmountDecimal = plan.PasswordManager.ProviderPortalSeatPrice * 100

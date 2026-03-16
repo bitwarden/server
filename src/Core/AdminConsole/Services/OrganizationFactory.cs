@@ -62,7 +62,10 @@ public static class OrganizationFactory
             UseAdminSponsoredFamilies =
             claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAdminSponsoredFamilies),
             UseAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseAutomaticUserConfirmation),
+            UseDisableSmAdsForUsers =
+                claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseDisableSmAdsForUsers),
             UsePhishingBlocker = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UsePhishingBlocker),
+            UseMyItems = claimsPrincipal.GetValue<bool>(OrganizationLicenseConstants.UseMyItems),
         };
 
     public static Organization Create(
@@ -113,6 +116,8 @@ public static class OrganizationFactory
             UseOrganizationDomains = license.UseOrganizationDomains,
             UseAdminSponsoredFamilies = license.UseAdminSponsoredFamilies,
             UseAutomaticUserConfirmation = license.UseAutomaticUserConfirmation,
+            UseDisableSmAdsForUsers = license.UseDisableSmAdsForUsers,
             UsePhishingBlocker = license.UsePhishingBlocker,
+            UseMyItems = license.UseMyItems,
         };
 }

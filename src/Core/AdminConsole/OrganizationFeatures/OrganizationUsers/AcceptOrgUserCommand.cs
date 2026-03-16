@@ -2,10 +2,14 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -14,17 +18,12 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 {
-    private readonly IDataProtector _dataProtector;
-    private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPolicyService _policyService;
@@ -34,10 +33,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
+    private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
+    private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
     public AcceptOrgUserCommand(
-        IDataProtectionProvider dataProtectionProvider,
-        IGlobalSettings globalSettings,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyService policyService,
@@ -46,11 +46,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+        IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
+        IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
-        // TODO: remove data protector when old token validation removed
-        _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
-        _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
         _policyService = policyService;
@@ -60,6 +60,9 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
+        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
+        _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
+        _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -71,18 +74,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             throw new BadRequestException("User invalid.");
         }
 
-        // Tokens will have been created in two ways in the OrganizationService invite methods:
-        // 1. New way - via OrgUserInviteTokenable
-        // 2. Old way - via manual process using data protector initialized with purpose: "OrganizationServiceDataProtector"
-        // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
-
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+        var tokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, emailToken, orgUser);
-
-        var tokenValid = newTokenValid ||
-                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
-                             _globalSettings);
 
         if (!tokenValid)
         {
@@ -116,13 +109,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         return organizationUser;
-    }
-
-    private bool ValidateOrgUserInviteToken(string orgUserInviteToken, OrganizationUser orgUser)
-    {
-        return _orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUser);
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByOrgSsoIdAsync(string orgSsoIdentifier, User user, IUserService userService)
@@ -186,24 +172,14 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             }
         }
 
-        // Enforce Single Organization Policy of organization user is trying to join
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
 
-        if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
-            throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
+            await HandleAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
         }
 
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
-        }
+        await ValidateSingleOrganizationPolicyAsync(orgUser, allOrgUsers, user);
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
         await ValidateTwoFactorAuthenticationPolicyAsync(user, orgUser.OrganizationId);
@@ -223,7 +199,29 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        {
+            await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
+        }
+
         return orgUser;
+    }
+
+    private async Task ValidateSingleOrganizationPolicyAsync(OrganizationUser orgUser, ICollection<OrganizationUser> allOrgUsers, User user)
+    {
+        var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+        var error = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
+        if (error is not null)
+        {
+            var singleOrgErrorMessage = error switch
+            {
+                UserIsAMemberOfAnotherOrganization => "You cannot accept this invite until you leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => "You cannot accept this invite because you are in another organization which forbids it.",
+                _ => error.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
+        }
     }
 
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
@@ -253,6 +251,34 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             {
                 throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
+        }
+    }
+
+    private async Task HandleAutomaticUserConfirmationPolicyAsync(OrganizationUser orgUser,
+        ICollection<OrganizationUser> allOrgUsers,
+        User user)
+    {
+        var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+            user.Id);
+
+        var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId,
+                    allOrgUsers.Append(orgUser),
+                    user),
+                policyRequirement))
+            .Match(
+                error => error.Message,
+                _ => string.Empty
+            );
+
+        if (!string.IsNullOrEmpty(error))
+        {
+            throw new BadRequestException(error);
+        }
+
+        if (policyRequirement.IsEnabled(orgUser.OrganizationId))
+        {
+            await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
     }
 }

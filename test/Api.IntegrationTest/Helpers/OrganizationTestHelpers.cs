@@ -159,14 +159,16 @@ public static class OrganizationTestHelpers
         Guid organizationId,
         string name,
         IEnumerable<CollectionAccessSelection>? users = null,
-        IEnumerable<CollectionAccessSelection>? groups = null)
+        IEnumerable<CollectionAccessSelection>? groups = null,
+        string? externalId = null)
     {
         var collectionRepository = factory.GetService<ICollectionRepository>();
         var collection = new Collection
         {
             OrganizationId = organizationId,
             Name = name,
-            Type = CollectionType.SharedCollection
+            Type = CollectionType.SharedCollection,
+            ExternalId = externalId
         };
 
         await collectionRepository.CreateAsync(collection, groups, users);

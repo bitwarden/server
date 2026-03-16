@@ -231,6 +231,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseDirectory")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseDisableSmAdsForUsers")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseEvents")
                         .HasColumnType("boolean");
 
@@ -238,6 +241,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UseMyItems")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseOrganizationDomains")
@@ -275,76 +281,15 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
+
                     b.HasIndex("Id", "Enabled");
 
-                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp" });
+                    NpgsqlIndexBuilderExtensions.IncludeProperties(b.HasIndex("Id", "Enabled"), new[] { "UseTotp", "UsersGetPremium" });
 
                     b.ToTable("Organization", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegration", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Configuration")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId")
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.HasIndex("OrganizationId", "Type")
-                        .IsUnique()
-                        .HasAnnotation("SqlServer:Clustered", false);
-
-                    b.ToTable("OrganizationIntegration", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegrationConfiguration", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Configuration")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("EventType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Filters")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("OrganizationIntegrationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Template")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationIntegrationId");
-
-                    b.ToTable("OrganizationIntegrationConfiguration", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
@@ -424,10 +369,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("smallint");
 
                     b.Property<string>("GatewayCustomerId")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("GatewaySubscriptionId")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
@@ -445,6 +392,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -626,8 +577,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<byte>("Type")
                         .HasColumnType("smallint");
 
-                    b.Property<int>("WaitTimeDays")
-                        .HasColumnType("integer");
+                    b.Property<short>("WaitTimeDays")
+                        .HasColumnType("smallint");
 
                     b.HasKey("Id");
 
@@ -984,6 +935,69 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("ProviderPlan", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.SubscriptionDiscount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("AmountOff")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("AudienceType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("DurationInMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("PercentOff")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StripeCouponId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StripeProductIds")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StripeCouponId")
+                        .IsUnique();
+
+                    b.HasIndex("StartDate", "EndDate")
+                        .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("SubscriptionDiscount", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationApplication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1015,6 +1029,71 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("OrganizationApplication", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Configuration")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("OrganizationId", "Type")
+                        .IsUnique()
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("OrganizationIntegration", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegrationConfiguration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Configuration")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("EventType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Filters")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizationIntegrationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Template")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationIntegrationId");
+
+                    b.ToTable("OrganizationIntegrationConfiguration", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReport", b =>
@@ -1073,6 +1152,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReportFile")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("RevisionDate")
@@ -1629,6 +1711,42 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("OrganizationUser", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PlayId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("PlayId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("UserId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("PlayItem", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlayItem_UserOrOrganization", "(\"UserId\" IS NOT NULL AND \"OrganizationId\" IS NULL) OR (\"UserId\" IS NULL AND \"OrganizationId\" IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Send", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1636,6 +1754,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<int>("AccessCount")
                         .HasColumnType("integer");
+
+                    b.Property<byte?>("AuthType")
+                        .HasColumnType("smallint");
 
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("uuid");
@@ -1653,8 +1774,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Emails")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
@@ -1888,6 +2009,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
@@ -1943,6 +2068,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("text");
+
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("boolean");
 
@@ -1951,6 +2079,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -2317,8 +2449,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ArchivedDate")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("Archives")
+                        .HasColumnType("text");
 
                     b.Property<string>("Attachments")
                         .HasColumnType("text");
@@ -2607,28 +2739,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasDiscriminator().HasValue("user_service_account");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegration", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
-                        .WithMany()
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegrationConfiguration", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.OrganizationIntegration", "OrganizationIntegration")
-                        .WithMany()
-                        .HasForeignKey("OrganizationIntegrationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("OrganizationIntegration");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2805,6 +2915,28 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegration", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegrationConfiguration", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationIntegration", "OrganizationIntegration")
+                        .WithMany()
+                        .HasForeignKey("OrganizationIntegrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrganizationIntegration");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationReport", b =>
@@ -2997,6 +3129,23 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany("OrganizationUsers")
                         .HasForeignKey("UserId");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.PlayItem", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Organization");
 

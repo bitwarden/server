@@ -1,8 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Tax.Models;
 
 namespace Bit.Core.Billing.Organizations.Services;
 
@@ -27,26 +25,6 @@ public interface IOrganizationBillingService
     Task Finalize(OrganizationSale sale);
 
     /// <summary>
-    /// Retrieve metadata about the organization represented bsy the provided <paramref name="organizationId"/>.
-    /// </summary>
-    /// <param name="organizationId">The ID of the organization to retrieve metadata for.</param>
-    /// <returns>An <see cref="OrganizationMetadata"/> record.</returns>
-    Task<OrganizationMetadata?> GetMetadata(Guid organizationId);
-
-    /// <summary>
-    /// Updates the provided <paramref name="organization"/>'s payment source and tax information.
-    /// If the <paramref name="organization"/> does not have a Stripe <see cref="Stripe.Customer"/>, this method will create one using the provided
-    /// <paramref name="tokenizedPaymentSource"/> and <paramref name="taxInformation"/>.
-    /// </summary>
-    /// <param name="organization">The <paramref name="organization"/> to update the payment source and tax information for.</param>
-    /// <param name="tokenizedPaymentSource">The tokenized payment source (ex. Credit Card) to attach to the <paramref name="organization"/>.</param>
-    /// <param name="taxInformation">The <paramref name="organization"/>'s updated tax information.</param>
-    Task UpdatePaymentMethod(
-        Organization organization,
-        TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation);
-
-    /// <summary>
     /// Updates the subscription with new plan frequencies and changes the collection method to charge_automatically if a valid payment method exists.
     /// Validates that the customer has a payment method attached before switching to automatic charging.
     /// Handles both Password Manager and Secrets Manager subscription items separately to ensure billing interval compatibility.
@@ -61,10 +39,6 @@ public interface IOrganizationBillingService
     /// Updates the organization name and email on the Stripe customer entry.
     /// This only updates Stripe, not the Bitwarden database.
     /// </summary>
-    /// <remarks>
-    /// The caller should ensure that the organization has a GatewayCustomerId before calling this method.
-    /// </remarks>
     /// <param name="organization">The organization to update in Stripe.</param>
-    /// <exception cref="BillingException">Thrown when the organization does not have a GatewayCustomerId.</exception>
     Task UpdateOrganizationNameAndEmail(Organization organization);
 }

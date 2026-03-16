@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -12,7 +13,7 @@ public abstract class CancelSponsorshipCommandTestsBase : FamiliesForEnterpriseT
     protected async Task AssertRemovedSponsoredPaymentAsync<T>(Organization sponsoredOrg,
 OrganizationSponsorship sponsorship, SutProvider<T> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .RemoveOrganizationSponsorshipAsync(sponsoredOrg, sponsorship);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).UpsertAsync(sponsoredOrg);
         if (sponsorship != null)
@@ -46,7 +47,7 @@ OrganizationSponsorship sponsorship, SutProvider<T> sutProvider)
 
     protected static async Task AssertDidNotRemoveSponsoredPaymentAsync<T>(SutProvider<T> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .RemoveOrganizationSponsorshipAsync(default, default);
         await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);

@@ -66,8 +66,8 @@ public class ProviderClientsControllerTests
                     signup.Plan == requestBody.PlanType &&
                     signup.AdditionalSeats == requestBody.Seats &&
                     signup.OwnerKey == requestBody.Key &&
-                    signup.PublicKey == requestBody.KeyPair.PublicKey &&
-                    signup.PrivateKey == requestBody.KeyPair.EncryptedPrivateKey &&
+                    signup.Keys.PublicKey == requestBody.KeyPair.PublicKey &&
+                    signup.Keys.WrappedPrivateKey == requestBody.KeyPair.EncryptedPrivateKey &&
                     signup.CollectionName == requestBody.CollectionName),
                 requestBody.OwnerEmail,
                 user)
@@ -107,6 +107,7 @@ public class ProviderClientsControllerTests
         organization.Seats = 10;
         organization.Status = OrganizationStatusType.Managed;
         requestBody.AssignedSeats = 20;
+        providerOrganization.ProviderId = provider.Id;
 
         ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
@@ -129,6 +130,26 @@ public class ProviderClientsControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task UpdateAsync_ProviderOrganizationBelongsToDifferentProvider_NotFound(
+        Provider provider,
+        Guid providerOrganizationId,
+        UpdateClientOrganizationRequestBody requestBody,
+        ProviderOrganization providerOrganization,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
+
+        providerOrganization.ProviderId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
+            .Returns(providerOrganization);
+
+        var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
+
+        AssertNotFound(result);
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateAsync_Ok(
         Provider provider,
         Guid providerOrganizationId,
@@ -141,6 +162,7 @@ public class ProviderClientsControllerTests
         organization.Seats = 10;
         organization.Status = OrganizationStatusType.Managed;
         requestBody.AssignedSeats = 20;
+        providerOrganization.ProviderId = provider.Id;
 
         ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 

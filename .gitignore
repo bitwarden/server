@@ -237,3 +237,7 @@ bitwarden_license/src/Sso/Sso.zip
 
 # Serena
 .serena/
+
+# Claude Code
+CLAUDE.local.md
+.worktrees/

@@ -7,8 +7,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -1142,7 +1146,7 @@ public class OrganizationServiceTests
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
         await stripeAdapter
             .Received(1)
-            .CustomerUpdateAsync(
+            .UpdateCustomerAsync(
                 Arg.Is<string>(id => id == organization.GatewayCustomerId),
                 Arg.Is<CustomerUpdateOptions>(options => options.Email == requestOptionsReturned.Email
                                                          && options.Description == requestOptionsReturned.Description
@@ -1182,7 +1186,7 @@ public class OrganizationServiceTests
             .GetByIdentifierAsync(Arg.Is<string>(id => id == organization.Identifier));
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
         await organizationRepository
             .Received(1)
             .ReplaceAsync(Arg.Is<Organization>(org => org == organization));
@@ -1328,6 +1332,173 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
             .GetByIdAsync(organizationId);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustSeatsAsync_WithFeatureFlag_UsesUpdateOrganizationSubscriptionCommand(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 20;
+        organization.GatewayCustomerId = "cus_123";
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.UseSecretsManager = false;
+
+        var plan = MockPlans.Get(organization.PlanType);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, 2);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>());
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default, default);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustSeatsAsync_WithoutFeatureFlag_UsesPaymentService(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 20;
+        organization.GatewayCustomerId = "cus_123";
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.UseSecretsManager = false;
+
+        var plan = MockPlans.Get(organization.PlanType);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        await sutProvider.Sut.AdjustSeatsAsync(organization.Id, 2);
+
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
+            .AdjustSeatsAsync(organization, plan, Arg.Any<int>());
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AdjustStorageAsync_OrganizationNotFound_ThrowsNotFoundException(
+        Guid organizationId, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.AdjustStorageAsync(organizationId, 1));
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
+    public async Task AdjustStorageAsync_PlanDoesNotAllowStorage_ThrowsBadRequestException(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = MockPlans.Get(organization.PlanType);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AdjustStorageAsync(organization.Id, 1));
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustStorageAsync_WithFeatureFlag_AtBaseStorage_AddsItem(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        organization.GatewayCustomerId = "cus_123";
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.MaxStorageGb = 1;
+        organization.Storage = 0;
+
+        var plan = MockPlans.Get(organization.PlanType);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.AdjustStorageAsync(organization.Id, 1);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 1 && cs.Changes[0].IsItemAddition));
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustStorageAsync(default, default, default);
+        Assert.Equal((short)2, organization.MaxStorageGb);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustStorageAsync_WithFeatureFlag_AboveBaseStorage_UpdatesItemQuantity(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        organization.GatewayCustomerId = "cus_123";
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.MaxStorageGb = 2;
+        organization.Storage = 0;
+
+        var plan = MockPlans.Get(organization.PlanType);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.AdjustStorageAsync(organization.Id, 1);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 1 && cs.Changes[0].IsItemQuantityUpdate));
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustStorageAsync(default, default, default);
+        Assert.Equal((short)3, organization.MaxStorageGb);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually), BitAutoData]
+    public async Task AdjustStorageAsync_WithoutFeatureFlag_UsesPaymentService(
+        Organization organization, SutProvider<OrganizationService> sutProvider)
+    {
+        organization.GatewayCustomerId = "cus_123";
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.MaxStorageGb = 1;
+        organization.Storage = 0;
+
+        var plan = MockPlans.Get(organization.PlanType);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        await sutProvider.Sut.AdjustStorageAsync(organization.Id, 1);
+
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
+            .AdjustStorageAsync(organization, Arg.Any<int>(), plan.PasswordManager.StripeStoragePlanId);
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default);
     }
 
     // Must set real guids in order for dictionary of guids to not throw aggregate exceptions

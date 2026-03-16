@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,106 +23,154 @@ public class SetInitialMasterPasswordCommandTests
     [Theory]
     [BitAutoData]
     public async Task SetInitialMasterPassword_Success(SutProvider<SetInitialMasterPasswordCommand> sutProvider,
-        User user, string masterPassword, string key, string orgIdentifier,
-        Organization org, OrganizationUser orgUser)
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
+        Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
     {
         // Arrange
-        user.MasterPassword = null;
-
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        user.Key = null;
+        var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdentifierAsync(orgIdentifier)
+            .GetByIdentifierAsync(org.Identifier)
             .Returns(org);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(org.Id, user.Id)
             .Returns(orgUser);
 
-        // Act
-        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier);
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .HashPassword(user, model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash)
+            .Returns(serverSideHash);
 
-        // Assert
-        Assert.Equal(IdentityResult.Success, result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SetInitialMasterPassword_UserIsNull_ThrowsArgumentNullException(SutProvider<SetInitialMasterPasswordCommand> sutProvider, string masterPassword, string key, string orgIdentifier)
-    {
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(null, masterPassword, key, orgIdentifier));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SetInitialMasterPassword_AlreadyHasPassword_ReturnsFalse(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
-    {
-        // Arrange
-        user.MasterPassword = "ExistingPassword";
+        // Mock SetMasterPassword to return a specific UpdateUserData delegate
+        UpdateUserData mockUpdateUserData = (connection, transaction) => Task.CompletedTask;
+        sutProvider.GetDependency<IUserRepository>()
+            .SetMasterPassword(user.Id, model.MasterPasswordUnlock, serverSideHash, model.MasterPasswordHint)
+            .Returns(mockUpdateUserData);
 
         // Act
-        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier);
+        await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model);
 
         // Assert
-        Assert.False(result.Succeeded);
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .SetV2AccountCryptographicStateAsync(
+                user.Id,
+                model.AccountKeys,
+                Arg.Do<IEnumerable<UpdateUserData>>(actions =>
+                {
+                    var actionsList = actions.ToList();
+                    Assert.Single(actionsList);
+                    Assert.Same(mockUpdateUserData, actionsList[0]);
+                }));
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
+            .AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_NullOrgSsoIdentifier_ThrowsBadRequestException(
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key)
+    public async Task SetInitialMasterPassword_UserAlreadyHasPassword_ThrowsBadRequestException(
+        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
-        user.MasterPassword = null;
-        string orgSsoIdentifier = null;
-
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        user.Key = "existing-key";
+        var model = CreateValidModel(user, accountKeys, kdfSettings, orgSsoIdentifier, masterPasswordHint);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgSsoIdentifier));
-        Assert.Equal("Organization SSO Identifier required.", exception.Message);
+            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+        Assert.Equal("User already has a master password set.", exception.Message);
     }
-
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_InvalidOrganization_Throws(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
+    public async Task SetInitialMasterPassword_AccountKeysNull_ThrowsBadRequestException(
+        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
-        user.MasterPassword = null;
+        user.Key = null;
+        var model = CreateValidModel(user, null, kdfSettings, orgSsoIdentifier, masterPasswordHint);
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+        Assert.Equal("Account keys are required.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData("wrong-salt", null)]
+    [BitAutoData([null, "wrong-salt"])]
+    [BitAutoData("wrong-salt", "different-wrong-salt")]
+    public async Task SetInitialMasterPassword_InvalidSalt_ThrowsBadRequestException(
+        string? authSaltOverride, string? unlockSaltOverride,
+        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
+    {
+        // Arrange
+        user.Key = null;
+        var correctSalt = user.GetMasterPasswordSalt();
+        var model = new SetInitialMasterPasswordDataModel
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = authSaltOverride ?? correctSalt,
+                MasterPasswordAuthenticationHash = "hash",
+                Kdf = kdfSettings
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Salt = unlockSaltOverride ?? correctSalt,
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdfSettings
+            },
+            AccountKeys = accountKeys,
+            OrgSsoIdentifier = orgSsoIdentifier,
+            MasterPasswordHint = masterPasswordHint
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+        Assert.Equal("Invalid master password salt.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetInitialMasterPassword_InvalidOrgSsoIdentifier_ThrowsBadRequestException(
+        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
+    {
+        // Arrange
+        user.Key = null;
+        var model = CreateValidModel(user, accountKeys, kdfSettings, orgSsoIdentifier, masterPasswordHint);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdentifierAsync(orgIdentifier)
+            .GetByIdentifierAsync(orgSsoIdentifier)
             .ReturnsNull();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier));
-        Assert.Equal("Organization invalid.", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+        Assert.Equal("Organization SSO identifier is invalid.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_UserNotFoundInOrganization_Throws(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, Organization org)
+    public async Task SetInitialMasterPassword_UserNotFoundInOrganization_ThrowsBadRequestException(
+        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, Organization org, string masterPasswordHint)
     {
         // Arrange
-        user.MasterPassword = null;
-
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        user.Key = null;
+        var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdentifierAsync(Arg.Any<string>())
+            .GetByIdentifierAsync(org.Identifier)
             .Returns(org);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -128,67 +178,33 @@ public class SetInitialMasterPasswordCommandTests
             .ReturnsNull();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, org.Identifier));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
         Assert.Equal("User not found within organization.", exception.Message);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task SetInitialMasterPassword_ConfirmedOrgUser_DoesNotCallAcceptOrgUser(SutProvider<SetInitialMasterPasswordCommand> sutProvider,
-        User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
+    private static SetInitialMasterPasswordDataModel CreateValidModel(
+        User user, UserAccountKeysData? accountKeys, KdfSettings kdfSettings,
+        string orgSsoIdentifier, string? masterPasswordHint)
     {
-        // Arrange
-        user.MasterPassword = null;
-
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdentifierAsync(orgIdentifier)
-            .Returns(org);
-
-        orgUser.Status = OrganizationUserStatusType.Confirmed;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(org.Id, user.Id)
-            .Returns(orgUser);
-
-
-        // Act
-        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier);
-
-        // Assert
-        Assert.Equal(IdentityResult.Success, result);
-        await sutProvider.GetDependency<IAcceptOrgUserCommand>().DidNotReceive().AcceptOrgUserAsync(Arg.Any<OrganizationUser>(), Arg.Any<User>(), Arg.Any<IUserService>());
+        var salt = user.GetMasterPasswordSalt();
+        return new SetInitialMasterPasswordDataModel
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Salt = salt,
+                MasterPasswordAuthenticationHash = "hash",
+                Kdf = kdfSettings
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Salt = salt,
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Kdf = kdfSettings
+            },
+            AccountKeys = accountKeys,
+            OrgSsoIdentifier = orgSsoIdentifier,
+            MasterPasswordHint = masterPasswordHint
+        };
     }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SetInitialMasterPassword_InvitedOrgUser_CallsAcceptOrgUser(SutProvider<SetInitialMasterPasswordCommand> sutProvider,
-        User user, string masterPassword, string key, string orgIdentifier, Organization org, OrganizationUser orgUser)
-    {
-        // Arrange
-        user.MasterPassword = null;
-
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdentifierAsync(orgIdentifier)
-            .Returns(org);
-
-        orgUser.Status = OrganizationUserStatusType.Invited;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(org.Id, user.Id)
-            .Returns(orgUser);
-
-        // Act
-        var result = await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier);
-
-        // Assert
-        Assert.Equal(IdentityResult.Success, result);
-        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1).AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
-    }
-
 }

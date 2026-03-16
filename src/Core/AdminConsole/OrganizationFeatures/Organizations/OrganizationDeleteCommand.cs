@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -12,13 +13,13 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 {
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
     public OrganizationDeleteCommand(
         IApplicationCacheService applicationCacheService,
         IOrganizationRepository organizationRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         ISsoConfigRepository ssoConfigRepository)
     {
         _applicationCacheService = applicationCacheService;

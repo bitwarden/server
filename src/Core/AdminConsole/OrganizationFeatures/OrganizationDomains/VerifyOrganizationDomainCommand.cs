@@ -157,6 +157,6 @@ public class VerifyOrganizationDomainCommand(
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization));
+        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization, domain.DomainName));
     }
 }

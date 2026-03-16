@@ -65,6 +65,7 @@ public class Startup
             default:
                 break;
         }
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();

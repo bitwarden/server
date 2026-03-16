@@ -4,6 +4,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -14,14 +15,14 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
 public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSponsorshipCommand
 {
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IMailService _mailService;
     private readonly ILogger<ValidateSponsorshipCommand> _logger;
 
     public ValidateSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationRepository organizationRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IMailService mailService,
         ILogger<ValidateSponsorshipCommand> logger) : base(organizationSponsorshipRepository, organizationRepository)
     {

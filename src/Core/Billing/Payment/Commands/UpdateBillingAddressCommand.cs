@@ -4,7 +4,6 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -46,7 +45,7 @@ public class UpdateBillingAddressCommand(
         BillingAddress billingAddress)
     {
         var customer =
-            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+            await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
                     Address = new AddressOptions
@@ -71,7 +70,7 @@ public class UpdateBillingAddressCommand(
         BillingAddress billingAddress)
     {
         var customer =
-            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+            await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
                     Address = new AddressOptions
@@ -92,7 +91,7 @@ public class UpdateBillingAddressCommand(
         await EnableAutomaticTaxAsync(subscriber, customer);
 
         var deleteExistingTaxIds = customer.TaxIds?.Any() ?? false
-            ? customer.TaxIds.Select(taxId => stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id)).ToList()
+            ? customer.TaxIds.Select(taxId => stripeAdapter.DeleteTaxIdAsync(customer.Id, taxId.Id)).ToList()
             : [];
 
         if (billingAddress.TaxId == null)
@@ -101,12 +100,12 @@ public class UpdateBillingAddressCommand(
             return BillingAddress.From(customer.Address);
         }
 
-        var updatedTaxId = await stripeAdapter.TaxIdCreateAsync(customer.Id,
+        var updatedTaxId = await stripeAdapter.CreateTaxIdAsync(customer.Id,
             new TaxIdCreateOptions { Type = billingAddress.TaxId.Code, Value = billingAddress.TaxId.Value });
 
         if (billingAddress.TaxId.Code == StripeConstants.TaxIdType.SpanishNIF)
         {
-            updatedTaxId = await stripeAdapter.TaxIdCreateAsync(customer.Id,
+            updatedTaxId = await stripeAdapter.CreateTaxIdAsync(customer.Id,
                 new TaxIdCreateOptions
                 {
                     Type = StripeConstants.TaxIdType.EUVAT,
@@ -130,7 +129,7 @@ public class UpdateBillingAddressCommand(
 
             if (subscription is { AutomaticTax.Enabled: false })
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                await stripeAdapter.UpdateSubscriptionAsync(subscriber.GatewaySubscriptionId,
                     new SubscriptionUpdateOptions
                     {
                         AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }

@@ -7,8 +7,9 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -21,6 +22,7 @@ using static StripeConstants;
 public interface IPreviewOrganizationTaxCommand
 {
     Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress);
 
@@ -37,10 +39,12 @@ public interface IPreviewOrganizationTaxCommand
 public class PreviewOrganizationTaxCommand(
     ILogger<PreviewOrganizationTaxCommand> logger,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter)
+    IStripeAdapter stripeAdapter,
+    ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<PreviewOrganizationTaxCommand>(logger), IPreviewOrganizationTaxCommand
 {
     public Task<BillingCommandResult<(decimal Tax, decimal Total)>> Run(
+        User user,
         OrganizationSubscriptionPurchase purchase,
         BillingAddress billingAddress)
         => HandleAsync<(decimal, decimal)>(async () =>
@@ -75,6 +79,8 @@ public class PreviewOrganizationTaxCommand(
                             Quantity = purchase.SecretsManager.Seats
                         }
                     ]);
+                    // System coupon takes precedence for standalone Secrets Manager purchases.
+                    // Any user-provided coupons are ignored in this scenario.
                     options.Discounts =
                     [
                         new InvoiceDiscountOptions
@@ -120,12 +126,27 @@ public class PreviewOrganizationTaxCommand(
                         }
                     }
 
+                    // Validate coupon and only apply if valid. If invalid, proceed without the discount.
+                    // Only Families plans support user-provided coupons
+                    if (!string.IsNullOrWhiteSpace(purchase.Coupon) && purchase.Tier == ProductTierType.Families)
+                    {
+                        var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                            user,
+                            purchase.Coupon.Trim(),
+                            DiscountTierType.Families);
+
+                        if (isValid)
+                        {
+                            options.Discounts = [new InvoiceDiscountOptions { Coupon = purchase.Coupon.Trim() }];
+                        }
+                    }
+
                     break;
             }
 
             options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
         });
 
@@ -165,7 +186,7 @@ public class PreviewOrganizationTaxCommand(
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-                var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+                var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
             }
             else
@@ -181,7 +202,7 @@ public class PreviewOrganizationTaxCommand(
 
                 var options = GetBaseOptions(billingAddress, planChange.Tier != ProductTierType.Families);
 
-                var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId,
+                var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                     new SubscriptionGetOptions { Expand = ["customer"] });
 
                 if (subscription.Customer.Discount != null)
@@ -259,7 +280,7 @@ public class PreviewOrganizationTaxCommand(
 
                 options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-                var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+                var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
                 return GetAmounts(invoice);
             }
         });
@@ -278,7 +299,7 @@ public class PreviewOrganizationTaxCommand(
                 return new BadRequest("Organization does not have a subscription.");
             }
 
-            var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId,
+            var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
                 new SubscriptionGetOptions { Expand = ["customer.tax_ids"] });
 
             var options = GetBaseOptions(subscription.Customer,
@@ -336,7 +357,7 @@ public class PreviewOrganizationTaxCommand(
 
             options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions { Items = items };
 
-            var invoice = await stripeAdapter.InvoiceCreatePreviewAsync(options);
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
             return GetAmounts(invoice);
         });
 

@@ -5,6 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Users;
 
@@ -38,7 +39,7 @@ public class PatchUserCommand : IPatchUserCommand
         foreach (var operation in model.Operations)
         {
             // Replace operations
-            if (operation.Op?.ToLowerInvariant() == "replace")
+            if (operation.Op?.ToLowerInvariant() == PatchOps.Replace)
             {
                 // Active from path
                 if (operation.Path?.ToLowerInvariant() == "active")
@@ -49,15 +50,42 @@ public class PatchUserCommand : IPatchUserCommand
                     {
                         operationHandled = handled;
                     }
-                }
-                // Active from value object
-                else if (string.IsNullOrWhiteSpace(operation.Path) &&
-                    operation.Value.TryGetProperty("active", out var activeProperty))
-                {
-                    var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
-                    if (!operationHandled)
+                    // Re-fetch to pick up status changes persisted by restore/revoke
+                    if (handled)
                     {
-                        operationHandled = handled;
+                        orgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id)
+                            ?? throw new NotFoundException("User not found.");
+                    }
+                }
+                // ExternalId from path
+                else if (operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId)
+                {
+                    var newExternalId = operation.Value.GetString();
+                    await HandleExternalIdOperationAsync(orgUser, newExternalId);
+                    operationHandled = true;
+                }
+                // Value object with no path — check for each supported property independently
+                else if (string.IsNullOrWhiteSpace(operation.Path))
+                {
+                    if (operation.Value.TryGetProperty("active", out var activeProperty))
+                    {
+                        var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
+                        if (!operationHandled)
+                        {
+                            operationHandled = handled;
+                        }
+                        // Re-fetch to pick up status changes persisted by restore/revoke
+                        if (handled)
+                        {
+                            orgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id)
+                                ?? throw new NotFoundException("User not found.");
+                        }
+                    }
+                    if (operation.Value.TryGetProperty("externalId", out var externalIdProperty))
+                    {
+                        var newExternalId = externalIdProperty.GetString();
+                        await HandleExternalIdOperationAsync(orgUser, newExternalId);
+                        operationHandled = true;
                     }
                 }
             }
@@ -83,5 +111,29 @@ public class PatchUserCommand : IPatchUserCommand
             return true;
         }
         return false;
+    }
+
+    private async Task HandleExternalIdOperationAsync(Core.Entities.OrganizationUser orgUser, string? newExternalId)
+    {
+        // Validate max length (300 chars per OrganizationUser.cs line 59)
+        if (!string.IsNullOrWhiteSpace(newExternalId) && newExternalId.Length > 300)
+        {
+            throw new BadRequestException("ExternalId cannot exceed 300 characters.");
+        }
+
+        // Check for duplicate externalId (same validation as PostUserCommand.cs)
+        if (!string.IsNullOrWhiteSpace(newExternalId))
+        {
+            var existingUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgUser.OrganizationId);
+            if (existingUsers.Any(u => u.Id != orgUser.Id &&
+                !string.IsNullOrWhiteSpace(u.ExternalId) &&
+                u.ExternalId.Equals(newExternalId, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ConflictException("ExternalId already exists for another user.");
+            }
+        }
+
+        orgUser.ExternalId = newExternalId;
+        await _organizationUserRepository.ReplaceAsync(orgUser);
     }
 }

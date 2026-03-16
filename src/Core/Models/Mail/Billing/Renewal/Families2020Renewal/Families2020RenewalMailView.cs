@@ -9,5 +9,5 @@ public class Families2020RenewalMailView : BaseMailView
 
 public class Families2020RenewalMail : BaseMail<Families2020RenewalMailView>
 {
-    public override string Subject { get => "Your Bitwarden Families renewal is updating"; }
+    public override string Subject { get; set; } = "Your Bitwarden Families renewal is updating";
 }

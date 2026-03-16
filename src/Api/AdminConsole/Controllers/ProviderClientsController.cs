@@ -57,8 +57,7 @@ public class ProviderClientsController(
             Owner = user,
             BillingEmail = provider.BillingEmail,
             OwnerKey = requestBody.Key,
-            PublicKey = requestBody.KeyPair.PublicKey,
-            PrivateKey = requestBody.KeyPair.EncryptedPrivateKey,
+            Keys = requestBody.KeyPair.ToPublicKeyEncryptionKeyPairData(),
             CollectionName = requestBody.CollectionName,
             IsFromProvider = true
         };
@@ -104,6 +103,11 @@ public class ProviderClientsController(
         var providerOrganization = await providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
 
         if (providerOrganization == null)
+        {
+            return Error.NotFound();
+        }
+
+        if (providerOrganization.ProviderId != provider.Id)
         {
             return Error.NotFound();
         }

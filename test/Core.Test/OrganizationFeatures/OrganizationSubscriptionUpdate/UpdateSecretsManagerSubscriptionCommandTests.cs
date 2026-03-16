@@ -1,5 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -16,6 +20,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
@@ -86,9 +91,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustSmSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
         // TODO: call ReferenceEventService - see AC-1481
@@ -136,9 +141,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustSmSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
-        await sutProvider.GetDependency<IPaymentService>().Received(1)
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
         // TODO: call ReferenceEventService - see AC-1481
@@ -258,7 +263,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustServiceAccountsAsync(
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1).AdjustServiceAccountsAsync(
             Arg.Is<Organization>(o => o.Id == organizationId),
             plan,
             expectedSmServiceAccountsExcludingBase);
@@ -777,11 +782,177 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
+    [Theory]
+    [BitMemberAutoData(nameof(AllTeamsAndEnterprise))]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_AboveBaseServiceAccounts_UpdatesItemQuantity(
+        Plan plan,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + 10;
+        organization.MaxAutoscaleSmServiceAccounts = 350;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmSeats = 15,
+            SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + 20,
+            MaxAutoscaleSmSeats = 16,
+            MaxAutoscaleSmServiceAccounts = 351
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 2 &&
+                cs.Changes[0].IsItemQuantityUpdate &&
+                cs.Changes[1].IsItemQuantityUpdate));
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustSmSeatsAsync(default, default, default);
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustServiceAccountsAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(AllTeamsAndEnterprise))]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_AtBaseServiceAccounts_AddsItem(
+        Plan plan,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount;
+        organization.MaxAutoscaleSmServiceAccounts = 350;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmSeats = 15,
+            SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + 10,
+            MaxAutoscaleSmSeats = 16,
+            MaxAutoscaleSmServiceAccounts = 351
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
+            .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Count == 2 &&
+                cs.Changes[0].IsItemQuantityUpdate &&
+                cs.Changes[1].IsItemAddition));
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustSmSeatsAsync(default, default, default);
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustServiceAccountsAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(AllTeamsAndEnterprise))]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_OnlyAutoscaleLimitsChanged_SkipsCommand(
+        Plan plan,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 200;
+        organization.MaxAutoscaleSmServiceAccounts = 350;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmSeats = organization.SmSeats,
+            SmServiceAccounts = organization.SmServiceAccounts,
+            MaxAutoscaleSmSeats = 25,
+            MaxAutoscaleSmServiceAccounts = 400
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default);
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustSmSeatsAsync(default, default, default);
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
+            .AdjustServiceAccountsAsync(default, default, default);
+
+        AssertUpdatedOrganization(() => Arg.Is<Organization>(org =>
+                org.Id == organization.Id &&
+                org.MaxAutoscaleSmSeats == 25 &&
+                org.MaxAutoscaleSmServiceAccounts == 400),
+            sutProvider);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(AllTeamsAndEnterprise))]
+    public async Task UpdateSubscriptionAsync_WithoutFeatureFlag_UpdateSeatsAndServiceAccounts_UsesPaymentService(
+        Plan plan,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 200;
+        organization.MaxAutoscaleSmServiceAccounts = 350;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmSeats = 15,
+            SmServiceAccounts = 300,
+            MaxAutoscaleSmSeats = 16,
+            MaxAutoscaleSmServiceAccounts = 301
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
+            .AdjustSmSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
+            .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
+        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .Run(default, default);
+    }
+
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceive()
             .AdjustSmSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
+        await sutProvider.GetDependency<IStripePaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         // TODO: call ReferenceEventService - see AC-1481
         await sutProvider.GetDependency<IMailService>().DidNotReceive()

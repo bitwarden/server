@@ -5,7 +5,6 @@ using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,28 +18,9 @@ public class OrganizationBillingController(
     ICurrentContext currentContext,
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IPaymentService paymentService,
+    IStripePaymentService paymentService,
     IPaymentHistoryService paymentHistoryService) : BaseBillingController
 {
-    // TODO: Remove when pm-25379-use-new-organization-metadata-structure is removed.
-    [HttpGet("metadata")]
-    public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
-    {
-        if (!await currentContext.OrganizationUser(organizationId))
-        {
-            return Error.Unauthorized();
-        }
-
-        var metadata = await organizationBillingService.GetMetadata(organizationId);
-
-        if (metadata == null)
-        {
-            return Error.NotFound();
-        }
-
-        return TypedResults.Ok(metadata);
-    }
-
     // TODO: Migrate to Query / OrganizationBillingVNextController
     [HttpGet("history")]
     public async Task<IResult> GetHistoryAsync([FromRoute] Guid organizationId)
