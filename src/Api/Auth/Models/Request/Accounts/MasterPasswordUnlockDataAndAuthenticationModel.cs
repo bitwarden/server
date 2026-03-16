@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
@@ -22,6 +20,8 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
     [EncryptedString] public required string MasterKeyEncryptedUserKey { get; set; }
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
+    [MaxLength(256)]
+    public string? MasterPasswordSalt { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -58,9 +58,9 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
 
             MasterKeyAuthenticationHash = MasterKeyAuthenticationHash,
             MasterKeyEncryptedUserKey = MasterKeyEncryptedUserKey,
-            MasterPasswordHint = MasterPasswordHint
+            MasterPasswordHint = MasterPasswordHint,
+            MasterPasswordSalt = MasterPasswordSalt
         };
         return data;
     }
-
 }
