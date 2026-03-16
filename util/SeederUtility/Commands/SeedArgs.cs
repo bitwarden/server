@@ -34,5 +34,10 @@ public class SeedArgs : IArgumentModel
         {
             throw new ArgumentException("--preset must be specified. Use --list to see available presets.");
         }
+
+        if (KdfIterations.HasValue && KdfIterations.Value < 5_000)
+        {
+            throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
     }
 }
