@@ -74,12 +74,12 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             throw new BadRequestException("User invalid.");
         }
 
-        var tokenValidationError = OrgUserInviteTokenable.GetOrgUserInviteValidationError(
-            _orgUserInviteTokenDataFactory, emailToken, orgUser.Id, user.Email);
+        var tokenValidationError = OrgUserInviteTokenable.ValidateOrgUserInvite(
+            _orgUserInviteTokenDataFactory, emailToken, orgUser.Id, orgUser.Email);
 
         if (tokenValidationError != null)
         {
-            throw new BadRequestException(tokenValidationError);
+            throw new BadRequestException(tokenValidationError.ErrorMessage);
         }
 
         var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(

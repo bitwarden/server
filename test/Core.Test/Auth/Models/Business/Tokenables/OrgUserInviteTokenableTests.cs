@@ -306,11 +306,11 @@ public class OrgUserInviteTokenableTests
         var inputEmail = useMatchingEmail ? orgUserEmail : "wrong@example.com";
 
         // Act
-        var result = OrgUserInviteTokenable.GetOrgUserInviteValidationError(
+        var result = OrgUserInviteTokenable.ValidateOrgUserInvite(
             factory, "test-token", inputOrgUserId, inputEmail);
 
         // Assert
-        Assert.Equal(expectedError, result);
+        Assert.Equal(expectedError, result?.ErrorMessage);
     }
 
     private bool TimesAreCloseEnough(DateTime time1, DateTime time2, TimeSpan tolerance)

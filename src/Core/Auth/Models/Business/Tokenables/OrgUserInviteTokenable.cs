@@ -37,18 +37,9 @@ public class OrgUserInviteTokenable : ExpiringTokenable
         OrgUserEmail = orgUser?.Email;
     }
 
-    public bool TokenIsValid(OrganizationUser orgUser)
-    {
-        if (OrgUserId == default || OrgUserEmail == default || orgUser == null)
-        {
-            return false;
-        }
+    public bool TokenIsValid(OrganizationUser? orgUser) => TokenIsValid(orgUser?.Id ?? default, orgUser?.Email);
 
-        return OrgUserId == orgUser.Id &&
-               OrgUserEmail.Equals(orgUser.Email, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    public bool TokenIsValid(Guid orgUserId, string orgUserEmail)
+    public bool TokenIsValid(Guid orgUserId, string? orgUserEmail)
     {
         if (OrgUserId == default || OrgUserEmail == default || orgUserId == default || orgUserEmail == default)
         {
@@ -63,38 +54,27 @@ public class OrgUserInviteTokenable : ExpiringTokenable
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier && OrgUserId != default && !string.IsNullOrWhiteSpace(OrgUserEmail);
 
-    public static string? GetOrgUserInviteValidationError(
+    public static TokenableValidationErrors? ValidateOrgUserInvite(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         string orgUserInviteToken,
         Guid orgUserId,
-        string orgUserEmail)
-    {
-        return orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken) switch
+        string? orgUserEmail) =>
+        orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken) switch
         {
-            // Used by clients to show better error message on token expiration, adjust both as-needed
-            true when decryptedToken.IsExpired => "Expired token.",
+            true when decryptedToken.IsExpired => TokenableValidationErrors.ExpiringTokenables.Expired,
             true when !(decryptedToken.Valid && decryptedToken.TokenIsValid(orgUserId, orgUserEmail)) =>
-                "Invalid token.",
-            false => "Invalid token.",
+                TokenableValidationErrors.InvalidToken,
+            false => TokenableValidationErrors.InvalidToken,
             _ => null
         };
-    }
 
     public static bool ValidateOrgUserInviteStringToken(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        string orgUserInviteToken, OrganizationUser orgUser)
-    {
-        return orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUser);
-    }
+        string orgUserInviteToken, OrganizationUser orgUser) =>
+        ValidateOrgUserInvite(orgUserInviteTokenDataFactory, orgUserInviteToken, orgUser.Id, orgUser.Email) is null;
 
     public static bool ValidateOrgUserInviteStringToken(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        string orgUserInviteToken, Guid orgUserId, string orgUserEmail)
-    {
-        return orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUserId, orgUserEmail);
-    }
+        string orgUserInviteToken, Guid orgUserId, string orgUserEmail) =>
+        ValidateOrgUserInvite(orgUserInviteTokenDataFactory, orgUserInviteToken, orgUserId, orgUserEmail) is null;
 }
