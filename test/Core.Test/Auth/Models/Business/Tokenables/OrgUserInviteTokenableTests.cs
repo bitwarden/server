@@ -258,7 +258,7 @@ public class OrgUserInviteTokenableTests
         Assert.Equal(orgUser.Email, result.OrgUserEmail);
     }
 
-    // GetOrgUserInviteValidationError Theory parameters:
+    // ValidateOrgUserInvite Parameters:
     // bool tryUnprotectResult, bool useMatchingOrgUserId, bool useMatchingEmail, bool isExpired, string? expectedError
     [Theory]
     // TryUnprotect fails → "Invalid token."
@@ -273,7 +273,7 @@ public class OrgUserInviteTokenableTests
     [InlineData(true, false, false, false, "Invalid token.")]
     // TryUnprotect succeeds, not expired, matching ID and email → null (valid)
     [InlineData(true, true, true, false, null)]
-    public void GetOrgUserInviteValidationError_ReturnsExpectedError(
+    public void ValidateOrgUserInvite_ReturnsExpectedErrors(
         bool tryUnprotectResult,
         bool useMatchingOrgUserId,
         bool useMatchingEmail,
