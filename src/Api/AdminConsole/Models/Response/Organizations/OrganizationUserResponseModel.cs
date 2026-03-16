@@ -29,7 +29,7 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
-        ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
     }
 
     public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
@@ -48,7 +48,7 @@ public class OrganizationUserResponseModel : ResponseModel
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
-        ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
         HasMasterPassword = organizationUser.HasMasterPassword;
     }

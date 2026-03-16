@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Models;
@@ -93,4 +94,11 @@ public static class Utilities
             customer.Address.City,
             customer.Address.State);
     }
+
+    /**
+     * Returns a dictionary with all DiscountTierTypes as keys and false as values,
+     * indicating that by default, no tiers are eligible for a discount.
+     */
+    public static IDictionary<DiscountTierType, bool> GetTierEligibilityDictionary()
+        => Enum.GetValues<DiscountTierType>().ToDictionary(t => t, _ => false);
 }

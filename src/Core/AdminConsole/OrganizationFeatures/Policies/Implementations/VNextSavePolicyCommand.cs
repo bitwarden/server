@@ -7,12 +7,13 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class VNextSavePolicyCommand(
-    IApplicationCacheService applicationCacheService,
+    IOrganizationRepository organizationRepository,
     IEventService eventService,
     IPolicyRepository policyRepository,
     IEnumerable<IPolicyUpdateEvent> policyUpdateEventHandlers,
@@ -50,7 +51,7 @@ public class VNextSavePolicyCommand(
 
     private async Task EnsureOrganizationCanUsePolicyAsync(Guid organizationId)
     {
-        var org = await applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        var org = await organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization not found");

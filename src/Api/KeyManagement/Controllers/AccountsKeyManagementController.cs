@@ -121,6 +121,7 @@ public class AccountsKeyManagementController : Controller
             OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
             WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
             DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
+            V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
 
             Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
@@ -159,7 +160,7 @@ public class AccountsKeyManagementController : Controller
         {
             // V1 account registration
             // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
-            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key!, model.OrgIdentifier);
             if (result.Succeeded)
             {
                 return;
@@ -183,7 +184,30 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user);
+        var result = await _userService.ConvertToKeyConnectorAsync(user, null);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("key-connector/enroll")]
+    public async Task PostEnrollToKeyConnectorAsync([FromBody] KeyConnectorEnrollmentRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _userService.ConvertToKeyConnectorAsync(user, model.KeyConnectorKeyWrappedUserKey);
         if (result.Succeeded)
         {
             return;

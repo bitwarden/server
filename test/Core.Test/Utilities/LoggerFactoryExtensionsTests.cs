@@ -74,8 +74,7 @@ public class LoggerFactoryExtensionsTests
 
         logger.LogWarning("This is a test");
 
-        // Writing to the file is buffered, give it a little time to flush
-        await Task.Delay(5);
+        await provider.DisposeAsync();
 
         var logFile = Assert.Single(tempDir.EnumerateFiles("Logs/*.log"));
 
@@ -90,13 +89,67 @@ public class LoggerFactoryExtensionsTests
             logFileContents
         );
     }
+
+    [Fact]
+    public async Task AddSerilogFileLogging_LegacyConfig_WithLevelCustomization_InfoLogs_DoNotFillUpFile()
+    {
+        await AssertSmallFileAsync((tempDir, config) =>
+        {
+            config["GlobalSettings:LogDirectory"] = tempDir;
+            config["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning";
+        });
+    }
+
+    [Fact]
+    public async Task AddSerilogFileLogging_NewConfig_WithLevelCustomization_InfoLogs_DoNotFillUpFile()
+    {
+        await AssertSmallFileAsync((tempDir, config) =>
+        {
+            config["Logging:PathFormat"] = Path.Combine(tempDir, "log.txt");
+            config["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning";
+        });
+    }
+
+    private static async Task AssertSmallFileAsync(Action<string, Dictionary<string, string?>> configure)
+    {
+        using var tempDir = new TempDirectory();
+        var config = new Dictionary<string, string?>();
+
+        configure(tempDir.Directory, config);
+
+        var provider = GetServiceProvider(config, "Production");
+
+        var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+        var microsoftLogger = loggerFactory.CreateLogger("Microsoft.AspNetCore.Testing");
+
+        for (var i = 0; i < 100; i++)
+        {
+            microsoftLogger.LogInformation("Tons of useless information");
+        }
+
+        var otherLogger = loggerFactory.CreateLogger("Bitwarden");
+
+        for (var i = 0; i < 5; i++)
+        {
+            otherLogger.LogInformation("Mildly more useful information but not as frequent.");
+        }
+
+        await provider.DisposeAsync();
+
+        var logFiles = Directory.EnumerateFiles(tempDir.Directory, "*.txt", SearchOption.AllDirectories);
+        var logFile = Assert.Single(logFiles);
+
+        using var fr = File.OpenRead(logFile);
+        Assert.InRange(fr.Length, 0, 1024);
+    }
+
     private static IEnumerable<ILoggerProvider> GetProviders(Dictionary<string, string?> initialData, string environment = "Production")
     {
         var provider = GetServiceProvider(initialData, environment);
         return provider.GetServices<ILoggerProvider>();
     }
 
-    private static IServiceProvider GetServiceProvider(Dictionary<string, string?> initialData, string environment)
+    private static ServiceProvider GetServiceProvider(Dictionary<string, string?> initialData, string environment)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(initialData)

@@ -5,7 +5,7 @@ namespace Bit.Core.Models.Mail.Billing.Renewal.Premium;
 public class PremiumRenewalMailView : BaseMailView
 {
     public required string BaseMonthlyRenewalPrice { get; set; }
-    public required string DiscountedMonthlyRenewalPrice { get; set; }
+    public required string DiscountedAnnualRenewalPrice { get; set; }
     public required string DiscountAmount { get; set; }
 }
 

@@ -60,6 +60,7 @@ public class UserDecryptionOptionsBuilderTests
         {
             Assert.NotNull(result.WebAuthnPrfOption);
             Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOption!.EncryptedPrivateKey);
+            Assert.Equal(credential.CredentialId, result.WebAuthnPrfOption!.CredentialId);
             Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOption!.EncryptedUserKey);
         }
         else
@@ -296,6 +297,27 @@ public class UserDecryptionOptionsBuilderTests
         var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasAdminApproval);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    [BitAutoData((string)null)]
+    public async Task Build_EmptyOrWhitespaceResetPasswordKey_ShouldReturnHasAdminApprovalFalse(
+        string resetPasswordKey,
+        SsoConfig ssoConfig,
+        SsoConfigurationData configurationData,
+        [OrganizationUserWithDefaultPermissions] OrganizationUser organizationUser,
+        User user)
+    {
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        organizationUser.ResetPasswordKey = resetPasswordKey;
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
+
+        Assert.False(result.TrustedDeviceOption?.HasAdminApproval);
     }
 
     [Theory, BitAutoData]

@@ -5,12 +5,15 @@ using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.Helpers;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Public.Controllers;
@@ -28,6 +31,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     public MembersControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
+        _factory.SubstituteService<IFeatureService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -263,5 +267,215 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         AssertHelper.AssertPropertyEqual(
             new Permissions { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true },
             orgUser.GetPermissions());
+    }
+
+    [Fact]
+    public async Task Revoke_Member_Success()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var updatedUser = await _factory.GetService<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(OrganizationUserStatusType.Revoked, updatedUser.Status);
+    }
+
+    [Fact]
+    public async Task Revoke_AlreadyRevoked_ReturnsBadRequest()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var revokeResponse = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
+        Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
+
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Equal("Already revoked.", error?.Message);
+    }
+
+    [Fact]
+    public async Task Revoke_NotFound_ReturnsNotFound()
+    {
+        var response = await _client.PostAsync($"/public/members/{Guid.NewGuid()}/revoke", null);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Revoke_DifferentOrganization_ReturnsNotFound()
+    {
+        // Create a different organization
+        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
+            ownerEmail: ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
+
+        // Create a user in the other organization
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, otherOrganization.Id, OrganizationUserType.User);
+
+        // Re-authenticate with the original organization
+        await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
+
+        // Try to revoke the user from the other organization
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/revoke", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Restore_Member_Success()
+    {
+        // Invite a user to revoke
+        var email = $"integration-test{Guid.NewGuid()}@example.com";
+        var inviteRequest = new MemberCreateRequestModel
+        {
+            Email = email,
+            Type = OrganizationUserType.User,
+        };
+
+        var inviteResponse = await _client.PostAsync("/public/members", JsonContent.Create(inviteRequest));
+        Assert.Equal(HttpStatusCode.OK, inviteResponse.StatusCode);
+        var invitedMember = await inviteResponse.Content.ReadFromJsonAsync<MemberResponseModel>();
+        Assert.NotNull(invitedMember);
+
+        // Revoke the invited user
+        var revokeResponse = await _client.PostAsync($"/public/members/{invitedMember.Id}/revoke", null);
+        Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
+
+        // Restore the user
+        var response = await _client.PostAsync($"/public/members/{invitedMember.Id}/restore", null);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Verify user is restored to Invited state
+        var updatedUser = await _factory.GetService<IOrganizationUserRepository>()
+            .GetByIdAsync(invitedMember.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal(OrganizationUserStatusType.Invited, updatedUser.Status);
+    }
+
+    [Fact]
+    public async Task Restore_AlreadyActive_ReturnsBadRequest()
+    {
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/restore", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
+        Assert.Equal("Already active.", error?.Message);
+    }
+
+    [Fact]
+    public async Task Restore_NotFound_ReturnsNotFound()
+    {
+        var response = await _client.PostAsync($"/public/members/{Guid.NewGuid()}/restore", null);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Restore_DifferentOrganization_ReturnsNotFound()
+    {
+        // Create a different organization
+        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
+            ownerEmail: ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
+
+        // Create a user in the other organization
+        var (_, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, otherOrganization.Id, OrganizationUserType.User);
+
+        // Re-authenticate with the original organization
+        await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
+
+        // Try to restore the user from the other organization
+        var response = await _client.PostAsync($"/public/members/{orgUser.Id}/restore", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_CustomMember_WithPublicMembersInviteRefactor_Success()
+    {
+        var featureService = _factory.GetService<IFeatureService>();
+        featureService
+            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
+            .Returns(true);
+
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var request = new MemberCreateRequestModel
+        {
+            Email = email,
+            Type = OrganizationUserType.Custom,
+            ExternalId = "myCustomUser",
+            Collections = [],
+            Groups = []
+        };
+
+        var response = await _client.PostAsync("/public/members", JsonContent.Create(request));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
+        Assert.NotNull(result);
+
+        Assert.Equal(email, result.Email);
+        Assert.Equal(OrganizationUserType.Custom, result.Type);
+        Assert.Equal("myCustomUser", result.ExternalId);
+        Assert.Empty(result.Collections);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var orgUser = await organizationUserRepository.GetByIdAsync(result.Id);
+
+        Assert.NotNull(orgUser);
+        Assert.Equal(email, orgUser.Email);
+        Assert.Equal(OrganizationUserType.Custom, orgUser.Type);
+        Assert.Equal("myCustomUser", orgUser.ExternalId);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.Equal(_organization.Id, orgUser.OrganizationId);
+    }
+
+    [Fact]
+    public async Task Post_UserMember_WithPublicMembersInviteRefactor_Success()
+    {
+        var featureService = _factory.GetService<IFeatureService>();
+        featureService
+            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
+            .Returns(true);
+
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var request = new MemberCreateRequestModel
+        {
+            Email = email,
+            Type = OrganizationUserType.User,
+            Collections = [],
+            Groups = []
+        };
+
+        var response = await _client.PostAsync("/public/members", JsonContent.Create(request));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
+        Assert.NotNull(result);
+
+        Assert.Equal(email, result.Email);
+        Assert.Equal(OrganizationUserType.User, result.Type);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var orgUser = await organizationUserRepository.GetByIdAsync(result.Id);
+
+        Assert.NotNull(orgUser);
+        Assert.Equal(email, orgUser.Email);
+        Assert.Equal(OrganizationUserType.User, orgUser.Type);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.Equal(_organization.Id, orgUser.OrganizationId);
     }
 }

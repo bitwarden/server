@@ -254,20 +254,19 @@ public class SendRequestModel
             var emails = Emails.Split(',', RemoveEmptyEntries | TrimEntries);
             existingSend.Emails = string.Join(",", emails);
             existingSend.Password = null;
-            existingSend.AuthType = Core.Tools.Enums.AuthType.Email;
         }
         else if (!string.IsNullOrWhiteSpace(Password))
         {
             existingSend.Password = authorizationService.HashPassword(Password);
             existingSend.Emails = null;
-            existingSend.AuthType = Core.Tools.Enums.AuthType.Password;
         }
-        else
+        else if (existingSend.AuthType == Core.Tools.Enums.AuthType.Email)
         {
-            // Neither Password nor Emails provided - preserve existing values and infer AuthType
-            existingSend.AuthType = SendUtilities.InferAuthType(existingSend);
+            existingSend.Emails = null;
+            existingSend.Password = null;
         }
 
+        existingSend.AuthType = SendUtilities.InferAuthType(existingSend);
         existingSend.Disabled = Disabled.GetValueOrDefault();
         existingSend.HideEmail = HideEmail.GetValueOrDefault();
 

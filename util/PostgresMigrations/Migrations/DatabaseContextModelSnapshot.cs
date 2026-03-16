@@ -243,6 +243,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("boolean");
 
@@ -277,6 +280,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Id", "Enabled");
 
@@ -362,10 +369,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("smallint");
 
                     b.Property<string>("GatewayCustomerId")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("GatewaySubscriptionId")
-                        .HasColumnType("text");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
@@ -383,6 +392,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.ToTable("Provider", (string)null);
                 });
@@ -922,6 +935,69 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("ProviderPlan", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.SubscriptionDiscount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long?>("AmountOff")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("AudienceType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("DurationInMonths")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("PercentOff")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StripeCouponId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StripeProductIds")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StripeCouponId")
+                        .IsUnique();
+
+                    b.HasIndex("StartDate", "EndDate")
+                        .HasDatabaseName("IX_SubscriptionDiscount_DateRange")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("SubscriptionDiscount", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Dirt.Models.OrganizationApplication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1076,6 +1152,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("ReportData")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReportFile")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("RevisionDate")
@@ -1930,6 +2009,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<short?>("MaxStorageGb")
                         .HasColumnType("smallint");
 
@@ -1985,6 +2068,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("V2UpgradeToken")
+                        .HasColumnType("text");
+
                     b.Property<bool>("VerifyDevices")
                         .HasColumnType("boolean");
 
@@ -1993,6 +2079,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("GatewayCustomerId");
+
+                    b.HasIndex("GatewaySubscriptionId");
 
                     b.HasIndex("Premium", "PremiumExpirationDate", "RenewalReminderDate")
                         .HasAnnotation("SqlServer:Clustered", false);

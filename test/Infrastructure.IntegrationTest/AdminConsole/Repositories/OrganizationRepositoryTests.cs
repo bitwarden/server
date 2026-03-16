@@ -1,261 +1,16 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Data.Common;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationRepositoryTests
 {
-    [DatabaseTheory, DatabaseData]
-    public async Task GetByClaimedUserDomainAsync_WithVerifiedDomain_Success(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
-    {
-        var id = Guid.NewGuid();
-        var domainName = $"{id}.example.com";
-
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@x-{domainName}", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var user3 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@{domainName}.example.com", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULL
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULL
-            PrivateKey = "privatekey",
-        });
-
-        var organizationDomain = new OrganizationDomain
-        {
-            OrganizationId = organization.Id,
-            DomainName = domainName,
-            Txt = "btw+12345",
-        };
-        organizationDomain.SetVerifiedDate();
-        organizationDomain.SetNextRunDate(12);
-        organizationDomain.SetJobRunCount();
-        await organizationDomainRepository.CreateAsync(organizationDomain);
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user3.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
-
-        var user1Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user1.Id);
-        var user2Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user2.Id);
-        var user3Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user3.Id);
-
-        Assert.NotEmpty(user1Response);
-        Assert.Equal(organization.Id, user1Response.First().Id);
-        Assert.Empty(user2Response);
-        Assert.Empty(user3Response);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task GetByVerifiedUserEmailDomainAsync_WithUnverifiedDomains_ReturnsEmpty(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
-    {
-        var id = Guid.NewGuid();
-        var domainName = $"{id}.example.com";
-
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
-
-        var organizationDomain = new OrganizationDomain
-        {
-            OrganizationId = organization.Id,
-            DomainName = domainName,
-            Txt = "btw+12345",
-        };
-        organizationDomain.SetNextRunDate(12);
-        organizationDomain.SetJobRunCount();
-        await organizationDomainRepository.CreateAsync(organizationDomain);
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey",
-        });
-
-        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
-
-        Assert.Empty(result);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task GetByVerifiedUserEmailDomainAsync_WithMultipleVerifiedDomains_ReturnsAllMatchingOrganizations(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
-    {
-        var id = Guid.NewGuid();
-        var domainName = $"{id}.example.com";
-
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
-
-        var organization1 = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org 1 {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey1",
-        });
-
-        var organization2 = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org 2 {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey2",
-        });
-
-        var organizationDomain1 = new OrganizationDomain
-        {
-            OrganizationId = organization1.Id,
-            DomainName = domainName,
-            Txt = "btw+12345",
-        };
-        organizationDomain1.SetNextRunDate(12);
-        organizationDomain1.SetJobRunCount();
-        organizationDomain1.SetVerifiedDate();
-        await organizationDomainRepository.CreateAsync(organizationDomain1);
-
-        var organizationDomain2 = new OrganizationDomain
-        {
-            OrganizationId = organization2.Id,
-            DomainName = domainName,
-            Txt = "btw+67890",
-        };
-        organizationDomain2.SetNextRunDate(12);
-        organizationDomain2.SetJobRunCount();
-        organizationDomain2.SetVerifiedDate();
-        await organizationDomainRepository.CreateAsync(organizationDomain2);
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization1.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
-
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization2.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey2",
-        });
-
-        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
-
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, org => org.Id == organization1.Id);
-        Assert.Contains(result, org => org.Id == organization2.Id);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task GetByVerifiedUserEmailDomainAsync_WithNonExistentUser_ReturnsEmpty(
-        IOrganizationRepository organizationRepository)
-    {
-        var nonExistentUserId = Guid.NewGuid();
-
-        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(nonExistentUserId);
-
-        Assert.Empty(result);
-    }
-
-
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetManyByIdsAsync_ExistingOrganizations_ReturnsOrganizations(IOrganizationRepository organizationRepository)
     {
         var email = "test@email.com";
@@ -287,7 +42,7 @@ public class OrganizationRepositoryTests
         await organizationRepository.DeleteAsync(organization2);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithUsersAndSponsorships_ReturnsCorrectCounts(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -356,7 +111,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(4, result.Total); // Total occupied seats
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithNoUsersOrSponsorships_ReturnsZero(
         IOrganizationRepository organizationRepository)
     {
@@ -372,7 +127,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Total);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyRevokedUsers_ReturnsZero(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
@@ -399,7 +154,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Total);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithOnlyExpiredSponsorships_ReturnsZero(
         IOrganizationRepository organizationRepository,
         IOrganizationSponsorshipRepository organizationSponsorshipRepository)
@@ -424,7 +179,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(0, result.Total);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task IncrementSeatCountAsync_IncrementsSeatCount(IOrganizationRepository organizationRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
@@ -438,7 +193,7 @@ public class OrganizationRepositoryTests
         Assert.Equal(8, result.Seats);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task IncrementSeatCountAsync_GivenOrganizationHasNotChangedSeatCountBefore_WhenUpdatingOrgSeats_ThenSubscriptionUpdateIsSaved(
         IOrganizationRepository sutRepository)
     {
@@ -462,7 +217,7 @@ public class OrganizationRepositoryTests
         await sutRepository.DeleteAsync(organization);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task IncrementSeatCountAsync_GivenOrganizationHasChangedSeatCountBeforeAndRecordExists_WhenUpdatingOrgSeats_ThenSubscriptionUpdateIsSaved(
         IOrganizationRepository sutRepository)
     {
@@ -487,7 +242,7 @@ public class OrganizationRepositoryTests
         await sutRepository.DeleteAsync(organization);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task GetOrganizationsForSubscriptionSyncAsync_GivenOrganizationHasChangedSeatCount_WhenGettingOrgsToUpdate_ThenReturnsOrgSubscriptionUpdate(
         IOrganizationRepository sutRepository)
     {
@@ -510,7 +265,7 @@ public class OrganizationRepositoryTests
         await sutRepository.DeleteAsync(organization);
     }
 
-    [DatabaseData, DatabaseTheory]
+    [DatabaseData, Theory]
     public async Task UpdateSuccessfulOrganizationSyncStatusAsync_GivenOrganizationHasChangedSeatCount_WhenUpdatingStatus_ThenSuccessfullyUpdatesOrgSoItDoesntSync(
         IOrganizationRepository sutRepository)
     {
@@ -529,5 +284,114 @@ public class OrganizationRepositoryTests
 
         // Annul
         await sutRepository.DeleteAsync(organization);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_UpdatesOrgAndOrgUserAtomically(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+
+        var publicKey = "public-key";
+        var privateKey = "private-key";
+        var userKey = "user-key";
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = publicKey;
+        organization.PrivateKey = privateKey;
+        organization.RevisionDate = DateTime.UtcNow;
+
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
+        organizationUser.UserId = user.Id;
+        organizationUser.Key = userKey;
+        organizationUser.Email = null;
+
+        var confirmOwnerAction = organizationUserRepository.BuildConfirmOwnerAction(organizationUser);
+        await organizationRepository.InitializeOrganizationAsync(organization, confirmOwnerAction);
+
+        var updatedOrg = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(updatedOrg);
+        Assert.True(updatedOrg.Enabled);
+        Assert.Equal(OrganizationStatusType.Created, updatedOrg.Status);
+        Assert.Equal(publicKey, updatedOrg.PublicKey);
+        Assert.Equal(privateKey, updatedOrg.PrivateKey);
+
+        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Confirmed, updatedOrgUser.Status);
+        Assert.Equal(user.Id, updatedOrgUser.UserId);
+        Assert.Equal(userKey, updatedOrgUser.Key);
+        Assert.Null(updatedOrgUser.Email);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task InitializeOrganizationAsync_WhenOrgUserActionFails_RollsBackAllChanges(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, organizationUser) = await CreatePendingOrganizationWithUserAsync(
+            userRepository, organizationRepository, organizationUserRepository);
+
+        organization.Enabled = true;
+        organization.Status = OrganizationStatusType.Created;
+        organization.PublicKey = "public-key";
+        organization.PrivateKey = "private-key";
+        organization.RevisionDate = DateTime.UtcNow;
+
+        Func<DbConnection, DbTransaction, Task> failingAction =
+            (DbConnection _, DbTransaction __) =>
+            {
+                throw new Exception("Simulated failure to test rollback");
+            };
+
+        await Assert.ThrowsAsync<Exception>(async () =>
+            await organizationRepository.InitializeOrganizationAsync(organization, failingAction));
+
+        var orgAfter = await organizationRepository.GetByIdAsync(organization.Id);
+        Assert.NotNull(orgAfter);
+        Assert.False(orgAfter.Enabled);
+        Assert.Equal(OrganizationStatusType.Pending, orgAfter.Status);
+        Assert.Null(orgAfter.PublicKey);
+        Assert.Null(orgAfter.PrivateKey);
+
+        var orgUserAfter = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(orgUserAfter);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUserAfter.Status);
+        Assert.Null(orgUserAfter.UserId);
+    }
+
+    private static async Task<(User user, Organization organization, OrganizationUser organizationUser)>
+        CreatePendingOrganizationWithUserAsync(
+            IUserRepository userRepository,
+            IOrganizationRepository organizationRepository,
+            IOrganizationUserRepository organizationUserRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Pending Org {CoreHelpers.GenerateComb()}",
+            BillingEmail = user.Email,
+            Plan = "Teams",
+            Status = OrganizationStatusType.Pending,
+            Enabled = false,
+            PublicKey = null,
+            PrivateKey = null
+        });
+
+        var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Email = user.Email,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.Owner
+        });
+
+        return (user, organization, organizationUser);
     }
 }
