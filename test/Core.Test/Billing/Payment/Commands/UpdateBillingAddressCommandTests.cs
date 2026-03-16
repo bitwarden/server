@@ -568,8 +568,11 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_SwissBusinessOrganization_ManuallySetReverse_PreservesReverse()
+    public async Task Run_SwissBusinessOrganization_WithReverse_CorrectsTaxExemptToNone()
     {
+        // CH is a direct-tax country — "reverse" is not preserved. A customer moving from a
+        // non-direct-tax country (where "reverse" was correctly set) to Switzerland should have
+        // their tax_exempt corrected to "none".
         var organization = new Organization
         {
             PlanType = PlanType.EnterpriseAnnually,
@@ -617,7 +620,7 @@ public class UpdateBillingAddressCommandTests
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
             options.HasExpansions("subscriptions", "tax_ids") &&
-            options.TaxExempt == TaxExempt.Reverse
+            options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
         var result = await _command.Run(organization, input);
@@ -627,6 +630,65 @@ public class UpdateBillingAddressCommandTests
         Assert.Equivalent(input, output);
 
         await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
-            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.Reverse));
+            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
+    }
+
+    [Fact]
+    public async Task Run_BusinessOrganizationWithExemptStatus_PreservesExempt()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.EnterpriseAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345",
+                Line1 = "123 Main St.",
+                City = "New York",
+                State = "NY"
+            },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = true }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId)
+            .Returns(new Customer { TaxExempt = TaxExempt.Exempt });
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.TaxExempt == TaxExempt.Exempt
+        )).Returns(customer);
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
+            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.Exempt));
     }
 }
