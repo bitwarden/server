@@ -225,8 +225,6 @@ public static class FeatureFlagKeys
     /* Platform Team */
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
-    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
-    public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
 
     /* Tools Team */
@@ -239,6 +237,7 @@ public static class FeatureFlagKeys
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
+    public const string SendControls = "pm-31885-send-controls";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
