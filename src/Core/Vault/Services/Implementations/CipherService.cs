@@ -21,7 +21,6 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
-
 namespace Bit.Core.Vault.Services;
 
 public class CipherService : ICipherService
@@ -188,8 +187,10 @@ public class CipherService : ICipherService
         }
     }
 
-    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
+    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, Guid savingUserId, bool orgAdmin = false)
     {
+        await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, attachment.Size);
+
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
@@ -412,12 +413,14 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
+        var url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data);
+
         var response = new AttachmentResponseData
         {
             Cipher = cipher,
             Data = data,
             Id = attachmentId,
-            Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data),
+            Url = url,
         };
 
         return response;
@@ -909,7 +912,7 @@ public class CipherService : ICipherService
         return new DeleteAttachmentResponseData(cipher);
     }
 
-    private async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
+    public async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
         long requestLength)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))

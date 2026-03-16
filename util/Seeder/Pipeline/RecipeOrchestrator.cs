@@ -75,6 +75,10 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
         {
             builder.AddCollections(options.StructureModel.Value);
         }
+        else if (options.Collections > 0)
+        {
+            builder.AddCollections(options.Collections, options.Density);
+        }
         else if (options.Ciphers > 0)
         {
             builder.AddCollections(1, options.Density);
@@ -82,7 +86,7 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
 
         if (options.Ciphers > 0)
         {
-            builder.AddFolders();
+            builder.AddFolders(options.Density);
             builder.AddCiphers(options.Ciphers, options.CipherTypeDistribution, options.PasswordDistribution, density: options.Density);
         }
 
