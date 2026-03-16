@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.Models.Business.Tokenables;
+﻿namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 public record TokenableValidationError
 {
