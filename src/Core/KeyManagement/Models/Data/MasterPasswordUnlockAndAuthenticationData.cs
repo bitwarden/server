@@ -26,7 +26,7 @@ public class MasterPasswordUnlockAndAuthenticationData
         {
             return false;
         }
-        else if (MasterPasswordSalt != user.GetMasterPasswordSalt())
+        else if (MasterPasswordSalt != null  && MasterPasswordSalt != user.GetMasterPasswordSalt())
         {
             return false;
         }
