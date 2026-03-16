@@ -1,4 +1,4 @@
-using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
+﻿using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 namespace Bit.Core.Billing.Tax.Utilities;
 
