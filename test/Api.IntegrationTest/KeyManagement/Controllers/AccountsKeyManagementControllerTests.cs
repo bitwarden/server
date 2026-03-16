@@ -694,7 +694,6 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupMasterPasswordRotateUserAccount(request, user);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        var responseMessage = await response.Content.ReadAsStringAsync();
         response.EnsureSuccessStatusCode();
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -723,7 +722,6 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupMasterPasswordRotateUserAccount(request, user, true);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        var responseMessage = await response.Content.ReadAsStringAsync();
         response.EnsureSuccessStatusCode();
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);

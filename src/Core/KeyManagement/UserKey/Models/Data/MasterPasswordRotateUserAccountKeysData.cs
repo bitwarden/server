@@ -14,7 +14,7 @@ public class MasterPasswordRotateUserAccountKeysData
         var isMasterPasswordUser = user is { Key: not null, MasterPassword: not null };
         if (!isMasterPasswordUser)
         {
-            throw new BadRequestException("User is in a invalid state for master password key rotation.");
+            throw new BadRequestException("User is in an invalid state for master password key rotation.");
         }
 
         MasterPasswordUnlockData.ValidateSaltUnchangedForUser(user);

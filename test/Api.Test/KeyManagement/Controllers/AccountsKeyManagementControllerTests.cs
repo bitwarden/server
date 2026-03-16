@@ -42,6 +42,19 @@ public class AccountsKeyManagementControllerTests
         "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
     private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
 
+
+    public static IEnumerable<object[]> UnimplementedUnlockMethods => new List<object[]>
+    {
+        //TDE
+        new object[] { new UnlockMethodRequestModel { KeyConnectorKeyWrappedUserKey = null, MasterPasswordUnlockData = null }},
+        //Key connector
+        new object[] {  new UnlockMethodRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = "wrapped-user-key", MasterPasswordUnlockData = null
+        } },
+
+    };
+
     [Theory]
     [BitAutoData]
     public async Task RegenerateKeysAsync_FeatureFlagOff_Throws(
@@ -598,7 +611,7 @@ public class AccountsKeyManagementControllerTests
         request.UnlockMethodData = unlockMethod;
 
 
-        await Assert.ThrowsAsync<NotImplementedException>(() =>
+        await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RotateUserKeysAsync(request));
     }
 
@@ -659,7 +672,6 @@ public class AccountsKeyManagementControllerTests
             ));
     }
 
-
     private static async Task AssertCommonValidatorsCalledAsync(SutProvider<AccountsKeyManagementController> sutProvider, RotateUserKeysRequestModel request)
     {
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>().Received(1)
@@ -702,16 +714,4 @@ public class AccountsKeyManagementControllerTests
         };
         return request;
     }
-
-    private static IEnumerable<object[]> UnimplementedUnlockMethods => new List<object[]>
-    {
-        //TDE
-        new object[] { new UnlockMethodRequestModel { KeyConnectorKeyWrappedUserKey = null, MasterPasswordUnlockData = null }},
-        //Key connector
-        new object[] {  new UnlockMethodRequestModel
-            {
-                KeyConnectorKeyWrappedUserKey = "wrapped-user-key", MasterPasswordUnlockData = null
-            } },
-
-    };
 }

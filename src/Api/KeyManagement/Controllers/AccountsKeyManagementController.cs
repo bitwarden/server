@@ -159,21 +159,19 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var unlockMethod = request.UnlockMethodData.GetUnlockMethod();
-        switch (unlockMethod)
+        switch (request.UnlockMethodData.GetUnlockMethod())
         {
             case UnlockMethod.MasterPassword:
                 await MasterPasswordRotateUserAccountKeysAsync(request, user);
                 break;
             case UnlockMethod.Tde:
-                throw new NotImplementedException("TDE not implemented");
+                throw new BadRequestException("TDE not implemented");
             case UnlockMethod.KeyConnector:
-                throw new NotImplementedException("Key connector not implemented");
+                throw new BadRequestException("Key connector not implemented");
             default:
-                throw new ArgumentOutOfRangeException(nameof(unlockMethod), unlockMethod, null);
+                throw new ArgumentOutOfRangeException();
         }
     }
-
 
     [HttpPost("set-key-connector-key")]
     public async Task PostSetKeyConnectorKeyAsync([FromBody] SetKeyConnectorKeyRequestModel model)
