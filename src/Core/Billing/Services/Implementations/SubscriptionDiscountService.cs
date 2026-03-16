@@ -53,15 +53,4 @@ public class SubscriptionDiscountService(
         var filter = discountAudienceFilterFactory.GetFilter(discount.AudienceType);
         return filter is not null ? await filter.IsUserEligible(user, discount) : null;
     }
-
-    /// <summary>
-    /// Checks if a discount is currently active based on its start and end dates.
-    /// </summary>
-    /// <param name="discount">The discount to check.</param>
-    /// <returns><see langword="true"/> if the current time is within the discount's valid date range; otherwise, <see langword="false"/>.</returns>
-    private static bool IsDiscountActive(SubscriptionDiscount discount)
-    {
-        var now = DateTime.UtcNow;
-        return now >= discount.StartDate && now <= discount.EndDate;
-    }
 }
