@@ -144,7 +144,7 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
-        OrganizationAbility organizationAbility,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
         : base(cipher, user, organizationAbility, globalSettings, obj)
@@ -162,7 +162,7 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetails cipher,
         User user,
-        OrganizationAbility organizationAbility,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
         : base(cipher, user, organizationAbility, globalSettings, obj)
@@ -173,7 +173,7 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(
         CipherDetailsWithCollections cipher,
         User user,
-        OrganizationAbility organizationAbility,
+        OrganizationAbility? organizationAbility,
         GlobalSettings globalSettings,
         string obj = "cipherDetails")
         : base(cipher, user, organizationAbility, globalSettings, obj)

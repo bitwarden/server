@@ -148,14 +148,16 @@ public class CiphersController : Controller
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
-        var responses = await Task.WhenAll(ciphers.Select(async cipher => new CipherDetailsResponseModel(
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
+        var responses = ciphers.Select(cipher => new CipherDetailsResponseModel(
             cipher,
             user,
-            await GetOrganizationAbilityAsync(cipher),
+            GetOrganizationAbility(cipher, organizationAbilities),
             _globalSettings,
-            collectionCiphersGroupDict)));
+            collectionCiphersGroupDict)).ToArray();
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
     }
+
 
     [HttpPost("")]
     public async Task<CipherResponseModel> Post([FromBody] CipherRequestModel model)
@@ -914,8 +916,9 @@ public class CiphersController : Controller
             throw new BadRequestException("No ciphers were archived. Ensure the provided IDs are correct and you have permission to archive them.");
         }
 
-        var responses = await Task.WhenAll(archivedCiphers.Select(async cipher =>
-            new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings)));
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(archivedCiphers);
+        var responses = archivedCiphers.Select(cipher =>
+            new CipherResponseModel(cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings)).ToArray();
 
         return new ListResponseModel<CipherResponseModel>(responses);
     }
@@ -1119,7 +1122,9 @@ public class CiphersController : Controller
             throw new BadRequestException("Ciphers were not unarchived. Ensure the provided ID is correct and you have permission to archive it.");
         }
 
-        var responses = await Task.WhenAll(unarchivedCipherOrganizationDetails.Select(async cipher => new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings)));
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(unarchivedCipherOrganizationDetails);
+        var responses = unarchivedCipherOrganizationDetails.Select(cipher =>
+            new CipherResponseModel(cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings)).ToArray();
 
         return new ListResponseModel<CipherResponseModel>(responses);
     }
@@ -1660,14 +1665,35 @@ public class CiphersController : Controller
 
         return lastKnownRevisionDate;
     }
+#nullable enable
 
-    private async Task<OrganizationAbility> GetOrganizationAbilityAsync(CipherDetails cipher)
+    private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(CipherDetails cipher)
     {
         if (cipher.OrganizationId.HasValue)
         {
             return await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
         }
         return null;
+    }
+
+    private static OrganizationAbility? GetOrganizationAbility(CipherDetails cipher, IDictionary<Guid, OrganizationAbility> organizationAbilities) =>
+        cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var ability) ? ability : null;
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(
+        IEnumerable<CipherDetails> ciphers)
+    {
+        var orgIds = ciphers
+            .Where(c => c.OrganizationId.HasValue)
+            .Select(c => c.OrganizationId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (orgIds.Count == 0)
+        {
+            return new Dictionary<Guid, OrganizationAbility>();
+        }
+
+        return await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
     }
 
 }
