@@ -54,17 +54,17 @@ public class OrgUserInviteTokenable : ExpiringTokenable
     protected override bool TokenIsValid() =>
         Identifier == TokenIdentifier && OrgUserId != default && !string.IsNullOrWhiteSpace(OrgUserEmail);
 
-    public static TokenableValidationErrors? ValidateOrgUserInvite(
+    public static TokenableValidationError? ValidateOrgUserInvite(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         string orgUserInviteToken,
         Guid orgUserId,
         string? orgUserEmail) =>
         orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken) switch
         {
-            true when decryptedToken.IsExpired => TokenableValidationErrors.ExpiringTokenables.Expired,
+            true when decryptedToken.IsExpired => TokenableValidationError.ExpiringTokenables.Expired,
             true when !(decryptedToken.Valid && decryptedToken.TokenIsValid(orgUserId, orgUserEmail)) =>
-                TokenableValidationErrors.InvalidToken,
-            false => TokenableValidationErrors.InvalidToken,
+                TokenableValidationError.InvalidToken,
+            false => TokenableValidationError.InvalidToken,
             _ => null
         };
 

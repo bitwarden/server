@@ -1,12 +1,12 @@
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
-public record TokenableValidationErrors
+public record TokenableValidationError
 {
-    public static TokenableValidationErrors InvalidToken => new("Invalid token.");
+    public static TokenableValidationError InvalidToken => new("Invalid token.");
 
     public string ErrorMessage { get; }
 
-    private TokenableValidationErrors(string errorMessage)
+    private TokenableValidationError(string errorMessage)
     {
         ErrorMessage = errorMessage;
     }
@@ -14,6 +14,6 @@ public record TokenableValidationErrors
     public static class ExpiringTokenables
     {
         // Used by clients to show better error message on token expiration, adjust both strings as-needed
-        public static TokenableValidationErrors Expired => new("Expired token.");
+        public static TokenableValidationError Expired => new("Expired token.");
     }
 }
