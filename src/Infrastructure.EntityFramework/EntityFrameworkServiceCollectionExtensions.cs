@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
@@ -102,6 +103,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
+        services.AddSingleton<ISubscriptionDiscountRepository, SubscriptionDiscountRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
         services

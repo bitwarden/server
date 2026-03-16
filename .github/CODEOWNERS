@@ -5,11 +5,11 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 ## Docker-related files
-**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
-**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-bre
-**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-bre
-**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-bre
-**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-bre
+**/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
+**/*.dockerignore @bitwarden/team-appsec @bitwarden/dept-shot
+**/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
+**/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
 
 # Scanning tools
 .checkmarx/ @bitwarden/team-appsec
@@ -35,7 +35,8 @@ util/SqlServerEFScaffold/** @bitwarden/dept-dbops
 util/SqliteMigrations/** @bitwarden/dept-dbops
 
 # Shared util projects
-util/Setup/** @bitwarden/dept-bre @bitwarden/team-platform-dev
+util/MsSqlMigratorUtility/** @bitwarden/team-platform-dev
+util/Setup/** @bitwarden/dept-shot @bitwarden/team-platform-dev
 
 # UIF
 src/Core/MailTemplates/Mjml @bitwarden/team-ui-foundation # Teams are expected to own sub-directories of this project
@@ -47,6 +48,10 @@ bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
 src/Core/Identity @bitwarden/team-auth-dev
 src/Core/IdentityServer @bitwarden/team-auth-dev
+
+# Autofill team
+src/Core/Utilities/StaticStore.cs @bitwarden/team-autofill-dev
+src/Core/Enums/GlobalEquivalentDomainsType.cs @bitwarden/team-autofill-dev
 
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
@@ -107,6 +112,8 @@ util/RustSdk @bitwarden/team-sdk-sme
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
+.devcontainer/**
+dev/docker-compose.yml
 
 # Claude related files
 .claude/ @bitwarden/team-ai-sme

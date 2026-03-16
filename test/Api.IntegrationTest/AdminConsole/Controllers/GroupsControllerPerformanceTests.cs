@@ -8,6 +8,7 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
 using Bit.Core.Entities;
 using Bit.Seeder.Recipes;
+using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,7 +32,8 @@ public class GroupsControllerPerformanceTests(ITestOutputHelper testOutputHelper
         var db = factory.GetDatabaseContext();
         var mapper = factory.GetService<IMapper>();
         var passwordHasher = factory.GetService<IPasswordHasher<User>>();
-        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher);
+        var manglerService = new NoOpManglerService();
+        var orgSeeder = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
         var collectionsSeeder = new CollectionsRecipe(db);
         var groupsSeeder = new GroupsRecipe(db);
 

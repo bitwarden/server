@@ -1,5 +1,7 @@
 ﻿using System.Reflection;
+using Bit.Core.Settings;
 using Bit.Seeder;
+using Bit.Seeder.Services;
 using Bit.SeederApi.Commands;
 using Bit.SeederApi.Commands.Interfaces;
 using Bit.SeederApi.Execution;
@@ -69,6 +71,25 @@ public static class ServiceCollectionExtensions
         {
             services.TryAddScoped(queryType);
             services.TryAddKeyedScoped(typeof(IQuery), queryType.Name, (sp, _) => sp.GetRequiredService(queryType));
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the appropriate mangler service based on execution context.
+    /// </summary>
+    public static IServiceCollection AddManglerService(
+        this IServiceCollection services,
+        GlobalSettings globalSettings)
+    {
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            services.TryAddScoped<IManglerService, ManglerService>();
+        }
+        else
+        {
+            services.TryAddSingleton<IManglerService, NoOpManglerService>();
         }
 
         return services;

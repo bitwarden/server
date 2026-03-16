@@ -63,6 +63,7 @@ CREATE TABLE [dbo].[Organization] (
     [MaxStorageGbIncreased]         SMALLINT         NULL,
     [UsePhishingBlocker]            BIT              NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] DEFAULT (0),
     [UseDisableSmAdsForUsers]       BIT              NOT NULL CONSTRAINT [DF_Organization_UseDisableSmAdsForUsers] DEFAULT (0),
+    [UseMyItems]                    BIT              NOT NULL CONSTRAINT [DF_Organization_UseMyItems] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
@@ -76,3 +77,13 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]
     ON [dbo].[Organization]([Identifier] ASC)
     WHERE [Identifier] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewayCustomerId]
+    ON [dbo].[Organization]([GatewayCustomerId])
+    WHERE [GatewayCustomerId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewaySubscriptionId]
+    ON [dbo].[Organization]([GatewaySubscriptionId])
+    WHERE [GatewaySubscriptionId] IS NOT NULL;

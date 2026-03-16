@@ -1,48 +1,74 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bit.Core.Vault.Models.Data;
 using Bit.RustSDK;
+using Bit.Seeder.Attributes;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
 
-public class RustSdkCipherTests
+public sealed class RustSdkCipherTests
 {
-    private static readonly JsonSerializerOptions SdkJsonOptions = new()
+    private static readonly JsonSerializerOptions _sdkJsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
     [Fact]
-    public void EncryptDecrypt_LoginCipher_RoundtripPreservesPlaintext()
+    public void EncryptString_DecryptString_Roundtrip()
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var encrypted = RustSdkService.EncryptString("SuperSecretP@ssw0rd!", orgKeys.Key);
 
-        var originalCipher = CreateTestLoginCipher();
-        var originalJson = JsonSerializer.Serialize(originalCipher, SdkJsonOptions);
-
-        var encryptedJson = RustSdkService.EncryptCipher(originalJson, orgKeys.Key);
-
-        Assert.DoesNotContain("\"error\"", encryptedJson);
-        Assert.Contains("\"name\":\"2.", encryptedJson);
-
-        var decryptedJson = RustSdkService.DecryptCipher(encryptedJson, orgKeys.Key);
-
-        Assert.DoesNotContain("\"error\"", decryptedJson);
-
-        var decryptedCipher = JsonSerializer.Deserialize<CipherViewDto>(decryptedJson, SdkJsonOptions);
-
-        Assert.NotNull(decryptedCipher);
-        Assert.Equal(originalCipher.Name, decryptedCipher.Name);
-        Assert.Equal(originalCipher.Notes, decryptedCipher.Notes);
-        Assert.Equal(originalCipher.Login?.Username, decryptedCipher.Login?.Username);
-        Assert.Equal(originalCipher.Login?.Password, decryptedCipher.Login?.Password);
+        Assert.StartsWith("2.", encrypted);
+        Assert.Equal("SuperSecretP@ssw0rd!", RustSdkService.DecryptString(encrypted, orgKeys.Key));
     }
 
     [Fact]
-    public void EncryptCipher_WithUri_EncryptsAllFields()
+    public void EncryptFields_DecryptString_Roundtrip()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "Test Login",
+            Notes = "Secret notes about this login",
+            Type = CipherTypes.Login,
+            Login = new LoginViewDto
+            {
+                Username = "testuser@example.com",
+                Password = "SuperSecretP@ssw0rd!",
+                Uris = [new LoginUriViewDto { Uri = "https://example.com" }]
+            }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var root = doc.RootElement;
+
+        var encryptedName = root.GetProperty("name").GetString()!;
+        Assert.StartsWith("2.", encryptedName);
+
+        var decryptedName = RustSdkService.DecryptString(encryptedName, orgKeys.Key);
+        Assert.Equal("Test Login", decryptedName);
+
+        var encryptedUsername = root.GetProperty("login").GetProperty("username").GetString()!;
+        var decryptedUsername = RustSdkService.DecryptString(encryptedUsername, orgKeys.Key);
+        Assert.Equal("testuser@example.com", decryptedUsername);
+
+        var encryptedUri = root.GetProperty("login").GetProperty("uris")[0].GetProperty("uri").GetString()!;
+        var decryptedUri = RustSdkService.DecryptString(encryptedUri, orgKeys.Key);
+        Assert.Equal("https://example.com", decryptedUri);
+    }
+
+    [Fact]
+    public void EncryptFields_NoPlaintextLeakage()
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
@@ -63,39 +89,31 @@ public class RustSdkCipherTests
             }
         };
 
-        var cipherJson = JsonSerializer.Serialize(cipher, SdkJsonOptions);
-        var encryptedJson = RustSdkService.EncryptCipher(cipherJson, orgKeys.Key);
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
 
-        Assert.DoesNotContain("\"error\"", encryptedJson);
         Assert.DoesNotContain("Amazon Shopping", encryptedJson);
         Assert.DoesNotContain("shopper@example.com", encryptedJson);
         Assert.DoesNotContain("MySecretPassword123!", encryptedJson);
+        Assert.DoesNotContain("Prime member since 2020", encryptedJson);
+        Assert.Contains("\"name\":\"2.", encryptedJson);
     }
 
     [Fact]
-    public void DecryptCipher_WithWrongKey_FailsOrProducesGarbage()
+    public void DecryptString_WithWrongKey_Throws()
     {
         var encryptionKey = RustSdkService.GenerateOrganizationKeys();
         var differentKey = RustSdkService.GenerateOrganizationKeys();
 
-        var originalCipher = CreateTestLoginCipher();
-        var cipherJson = JsonSerializer.Serialize(originalCipher, SdkJsonOptions);
+        var encrypted = RustSdkService.EncryptString("secret value", encryptionKey.Key);
 
-        var encryptedJson = RustSdkService.EncryptCipher(cipherJson, encryptionKey.Key);
-        Assert.DoesNotContain("\"error\"", encryptedJson);
-
-        var decryptedJson = RustSdkService.DecryptCipher(encryptedJson, differentKey.Key);
-
-        var decryptionFailedWithError = decryptedJson.Contains("\"error\"");
-        if (!decryptionFailedWithError)
-        {
-            var decrypted = JsonSerializer.Deserialize<CipherViewDto>(decryptedJson, SdkJsonOptions);
-            Assert.NotEqual(originalCipher.Name, decrypted?.Name);
-        }
+        Assert.Throws<RustSdkException>(() =>
+            RustSdkService.DecryptString(encrypted, differentKey.Key));
     }
 
     [Fact]
-    public void EncryptCipher_WithFields_EncryptsCustomFields()
+    public void EncryptFields_WithCustomFields_EncryptsFieldNameAndValue()
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
@@ -110,25 +128,28 @@ public class RustSdkCipherTests
             },
             Fields =
             [
-                new FieldViewDto { Name = "API Key", Value = "sk-secret-api-key-12345", Type = 1 },
+                new FieldViewDto { Name = "API Key", Value = "sk_test_FAKE_api_key_12345", Type = 1 },
                 new FieldViewDto { Name = "Client ID", Value = "client-id-xyz", Type = 0 }
             ]
         };
 
-        var cipherJson = JsonSerializer.Serialize(cipher, SdkJsonOptions);
-        var encryptedJson = RustSdkService.EncryptCipher(cipherJson, orgKeys.Key);
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
 
-        Assert.DoesNotContain("\"error\"", encryptedJson);
-        Assert.DoesNotContain("sk-secret-api-key-12345", encryptedJson);
+        Assert.DoesNotContain("sk_test_FAKE_api_key_12345", encryptedJson);
         Assert.DoesNotContain("client-id-xyz", encryptedJson);
 
-        var decryptedJson = RustSdkService.DecryptCipher(encryptedJson, orgKeys.Key);
-        var decrypted = JsonSerializer.Deserialize<CipherViewDto>(decryptedJson, SdkJsonOptions);
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var fields = doc.RootElement.GetProperty("fields");
 
-        Assert.NotNull(decrypted?.Fields);
-        Assert.Equal(2, decrypted.Fields.Count);
-        Assert.Equal("API Key", decrypted.Fields[0].Name);
-        Assert.Equal("sk-secret-api-key-12345", decrypted.Fields[0].Value);
+        var field0Name = fields[0].GetProperty("name").GetString()!;
+        var field0Value = fields[0].GetProperty("value").GetString()!;
+        Assert.StartsWith("2.", field0Name);
+        Assert.StartsWith("2.", field0Value);
+
+        Assert.Equal("API Key", RustSdkService.DecryptString(field0Name, orgKeys.Key));
+        Assert.Equal("sk_test_FAKE_api_key_12345", RustSdkService.DecryptString(field0Value, orgKeys.Key));
     }
 
     [Fact]
@@ -137,11 +158,10 @@ public class RustSdkCipherTests
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var orgId = Guid.NewGuid();
 
-        // Create cipher using the seeder
-        var cipher = CipherSeeder.CreateOrganizationLoginCipher(
-            orgId,
+        var cipher = LoginCipherSeeder.Create(
             orgKeys.Key,
             name: "GitHub Account",
+            organizationId: orgId,
             username: "developer@example.com",
             password: "SecureP@ss123!",
             uri: "https://github.com",
@@ -155,7 +175,7 @@ public class RustSdkCipherTests
         var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
         Assert.NotNull(loginData);
 
-        var encStringPrefix = "2.";
+        const string encStringPrefix = "2.";
         Assert.StartsWith(encStringPrefix, loginData.Name);
         Assert.StartsWith(encStringPrefix, loginData.Username);
         Assert.StartsWith(encStringPrefix, loginData.Password);
@@ -175,16 +195,16 @@ public class RustSdkCipherTests
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
-        var cipher = CipherSeeder.CreateOrganizationLoginCipherWithFields(
-            Guid.NewGuid(),
+        var cipher = LoginCipherSeeder.Create(
             orgKeys.Key,
             name: "API Service",
+            organizationId: Guid.NewGuid(),
             username: "service@example.com",
             password: "SvcP@ss!",
             uri: "https://api.example.com",
             fields: [
-                ("API Key", "sk-live-abc123", 1),  // Hidden field
-                ("Environment", "production", 0)   // Text field
+                ("API Key", "sk_test_FAKE_abc123", 1),
+                ("Environment", "production", 0)
             ]);
 
         var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
@@ -194,7 +214,7 @@ public class RustSdkCipherTests
         var fields = loginData.Fields.ToList();
         Assert.Equal(2, fields.Count);
 
-        var encStringPrefix = "2.";
+        const string encStringPrefix = "2.";
         Assert.StartsWith(encStringPrefix, fields[0].Name);
         Assert.StartsWith(encStringPrefix, fields[0].Value);
         Assert.StartsWith(encStringPrefix, fields[1].Name);
@@ -204,23 +224,232 @@ public class RustSdkCipherTests
         Assert.Equal(Core.Vault.Enums.FieldType.Text, fields[1].Type);
 
         Assert.DoesNotContain("API Key", cipher.Data);
-        Assert.DoesNotContain("sk-live-abc123", cipher.Data);
+        Assert.DoesNotContain("sk_test_FAKE_abc123", cipher.Data);
     }
 
-    private static CipherViewDto CreateTestLoginCipher()
+    [Fact]
+    public void EncryptFields_CardCipher_RoundtripDecrypt()
     {
-        return new CipherViewDto
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
         {
-            Name = "Test Login",
-            Notes = "Secret notes about this login",
-            Type = CipherTypes.Login,
-            Login = new LoginViewDto
+            Name = "My Visa Card",
+            Type = CipherTypes.Card,
+            Card = new CardViewDto
             {
-                Username = "testuser@example.com",
-                Password = "SuperSecretP@ssw0rd!",
-                Uris = [new LoginUriViewDto { Uri = "https://example.com" }]
+                CardholderName = "John Doe",
+                Number = "4111111111111111",
+                ExpMonth = "12",
+                ExpYear = "2028",
+                Code = "123"
             }
         };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var card = doc.RootElement.GetProperty("card");
+
+        Assert.Equal("John Doe", RustSdkService.DecryptString(card.GetProperty("cardholderName").GetString()!, orgKeys.Key));
+        Assert.Equal("4111111111111111", RustSdkService.DecryptString(card.GetProperty("number").GetString()!, orgKeys.Key));
+        Assert.Equal("12", RustSdkService.DecryptString(card.GetProperty("expMonth").GetString()!, orgKeys.Key));
+        Assert.Equal("2028", RustSdkService.DecryptString(card.GetProperty("expYear").GetString()!, orgKeys.Key));
+        Assert.Equal("123", RustSdkService.DecryptString(card.GetProperty("code").GetString()!, orgKeys.Key));
     }
 
+    [Fact]
+    public void EncryptFields_IdentityCipher_RoundtripDecrypt()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "Personal Identity",
+            Type = CipherTypes.Identity,
+            Identity = new IdentityViewDto
+            {
+                FirstName = "John",
+                LastName = "Doe",
+                Email = "john.doe@example.com",
+                SSN = "123-45-6789",
+                Address1 = "123 Main Street",
+                City = "Anytown",
+                State = "CA",
+                PostalCode = "90210",
+                Country = "US"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var identity = doc.RootElement.GetProperty("identity");
+
+        Assert.Equal("John", RustSdkService.DecryptString(identity.GetProperty("firstName").GetString()!, orgKeys.Key));
+        Assert.Equal("123-45-6789", RustSdkService.DecryptString(identity.GetProperty("ssn").GetString()!, orgKeys.Key));
+        Assert.Equal("john.doe@example.com", RustSdkService.DecryptString(identity.GetProperty("email").GetString()!, orgKeys.Key));
+        Assert.Equal("123 Main Street", RustSdkService.DecryptString(identity.GetProperty("address1").GetString()!, orgKeys.Key));
+        Assert.Equal("90210", RustSdkService.DecryptString(identity.GetProperty("postalCode").GetString()!, orgKeys.Key));
+    }
+
+    [Fact]
+    public void EncryptFields_SshKeyCipher_RoundtripDecrypt()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var cipher = new CipherViewDto
+        {
+            Name = "Dev Key",
+            Type = CipherTypes.SshKey,
+            SshKey = new SshKeyViewDto
+            {
+                PrivateKey = "-----BEGIN FAKE KEY-----\nMIIE...\n-----END FAKE KEY-----",
+                PublicKey = "ssh-rsa AAAAB3... user@host",
+                Fingerprint = "SHA256:abc123"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(cipher, _sdkJsonOptions);
+        var fieldPathsJson = JsonSerializer.Serialize(EncryptPropertyAttribute.GetFieldPaths<CipherViewDto>());
+        var encryptedJson = RustSdkService.EncryptFields(json, fieldPathsJson, orgKeys.Key);
+
+        using var doc = JsonDocument.Parse(encryptedJson);
+        var sshKey = doc.RootElement.GetProperty("sshKey");
+
+        Assert.Equal("-----BEGIN FAKE KEY-----\nMIIE...\n-----END FAKE KEY-----",
+            RustSdkService.DecryptString(sshKey.GetProperty("privateKey").GetString()!, orgKeys.Key));
+        Assert.Equal("ssh-rsa AAAAB3... user@host",
+            RustSdkService.DecryptString(sshKey.GetProperty("publicKey").GetString()!, orgKeys.Key));
+        Assert.Equal("SHA256:abc123",
+            RustSdkService.DecryptString(sshKey.GetProperty("fingerprint").GetString()!, orgKeys.Key));
+    }
+
+    [Fact]
+    public void CipherSeeder_CardCipher_ProducesServerCompatibleFormat()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var orgId = Guid.NewGuid();
+
+        var card = new CardViewDto
+        {
+            CardholderName = "Jane Smith",
+            Brand = "Mastercard",
+            Number = "5500000000000004",
+            ExpMonth = "06",
+            ExpYear = "2027",
+            Code = "456"
+        };
+
+        var cipher = CardCipherSeeder.Create(orgKeys.Key, name: "Business Card", card: card, organizationId: orgId, notes: "Company expenses");
+
+        Assert.Equal(orgId, cipher.OrganizationId);
+        Assert.Equal(Core.Vault.Enums.CipherType.Card, cipher.Type);
+
+        var cardData = JsonSerializer.Deserialize<CipherCardData>(cipher.Data);
+        Assert.NotNull(cardData);
+
+        var encStringPrefix = "2.";
+        Assert.StartsWith(encStringPrefix, cardData.Name);
+        Assert.StartsWith(encStringPrefix, cardData.CardholderName);
+        Assert.StartsWith(encStringPrefix, cardData.Number);
+        Assert.StartsWith(encStringPrefix, cardData.Code);
+
+        Assert.DoesNotContain("5500000000000004", cipher.Data);
+        Assert.DoesNotContain("Jane Smith", cipher.Data);
+    }
+
+    [Fact]
+    public void CipherSeeder_IdentityCipher_ProducesServerCompatibleFormat()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var orgId = Guid.NewGuid();
+
+        var identity = new IdentityViewDto
+        {
+            Title = "Dr",
+            FirstName = "Alice",
+            LastName = "Johnson",
+            Email = "alice@company.com",
+            SSN = "987-65-4321",
+            PassportNumber = "X12345678"
+        };
+
+        var cipher = IdentityCipherSeeder.Create(orgKeys.Key, name: "Dr. Alice Johnson", identity: identity, organizationId: orgId);
+
+        Assert.Equal(orgId, cipher.OrganizationId);
+        Assert.Equal(Core.Vault.Enums.CipherType.Identity, cipher.Type);
+
+        var identityData = JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data);
+        Assert.NotNull(identityData);
+
+        var encStringPrefix = "2.";
+        Assert.StartsWith(encStringPrefix, identityData.Name);
+        Assert.StartsWith(encStringPrefix, identityData.FirstName);
+        Assert.StartsWith(encStringPrefix, identityData.SSN);
+
+        Assert.DoesNotContain("987-65-4321", cipher.Data);
+        Assert.DoesNotContain("Alice", cipher.Data);
+    }
+
+    [Fact]
+    public void CipherSeeder_SecureNoteCipher_ProducesServerCompatibleFormat()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var orgId = Guid.NewGuid();
+
+        var cipher = SecureNoteCipherSeeder.Create(
+            orgKeys.Key,
+            name: "Production Secrets",
+            organizationId: orgId,
+            notes: "DATABASE_URL=postgres://user:FAKE_secret@db.example.com/prod");
+
+        Assert.Equal(orgId, cipher.OrganizationId);
+        Assert.Equal(Core.Vault.Enums.CipherType.SecureNote, cipher.Type);
+
+        var noteData = JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data);
+        Assert.NotNull(noteData);
+        Assert.Equal(Core.Vault.Enums.SecureNoteType.Generic, noteData.Type);
+
+        Assert.StartsWith("2.", noteData.Name);
+        Assert.StartsWith("2.", noteData.Notes);
+
+        Assert.DoesNotContain("postgres://", cipher.Data);
+        Assert.DoesNotContain("secret", cipher.Data);
+    }
+
+    [Fact]
+    public void CipherSeeder_SshKeyCipher_ProducesServerCompatibleFormat()
+    {
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+        var orgId = Guid.NewGuid();
+
+        var sshKey = new SshKeyViewDto
+        {
+            PrivateKey = "-----BEGIN FAKE OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA...\n-----END FAKE OPENSSH PRIVATE KEY-----",
+            PublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExample test@machine",
+            Fingerprint = "SHA256:examplefingerprint123"
+        };
+
+        var cipher = SshKeyCipherSeeder.Create(orgKeys.Key, name: "Production Deploy Key", sshKey: sshKey, organizationId: orgId);
+
+        Assert.Equal(orgId, cipher.OrganizationId);
+        Assert.Equal(Core.Vault.Enums.CipherType.SSHKey, cipher.Type);
+
+        var sshData = JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data);
+        Assert.NotNull(sshData);
+
+        const string encStringPrefix = "2.";
+        Assert.StartsWith(encStringPrefix, sshData.Name);
+        Assert.StartsWith(encStringPrefix, sshData.PrivateKey);
+        Assert.StartsWith(encStringPrefix, sshData.PublicKey);
+        Assert.StartsWith(encStringPrefix, sshData.KeyFingerprint);
+
+        Assert.DoesNotContain("BEGIN FAKE OPENSSH PRIVATE KEY", cipher.Data);
+        Assert.DoesNotContain("ssh-ed25519", cipher.Data);
+    }
 }

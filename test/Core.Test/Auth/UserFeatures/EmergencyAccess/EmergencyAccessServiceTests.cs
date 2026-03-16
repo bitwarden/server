@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -74,6 +77,64 @@ public class EmergencyAccessServiceTests
         await sutProvider.GetDependency<IMailService>()
                          .Received(1)
                          .SendEmergencyAccessInviteEmailAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>(), Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_FeatureFlagEnabled_GrantorInAutoConfirmOrg_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([
+                new PolicyDetails { OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
+            ]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.Takeover, waitTime));
+
+        Assert.Contains("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_FeatureFlagEnabled_GrantorNotInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        var result = await sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.Takeover, waitTime);
+
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1).CreateAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteAsync_FeatureFlagDisabled_GrantorInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
+    {
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.Takeover, waitTime);
+
+        Assert.NotNull(result);
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -334,6 +395,113 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AcceptUserAsync_FeatureFlagEnabled_GranteeInAutoConfirmOrg_ThrowsBadRequest(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([
+                new PolicyDetails { OrganizationUserStatus = OrganizationUserStatusType.Confirmed }
+            ]));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
+
+        Assert.Contains("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_FeatureFlagEnabled_GranteeNotInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        User invitingUser,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(Arg.Any<Guid>())
+            .Returns(invitingUser);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptUserAsync_FeatureFlagDisabled_GranteeInAutoConfirmOrg_Succeeds(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User acceptingUser,
+        User invitingUser,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        string token)
+    {
+        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
+        emergencyAccess.Email = acceptingUser.Email;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(Arg.Any<Guid>())
+            .Returns(invitingUser);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+                return true;
+            });
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
+            .Returns(false);
+
+        await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
+
+        await sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
     public async Task AcceptUserAsync_ReplaceEmergencyAccess_SendsEmail_Success(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
@@ -389,7 +557,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task DeleteAsync_EmergencyAccessGrantorIdNotEqual_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        User invitingUser,
+        User randomUser,
         Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         emergencyAccess.GrantorId = Guid.NewGuid();
@@ -398,7 +566,7 @@ public class EmergencyAccessServiceTests
                 .Returns(emergencyAccess);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, invitingUser.Id));
+            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, randomUser.Id));
 
         Assert.Contains("Emergency Access not valid.", exception.Message);
     }
@@ -406,7 +574,7 @@ public class EmergencyAccessServiceTests
     [Theory, BitAutoData]
     public async Task DeleteAsync_EmergencyAccessGranteeIdNotEqual_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
-        User invitingUser,
+        User randomUser,
         Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         emergencyAccess.GranteeId = Guid.NewGuid();
@@ -415,28 +583,49 @@ public class EmergencyAccessServiceTests
                 .Returns(emergencyAccess);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, invitingUser.Id));
+            () => sutProvider.Sut.DeleteAsync(emergencyAccess.Id, randomUser.Id));
 
         Assert.Contains("Emergency Access not valid.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_EmergencyAccessIsDeleted_Success(
-    SutProvider<EmergencyAccessService> sutProvider,
-    User user,
-    Core.Auth.Entities.EmergencyAccess emergencyAccess)
+    public async Task DeleteAsync_GrantorDeletes_Success(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User grantor,
+        User grantee,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
-        emergencyAccess.GranteeId = user.Id;
-        emergencyAccess.GrantorId = user.Id;
+        emergencyAccess.GrantorId = grantor.Id;
+        emergencyAccess.GranteeId = grantee.Id;
         sutProvider.GetDependency<IEmergencyAccessRepository>()
-                .GetByIdAsync(Arg.Any<Guid>())
-                .Returns(emergencyAccess);
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
 
-        await sutProvider.Sut.DeleteAsync(emergencyAccess.Id, user.Id);
+        await sutProvider.Sut.DeleteAsync(emergencyAccess.Id, grantor.Id);
 
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
-                .Received(1)
-                .DeleteAsync(emergencyAccess);
+            .Received(1)
+            .DeleteAsync(emergencyAccess);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_GranteeDeletes_Success(
+        SutProvider<EmergencyAccessService> sutProvider,
+        User grantor,
+        User grantee,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess)
+    {
+        emergencyAccess.GrantorId = grantor.Id;
+        emergencyAccess.GranteeId = grantee.Id;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        await sutProvider.Sut.DeleteAsync(emergencyAccess.Id, grantee.Id);
+
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .Received(1)
+            .DeleteAsync(emergencyAccess);
     }
 
     [Theory, BitAutoData]

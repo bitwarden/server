@@ -1,0 +1,60 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "Cipher-1867257",
+      "login": {
+        "username": "1867257 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1867257-2",
+      "reprompt": 1,
+      "login": {
+        "username": "1867257-2 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1867259",
+      "login": {
+        "username": "1867259 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1867259-2",
+      "reprompt": 1,
+      "login": {
+        "username": "1867259-2 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1867261",
+      "reprompt": 1,
+      "login": {
+        "username": "1867261 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-1867262",
+      "reprompt": 1,
+      "login": {
+        "username": "1867262 Username"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cipher-19503",
+      "reprompt": 1,
+      "login": {
+        "username": "19503 Username",
+        "password": "19503 Password"
+      }
+    }
+  ]
+}

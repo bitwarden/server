@@ -12,7 +12,10 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Premium.Queries;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -21,19 +24,16 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Fido2NetLib;
-using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
-using static Fido2NetLib.Fido2;
-using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Services;
 
@@ -117,11 +117,11 @@ public class UserServiceTests
     {
         orgUser.OrganizationId = organization.Id;
         organization.Enabled = true;
-        organization.UsersGetPremium = true;
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
@@ -586,6 +586,72 @@ public class UserServiceTests
         Assert.NotNull(user.TwoFactorProviders);
     }
 
+    [Theory]
+    [BitAutoData("wrapped-user-key")]
+    [BitAutoData("2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=")]
+    public async Task ConvertToKeyConnectorAsync_WrappedUserKeyProvided_SetsWrappedUserKey(
+        string wrappedUserKey,
+        SutProvider<UserService> sutProvider,
+        User user)
+    {
+        // Arrange
+        user.UsesKeyConnector = false;
+        user.MasterPassword = "master-password";
+        user.Key = "old-key";
+        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
+
+        // Act
+        var result = await sutProvider.Sut.ConvertToKeyConnectorAsync(user, wrappedUserKey);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Null(user.MasterPassword);
+        Assert.Equal(wrappedUserKey, user.Key);
+        Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<User>(u =>
+                u == user &&
+                u.Key == wrappedUserKey &&
+                u.MasterPassword == null &&
+                u.UsesKeyConnector));
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConvertToKeyConnectorAsync_WrappedUserKeyNull_DoesNotOverwriteExistingKey(
+        SutProvider<UserService> sutProvider,
+        User user)
+    {
+        // Arrange
+        const string existingUserKey = "existing-user-key";
+        user.UsesKeyConnector = false;
+        user.MasterPassword = "master-password";
+        user.Key = existingUserKey;
+        sutProvider.GetDependency<ICurrentContext>().Organizations = [];
+
+        // Act
+        var result = await sutProvider.Sut.ConvertToKeyConnectorAsync(user, null);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Null(user.MasterPassword);
+        Assert.Equal(existingUserKey, user.Key);
+        Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
+
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<User>(u =>
+                u == user &&
+                u.Key == existingUserKey &&
+                u.MasterPassword == null &&
+                u.UsesKeyConnector));
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
@@ -600,206 +666,82 @@ public class UserServiceTests
     }
 
     [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task StartWebAuthnRegistrationAsync_BelowLimit_Succeeds(
-        bool hasPremium, SutProvider<UserService> sutProvider, User user)
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    [BitAutoData("\t")]
+    public async Task AdminResetPasswordAsync_EmptyOrWhitespaceResetPasswordKey_ThrowsBadRequest(
+        string resetPasswordKey,
+        SutProvider<UserService> sutProvider,
+        Organization organization,
+        OrganizationUser orgUser,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy)
     {
-        // Arrange - Non-premium user with 4 credentials (below limit of 5)
-        SetupWebAuthnProvider(user, credentialCount: 4);
+        // Arrange
+        organization.UseResetPassword = true;
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+        orgUser.OrganizationId = organization.Id;
+        orgUser.ResetPasswordKey = resetPasswordKey;
+        orgUser.UserId = Guid.NewGuid();
 
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
-        {
-            PremiumMaximumAllowedCredentials = 10,
-            NonPremiumMaximumAllowedCredentials = 5
-        };
-
-        user.Premium = hasPremium;
-        user.Id = Guid.NewGuid();
-        user.Email = "test@example.com";
-
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(policy);
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
-
-        var mockFido2 = sutProvider.GetDependency<IFido2>();
-        mockFido2.RequestNewCredential(
-            Arg.Any<Fido2User>(),
-            Arg.Any<List<PublicKeyCredentialDescriptor>>(),
-            Arg.Any<AuthenticatorSelection>(),
-            Arg.Any<AttestationConveyancePreference>())
-            .Returns(new CredentialCreateOptions
-            {
-                Challenge = new byte[] { 1, 2, 3 },
-                Rp = new PublicKeyCredentialRpEntity("example.com", "example.com", ""),
-                User = new Fido2User
-                {
-                    Id = user.Id.ToByteArray(),
-                    Name = user.Email,
-                    DisplayName = user.Name
-                },
-                PubKeyCredParams = new List<PubKeyCredParam>()
-            });
-
-        // Act
-        var result = await sutProvider.Sut.StartWebAuthnRegistrationAsync(user);
-
-        // Assert
-        Assert.NotNull(result);
-        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
-    }
-
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task CompleteWebAuthRegistrationAsync_ExceedsLimit_ThrowsBadRequestException(bool hasPremium,
-        SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
-    {
-        // Arrange - time-of-check/time-of-use scenario: user now has 10 credentials (at limit)
-        SetupWebAuthnProviderWithPending(user, credentialCount: 10);
-
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
-        {
-            PremiumMaximumAllowedCredentials = 10,
-            NonPremiumMaximumAllowedCredentials = 5
-        };
-
-        user.Premium = hasPremium;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
+            .GetByIdAsync(orgUser.Id)
+            .Returns(orgUser);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CompleteWebAuthRegistrationAsync(user, 11, "NewKey", deviceResponse));
-
-        Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AdminResetPasswordAsync(
+                OrganizationUserType.Owner, organization.Id, orgUser.Id, "newPassword", "key"));
+        Assert.Equal("Organization User not valid", exception.Message);
     }
 
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task CompleteWebAuthRegistrationAsync_BelowLimit_Succeeds(bool hasPremium,
-        SutProvider<UserService> sutProvider, User user, AuthenticatorAttestationRawResponse deviceResponse)
+    [Theory, BitAutoData]
+    public async Task AdjustStorageAsync_NullUser_ThrowsArgumentNullException(
+        SutProvider<UserService> sutProvider)
     {
-        // Arrange - User has 4 credentials (below limit of 5)
-        SetupWebAuthnProviderWithPending(user, credentialCount: 4);
-
-        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = new GlobalSettings.WebAuthnSettings
-        {
-            PremiumMaximumAllowedCredentials = 10,
-            NonPremiumMaximumAllowedCredentials = 5
-        };
-
-        user.Premium = hasPremium;
-        user.Id = Guid.NewGuid();
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
-
-        var mockFido2 = sutProvider.GetDependency<IFido2>();
-        mockFido2.MakeNewCredentialAsync(
-            Arg.Any<AuthenticatorAttestationRawResponse>(),
-            Arg.Any<CredentialCreateOptions>(),
-            Arg.Any<IsCredentialIdUniqueToUserAsyncDelegate>())
-            .Returns(new CredentialMakeResult("ok", "", new AttestationVerificationSuccess
-            {
-                Aaguid = Guid.NewGuid(),
-                Counter = 0,
-                CredentialId = new byte[] { 1, 2, 3 },
-                CredType = "public-key",
-                PublicKey = new byte[] { 4, 5, 6 },
-                Status = "ok",
-                User = new Fido2User
-                {
-                    Id = user.Id.ToByteArray(),
-                    Name = user.Email ?? "test@example.com",
-                    DisplayName = user.Name ?? "Test User"
-                }
-            }));
-
-        // Act
-        var result = await sutProvider.Sut.CompleteWebAuthRegistrationAsync(user, 5, "NewKey", deviceResponse);
-
-        // Assert
-        Assert.True(result);
-        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => sutProvider.Sut.AdjustStorageAsync(null, 1));
     }
 
-    private static void SetupWebAuthnProvider(User user, int credentialCount)
+    [Theory, BitAutoData]
+    public async Task AdjustStorageAsync_NotPremium_ThrowsBadRequestException(
+        User user, SutProvider<UserService> sutProvider)
     {
-        var providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-        var metadata = new Dictionary<string, object>();
+        user.Premium = false;
 
-        // Add credentials as Key1, Key2, Key3, etc.
-        for (int i = 1; i <= credentialCount; i++)
-        {
-            metadata[$"Key{i}"] = new TwoFactorProvider.WebAuthnData
-            {
-                Name = $"Key {i}",
-                Descriptor = new PublicKeyCredentialDescriptor(new byte[] { (byte)i }),
-                PublicKey = new byte[] { (byte)i },
-                UserHandle = new byte[] { (byte)i },
-                SignatureCounter = 0,
-                CredType = "public-key",
-                RegDate = DateTime.UtcNow,
-                AaGuid = Guid.NewGuid()
-            };
-        }
-
-        providers[TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
-        {
-            Enabled = true,
-            MetaData = metadata
-        };
-
-        user.SetTwoFactorProviders(providers);
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AdjustStorageAsync(user, 1));
     }
 
-    private static void SetupWebAuthnProviderWithPending(User user, int credentialCount)
+    [Theory, BitAutoData]
+    public async Task AdjustStorageAsync_Success_CallsPaymentServiceAndSavesUser(
+        User user, SutProvider<UserService> sutProvider)
     {
-        var providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
-        var metadata = new Dictionary<string, object>();
+        user.Premium = true;
+        user.GatewayCustomerId = "cus_123";
+        user.GatewaySubscriptionId = "sub_123";
+        user.MaxStorageGb = 1;
+        user.Storage = 0;
 
-        // Add existing credentials
-        for (int i = 1; i <= credentialCount; i++)
+        var premiumPlan = new Bit.Core.Billing.Pricing.Premium.Plan
         {
-            metadata[$"Key{i}"] = new TwoFactorProvider.WebAuthnData
-            {
-                Name = $"Key {i}",
-                Descriptor = new PublicKeyCredentialDescriptor(new byte[] { (byte)i }),
-                PublicKey = new byte[] { (byte)i },
-                UserHandle = new byte[] { (byte)i },
-                SignatureCounter = 0,
-                CredType = "public-key",
-                RegDate = DateTime.UtcNow,
-                AaGuid = Guid.NewGuid()
-            };
-        }
-
-        // Add pending registration
-        var pendingOptions = new CredentialCreateOptions
-        {
-            Challenge = new byte[] { 1, 2, 3 },
-            Rp = new PublicKeyCredentialRpEntity("example.com", "example.com", ""),
-            User = new Fido2User
-            {
-                Id = user.Id.ToByteArray(),
-                Name = user.Email ?? "test@example.com",
-                DisplayName = user.Name ?? "Test User"
-            },
-            PubKeyCredParams = new List<PubKeyCredParam>()
-        };
-        metadata["pending"] = pendingOptions.ToJson();
-
-        providers[TwoFactorProviderType.WebAuthn] = new TwoFactorProvider
-        {
-            Enabled = true,
-            MetaData = metadata
+            Name = "Premium",
+            Available = true,
+            Seat = new Bit.Core.Billing.Pricing.Premium.Purchasable { StripePriceId = "premium-seat", Price = 10, Provided = 1 },
+            Storage = new Bit.Core.Billing.Pricing.Premium.Purchasable { StripePriceId = "storage-gb-annually", Price = 4, Provided = 1 }
         };
 
-        user.SetTwoFactorProviders(providers);
+        sutProvider.GetDependency<IPricingClient>().GetAvailablePremiumPlan().Returns(premiumPlan);
+
+        await sutProvider.Sut.AdjustStorageAsync(user, 1);
+
+        await sutProvider.GetDependency<IStripePaymentService>().Received(1)
+            .AdjustStorageAsync(user, Arg.Any<int>(), premiumPlan.Storage.StripePriceId);
     }
 }
 
@@ -853,8 +795,6 @@ public static class UserServiceSutProviderExtensions
     /// <summary>
     /// Properly registers IUserPasswordStore as IUserStore so it's injected when the sut is initialized.
     /// </summary>
-    /// <param name="sutProvider"></param>
-    /// <returns></returns>
     private static SutProvider<UserService> SetUserPasswordStore(this SutProvider<UserService> sutProvider)
     {
         var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();

@@ -107,6 +107,11 @@ public class ProviderClientsController(
             return Error.NotFound();
         }
 
+        if (providerOrganization.ProviderId != provider.Id)
+        {
+            return Error.NotFound();
+        }
+
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
         if (clientOrganization is not { Status: OrganizationStatusType.Managed })

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -87,6 +87,10 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+          - project_name: SeederApi
+            base_path: ./util
+            platforms: linux/amd64,linux/arm64
+            dotnet: true
           - project_name: Setup
             base_path: ./util
             dotnet: true
@@ -101,7 +105,7 @@ jobs:
           echo "has_secrets=$has_secrets" >> "$GITHUB_OUTPUT"
 
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -126,7 +130,7 @@ jobs:
         with:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
-          node-version: "16"
+          node-version: "24"
 
       - name: Print environment
         run: |
@@ -214,6 +218,7 @@ jobs:
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "platforms: ${{ matrix.platforms }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate image tags(s)
         id: image-tags
@@ -230,16 +235,22 @@ jobs:
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
+      - name: Set platforms
+        id: platforms
+        run: |
+          PLATFORMS="${{ matrix.platforms }}"
+          if [ -z "$PLATFORMS" ]; then
+            PLATFORMS="linux/amd64,linux/arm/v7,linux/arm64"
+          fi
+          echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
+
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: |
-            linux/amd64,
-            linux/arm/v7,
-            linux/arm64
+          platforms: ${{ steps.platforms.outputs.platforms }}
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 
@@ -263,7 +274,7 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@0d444ed77d83ee2ba7f5ced0d90d640a1281d762 # v7.3.0
+        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
@@ -288,7 +299,7 @@ jobs:
       actions: read
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -414,7 +425,7 @@ jobs:
           - win-x64
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false

@@ -19,7 +19,7 @@ public class EmergencyAccessInviteQuery(
         public required string Email { get; set; }
     }
 
-    public IEnumerable<string> Execute(Request request)
+    public Task<IEnumerable<string>> Execute(Request request)
     {
         var invites = db.EmergencyAccesses
             .Where(ea => ea.Email == request.Email).ToList().Select(ea =>
@@ -30,6 +30,6 @@ public class EmergencyAccessInviteQuery(
                 return $"/accept-emergency?id={ea.Id}&name=Dummy&email={ea.Email}&token={token}";
             });
 
-        return invites;
+        return Task.FromResult(invites);
     }
 }
