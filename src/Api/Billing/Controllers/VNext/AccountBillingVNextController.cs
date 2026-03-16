@@ -1,11 +1,14 @@
 ﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
+using Bit.Api.Billing.Models.Requests.Portal;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
+using Bit.Api.Billing.Models.Responses.Portal;
 using Bit.Core;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
@@ -21,6 +24,7 @@ namespace Bit.Api.Billing.Controllers.VNext;
 [Route("account/billing/vnext")]
 [SelfHosted(NotSelfHostedOnly = true)]
 public class AccountBillingVNextController(
+    ICreateBillingPortalSessionCommand createBillingPortalSessionCommand,
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
     IGetBitwardenSubscriptionQuery getBitwardenSubscriptionQuery,
@@ -145,6 +149,23 @@ public class AccountBillingVNextController(
     {
         var result = await getApplicableDiscountsQuery.Run(user);
         return Handle(result);
+    }
+
+    /// <summary>
+    /// Creates a Stripe billing portal session for the authenticated user.
+    /// The portal allows users to manage their subscription, payment methods, and billing history.
+    /// </summary>
+    /// <param name="user">The authenticated user</param>
+    /// <param name="request">Portal session configuration including return URL</param>
+    /// <returns>Portal session URL for redirection</returns>
+    [HttpPost("portal-session")]
+    [InjectUser]
+    public async Task<IResult> CreatePortalSessionAsync(
+        [BindNever] User user,
+        [FromBody] PortalSessionRequest request)
+    {
+        var result = await createBillingPortalSessionCommand.Run(user, request.ReturnUrl!);
+        return Handle(result.Map(url => new PortalSessionResponse { Url = url }));
     }
 
 }

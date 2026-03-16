@@ -1,10 +1,12 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
+using Bit.Api.Billing.Models.Requests.Portal;
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Models.Api.Response;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
@@ -14,8 +16,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using OneOf.Types;
+using Stripe;
 using Xunit;
 using BadRequest = Bit.Core.Billing.Commands.BadRequest;
+using Conflict = Bit.Core.Billing.Commands.Conflict;
 
 namespace Bit.Api.Test.Billing.Controllers.VNext;
 
@@ -25,6 +29,7 @@ public class AccountBillingVNextControllerTests
     private readonly IGetUserLicenseQuery _getUserLicenseQuery;
     private readonly IUpgradePremiumToOrganizationCommand _upgradePremiumToOrganizationCommand;
     private readonly IGetApplicableDiscountsQuery _getApplicableDiscountsQuery;
+    private readonly ICreateBillingPortalSessionCommand _createBillingPortalSessionCommand;
     private readonly AccountBillingVNextController _sut;
 
     public AccountBillingVNextControllerTests()
@@ -33,8 +38,10 @@ public class AccountBillingVNextControllerTests
         _getUserLicenseQuery = Substitute.For<IGetUserLicenseQuery>();
         _upgradePremiumToOrganizationCommand = Substitute.For<IUpgradePremiumToOrganizationCommand>();
         _getApplicableDiscountsQuery = Substitute.For<IGetApplicableDiscountsQuery>();
+        _createBillingPortalSessionCommand = Substitute.For<ICreateBillingPortalSessionCommand>();
 
         _sut = new AccountBillingVNextController(
+            _createBillingPortalSessionCommand,
             Substitute.For<Core.Billing.Payment.Commands.ICreateBitPayInvoiceForCreditCommand>(),
             Substitute.For<Core.Billing.Premium.Commands.ICreatePremiumCloudHostedSubscriptionCommand>(),
             Substitute.For<IGetBitwardenSubscriptionQuery>(),
@@ -290,5 +297,143 @@ public class AccountBillingVNextControllerTests
         var okResult = Assert.IsType<Ok<SubscriptionDiscountResponseModel[]>>(result);
         Assert.Equal(models, okResult.Value);
         await _getApplicableDiscountsQuery.Received(1).Run(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_Success_ReturnsPortalUrlAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+        var portalUrl = "https://billing.stripe.com/session/test123";
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(portalUrl));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_NoCustomerId_ReturnsBadRequestAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(new BadRequest("User does not have a Stripe customer ID.")));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_NoSubscriptionId_ReturnsBadRequestAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(new BadRequest("User does not have a Premium subscription.")));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_InvalidSubscriptionStatus_ReturnsBadRequestAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(new BadRequest("Your subscription cannot be managed in its current status.")));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_SubscriptionNotFound_ReturnsBadRequestAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(new BadRequest("User subscription not found.")));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_StripeException_ReturnsServerErrorAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+        var exception = new StripeException("Stripe API error");
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(new Unhandled(exception)));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_SessionWithNullUrl_ReturnsServerErrorAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(new Conflict("Unable to create billing portal session. Please contact support for assistance.")));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_NullSession_ReturnsServerErrorAsync(User user, string returnUrl)
+    {
+        // Arrange
+        var request = new PortalSessionRequest { ReturnUrl = $"https://example.com/{returnUrl}" };
+
+        _createBillingPortalSessionCommand.Run(user, request.ReturnUrl)
+            .Returns(new BillingCommandResult<string>(new Conflict("Unable to create billing portal session. Please contact support for assistance.")));
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user, request);
+
+        // Assert
+        Assert.IsAssignableFrom<IResult>(result);
+        await _createBillingPortalSessionCommand.Received(1).Run(user, request.ReturnUrl);
     }
 }
