@@ -37,7 +37,7 @@ public class RustSdkService
         PropertyNameCaseInsensitive = true
     };
 
-    public static unsafe UserKeys GenerateUserKeys(string email, string password, int kdfIterations = 600_000)
+    public static unsafe UserKeys GenerateUserKeys(string email, string password, int kdfIterations = 5_000)
     {
         var emailBytes = StringToRustString(email);
         var passwordBytes = StringToRustString(password);

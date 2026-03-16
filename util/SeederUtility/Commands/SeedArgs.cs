@@ -20,6 +20,9 @@ public class SeedArgs : IArgumentModel
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 
+    [Option("kdf-iterations", Description = "KDF iteration count for all seeded users. Overrides the preset value if specified. Use 600000 for production-realistic e2e testing.")]
+    public int? KdfIterations { get; set; }
+
     public void Validate()
     {
         if (List)
