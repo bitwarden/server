@@ -18,7 +18,7 @@ public class MasterPasswordUnlockAndAuthenticationData
     /// </summary>
     public required string MasterKeyEncryptedUserKey { get; set; }
     public string? MasterPasswordHint { get; set; }
-     public string? MasterPasswordSalt { get; set; }
+    public string? MasterPasswordSalt { get; set; }
 
     public bool ValidateForUser(User user)
     {
