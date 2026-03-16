@@ -37,7 +37,7 @@ public class RustSdkService
         PropertyNameCaseInsensitive = true
     };
 
-    public static unsafe UserKeys GenerateUserKeys(string email, string password)
+    public static unsafe UserKeys GenerateUserKeys(string email, string password, int kdfIterations = 600_000)
     {
         var emailBytes = StringToRustString(email);
         var passwordBytes = StringToRustString(password);
@@ -45,7 +45,7 @@ public class RustSdkService
         fixed (byte* emailPtr = emailBytes)
         fixed (byte* passwordPtr = passwordBytes)
         {
-            var resultPtr = NativeMethods.generate_user_keys(emailPtr, passwordPtr);
+            var resultPtr = NativeMethods.generate_user_keys(emailPtr, passwordPtr, (uint)kdfIterations);
 
             var result = ParseResponse(resultPtr);
 

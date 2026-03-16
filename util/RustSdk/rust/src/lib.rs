@@ -18,12 +18,13 @@ use bitwarden_crypto::{
 pub unsafe extern "C" fn generate_user_keys(
     email: *const c_char,
     password: *const c_char,
+    kdf_iterations: u32,
 ) -> *const c_char {
     let email = CStr::from_ptr(email).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
 
     let kdf = Kdf::PBKDF2 {
-        iterations: NonZeroU32::new(5_000).unwrap(),
+        iterations: NonZeroU32::new(kdf_iterations).unwrap(),
     };
 
     let master_key = MasterKey::derive(password, email, &kdf).unwrap();
