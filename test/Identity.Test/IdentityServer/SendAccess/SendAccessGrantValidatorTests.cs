@@ -79,6 +79,34 @@ public class SendAccessGrantValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_SendInaccessibleMethod_ReturnsInvalidSendId(
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<SendAccessGrantValidator> sutProvider,
+        Guid sendId)
+    {
+        // Arrange
+        var context = SetupTokenRequest(
+            sutProvider,
+            sendId,
+            tokenRequest);
+
+        sutProvider.GetDependency<ISendAuthenticationQuery>()
+            .GetAuthenticationMethod(sendId)
+            .Returns(new SendInaccessible());
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.True(context.Result.IsError);
+        Assert.Equal(OidcConstants.TokenErrors.InvalidGrant, context.Result.Error);
+        Assert.Equal(SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, context.Result.ErrorDescription);
+        var customResponse = context.Result.CustomResponse as Dictionary<string, object>;
+        Assert.NotNull(customResponse);
+        Assert.Equal(SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, customResponse[SendAccessConstants.SendAccessError]);
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_NeverAuthenticateMethod_ReturnsInvalidGrant(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider,
