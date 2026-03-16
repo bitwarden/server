@@ -15,6 +15,7 @@ public class AzureSendFileStorageService(
     public const string FilesContainerName = "sendfiles";
     private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
     private readonly BlobServiceClient _blobServiceClient = new(globalSettings.Send.ConnectionString);
+    private readonly ILogger<AzureSendFileStorageService> _logger = logger;
     /*
      * When this file was made nullable, multiple instances of ! were introduced asserting that
      * _sendFilesContainerClient abd the blobClient it is used to construct are not null.
@@ -122,7 +123,7 @@ public class AzureSendFileStorageService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, $"A storage operation failed in {nameof(ValidateFileAsync)}");
+            _logger.LogError(ex, $"A storage operation failed in {nameof(ValidateFileAsync)}");
             return (false, -1);
         }
     }
