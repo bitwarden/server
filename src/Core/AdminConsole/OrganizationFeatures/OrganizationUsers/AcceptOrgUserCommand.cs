@@ -74,14 +74,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             throw new BadRequestException("User invalid.");
         }
 
-        var tokenValidationError = _orgUserInviteTokenDataFactory.TryUnprotect(emailToken, out var decryptedToken) switch
-        {
-            // Used by clients to show better error message on token expiration, adjust both as-needed
-            true when decryptedToken.IsExpired => "Expired token.",
-            true when !(decryptedToken.Valid && decryptedToken.TokenIsValid(orgUser)) => "Invalid token.",
-            false => "Invalid token.",
-            _ => null
-        };
+        var tokenValidationError = OrgUserInviteTokenable.GetOrgUserInviteValidationError(
+            _orgUserInviteTokenDataFactory, emailToken, orgUser.Id, user.Email);
 
         if (tokenValidationError != null)
         {
