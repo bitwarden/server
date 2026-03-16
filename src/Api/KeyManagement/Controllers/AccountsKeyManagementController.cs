@@ -169,7 +169,7 @@ public class AccountsKeyManagementController : Controller
             case UnlockMethod.KeyConnector:
                 throw new BadRequestException("Key connector not implemented");
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(null, "Unrecognized unlock method");
         }
     }
 
