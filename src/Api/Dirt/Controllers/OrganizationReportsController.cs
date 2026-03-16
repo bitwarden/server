@@ -4,6 +4,7 @@ using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Services;
@@ -324,6 +325,9 @@ public class OrganizationReportsController : Controller
     /// <param name="endDate">The end of the date range to query.</param>
     /// <returns>A collection of <see cref="OrganizationReportSummaryDataResponseModel"/> entries spaced across the date range.</returns>
     [HttpGet("{organizationId}/data/summary")]
+    [ProducesResponseType<IEnumerable<OrganizationReportSummaryDataResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
