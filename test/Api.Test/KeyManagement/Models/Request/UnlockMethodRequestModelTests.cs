@@ -53,7 +53,7 @@ public class UnlockMethodRequestModelTests
         return results;
     }
 
-    private MasterPasswordUnlockDataRequestModel BuildMasterPasswordUnlockDataRequestModel() => new()
+    private static MasterPasswordUnlockDataRequestModel BuildMasterPasswordUnlockDataRequestModel() => new()
     {
         Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 60000 },
         MasterKeyWrappedUserKey = _wrappedUserKey,

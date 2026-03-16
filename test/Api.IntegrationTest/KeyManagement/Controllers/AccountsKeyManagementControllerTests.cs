@@ -1,11 +1,11 @@
 ﻿#nullable enable
 using System.Net;
+using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.Tools.Models.Request;
-using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -916,7 +916,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
                 Id = Guid.NewGuid(),
                 Type = CipherType.Login,
                 Name = _mockEncryptedString,
-                Login = new CipherLoginModel { Username = _mockEncryptedString, Password = _mockEncryptedString },
+                Data = JsonSerializer.Serialize(new { Username = _mockEncryptedString, Password = _mockEncryptedString }),
             },
         ],
         Folders = [new FolderWithIdRequestModel { Id = Guid.NewGuid(), Name = _mockEncryptedString }],

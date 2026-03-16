@@ -689,7 +689,7 @@ public class AccountsKeyManagementControllerTests
             .ValidateAsync(Arg.Any<User>(), Arg.Is(request.AccountData.Sends));
     }
 
-    private RotateUserKeysRequestModel SetupValidRotateUserKeysRequest(RotateUserKeysRequestModel request)
+    private static RotateUserKeysRequestModel SetupValidRotateUserKeysRequest(RotateUserKeysRequestModel request)
     {
         request.WrappedAccountCryptographicState.SignatureKeyPair = new SignatureKeyPairRequestModel
         {
