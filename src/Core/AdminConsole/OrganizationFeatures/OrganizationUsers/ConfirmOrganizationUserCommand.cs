@@ -28,7 +28,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEventService _eventService;
-    private readonly IMailService _mailService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
@@ -46,7 +45,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         IEventService eventService,
-        IMailService mailService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
@@ -63,7 +61,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _eventService = eventService;
-        _mailService = mailService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
@@ -327,21 +324,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     /// <summary>
-    /// Sends the organization confirmed email using either the new mailer pattern or the legacy mail service,
-    /// depending on the feature flag.
+    /// Sends the organization confirmed email using the new mailer pattern.
     /// </summary>
     /// <param name="organization">The organization the user was confirmed to.</param>
     /// <param name="userEmail">The email address of the confirmed user.</param>
     /// <param name="accessSecretsManager">Whether the user has access to Secrets Manager.</param>
     internal async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
-        {
-            await _sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
-        }
-        else
-        {
-            await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
-        }
+        await _sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
     }
 }

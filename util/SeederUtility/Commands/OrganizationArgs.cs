@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Data.Enums;
+﻿using Bit.Seeder.Data.Distributions;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using CommandDotNet;
@@ -26,10 +27,16 @@ public class OrganizationArgs : IArgumentModel
     [Option('g', "groups", Description = "Number of groups to create (default: 0, no groups)")]
     public int? Groups { get; set; }
 
+    [Option("collections", Description = "Number of collections to create (default: 0). Required for density profiles to be useful.")]
+    public int? Collections { get; set; }
+
+    [Option("density", Description = "Named density profile: balanced, highPerm, highCollection, broad, minimal, groupHeavy, or sparse")]
+    public string? Density { get; set; }
+
     [Option('m', "mix-user-statuses", Description = "Use realistic status mix (85% confirmed, 5% each invited/accepted/revoked). Requires >= 10 users.")]
     public bool MixStatuses { get; set; } = true;
 
-    [Option('o', "org-structure", Description = "Org structure for collections: Traditional, Spotify, or Modern")]
+    [Option('o', "org-structure", Description = "Org structure for collections: Traditional, Spotify, Modern, Government, SchoolDistrict, Healthcare, or Startup")]
     public string? Structure { get; set; }
 
     [Option('r', "region", Description = "Geographic region for names: NorthAmerica, Europe, AsiaPacific, LatinAmerica, MiddleEast, Africa, or Global")]
@@ -66,6 +73,11 @@ public class OrganizationArgs : IArgumentModel
             ParseGeographicRegion(Region);
         }
 
+        if (!string.IsNullOrEmpty(Density))
+        {
+            DensityProfiles.Parse(Density);
+        }
+
         PlanFeatures.Parse(PlanType);
     }
 
@@ -76,9 +88,11 @@ public class OrganizationArgs : IArgumentModel
         Users = Users,
         Ciphers = Ciphers ?? 0,
         Groups = Groups ?? 0,
+        Collections = Collections ?? 0,
         RealisticStatusMix = MixStatuses,
         StructureModel = ParseOrgStructure(Structure),
         Region = ParseGeographicRegion(Region),
+        Density = DensityProfiles.Parse(Density),
         Password = Password,
         PlanType = PlanFeatures.Parse(PlanType)
     };
@@ -95,7 +109,12 @@ public class OrganizationArgs : IArgumentModel
             "traditional" => OrgStructureModel.Traditional,
             "spotify" => OrgStructureModel.Spotify,
             "modern" => OrgStructureModel.Modern,
-            _ => throw new ArgumentException($"Unknown structure '{structure}'. Use: Traditional, Spotify, or Modern")
+            "government" => OrgStructureModel.Government,
+            "schooldistrict" => OrgStructureModel.SchoolDistrict,
+            "healthcare" => OrgStructureModel.Healthcare,
+            "startup" => OrgStructureModel.Startup,
+            _ => throw new ArgumentException(
+                $"Unknown structure '{structure}'. Use: Traditional, Spotify, Modern, Government, SchoolDistrict, Healthcare, or Startup")
         };
     }
 

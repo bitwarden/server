@@ -522,7 +522,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user)
+    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey = null)
     {
         var identityResult = CheckCanUseKeyConnector(user);
         if (identityResult != null)
@@ -533,6 +533,11 @@ public class UserService : UserManager<User>, IUserService
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
         user.MasterPassword = null;
         user.UsesKeyConnector = true;
+
+        if (!string.IsNullOrWhiteSpace(keyConnectorKeyWrappedUserKey))
+        {
+            user.Key = keyConnectorKeyWrappedUserKey;
+        }
 
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
