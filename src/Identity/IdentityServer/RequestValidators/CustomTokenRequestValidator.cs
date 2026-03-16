@@ -4,7 +4,6 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -16,10 +15,7 @@ using Bit.Core.Settings;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
-using HandlebarsDotNet;
 using Microsoft.AspNetCore.Identity;
-
-#nullable enable
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -50,7 +46,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyRequirementQuery policyRequirementQuery,
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator)
         : base(
             userManager,
             userService,
@@ -70,7 +67,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             policyRequirementQuery,
             authRequestRepository,
             mailService,
-            userAccountKeysQuery)
+            userAccountKeysQuery,
+            clientVersionValidator)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -155,23 +153,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 // KeyConnectorUrl is configured in the CLI client, we just need to tell the client to use it
                 context.Result.CustomResponse["ApiUseKeyConnector"] = true;
-                context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
-            return Task.CompletedTask;
-        }
-
-        // Key connector data should have already been set in the decryption options
-        // for backwards compatibility we set them this way too. We can eventually get rid of this once we clean up
-        // ResetMasterPassword
-        if (!context.Result.CustomResponse.TryGetValue("UserDecryptionOptions", out var userDecryptionOptionsObj) ||
-            userDecryptionOptionsObj is not UserDecryptionOptions userDecryptionOptions)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (userDecryptionOptions is { KeyConnectorOption: { } })
-        {
-            context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
 
         return Task.CompletedTask;

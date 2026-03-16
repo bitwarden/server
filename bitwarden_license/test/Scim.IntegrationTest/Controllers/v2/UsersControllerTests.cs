@@ -569,6 +569,118 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Fact]
+    public async Task Patch_ExternalIdFromPath_Success()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var newExternalId = "new-external-id-path";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
+        Assert.Equal(newExternalId, organizationUser.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_ExternalIdFromValue_Success()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
+        var newExternalId = "new-external-id-value";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"externalId\":\"{newExternalId}\"}}").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
+        Assert.Equal(newExternalId, organizationUser.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_ExternalIdDuplicate_ThrowsConflict()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var duplicateExternalId = "UB"; // This is the externalId of TestOrganizationUserId2
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{duplicateExternalId}\"").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+        var expectedResponse = new ScimErrorResponseModel
+        {
+            Status = StatusCodes.Status409Conflict,
+            Detail = "ExternalId already exists for another user.",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
+
+    [Fact]
+    public async Task Patch_UnsupportedOperation_LogsWarningAndSucceeds()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "add",
+                    Path = "displayName",
+                    Value = JsonDocument.Parse("\"John Doe\"").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        // Unsupported operations are logged as warnings but don't fail the request
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+    }
+
+    [Fact]
     public async Task Delete_Success()
     {
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;

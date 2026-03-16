@@ -13,6 +13,6 @@ public static class OrganizationSubscriptionServiceCollectionExtensions
             .AddScoped<IUpgradeOrganizationPlanCommand, UpgradeOrganizationPlanCommand>()
             .AddScoped<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>()
             .AddScoped<IGetOrganizationSubscriptionsToUpdateQuery, GetOrganizationSubscriptionsToUpdateQuery>()
-            .AddScoped<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
+            .AddScoped<IBulkUpdateOrganizationSubscriptionsCommand, BulkUpdateOrganizationSubscriptionsCommand>();
     }
 }

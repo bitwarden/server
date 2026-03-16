@@ -36,6 +36,12 @@ public class OrganizationVaultOptions
     public int Groups { get; init; } = 0;
 
     /// <summary>
+    /// Number of collections to create. When 0 and no <see cref="StructureModel"/> is set,
+    /// falls back to 1 collection if ciphers are requested.
+    /// </summary>
+    public int Collections { get; init; } = 0;
+
+    /// <summary>
     /// When true and Users >= 10, creates a realistic mix of user statuses:
     /// 85% Confirmed, 5% Invited, 5% Accepted, 5% Revoked.
     /// When false or Users less than 10, all users are Confirmed.
@@ -77,6 +83,12 @@ public class OrganizationVaultOptions
     /// Use <see cref="CipherTypeDistributions.Realistic"/> for a typical enterprise mix.
     /// </summary>
     public Distribution<CipherType> CipherTypeDistribution { get; init; } = CipherTypeDistributions.Realistic;
+
+    /// <summary>
+    /// Density profile controlling entity relationship patterns.
+    /// When null, steps use default round-robin behavior.
+    /// </summary>
+    public DensityProfile? Density { get; init; }
 
     /// <summary>
     /// Seed for deterministic data generation. When null, derived from Domain hash.
