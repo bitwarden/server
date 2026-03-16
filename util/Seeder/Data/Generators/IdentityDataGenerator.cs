@@ -10,6 +10,9 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
 
     private readonly GeographicRegion _region = region;
 
+    // Instance-level (not static) because each generator needs locale-aware Faker from the constructor
+    private readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker(MapRegionToLocale(region)));
+
     private static readonly Dictionary<GeographicRegion, string[]> _regionalTitles = new()
     {
         [GeographicRegion.NorthAmerica] = ["Mr", "Mrs", "Ms", "Dr", "Prof"],
@@ -26,7 +29,8 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
     /// </summary>
     internal IdentityViewDto GenerateByIndex(int index)
     {
-        var seededFaker = new Faker(MapRegionToLocale(_region)) { Random = new Randomizer(_seed + index) };
+        var seededFaker = _threadFaker.Value!;
+        seededFaker.Random = new Randomizer(_seed + index);
         var person = seededFaker.Person;
         var titles = _regionalTitles[_region];
 
