@@ -106,7 +106,7 @@ public class OrganizationReportsController : Controller
             var response = new OrganizationReportResponseModel(latestReport);
 
             var fileData = latestReport.GetReportFile();
-            if (fileData != null)
+            if (fileData is { Validated: true })
             {
                 response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
             }
