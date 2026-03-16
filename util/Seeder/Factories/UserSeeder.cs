@@ -40,7 +40,7 @@ internal static class UserSeeder
             Premium = premium,
             ApiKey = Guid.NewGuid().ToString("N")[..30],
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 5_000
+            KdfIterations = 600_000
         };
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
