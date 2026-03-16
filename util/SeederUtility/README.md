@@ -60,16 +60,16 @@ dotnet run -- organization -n TeamsOrg -d teams.example -u 20 -c 200 -g 5 --plan
 dotnet run -- seed --list
 
 # Load the Dunder Mifflin preset (58 users, 14 groups, 15 collections, ciphers)
-dotnet run -- seed --preset dunder-mifflin-enterprise-full
+dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full
 
 # Load with ID mangling for test isolation
-dotnet run -- seed --preset dunder-mifflin-enterprise-full --mangle
+dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --mangle
 
-dotnet run -- seed --preset stark-free-basic --mangle
+dotnet run -- seed --preset qa.stark-free-basic --mangle
 
-# Large enterprise preset for performance testing
-dotnet run -- seed --preset large-enterprise
+# Scale preset for performance testing
+dotnet run -- seed --preset scale.xs-central-perk --mangle
 
-dotnet run -- seed --preset dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
+dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
 ```
 

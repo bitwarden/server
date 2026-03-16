@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -12,6 +13,8 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
+using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 
 namespace Bit.Core.Billing.Premium.Commands;
 /// <summary>
@@ -40,7 +43,7 @@ public interface IUpgradePremiumToOrganizationCommand
         string encryptedPrivateKey,
         string? collectionName,
         PlanType targetPlanType,
-        Payment.Models.BillingAddress billingAddress);
+        BillingAddress billingAddress);
 }
 
 public class UpgradePremiumToOrganizationCommand(
@@ -65,7 +68,7 @@ public class UpgradePremiumToOrganizationCommand(
         string encryptedPrivateKey,
         string? collectionName,
         PlanType targetPlanType,
-        Payment.Models.BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
+        BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -162,7 +165,7 @@ public class UpgradePremiumToOrganizationCommand(
             MaxCollections = targetPlan.PasswordManager.MaxCollections,
             MaxStorageGb = targetPlan.PasswordManager.BaseStorageGb,
             UsePolicies = targetPlan.HasPolicies,
-            UseMyItems = targetPlan.HasPolicies, // TODO: use the plan property when added (PM-32366)
+            UseMyItems = targetPlan.HasMyItems,
             UseSso = targetPlan.HasSso,
             UseGroups = targetPlan.HasGroups,
             UseEvents = targetPlan.HasEvents,
@@ -198,8 +201,15 @@ public class UpgradePremiumToOrganizationCommand(
             {
                 Country = billingAddress.Country,
                 PostalCode = billingAddress.PostalCode
-            }
+            },
+            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
         });
+
+        // Add tax ID to customer for accurate tax calculation if provided
+        if (billingAddress.TaxId != null)
+        {
+            await AddTaxIdToCustomerAsync(user, billingAddress.TaxId);
+        }
 
         // Update the subscription in Stripe
         await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
@@ -271,4 +281,26 @@ public class UpgradePremiumToOrganizationCommand(
 
         return organization.Id;
     });
+
+    /// <summary>
+    /// Adds a tax ID to the Stripe customer for accurate tax calculation.
+    /// If the tax ID is a Spanish NIF, also adds the corresponding EU VAT ID.
+    /// </summary>
+    /// <param name="user"> The user whose Stripe customer will be updated with the tax ID.</param>
+    /// <param name="taxId"> The tax ID to add, including the type and value.</param>
+    private async Task AddTaxIdToCustomerAsync(User user, TaxID taxId)
+    {
+        await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
+            new TaxIdCreateOptions { Type = taxId.Code, Value = taxId.Value });
+
+        if (taxId.Code == StripeConstants.TaxIdType.SpanishNIF)
+        {
+            await stripeAdapter.CreateTaxIdAsync(user.GatewayCustomerId,
+                new TaxIdCreateOptions
+                {
+                    Type = StripeConstants.TaxIdType.EUVAT,
+                    Value = $"ES{taxId.Value}"
+                });
+        }
+    }
 }

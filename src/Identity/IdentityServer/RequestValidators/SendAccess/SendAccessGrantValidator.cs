@@ -1,7 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Core;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Utilities;
@@ -15,8 +13,7 @@ public class SendAccessGrantValidator(
     ISendAuthenticationQuery _sendAuthenticationQuery,
     ISendAuthenticationMethodValidator<NeverAuthenticate> _sendNeverAuthenticateValidator,
     ISendAuthenticationMethodValidator<ResourcePassword> _sendPasswordRequestValidator,
-    ISendAuthenticationMethodValidator<EmailOtp> _sendEmailOtpRequestValidator,
-    IFeatureService _featureService) : IExtensionGrantValidator
+    ISendAuthenticationMethodValidator<EmailOtp> _sendEmailOtpRequestValidator) : IExtensionGrantValidator
 {
     string IExtensionGrantValidator.GrantType => CustomGrantTypes.SendAccess;
 
@@ -28,13 +25,6 @@ public class SendAccessGrantValidator(
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
-        // Check the feature flag
-        if (!_featureService.IsEnabled(FeatureFlagKeys.SendAccess))
-        {
-            context.Result = new GrantValidationResult(TokenRequestErrors.UnsupportedGrantType);
-            return;
-        }
-
         var (sendIdGuid, result) = GetRequestSendId(context);
         if (result != SendAccessConstants.SendIdGuidValidatorResults.ValidSendGuid)
         {
@@ -50,6 +40,16 @@ public class SendAccessGrantValidator(
             case NeverAuthenticate never:
                 // null send scenario.
                 context.Result = await _sendNeverAuthenticateValidator.ValidateRequestAsync(context, never, sendIdGuid);
+                return;
+            case SendInaccessible:
+                // send exists but is not accessible (expired, disabled, max access exceeded, or past deletion date).
+                context.Result = new GrantValidationResult(
+                    TokenRequestErrors.InvalidGrant,
+                    SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId,
+                    new Dictionary<string, object>
+                    {
+                        { SendAccessConstants.SendAccessError, SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId }
+                    });
                 return;
             case NotAuthenticated:
                 // automatically issue access token
