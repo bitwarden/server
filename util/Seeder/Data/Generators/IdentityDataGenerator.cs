@@ -31,15 +31,16 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
     {
         var seededFaker = _threadFaker.Value!;
         seededFaker.Random = new Randomizer(_seed + index);
-        var person = seededFaker.Person;
         var titles = _regionalTitles[_region];
+        var firstName = seededFaker.Name.FirstName();
+        var lastName = seededFaker.Name.LastName();
 
         return new IdentityViewDto
         {
             Title = titles[index % titles.Length],
-            FirstName = person.FirstName,
+            FirstName = firstName,
             MiddleName = index % 3 == 0 ? seededFaker.Name.FirstName() : null,
-            LastName = person.LastName,
+            LastName = lastName,
             Address1 = seededFaker.Address.StreetAddress(),
             Address2 = index % 5 == 0 ? seededFaker.Address.SecondaryAddress() : null,
             Address3 = null,
@@ -48,10 +49,10 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
             PostalCode = seededFaker.Address.ZipCode(),
             Country = GetCountryCode(seededFaker),
             Company = index % 2 == 0 ? seededFaker.Company.CompanyName() : null,
-            Email = person.Email,
+            Email = seededFaker.Internet.Email(firstName, lastName),
             Phone = seededFaker.Phone.PhoneNumber(),
             SSN = GenerateNationalIdByIndex(index),
-            Username = person.UserName,
+            Username = seededFaker.Internet.UserName(firstName, lastName),
             PassportNumber = index % 3 == 0 ? GeneratePassportNumberByIndex(index) : null,
             LicenseNumber = index % 2 == 0 ? GenerateLicenseNumberByIndex(index) : null
         };
