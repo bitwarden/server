@@ -386,6 +386,60 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
     }
 
+    [Fact]
+    public async Task PostEnrollToKeyConnectorAsync_NotLoggedIn_Unauthorized()
+    {
+        var request = new KeyConnectorEnrollmentRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-connector/enroll", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostEnrollToKeyConnectorAsync_KeyConnectorKeyWrappedUserKeyMissing_BadRequest()
+    {
+        var (ssoUserEmail, _) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+
+        var request = new KeyConnectorEnrollmentRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = " "
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-connector/enroll", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.False(user.UsesKeyConnector);
+    }
+
+    [Fact]
+    public async Task PostEnrollToKeyConnectorAsync_Success()
+    {
+        var (ssoUserEmail, _) = await SetupKeyConnectorTestAsync(OrganizationUserStatusType.Accepted);
+
+        var request = new KeyConnectorEnrollmentRequestModel
+        {
+            KeyConnectorKeyWrappedUserKey = _mockEncryptedString
+        };
+
+        var response = await _client.PostAsJsonAsync("/accounts/key-connector/enroll", request);
+        response.EnsureSuccessStatusCode();
+
+        var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
+        Assert.NotNull(user);
+        Assert.Null(user.MasterPassword);
+        Assert.True(user.UsesKeyConnector);
+        Assert.Equal(request.KeyConnectorKeyWrappedUserKey, user.Key);
+        Assert.Equal(DateTime.UtcNow, user.RevisionDate, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, user.AccountRevisionDate, TimeSpan.FromMinutes(1));
+    }
+
     [Theory]
     [BitAutoData]
     public async Task RotateV2UserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
