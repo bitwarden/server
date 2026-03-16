@@ -7,7 +7,6 @@ public class PortalSessionResponse
 {
     /// <summary>
     /// The URL to redirect the user to for accessing the Stripe billing portal.
-    /// This URL is time-limited and single-use.
     /// </summary>
     public required string Url { get; init; }
 }
