@@ -600,7 +600,9 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfIterations = 3;
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
-        // The email is the salt for the KDF and is validated currently.
+        model.MasterPasswordUnlockData.MasterPasswordSalt = user.GetMasterPasswordSalt();
+        // The email used to be the salt for the KDF and is validated currently.
+        // TODO: This can be removed once the email is no longer used as part of the KDF salt and validation is updated to reflect that.
         user.Email = model.MasterPasswordUnlockData.Email;
     }
 
