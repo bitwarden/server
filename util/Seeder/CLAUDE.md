@@ -49,6 +49,25 @@ Need to create test data?
 
 See `Pipeline/` folder for implementation.
 
+## Parallelism
+
+Steps execute sequentially (phase order preserved by RecipeExecutor). Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
+
+**Thread-safety requirements:**
+- `GeneratorContext` lazy properties (`??=`) must be force-initialized before any `Parallel.For` loop to prevent a data race
+- Generators use `ThreadLocal<Faker>` for thread-safe deterministic data generation
+- `ManglerService` and `SeederContext` are NOT thread-safe -- pre-compute their outputs before entering parallel loops
+
+## Performance A/B Testing
+
+When measuring step-level performance changes, use paired worktrees:
+- Create `server-PM-XXXXX/perf-baseline` and `server-PM-XXXXX/perf-optimized` worktrees
+- Both worktrees get `Stopwatch` timing in `RecipeExecutor.Execute()` (the baseline measurement)
+- Only the optimized worktree gets actual code changes
+- Run presets with `--mangle` flag to avoid DB collisions between runs
+- Compare per-step timings across 3+ runs each, discard the first run (JIT warmup)
+- `.worktrees/` is already in `.gitignore`
+
 ## Density Profiles
 
 Steps accept an optional `DensityProfile` that controls relationship patterns between users, groups, collections, and ciphers. When null, steps use the original round-robin behavior. When present, steps branch into density-aware algorithms.
