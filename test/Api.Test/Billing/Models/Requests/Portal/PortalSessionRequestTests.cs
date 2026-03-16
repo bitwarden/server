@@ -10,6 +10,8 @@ public class PortalSessionRequestTests
     [InlineData("https://example.com/return")]
     [InlineData("http://localhost:3000/billing")]
     [InlineData("https://app.bitwarden.com/settings/billing")]
+    [InlineData("bitwarden://foo")]
+    [InlineData("bitwarden://vault/item/12345")]
     public void Validate_ValidHttpsUrl_ReturnsNoErrors(string returnUrl)
     {
         // Arrange
@@ -60,7 +62,7 @@ public class PortalSessionRequestTests
 
         // Assert
         Assert.False(isValid);
-        Assert.Contains(results, r => r.ErrorMessage!.Contains("HTTP or HTTPS"));
+        Assert.Contains(results, r => r.ErrorMessage!.Contains("HTTP, HTTPS, or bitwarden://"));
     }
 
     [Theory]

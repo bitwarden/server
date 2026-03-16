@@ -9,7 +9,7 @@ public class PortalSessionRequest : IValidatableObject
 {
     /// <summary>
     /// The URL to redirect to after the user completes their session in the billing portal.
-    /// Must be a valid HTTP(S) URL.
+    /// Must be a valid HTTP(S) or bitwarden:// URL.
     /// </summary>
     [Required]
     [MaxLength(2000)]
@@ -27,11 +27,11 @@ public class PortalSessionRequest : IValidatableObject
                 yield break;
             }
 
-            // Prevent open redirect vulnerabilities by restricting to HTTP(S) schemes
-            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            // Prevent open redirect vulnerabilities by restricting to HTTP(S) and bitwarden:// schemes
+            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != "bitwarden")
             {
                 yield return new ValidationResult(
-                    "Return URL must use HTTP or HTTPS scheme.",
+                    "Return URL must use HTTP, HTTPS, or bitwarden:// scheme.",
                     [nameof(ReturnUrl)]);
             }
         }
