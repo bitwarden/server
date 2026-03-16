@@ -1,5 +1,5 @@
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Billing.Models.Requests.Portal;
-using System.ComponentModel.DataAnnotations;
 using Xunit;
 
 namespace Bit.Api.Test.Billing.Models.Requests.Portal;

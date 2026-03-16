@@ -1,4 +1,4 @@
-namespace Bit.Api.Billing.Models.Responses.Portal;
+﻿namespace Bit.Api.Billing.Models.Responses.Portal;
 
 /// <summary>
 /// Response model containing the Stripe billing portal session URL.
