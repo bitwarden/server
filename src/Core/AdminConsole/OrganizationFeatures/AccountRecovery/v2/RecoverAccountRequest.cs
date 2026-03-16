@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 

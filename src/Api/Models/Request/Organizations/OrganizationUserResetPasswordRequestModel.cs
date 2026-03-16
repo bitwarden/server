@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using Bit.Core.Entities;
 
