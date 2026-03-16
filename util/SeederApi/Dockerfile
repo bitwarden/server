@@ -102,7 +102,7 @@ EXPOSE 5000
 
 # Set up health check wrapper
 # Get the executable and copy it to any path you want
-COPY --from=ghcr.io/alexaka1/distroless-dotnet-healthchecks:1 / /healthcheck
+COPY --from=ghcr.io/alexaka1/distroless-dotnet-healthchecks:1@sha256:d2a71a595020f13a9283f5e1f93c5f92bc2385c1d9b36e128a00d35863995aba / /healthcheck
 # Setup your healthcheck endpoints via environment variable in Dockerfile, or at runtime via `docker run -e DISTROLESS_HEALTHCHECKS_URIS__0="http://localhost/healthz" -e DISTROLESS_HEALTHCHECKS_URIS__1="http://localhost/some/other/endpoint"`
 ENV DISTROLESS_HEALTHCHECKS_URI="http://localhost:5000/alive"
 # Setup the healthcheck using the EXEC array syntax
