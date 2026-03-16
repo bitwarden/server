@@ -9,7 +9,7 @@ BEGIN
         [KdfIterations],
         [KdfMemory],
         [KdfParallelism],
-        [MasterPasswordSalt] AS [Salt]
+        [MasterPasswordSalt]
     FROM
         [dbo].[User]
     WHERE
