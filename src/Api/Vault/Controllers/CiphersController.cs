@@ -1388,12 +1388,22 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
+
         var attachments = cipher?.GetAttachments();
 
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
         {
             throw new NotFoundException();
         }
+
+        await _cipherService.ValidateCipherEditForAttachmentAsync(cipher, userId, orgAdmin, attachment.Size);
 
         return new AttachmentUploadDataResponseModel
         {
@@ -1415,6 +1425,13 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
         var attachments = cipher?.GetAttachments();
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
         {
@@ -1423,7 +1440,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, userId, orgAdmin);
         });
     }
 
