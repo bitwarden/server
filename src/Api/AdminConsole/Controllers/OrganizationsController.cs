@@ -558,16 +558,4 @@ public class OrganizationsController : Controller
         return new OrganizationResponseModel(organization, plan);
     }
 
-    [HttpGet("{id}/plan-type")]
-    public async Task<PlanType> GetPlanType(string id)
-    {
-        var orgIdGuid = new Guid(id);
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        return organization.PlanType;
-    }
 }

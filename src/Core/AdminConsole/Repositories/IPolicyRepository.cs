@@ -44,4 +44,20 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// associated with the specified users and policy type.
     /// </returns>
     Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByUserIdsAndPolicyType(IEnumerable<Guid> userIds, PolicyType policyType);
+
+    /// <summary>
+    /// Retrieves policy details for a single user filtered by the specified policy type.
+    /// </summary>
+    /// <remarks>
+    /// Returns policy details only for enabled policies from enabled organizations that support policies.
+    /// This includes both confirmed users (matched by UserId) and invited users (matched by email).
+    /// Provider users are identified via the IsProvider flag.
+    /// </remarks>
+    /// <param name="userId">The user identifier for which policy details are to be fetched.</param>
+    /// <param name="policyType">The type of policy for which the details are required.</param>
+    /// <returns>
+    /// An asynchronous task that returns a collection of <see cref="PolicyDetails"/> objects containing
+    /// the policy information associated with the specified user and policy type.
+    /// </returns>
+    Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType);
 }
