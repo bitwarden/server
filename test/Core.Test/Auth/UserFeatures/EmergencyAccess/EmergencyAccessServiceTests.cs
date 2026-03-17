@@ -54,6 +54,25 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory]
+    // Case 1: grantor and contact email are identical
+    // Case 2: grantor and contact email match case-insensitively
+    [BitAutoData("test@example.com", "test@example.com")]
+    [BitAutoData("test@example.com", "TEST@EXAMPLE.COM")]
+    public async Task InviteAsync_GrantorInvitesSelf_ThrowsBadRequest(
+        string grantorEmail, string contactEmail, SutProvider<EmergencyAccessService> sutProvider, User invitingUser, int waitTime)
+    {
+        invitingUser.Email = grantorEmail;
+        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteAsync(invitingUser, contactEmail, EmergencyAccessType.View, waitTime));
+
+        Assert.Contains("You cannot add yourself as an emergency access contact.", exception.Message);
+        await sutProvider.GetDependency<IEmergencyAccessRepository>()
+                        .DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory]
     [BitAutoData(EmergencyAccessType.Takeover)]
     [BitAutoData(EmergencyAccessType.View)]
     public async Task InviteAsync_ReturnsEmergencyAccessObject(
