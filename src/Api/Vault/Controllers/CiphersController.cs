@@ -708,7 +708,8 @@ public class CiphersController : Controller
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
-        var response = new CipherResponseModel(cipher, user, await GetOrganizationAbilityAsync(cipher), _globalSettings);
+        var updatedCipher = await GetByIdAsync(id, user.Id);
+        var response = new CipherResponseModel(updatedCipher, user, await GetOrganizationAbilityAsync(updatedCipher), _globalSettings);
         return response;
     }
 
