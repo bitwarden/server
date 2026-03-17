@@ -20,6 +20,9 @@ public class SeedArgs : IArgumentModel
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 
+    [Option("kdf-iterations", Description = "KDF iteration count for all seeded users. Overrides the preset value if specified. Use 600000 for production-realistic e2e testing.")]
+    public int? KdfIterations { get; set; }
+
     public void Validate()
     {
         if (List)
@@ -30,6 +33,11 @@ public class SeedArgs : IArgumentModel
         if (string.IsNullOrEmpty(Preset))
         {
             throw new ArgumentException("--preset must be specified. Use --list to see available presets.");
+        }
+
+        if (KdfIterations.HasValue && KdfIterations.Value < 5_000)
+        {
+            throw new ArgumentException("KDF iterations must be at least 5,000.");
         }
     }
 }

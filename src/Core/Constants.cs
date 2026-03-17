@@ -69,8 +69,13 @@ public static class Constants
         /// This value must match what Stripe uses for the `Country` field value for the United States.
         /// </summary>
         public const string UnitedStates = "US";
-    }
 
+        /// <summary>
+        /// Abbreviation for Switzerland.
+        /// This value must match what Stripe uses for the `Country` field value for Switzerland.
+        /// </summary>
+        public const string Switzerland = "CH";
+    }
 
     /// <summary>
     /// Constants for our browser extensions IDs
@@ -142,8 +147,8 @@ public static class FeatureFlagKeys
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
-    public const string UpdateJoinOrganizationEmailTemplate = "pm-28396-update-join-organization-email-template";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
+    public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -152,23 +157,17 @@ public static class FeatureFlagKeys
     public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
 
     /* Auth Team */
-    public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
-    public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
-    public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
-    public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string PM24579_PreventSsoOnExistingNonCompliantUsers = "pm-24579-prevent-sso-on-existing-non-compliant-users";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
-    public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
-    public const string PM27044_UpdateRegistrationApis = "pm-27044-update-registration-apis";
     public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
+    public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
 
     /* Autofill Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
@@ -192,6 +191,7 @@ public static class FeatureFlagKeys
     public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
     public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
     public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
+    public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -199,7 +199,6 @@ public static class FeatureFlagKeys
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
-    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
@@ -209,6 +208,9 @@ public static class FeatureFlagKeys
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
     public const string UnlockViaSdk = "unlock-via-sdk";
+    public const string UseSdkForKeyConnectorMigration = "use-sdk-for-key-connector-migration";
+    public const string UseUnlockServiceForPasswordLogin = "use-unlock-service-for-password-login";
+    public const string UseUnlockServiceForKeyConnectorLogin = "use-unlock-service-for-key-connector-login";
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
@@ -222,16 +224,14 @@ public static class FeatureFlagKeys
     public const string MobileErrorReporting = "mobile-error-reporting";
     public const string AndroidChromeAutofill = "android-chrome-autofill";
     public const string UserManagedPrivilegedApps = "pm-18970-user-managed-privileged-apps";
-    public const string SendAccess = "pm-19394-send-access-control";
     public const string CxpImportMobile = "cxp-import-mobile";
     public const string CxpExportMobile = "cxp-export-mobile";
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
+    public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
 
     /* Platform Team */
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
-    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
-    public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
 
     /* Tools Team */
@@ -244,6 +244,7 @@ public static class FeatureFlagKeys
     public const string ChromiumImporterWithABE = "pm-25855-chromium-importer-abe";
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
+    public const string SendControls = "pm-31885-send-controls";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";

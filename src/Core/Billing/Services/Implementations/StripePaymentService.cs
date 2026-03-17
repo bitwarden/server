@@ -9,6 +9,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -50,6 +51,7 @@ public class StripePaymentService : IStripePaymentService
         _pricingClient = pricingClient;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     private async Task ChangeOrganizationSponsorship(
         Organization org,
         OrganizationSponsorship sponsorship,
@@ -73,9 +75,11 @@ public class StripePaymentService : IStripePaymentService
         }
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, true);
 
+    // TODO: Remove -> Unused
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
@@ -119,14 +123,14 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            if (sub.Customer is
-                {
-                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: not StripeConstants.TaxExempt.Reverse
-                })
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
+            switch (sub.Customer)
             {
-                await _stripeAdapter.UpdateCustomerAsync(sub.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                    when determinedTaxExemptStatus != customerTaxExemptStatus:
+                    await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
+                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                    break;
             }
 
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
@@ -227,6 +231,7 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpgradeOrganizationPlanCommand
     public async Task<string> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,
@@ -254,14 +259,17 @@ public class StripePaymentService : IStripePaymentService
                 }), true);
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated OrganizationService.AdjustSeatsAsync
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustServiceAccountsAsync(
         Organization organization,
         StaticStore.Plan plan,
