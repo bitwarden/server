@@ -34,7 +34,15 @@
         },
         "planType": {
           "type": "string",
-          "enum": ["free", "teams-monthly", "teams-annually", "enterprise-monthly", "enterprise-annually", "teams-starter", "families-annually"],
+          "enum": [
+            "free",
+            "teams-monthly",
+            "teams-annually",
+            "enterprise-monthly",
+            "enterprise-annually",
+            "teams-starter",
+            "families-annually"
+          ],
           "description": "Billing plan type. Defaults to enterprise-annually if omitted."
         }
       }
@@ -176,6 +184,13 @@
           "description": "Identity provider protocol."
         }
       }
+    },
+    "kdfIterations": {
+      "type": "integer",
+      "minimum": 5000,
+      "maximum": 1000000,
+      "default": 5000,
+      "description": "KDF iteration count for all seeded users. Defaults to 5,000 for fast seeding. Use 600,000 for production-realistic e2e testing."
     },
     "density": {
       "type": "object",
@@ -330,7 +345,12 @@
           "properties": {
             "preset": {
               "type": "string",
-              "enum": ["realistic", "loginOnly", "documentationHeavy", "developerFocused"],
+              "enum": [
+                "realistic",
+                "loginOnly",
+                "documentationHeavy",
+                "developerFocused"
+              ],
               "description": "Named cipher type distribution. Mutually exclusive with custom weights."
             },
             "login": {
