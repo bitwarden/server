@@ -2,11 +2,12 @@
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
 
-public class UserCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IManglerService manglerService) : IScene<UserCipherScene.Request, UserCipherScene.Result>
+public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherRepository cipherRepository, IManglerService manglerService) : IScene<UserSshKeyCipherScene.Request, UserSshKeyCipherScene.Result>
 {
     public class Request
     {
@@ -16,11 +17,9 @@ public class UserCipherScene(IUserRepository userRepository, ICipherRepository c
         public required string UserKeyB64 { get; set; }
         [Required]
         public required string Name { get; set; }
-        public string? Username { get; set; }
-        public string? Password { get; set; }
-        public string? Uri { get; set; }
-        public string? Notes { get; set; }
-        public IEnumerable<(string name, string value, int type)>? Fields { get; set; }
+        public string? PrivateKey { get; set; }
+        public string? PublicKey { get; set; }
+        public string? Fingerprint { get; set; }
     }
 
     public class Result
@@ -36,7 +35,13 @@ public class UserCipherScene(IUserRepository userRepository, ICipherRepository c
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, uri: request.Uri, notes: request.Notes, fields: request.Fields);
+        var sshKey = new SshKeyViewDto
+        {
+            PrivateKey = request.PrivateKey,
+            PublicKey = request.PublicKey,
+            Fingerprint = request.Fingerprint
+        };
+        var cipher = SshKeyCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, sshKey: sshKey);
 
         await cipherRepository.CreateAsync(cipher);
 
