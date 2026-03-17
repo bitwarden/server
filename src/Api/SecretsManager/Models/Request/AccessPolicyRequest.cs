@@ -15,6 +15,9 @@ public class AccessPolicyRequest
     [Required]
     public bool Write { get; set; }
 
+    [Required]
+    public bool Manage { get; set; }
+
     public UserProjectAccessPolicy ToUserProjectAccessPolicy(Guid projectId, Guid organizationId) =>
         new()
         {
@@ -22,7 +25,8 @@ public class AccessPolicyRequest
             GrantedProjectId = projectId,
             GrantedProject = new Project { OrganizationId = organizationId, Id = projectId },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 
     public UserSecretAccessPolicy ToUserSecretAccessPolicy(Guid secretId, Guid organizationId) =>
@@ -32,7 +36,8 @@ public class AccessPolicyRequest
             GrantedSecretId = secretId,
             GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 
     public GroupProjectAccessPolicy ToGroupProjectAccessPolicy(Guid projectId, Guid organizationId) =>
@@ -42,7 +47,8 @@ public class AccessPolicyRequest
             GrantedProjectId = projectId,
             GrantedProject = new Project { OrganizationId = organizationId, Id = projectId },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 
     public GroupSecretAccessPolicy ToGroupSecretAccessPolicy(Guid secretId, Guid organizationId) =>
@@ -52,7 +58,8 @@ public class AccessPolicyRequest
             GrantedSecretId = secretId,
             GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 
     public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(Guid projectId, Guid organizationId) =>
@@ -62,7 +69,8 @@ public class AccessPolicyRequest
             GrantedProjectId = projectId,
             GrantedProject = new Project { OrganizationId = organizationId, Id = projectId },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 
     public ServiceAccountSecretAccessPolicy ToServiceAccountSecretAccessPolicy(Guid secretId, Guid organizationId) =>
@@ -72,7 +80,8 @@ public class AccessPolicyRequest
             GrantedSecretId = secretId,
             GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 
     public UserServiceAccountAccessPolicy ToUserServiceAccountAccessPolicy(Guid id, Guid organizationId) =>
@@ -82,7 +91,8 @@ public class AccessPolicyRequest
             GrantedServiceAccountId = id,
             GrantedServiceAccount = new ServiceAccount() { OrganizationId = organizationId, Id = id },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 
     public GroupServiceAccountAccessPolicy ToGroupServiceAccountAccessPolicy(Guid id, Guid organizationId) =>
@@ -92,6 +102,7 @@ public class AccessPolicyRequest
             GrantedServiceAccountId = id,
             GrantedServiceAccount = new ServiceAccount() { OrganizationId = organizationId, Id = id },
             Read = Read,
-            Write = Write
+            Write = Write,
+            Manage = Manage
         };
 }

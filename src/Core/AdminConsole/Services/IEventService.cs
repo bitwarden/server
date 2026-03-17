@@ -41,4 +41,6 @@ public interface IEventService
     Task LogServiceAccountPeopleEventAsync(Guid userId, UserServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null);
     Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null);
     Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccount, EventType type, IdentityClientType identityClientType, DateTime? date = null);
+    Task LogProjectAccessPolicyEventAsync(Guid actingUserId, Guid organizationId, BaseAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null);
+    Task LogSecretAccessPolicyEventAsync(Guid actingUserId, Guid organizationId, BaseAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null);
 }

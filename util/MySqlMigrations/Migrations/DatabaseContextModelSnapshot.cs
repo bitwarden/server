@@ -2234,6 +2234,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Write")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
@@ -2313,8 +2317,14 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid?>("CreatedByServiceAccountId")
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("CreatedByServiceAccountId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("DeletedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -3232,6 +3242,11 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "CreatedByServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("CreatedByServiceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")

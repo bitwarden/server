@@ -29,6 +29,8 @@ public class AccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<Acce
             .IsClustered();
 
         builder.ToTable(nameof(AccessPolicy));
+        builder.HasCheckConstraint("CK_AccessPolicy_ManageImpliesWrite", "[Manage] = 0 OR [Write] = 1");
+        builder.HasCheckConstraint("CK_AccessPolicy_WriteImpliesRead", "[Write] = 0 OR [Read] = 1");
     }
 }
 

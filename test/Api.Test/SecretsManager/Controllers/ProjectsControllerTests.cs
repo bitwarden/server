@@ -234,7 +234,7 @@ public class ProjectsControllerTests
             case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, orgId);
                 sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
-                    .Returns((true, true));
+                    .Returns((true, true, false));
                 break;
         }
 
@@ -242,7 +242,7 @@ public class ProjectsControllerTests
             .ReturnsForAnyArgs(new Project { Id = data, OrganizationId = orgId });
 
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
-            .ReturnsForAnyArgs((true, false));
+            .ReturnsForAnyArgs((true, false, false));
 
         await sutProvider.Sut.GetAsync(data);
 
@@ -257,7 +257,7 @@ public class ProjectsControllerTests
     {
         SetupUserWithPermission(sutProvider, orgId);
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
-            .Returns((false, false));
+            .Returns((false, false, false));
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(Arg.Is(data))
             .ReturnsForAnyArgs(new Project { Id = data, OrganizationId = orgId });

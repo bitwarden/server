@@ -122,7 +122,7 @@ public class SecretAccessPolicies
             .Where(currentAp => requested.Any(requestedAp =>
                 requestedAp.GrantedSecretId == currentAp.GrantedSecretId &&
                 requestedAp.OrganizationUserId == currentAp.OrganizationUserId &&
-                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read)))
+                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read || requestedAp.Manage != currentAp.Manage)))
             .Select(ap => ap.OrganizationUserId!.Value)
             .ToList();
 
@@ -131,7 +131,7 @@ public class SecretAccessPolicies
             .Where(currentAp => requested.Any(requestedAp =>
                 requestedAp.GrantedSecretId == currentAp.GrantedSecretId &&
                 requestedAp.GroupId == currentAp.GroupId &&
-                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read)))
+                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read || requestedAp.Manage != currentAp.Manage)))
             .Select(ap => ap.GroupId!.Value)
             .ToList();
 
@@ -140,7 +140,7 @@ public class SecretAccessPolicies
             .Where(currentAp => requested.Any(requestedAp =>
                 requestedAp.GrantedSecretId == currentAp.GrantedSecretId &&
                 requestedAp.ServiceAccountId == currentAp.ServiceAccountId &&
-                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read)))
+                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read || requestedAp.Manage != currentAp.Manage)))
             .Select(ap => ap.ServiceAccountId!.Value)
             .ToList();
 }

@@ -171,7 +171,7 @@ public class ProjectAuthorizationHandlerTests
         SetupPermission(sutProvider, PermissionType.RunAsAdmin, project.OrganizationId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((true, true));
+            .Returns((true, true, false));
         var requirement = ProjectOperations.Update;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, null);
@@ -221,7 +221,7 @@ public class ProjectAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, project.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
 
@@ -304,7 +304,7 @@ public class ProjectAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, project.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
 

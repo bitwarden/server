@@ -72,5 +72,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IRestoreTrashCommand, RestoreTrashCommand>();
         services.AddScoped<IUpdateServiceAccountGrantedPoliciesCommand, UpdateServiceAccountGrantedPoliciesCommand>();
         services.AddScoped<IUpdateProjectServiceAccountsAccessPoliciesCommand, UpdateProjectServiceAccountsAccessPoliciesCommand>();
+        services.AddScoped<IUpdateSecretAccessPoliciesCommand, UpdateSecretAccessPoliciesCommand>();
     }
 }

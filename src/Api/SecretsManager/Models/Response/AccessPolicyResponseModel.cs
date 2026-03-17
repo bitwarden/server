@@ -11,10 +11,12 @@ public abstract class BaseAccessPolicyResponseModel : ResponseModel
     {
         Read = baseAccessPolicy.Read;
         Write = baseAccessPolicy.Write;
+        Manage = baseAccessPolicy.Manage;
     }
 
     public bool Read { get; set; }
     public bool Write { get; set; }
+    public bool Manage { get; set; }
 
     protected static string? GetUserDisplayName(User? user)
     {

@@ -58,7 +58,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((false, false));
+            .ReturnsForAnyArgs((false, false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id));
@@ -77,7 +77,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, false));
+            .ReturnsForAnyArgs((true, false, false));
 
         foreach (var version in versions)
         {
@@ -119,7 +119,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, false));
+            .ReturnsForAnyArgs((true, false, false));
 
         var result = await sutProvider.Sut.GetByIdAsync(version.Id);
 
@@ -144,7 +144,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, false));
+            .ReturnsForAnyArgs((true, false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.RestoreVersionAsync(secret.Id, request));
@@ -163,7 +163,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, true));
+            .ReturnsForAnyArgs((true, true, false));
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns((SecretVersion?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -187,7 +187,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, true));
+            .ReturnsForAnyArgs((true, true, false));
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -215,7 +215,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, true));
+            .ReturnsForAnyArgs((true, true, false));
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(secret.OrganizationId, userId).Returns(organizationUser);
@@ -269,7 +269,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, false));
+            .ReturnsForAnyArgs((true, false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.BulkDeleteAsync(ids));
@@ -297,7 +297,7 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, true));
+            .ReturnsForAnyArgs((true, true, false));
 
         await sutProvider.Sut.BulkDeleteAsync(ids);
 

@@ -32,7 +32,7 @@ public class ServiceAccountPeopleAccessPoliciesAuthorizationHandlerTests
                 (accessClientType, userId));
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(resource.Id, userId, accessClientType)
-            .Returns((read, write));
+            .Returns((read, write, write)); // manage mirrors write: handler requires Manage for Replace
     }
 
     private static void SetupOrganizationUsers(

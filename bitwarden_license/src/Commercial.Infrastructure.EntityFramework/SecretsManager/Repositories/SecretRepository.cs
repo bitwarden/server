@@ -133,12 +133,12 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                                     .OrderBy(c => c.RevisionDate)
                                     .ToListAsync();
 
-            // This should be changed if/when we allow non admins to access trashed items
             return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets).Select(s => new SecretPermissionDetails
             {
                 Secret = s,
                 Read = true,
                 Write = true,
+                Manage = true,
             });
         }
     }
@@ -301,7 +301,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return secrets;
     }
 
-    public async Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType)
+    public async Task<(bool Read, bool Write, bool Manage)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -313,10 +313,10 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         var policy = await query.FirstOrDefaultAsync();
 
-        return policy == null ? (false, false) : (policy.Read, policy.Write);
+        return policy == null ? (false, false, false) : (policy.Read, policy.Write, policy.Manage);
     }
 
-    public async Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToSecretsAsync(
+    public async Task<Dictionary<Guid, (bool Read, bool Write, bool Manage)>> AccessToSecretsAsync(
         IEnumerable<Guid> ids,
         Guid userId,
         AccessClientType accessType)
@@ -329,7 +329,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         var accessQuery = BuildSecretAccessQuery(secrets, userId, accessType);
 
-        return await accessQuery.ToDictionaryAsync(sa => sa.Id, sa => (sa.Read, sa.Write));
+        return await accessQuery.ToDictionaryAsync(sa => sa.Id, sa => (sa.Read, sa.Write, sa.Manage));
     }
 
     public async Task EmptyTrash(DateTime currentDate, uint deleteAfterThisNumberOfDays)
@@ -368,6 +368,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
                 Read = true,
                 Write = true,
+                Manage = true,
             }),
             AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)).Select(SecretToPermissionsUser(userId, true)),
             AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)).Select(s =>
@@ -377,6 +378,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                     Read = true,
                     Write = s.Projects.Any(p =>
                         p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)),
+                    Manage = s.Projects.Any(p =>
+                        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Manage)),
                 }),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
@@ -395,7 +398,15 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 s.Projects.Any(p =>
                     p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
                     p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)))
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
+            Manage =
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Manage) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Manage)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Manage) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Manage)))
         };
 
     private static Expression<Func<Secret, bool>> ServiceAccountHasReadAccessToSecret(Guid serviceAccountId) => s =>
@@ -472,7 +483,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         AccessClientType accessType) =>
         accessType switch
         {
-            AccessClientType.NoAccessCheck => secrets.Select(s => new SecretAccess(s.Id, true, true)),
+            AccessClientType.NoAccessCheck => secrets.Select(s => new SecretAccess(s.Id, true, true, true)),
             AccessClientType.User => secrets.Select(s => new SecretAccess(
                 s.Id,
                 s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Read) ||
@@ -488,7 +499,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 s.Projects.Any(p =>
                     p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Write) ||
                     p.GroupAccessPolicies.Any(ap =>
-                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Write)))
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Write))),
+                s.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Manage) ||
+                s.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Manage)) ||
+                s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == accessClientId && ap.Manage) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == accessClientId && ap.Manage)))
             )),
             AccessClientType.ServiceAccount => secrets.Select(s => new SecretAccess(
                 s.Id,
@@ -497,9 +515,12 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                     p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Read)),
                 s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Write) ||
                 s.Projects.Any(p =>
-                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Write))
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Write)),
+                s.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Manage) ||
+                s.Projects.Any(p =>
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == accessClientId && ap.Manage))
             )),
-            _ => secrets.Select(s => new SecretAccess(s.Id, false, false))
+            _ => secrets.Select(s => new SecretAccess(s.Id, false, false, false))
         };
 
     private static async Task<Secret> UpdateProjectMappingAsync(DatabaseContext dbContext, Secret currentEntity, Secret updatedEntity)
@@ -574,6 +595,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 dbContext.AccessPolicies.Attach(currentEntity);
                 currentEntity.Read = updatedEntity.Read;
                 currentEntity.Write = updatedEntity.Write;
+                currentEntity.Manage = updatedEntity.Manage;
                 currentEntity.RevisionDate = currentDate;
                 break;
             default:
@@ -659,5 +681,5 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             _ => throw new ArgumentException("Unsupported access policy type")
         };
 
-    private record SecretAccess(Guid Id, bool Read, bool Write);
+    private record SecretAccess(Guid Id, bool Read, bool Write, bool Manage);
 }

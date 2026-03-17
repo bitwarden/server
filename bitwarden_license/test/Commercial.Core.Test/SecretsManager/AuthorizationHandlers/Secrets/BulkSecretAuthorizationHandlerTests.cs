@@ -95,7 +95,7 @@ public class BulkSecretAuthorizationHandlerTests
             SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
-            .Returns(secretIds.ToDictionary(id => id, _ => (false, false)));
+            .Returns(secretIds.ToDictionary(id => id, _ => (false, false, false)));
 
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resources);
@@ -119,8 +119,8 @@ public class BulkSecretAuthorizationHandlerTests
         var secretIds =
             SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
 
-        var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (false, false));
-        accessResult[secretIds.First()] = (true, true);
+        var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (false, false, false));
+        accessResult[secretIds.First()] = (true, true, false);
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
             .Returns(accessResult);
@@ -147,7 +147,7 @@ public class BulkSecretAuthorizationHandlerTests
         var secretIds =
             SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
 
-        var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (false, false));
+        var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (false, false, false));
         accessResult.Remove(secretIds.First());
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
@@ -175,7 +175,7 @@ public class BulkSecretAuthorizationHandlerTests
         var secretIds =
             SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
 
-        var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (true, true));
+        var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (true, true, false));
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
             .Returns(accessResult);

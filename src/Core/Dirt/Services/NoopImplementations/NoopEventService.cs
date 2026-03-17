@@ -155,4 +155,14 @@ public class NoopEventService : IEventService
     {
         return Task.FromResult(0);
     }
+
+    public Task LogProjectAccessPolicyEventAsync(Guid actingUserId, Guid organizationId, BaseAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogSecretAccessPolicyEventAsync(Guid actingUserId, Guid organizationId, BaseAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
 }

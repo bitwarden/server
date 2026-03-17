@@ -559,7 +559,7 @@ public class EventService : IEventService
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var eventMessages = new List<IEvent>();
 
-        if (!CanUseEvents(orgAbilities, policy.Group.OrganizationId))
+        if (policy.Group == null || !CanUseEvents(orgAbilities, policy.Group.OrganizationId))
         {
             return;
         }
@@ -627,6 +627,96 @@ public class EventService : IEventService
         {
             await _eventWriteService.CreateManyAsync(eventMessages);
         }
+    }
+
+    public async Task LogProjectAccessPolicyEventAsync(Guid actingUserId, Guid organizationId, BaseAccessPolicy policy,
+        EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, organizationId))
+        {
+            return;
+        }
+
+        var (userId, serviceAccountId) = MapIdentityClientType(actingUserId, identityClientType);
+        if (userId is null && serviceAccountId is null)
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationId,
+            Type = type,
+            ActingUserId = userId,
+            ServiceAccountId = serviceAccountId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+
+        switch (policy)
+        {
+            case UserProjectAccessPolicy p:
+                e.ProjectId = p.GrantedProjectId;
+                e.OrganizationUserId = p.OrganizationUserId;
+                break;
+            case GroupProjectAccessPolicy p:
+                e.ProjectId = p.GrantedProjectId;
+                e.GroupId = p.GroupId;
+                break;
+            case ServiceAccountProjectAccessPolicy p:
+                e.ProjectId = p.GrantedProjectId;
+                e.GrantedServiceAccountId = p.ServiceAccountId;
+                break;
+            default:
+                return;
+        }
+
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogSecretAccessPolicyEventAsync(Guid actingUserId, Guid organizationId, BaseAccessPolicy policy,
+        EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, organizationId))
+        {
+            return;
+        }
+
+        var (userId, serviceAccountId) = MapIdentityClientType(actingUserId, identityClientType);
+        if (userId is null && serviceAccountId is null)
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationId,
+            Type = type,
+            ActingUserId = userId,
+            ServiceAccountId = serviceAccountId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+
+        switch (policy)
+        {
+            case UserSecretAccessPolicy p:
+                e.SecretId = p.GrantedSecretId;
+                e.OrganizationUserId = p.OrganizationUserId;
+                break;
+            case GroupSecretAccessPolicy p:
+                e.SecretId = p.GrantedSecretId;
+                e.GroupId = p.GroupId;
+                break;
+            case ServiceAccountSecretAccessPolicy p:
+                e.SecretId = p.GrantedSecretId;
+                e.GrantedServiceAccountId = p.ServiceAccountId;
+                break;
+            default:
+                return;
+        }
+
+        await _eventWriteService.CreateAsync(e);
     }
 
     private (Guid? actingUserId, Guid? serviceAccountId) MapIdentityClientType(

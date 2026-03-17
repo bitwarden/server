@@ -39,9 +39,16 @@ public class
             return;
         }
 
-        // Only users and admins should be able to manipulate access policies
         var (accessClient, userId) =
             await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+
+        // Policy decision: service accounts cannot manage human grantees on service accounts.
+        // This is intentional and must not be removed without security review.
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            return;
+        }
+
         if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
         {
             return;
@@ -63,7 +70,7 @@ public class
         AccessClientType accessClient, Guid userId)
     {
         var access = await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId, accessClient);
-        if (access.Write)
+        if (access.Manage)
         {
             if (resource.UserAccessPolicies != null && resource.UserAccessPolicies.Any())
             {

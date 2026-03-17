@@ -68,7 +68,7 @@ public class ServiceAccountGrantedPolicies
             .Where(currentAp => requested.ProjectGrantedPolicies.Any(requestedAp =>
                 requestedAp.GrantedProjectId == currentAp.GrantedProjectId &&
                 requestedAp.ServiceAccountId == currentAp.ServiceAccountId &&
-                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read)))
+                (requestedAp.Write != currentAp.Write || requestedAp.Read != currentAp.Read || requestedAp.Manage != currentAp.Manage)))
             .Select(ap => ap.GrantedProjectId!.Value)
             .ToList();
 }

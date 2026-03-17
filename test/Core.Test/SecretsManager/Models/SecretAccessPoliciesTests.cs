@@ -116,4 +116,39 @@ public class SecretAccessPoliciesTests
         Assert.DoesNotContain(unChangedId, result.ServiceAccountAccessPolicyUpdates
             .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value));
     }
+
+    [Fact]
+    public void GetPolicyUpdates_ManageOnlyChange_IsDetectedAsUpdate()
+    {
+        var secretId = Guid.NewGuid();
+        var policyId = Guid.NewGuid();
+
+        var existing = new SecretAccessPolicies
+        {
+            UserAccessPolicies = new List<UserSecretAccessPolicy>
+            {
+                new() { OrganizationUserId = policyId, GrantedSecretId = secretId, Read = true, Write = true, Manage = false }
+            },
+            GroupAccessPolicies = new List<GroupSecretAccessPolicy>(),
+            ServiceAccountAccessPolicies = new List<ServiceAccountSecretAccessPolicy>()
+        };
+
+        var requested = new SecretAccessPolicies
+        {
+            UserAccessPolicies = new List<UserSecretAccessPolicy>
+            {
+                new() { OrganizationUserId = policyId, GrantedSecretId = secretId, Read = true, Write = true, Manage = true }
+            },
+            GroupAccessPolicies = new List<GroupSecretAccessPolicy>(),
+            ServiceAccountAccessPolicies = new List<ServiceAccountSecretAccessPolicy>()
+        };
+
+        var result = existing.GetPolicyUpdates(requested);
+
+        Assert.Single(result.UserAccessPolicyUpdates);
+        Assert.Equal(AccessPolicyOperation.Update, result.UserAccessPolicyUpdates.Single().Operation);
+        Assert.Equal(policyId, result.UserAccessPolicyUpdates.Single().AccessPolicy.OrganizationUserId);
+        Assert.Empty(result.GroupAccessPolicyUpdates);
+        Assert.Empty(result.ServiceAccountAccessPolicyUpdates);
+    }
 }

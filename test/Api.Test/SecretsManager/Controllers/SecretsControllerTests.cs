@@ -70,7 +70,7 @@ public class SecretsControllerTests
             resultSecret.Projects = new List<Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
             sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
-                .Returns((true, true));
+                .Returns((true, true, false));
         }
 
 
@@ -110,20 +110,20 @@ public class SecretsControllerTests
 
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(default).ReturnsForAnyArgs(resultSecret);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(default, default, default)
-            .ReturnsForAnyArgs(Task.FromResult((true, true)));
+            .ReturnsForAnyArgs(Task.FromResult((true, true, false)));
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
             resultSecret.OrganizationId = organizationId;
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
             sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.NoAccessCheck)
-                .Returns((true, true));
+                .Returns((true, true, false));
         }
         else
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
             sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.User)
-                .Returns((true, true));
+                .Returns((true, true, false));
         }
 
         await sutProvider.Sut.GetAsync(resultSecret.Id);
@@ -572,6 +572,10 @@ public class SecretsControllerTests
         {
             data.AccessPoliciesRequests = null;
         }
+        else if (data.AccessPoliciesRequests != null)
+        {
+            SanitizeSecretAccessPoliciesRequests(data.AccessPoliciesRequests);
+        }
 
         sutProvider.GetDependency<ICreateSecretCommand>()
             .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
@@ -596,8 +600,31 @@ public class SecretsControllerTests
         {
             data.AccessPoliciesRequests = null;
         }
+        else if (data.AccessPoliciesRequests != null)
+        {
+            SanitizeSecretAccessPoliciesRequests(data.AccessPoliciesRequests);
+        }
 
         return data;
+    }
+
+    private static void SanitizeSecretAccessPoliciesRequests(SecretAccessPoliciesRequestsModel requests)
+    {
+        foreach (var r in requests.UserAccessPolicyRequests)
+        {
+            r.Read = true;
+            r.Manage = false;
+        }
+        foreach (var r in requests.GroupAccessPolicyRequests)
+        {
+            r.Read = true;
+            r.Manage = false;
+        }
+        foreach (var r in requests.ServiceAccountAccessPolicyRequests)
+        {
+            r.Read = true;
+            r.Manage = false;
+        }
     }
 
     private static SecretUpdateRequestModel SetupSecretUpdateAccessPoliciesRequest(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret, SecretAccessPoliciesUpdates accessPoliciesUpdates)

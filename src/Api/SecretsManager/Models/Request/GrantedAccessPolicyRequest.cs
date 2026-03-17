@@ -15,6 +15,9 @@ public class GrantedAccessPolicyRequest
     [Required]
     public bool Write { get; set; }
 
+    [Required]
+    public bool Manage { get; set; }
+
     public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(Guid serviceAccountId, Guid organizationId) =>
         new()
         {
@@ -23,5 +26,6 @@ public class GrantedAccessPolicyRequest
             GrantedProjectId = GrantedId,
             Read = Read,
             Write = Write,
+            Manage = Manage,
         };
 }

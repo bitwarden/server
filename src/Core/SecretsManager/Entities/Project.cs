@@ -18,6 +18,8 @@ public class Project : ITableObject<Guid>
 
     public DateTime? DeletedDate { get; set; }
 
+    public Guid? CreatedByServiceAccountId { get; set; }
+
     public virtual ICollection<Secret>? Secrets { get; set; }
 
     public void SetNewId()

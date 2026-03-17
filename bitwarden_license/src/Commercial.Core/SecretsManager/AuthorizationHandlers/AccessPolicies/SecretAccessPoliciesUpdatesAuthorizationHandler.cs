@@ -17,6 +17,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
+    private readonly IProjectRepository _projectRepository;
     private readonly ISameOrganizationQuery _sameOrganizationQuery;
     private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -25,13 +26,15 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
         IAccessClientQuery accessClientQuery,
         ISecretRepository secretRepository,
         ISameOrganizationQuery sameOrganizationQuery,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository,
+        IProjectRepository projectRepository)
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
         _sameOrganizationQuery = sameOrganizationQuery;
         _serviceAccountRepository = serviceAccountRepository;
         _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -43,13 +46,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
             return;
         }
 
-        // Only users and admins should be able to manipulate access policies
         var (accessClient, userId) =
             await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
-        {
-            return;
-        }
 
         switch (requirement)
         {
@@ -74,9 +72,26 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
     {
         var access = await _secretRepository
             .AccessToSecretAsync(resource.SecretId, userId, accessClient);
-        if (!access.Write)
+        if (!access.Manage)
         {
             return;
+        }
+
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            var hasManageGrant =
+                resource.UserAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage) ||
+                resource.GroupAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage) ||
+                resource.ServiceAccountAccessPolicyUpdates.Any(u =>
+                    (u.Operation == AccessPolicyOperation.Create || u.Operation == AccessPolicyOperation.Update) && u.AccessPolicy.Manage);
+            if (hasManageGrant)
+            {
+                var creatorId = await _projectRepository.GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId);
+                if (creatorId != userId)
+                {
+                    return;
+                }
+            }
         }
 
         if (!await GranteesInTheSameOrganizationAsync(resource))
@@ -85,7 +100,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
         }
 
         // Users can only create access policies for service accounts they have access to.
-        // User can delete and update any service account access policy if they have write access to the secret.
+        // User can delete and update any service account access policy if they have Manage access to the secret.
         if (await HasAccessToTargetServiceAccountsAsync(resource, accessClient, userId))
         {
             context.Succeed(requirement);
@@ -97,11 +112,33 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
         SecretAccessPoliciesUpdates resource,
         AccessClientType accessClient, Guid userId)
     {
+        var access = await _secretRepository.AccessToSecretAsync(resource.SecretId, userId, accessClient);
+        if (!access.Manage)
+        {
+            return;
+        }
+
         if (resource.UserAccessPolicyUpdates.Any(x => x.Operation != AccessPolicyOperation.Create) ||
             resource.GroupAccessPolicyUpdates.Any(x => x.Operation != AccessPolicyOperation.Create) ||
             resource.ServiceAccountAccessPolicyUpdates.Any(x => x.Operation != AccessPolicyOperation.Create))
         {
             return;
+        }
+
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            var hasManageGrant =
+                resource.UserAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage) ||
+                resource.GroupAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage) ||
+                resource.ServiceAccountAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage);
+            if (hasManageGrant)
+            {
+                var creatorId = await _projectRepository.GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId);
+                if (creatorId != userId)
+                {
+                    return;
+                }
+            }
         }
 
         if (!await GranteesInTheSameOrganizationAsync(resource))
@@ -157,6 +194,6 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
                 accessClient);
 
         return serviceAccountsAccess.Count == serviceAccountIdsToCheck.Count &&
-               serviceAccountsAccess.All(a => a.Value.Write);
+               serviceAccountsAccess.All(a => a.Value.Manage);
     }
 }

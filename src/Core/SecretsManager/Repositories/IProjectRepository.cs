@@ -17,11 +17,13 @@ public interface IProjectRepository
     Task ReplaceAsync(Project project);
     Task DeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task<IEnumerable<Project>> ImportAsync(IEnumerable<Project> projects);
-    Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType);
+    Task<(bool Read, bool Write, bool Manage)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType);
     Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId);
     Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId);
     Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<ProjectCounts> GetProjectCountsByIdAsync(Guid projectId, Guid userId, AccessClientType accessType);
-    Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds, Guid userId,
+    Task<Dictionary<Guid, (bool Read, bool Write, bool Manage)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds, Guid userId,
         AccessClientType accessType);
+    Task<Guid?> GetProjectCreatorServiceAccountIdAsync(Guid projectId);
+    Task<Guid?> GetProjectCreatorServiceAccountIdBySecretIdAsync(Guid secretId);
 }

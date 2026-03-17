@@ -13,6 +13,7 @@ public class Project : Core.SecretsManager.Entities.Project
     public virtual ICollection<GroupProjectAccessPolicy> GroupAccessPolicies { get; set; }
     public virtual ICollection<UserProjectAccessPolicy> UserAccessPolicies { get; set; }
     public virtual ICollection<ServiceAccountProjectAccessPolicy> ServiceAccountAccessPolicies { get; set; }
+    public virtual ServiceAccount CreatedByServiceAccount { get; set; }
 }
 
 public class ProjectMapperProfile : Profile

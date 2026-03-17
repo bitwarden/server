@@ -2,13 +2,16 @@
 using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Enums.AccessPolicies;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
+using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -240,7 +243,7 @@ public class AccessPoliciesControllerTests
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
-            .ReturnsForAnyArgs((canRead, false));
+            .ReturnsForAnyArgs((canRead, false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectPeopleAccessPoliciesAsync(data.Id));
 
@@ -346,6 +349,7 @@ public class AccessPoliciesControllerTests
         Project project,
         PeopleAccessPoliciesRequestModel request)
     {
+        request = SetupValidRequest(request);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
         var peoplePolicies = request.ToProjectPeopleAccessPolicies(project.Id, project.OrganizationId);
         sutProvider.GetDependency<IAuthorizationService>()
@@ -367,6 +371,7 @@ public class AccessPoliciesControllerTests
         Project project,
         PeopleAccessPoliciesRequestModel request)
     {
+        request = SetupValidRequest(request);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         var peoplePolicies = request.ToProjectPeopleAccessPolicies(project.Id, project.OrganizationId);
@@ -428,7 +433,7 @@ public class AccessPoliciesControllerTests
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
-            .ReturnsForAnyArgs((canRead, false));
+            .ReturnsForAnyArgs((canRead, false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetServiceAccountPeopleAccessPoliciesAsync(data.Id));
@@ -448,7 +453,7 @@ public class AccessPoliciesControllerTests
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
-            .ReturnsForAnyArgs((true, true));
+            .ReturnsForAnyArgs((true, true, true));
 
         var result = await sutProvider.Sut.GetServiceAccountPeopleAccessPoliciesAsync(data.Id);
 
@@ -472,7 +477,7 @@ public class AccessPoliciesControllerTests
             .ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
-            .ReturnsForAnyArgs((true, true));
+            .ReturnsForAnyArgs((true, true, true));
 
         sutProvider.GetDependency<IAccessPolicyRepository>()
             .GetPeoplePoliciesByGrantedServiceAccountIdAsync(default, default)
@@ -740,10 +745,12 @@ public class AccessPoliciesControllerTests
     public async Task PutServiceAccountGrantedPoliciesAsync_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
+        Guid userId,
         ServiceAccountGrantedPoliciesRequestModel request)
     {
         request = SetupValidRequest(request);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ServiceAccountGrantedPoliciesUpdates>(),
@@ -795,7 +802,7 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).Returns(data);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
-            .ReturnsForAnyArgs((false, false));
+            .ReturnsForAnyArgs((false, false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetProjectServiceAccountsAccessPoliciesAsync(data.Id));
@@ -937,10 +944,12 @@ public class AccessPoliciesControllerTests
     public async Task PutProjectServiceAccountsAccessPoliciesAsync_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         Project data,
+        Guid userId,
         ProjectServiceAccountsAccessPoliciesRequestModel request)
     {
         request = SetupValidRequest(request);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>(),
@@ -1030,6 +1039,7 @@ public class AccessPoliciesControllerTests
         foreach (var policyRequest in request.ProjectGrantedPolicyRequests)
         {
             policyRequest.Read = true;
+            policyRequest.Manage = false;
         }
 
         return request;
@@ -1041,6 +1051,24 @@ public class AccessPoliciesControllerTests
         foreach (var policyRequest in request.ServiceAccountAccessPolicyRequests)
         {
             policyRequest.Read = true;
+            policyRequest.Manage = false;
+        }
+
+        return request;
+    }
+
+    private static PeopleAccessPoliciesRequestModel SetupValidRequest(PeopleAccessPoliciesRequestModel request)
+    {
+        foreach (var policyRequest in request.UserAccessPolicyRequests ?? [])
+        {
+            policyRequest.Read = true;
+            policyRequest.Manage = false;
+        }
+
+        foreach (var policyRequest in request.GroupAccessPolicyRequests ?? [])
+        {
+            policyRequest.Read = true;
+            policyRequest.Manage = false;
         }
 
         return request;
@@ -1052,9 +1080,11 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
             .ReturnsForAnyArgs(true);
+        // ServiceAccount clients do not have Manage access to project people/SA policies
+        var hasManage = accessClientType != AccessClientType.ServiceAccount;
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
-            .ReturnsForAnyArgs((true, true));
+            .ReturnsForAnyArgs((true, true, hasManage));
         sutProvider.GetDependency<IAccessClientQuery>()
             .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
             .ReturnsForAnyArgs((accessClientType, Guid.NewGuid()));
@@ -1067,5 +1097,619 @@ public class AccessPoliciesControllerTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
+    }
+
+    // --- Event logging tests ---
+
+    [Theory]
+    [BitAutoData]
+    public async Task LogAccessPolicyServiceAccountChanges_UserPermissionChanged_EmitsUpdatedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
+        UserServiceAccountAccessPolicy policy)
+    {
+        policy.Read = true;
+        policy.Write = true;
+        policy.Manage = false;
+
+        var updatedPolicy = new UserServiceAccountAccessPolicy
+        {
+            Id = policy.Id,
+            OrganizationUserId = policy.OrganizationUserId,
+            GrantedServiceAccountId = policy.GrantedServiceAccountId,
+            Read = true,
+            Write = true,
+            Manage = true
+        };
+
+        var before = new List<BaseAccessPolicy> { policy };
+        var after = new List<BaseAccessPolicy> { updatedPolicy };
+
+        await sutProvider.Sut.LogAccessPolicyServiceAccountChanges(before, after, userId);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountPeopleEventAsync(userId, updatedPolicy,
+                EventType.ServiceAccount_UserPermissionUpdated, Arg.Any<IdentityClientType>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogServiceAccountPeopleEventAsync(Arg.Any<Guid>(), Arg.Any<UserServiceAccountAccessPolicy>(),
+                EventType.ServiceAccount_UserAdded, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task LogAccessPolicyServiceAccountChanges_UserPermissionUnchanged_DoesNotEmitUpdatedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
+        UserServiceAccountAccessPolicy policy)
+    {
+        policy.Read = true;
+        policy.Write = true;
+        policy.Manage = false;
+
+        var samePolicy = new UserServiceAccountAccessPolicy
+        {
+            Id = policy.Id,
+            OrganizationUserId = policy.OrganizationUserId,
+            GrantedServiceAccountId = policy.GrantedServiceAccountId,
+            Read = true,
+            Write = true,
+            Manage = false
+        };
+
+        var before = new List<BaseAccessPolicy> { policy };
+        var after = new List<BaseAccessPolicy> { samePolicy };
+
+        await sutProvider.Sut.LogAccessPolicyServiceAccountChanges(before, after, userId);
+
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogServiceAccountPeopleEventAsync(Arg.Any<Guid>(), Arg.Any<UserServiceAccountAccessPolicy>(),
+                EventType.ServiceAccount_UserPermissionUpdated, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task LogAccessPolicyServiceAccountChanges_GroupPermissionChanged_EmitsUpdatedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
+        GroupServiceAccountAccessPolicy policy)
+    {
+        policy.Read = true;
+        policy.Write = true;
+        policy.Manage = false;
+
+        var updatedPolicy = new GroupServiceAccountAccessPolicy
+        {
+            Id = policy.Id,
+            GroupId = policy.GroupId,
+            Group = policy.Group,
+            GrantedServiceAccountId = policy.GrantedServiceAccountId,
+            Read = true,
+            Write = true,
+            Manage = true
+        };
+
+        var before = new List<BaseAccessPolicy> { policy };
+        var after = new List<BaseAccessPolicy> { updatedPolicy };
+
+        await sutProvider.Sut.LogAccessPolicyServiceAccountChanges(before, after, userId);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountGroupEventAsync(userId, updatedPolicy,
+                EventType.ServiceAccount_GroupPermissionUpdated, Arg.Any<IdentityClientType>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogServiceAccountGroupEventAsync(Arg.Any<Guid>(), Arg.Any<GroupServiceAccountAccessPolicy>(),
+                EventType.ServiceAccount_GroupAdded, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectPeopleAccessPoliciesAsync_UserAdded_EmitsGrantedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
+        Project project,
+        UserProjectAccessPolicy newPolicy,
+        PeopleAccessPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectPeopleAccessPolicies>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy>());
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy> { newPolicy });
+
+        await sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(project.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, project.OrganizationId, newPolicy,
+                EventType.Project_UserAccessGranted, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectPeopleAccessPoliciesAsync_UserRemoved_EmitsRevokedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
+        Project project,
+        UserProjectAccessPolicy existingPolicy,
+        PeopleAccessPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectPeopleAccessPolicies>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy> { existingPolicy });
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy>());
+
+        await sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(project.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, project.OrganizationId, existingPolicy,
+                EventType.Project_UserAccessRevoked, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectPeopleAccessPoliciesAsync_UserPermissionChanged_EmitsUpdatedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
+        Project project,
+        UserProjectAccessPolicy existingPolicy,
+        PeopleAccessPoliciesRequestModel request)
+    {
+        existingPolicy.Read = true;
+        existingPolicy.Write = true;
+        existingPolicy.Manage = false;
+        request = SetupValidRequest(request);
+
+        var updatedPolicy = new UserProjectAccessPolicy
+        {
+            Id = existingPolicy.Id,
+            OrganizationUserId = existingPolicy.OrganizationUserId,
+            GrantedProjectId = existingPolicy.GrantedProjectId,
+            Read = true,
+            Write = true,
+            Manage = true
+        };
+
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectPeopleAccessPolicies>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy> { existingPolicy });
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy> { updatedPolicy });
+
+        await sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(project.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, project.OrganizationId, updatedPolicy,
+                EventType.Project_UserAccessUpdated, Arg.Any<IdentityClientType>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogProjectAccessPolicyEventAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<BaseAccessPolicy>(),
+                EventType.Project_UserAccessGranted, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectPeopleAccessPoliciesAsync_UserPermissionUnchanged_DoesNotEmitEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
+        Project project,
+        UserProjectAccessPolicy existingPolicy,
+        PeopleAccessPoliciesRequestModel request)
+    {
+        var samePolicy = new UserProjectAccessPolicy
+        {
+            Id = existingPolicy.Id,
+            OrganizationUserId = existingPolicy.OrganizationUserId,
+            GrantedProjectId = existingPolicy.GrantedProjectId,
+            Read = existingPolicy.Read,
+            Write = existingPolicy.Write,
+            Manage = existingPolicy.Manage
+        };
+
+        request = SetupValidRequest(request);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectPeopleAccessPolicies>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy> { existingPolicy });
+        sutProvider.GetDependency<IAccessPolicyRepository>()
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>())
+            .Returns(new List<BaseAccessPolicy> { samePolicy });
+
+        await sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(project.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogProjectAccessPolicyEventAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<BaseAccessPolicy>(),
+                Arg.Any<EventType>(), Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_ServiceAccountGranted_EmitsGrantedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        Guid userId,
+        ServiceAccountProjectAccessPolicy grantedPolicy,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        var updates = new ProjectServiceAccountsAccessPoliciesUpdates
+        {
+            ProjectId = data.Id,
+            OrganizationId = data.OrganizationId,
+            ServiceAccountAccessPolicyUpdates = new[]
+            {
+                new ServiceAccountProjectAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Create,
+                    AccessPolicy = grantedPolicy
+                }
+            }
+        };
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IProjectServiceAccountsAccessPoliciesUpdatesQuery>()
+            .GetAsync(Arg.Any<ProjectServiceAccountsAccessPolicies>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, data.OrganizationId, grantedPolicy,
+                EventType.Project_ServiceAccountAccessGranted, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_ServiceAccountRevoked_EmitsRevokedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        Guid userId,
+        ServiceAccountProjectAccessPolicy revokedPolicy,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        var updates = new ProjectServiceAccountsAccessPoliciesUpdates
+        {
+            ProjectId = data.Id,
+            OrganizationId = data.OrganizationId,
+            ServiceAccountAccessPolicyUpdates = new[]
+            {
+                new ServiceAccountProjectAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Delete,
+                    AccessPolicy = revokedPolicy
+                }
+            }
+        };
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IProjectServiceAccountsAccessPoliciesUpdatesQuery>()
+            .GetAsync(Arg.Any<ProjectServiceAccountsAccessPolicies>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, data.OrganizationId, revokedPolicy,
+                EventType.Project_ServiceAccountAccessRevoked, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutProjectServiceAccountsAccessPoliciesAsync_ServiceAccountUpdated_EmitsUpdatedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Project data,
+        Guid userId,
+        ServiceAccountProjectAccessPolicy updatedPolicy,
+        ProjectServiceAccountsAccessPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        var updates = new ProjectServiceAccountsAccessPoliciesUpdates
+        {
+            ProjectId = data.Id,
+            OrganizationId = data.OrganizationId,
+            ServiceAccountAccessPolicyUpdates = new[]
+            {
+                new ServiceAccountProjectAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Update,
+                    AccessPolicy = updatedPolicy
+                }
+            }
+        };
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IProjectServiceAccountsAccessPoliciesUpdatesQuery>()
+            .GetAsync(Arg.Any<ProjectServiceAccountsAccessPolicies>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutProjectServiceAccountsAccessPoliciesAsync(data.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, data.OrganizationId, updatedPolicy,
+                EventType.Project_ServiceAccountAccessUpdated, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutServiceAccountGrantedPoliciesAsync_ProjectGranted_EmitsGrantedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        ServiceAccount data,
+        Guid userId,
+        ServiceAccountProjectAccessPolicy grantedPolicy,
+        ServiceAccountGrantedPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        var updates = new ServiceAccountGrantedPoliciesUpdates
+        {
+            ServiceAccountId = data.Id,
+            OrganizationId = data.OrganizationId,
+            ProjectGrantedPolicyUpdates = new[]
+            {
+                new ServiceAccountProjectAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Create,
+                    AccessPolicy = grantedPolicy
+                }
+            }
+        };
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IServiceAccountGrantedPolicyUpdatesQuery>()
+            .GetAsync(Arg.Any<ServiceAccountGrantedPolicies>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ServiceAccountGrantedPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, data.OrganizationId, grantedPolicy,
+                EventType.Project_ServiceAccountAccessGranted, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutServiceAccountGrantedPoliciesAsync_ProjectRevoked_EmitsRevokedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        ServiceAccount data,
+        Guid userId,
+        ServiceAccountProjectAccessPolicy revokedPolicy,
+        ServiceAccountGrantedPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        var updates = new ServiceAccountGrantedPoliciesUpdates
+        {
+            ServiceAccountId = data.Id,
+            OrganizationId = data.OrganizationId,
+            ProjectGrantedPolicyUpdates = new[]
+            {
+                new ServiceAccountProjectAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Delete,
+                    AccessPolicy = revokedPolicy
+                }
+            }
+        };
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IServiceAccountGrantedPolicyUpdatesQuery>()
+            .GetAsync(Arg.Any<ServiceAccountGrantedPolicies>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ServiceAccountGrantedPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, data.OrganizationId, revokedPolicy,
+                EventType.Project_ServiceAccountAccessRevoked, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutServiceAccountGrantedPoliciesAsync_ProjectUpdated_EmitsUpdatedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        ServiceAccount data,
+        Guid userId,
+        ServiceAccountProjectAccessPolicy updatedPolicy,
+        ServiceAccountGrantedPoliciesRequestModel request)
+    {
+        request = SetupValidRequest(request);
+        var updates = new ServiceAccountGrantedPoliciesUpdates
+        {
+            ServiceAccountId = data.Id,
+            OrganizationId = data.OrganizationId,
+            ProjectGrantedPolicyUpdates = new[]
+            {
+                new ServiceAccountProjectAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Update,
+                    AccessPolicy = updatedPolicy
+                }
+            }
+        };
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IServiceAccountGrantedPolicyUpdatesQuery>()
+            .GetAsync(Arg.Any<ServiceAccountGrantedPolicies>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ServiceAccountGrantedPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutServiceAccountGrantedPoliciesAsync(data.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogProjectAccessPolicyEventAsync(userId, data.OrganizationId, updatedPolicy,
+                EventType.Project_ServiceAccountAccessUpdated, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutSecretAccessPoliciesAsync_UserGranted_EmitsGrantedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Secret secret,
+        Guid userId,
+        UserSecretAccessPolicy grantedPolicy,
+        SecretAccessPoliciesRequestsModel request)
+    {
+        request.UserAccessPolicyRequests = new[] { new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = true, Write = true } };
+        request.GroupAccessPolicyRequests = Array.Empty<AccessPolicyRequest>();
+        request.ServiceAccountAccessPolicyRequests = Array.Empty<AccessPolicyRequest>();
+
+        var updates = new SecretAccessPoliciesUpdates
+        {
+            SecretId = secret.Id,
+            OrganizationId = secret.OrganizationId,
+            UserAccessPolicyUpdates = new[]
+            {
+                new UserSecretAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Create,
+                    AccessPolicy = grantedPolicy
+                }
+            },
+            GroupAccessPolicyUpdates = Array.Empty<GroupSecretAccessPolicyUpdate>(),
+            ServiceAccountAccessPolicyUpdates = Array.Empty<ServiceAccountSecretAccessPolicyUpdate>()
+        };
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
+            .Returns((AccessClientType.User, userId));
+        sutProvider.GetDependency<ISecretAccessPoliciesUpdatesQuery>()
+            .GetAsync(Arg.Any<SecretAccessPolicies>(), Arg.Any<Guid>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutSecretAccessPoliciesAsync(secret.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogSecretAccessPolicyEventAsync(userId, secret.OrganizationId, grantedPolicy,
+                EventType.Secret_UserAccessGranted, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutSecretAccessPoliciesAsync_UserRevoked_EmitsRevokedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Secret secret,
+        Guid userId,
+        UserSecretAccessPolicy revokedPolicy,
+        SecretAccessPoliciesRequestsModel request)
+    {
+        request.UserAccessPolicyRequests = new[] { new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = true, Write = true } };
+        request.GroupAccessPolicyRequests = Array.Empty<AccessPolicyRequest>();
+        request.ServiceAccountAccessPolicyRequests = Array.Empty<AccessPolicyRequest>();
+
+        var updates = new SecretAccessPoliciesUpdates
+        {
+            SecretId = secret.Id,
+            OrganizationId = secret.OrganizationId,
+            UserAccessPolicyUpdates = new[]
+            {
+                new UserSecretAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Delete,
+                    AccessPolicy = revokedPolicy
+                }
+            },
+            GroupAccessPolicyUpdates = Array.Empty<GroupSecretAccessPolicyUpdate>(),
+            ServiceAccountAccessPolicyUpdates = Array.Empty<ServiceAccountSecretAccessPolicyUpdate>()
+        };
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
+            .Returns((AccessClientType.User, userId));
+        sutProvider.GetDependency<ISecretAccessPoliciesUpdatesQuery>()
+            .GetAsync(Arg.Any<SecretAccessPolicies>(), Arg.Any<Guid>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutSecretAccessPoliciesAsync(secret.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogSecretAccessPolicyEventAsync(userId, secret.OrganizationId, revokedPolicy,
+                EventType.Secret_UserAccessRevoked, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PutSecretAccessPoliciesAsync_ServiceAccountUpdated_EmitsUpdatedEvent(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Secret secret,
+        Guid userId,
+        ServiceAccountSecretAccessPolicy updatedPolicy,
+        SecretAccessPoliciesRequestsModel request)
+    {
+        request.UserAccessPolicyRequests = new[] { new AccessPolicyRequest { GranteeId = Guid.NewGuid(), Read = true, Write = true } };
+        request.GroupAccessPolicyRequests = Array.Empty<AccessPolicyRequest>();
+        request.ServiceAccountAccessPolicyRequests = Array.Empty<AccessPolicyRequest>();
+
+        var updates = new SecretAccessPoliciesUpdates
+        {
+            SecretId = secret.Id,
+            OrganizationId = secret.OrganizationId,
+            UserAccessPolicyUpdates = Array.Empty<UserSecretAccessPolicyUpdate>(),
+            GroupAccessPolicyUpdates = Array.Empty<GroupSecretAccessPolicyUpdate>(),
+            ServiceAccountAccessPolicyUpdates = new[]
+            {
+                new ServiceAccountSecretAccessPolicyUpdate
+                {
+                    Operation = AccessPolicyOperation.Update,
+                    AccessPolicy = updatedPolicy
+                }
+            }
+        };
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Guid>())
+            .Returns((AccessClientType.User, userId));
+        sutProvider.GetDependency<ISecretAccessPoliciesUpdatesQuery>()
+            .GetAsync(Arg.Any<SecretAccessPolicies>(), Arg.Any<Guid>()).Returns(updates);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<SecretAccessPoliciesUpdates>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PutSecretAccessPoliciesAsync(secret.Id, request);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogSecretAccessPolicyEventAsync(userId, secret.OrganizationId, updatedPolicy,
+                EventType.Secret_ServiceAccountAccessUpdated, Arg.Any<IdentityClientType>());
     }
 }

@@ -16,8 +16,8 @@ public interface IServiceAccountRepository
     Task ReplaceAsync(ServiceAccount serviceAccount);
     Task DeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType);
-    Task<(bool Read, bool Write)> AccessToServiceAccountAsync(Guid id, Guid userId, AccessClientType accessType);
-    Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToServiceAccountsAsync(IEnumerable<Guid> ids, Guid userId,
+    Task<(bool Read, bool Write, bool Manage)> AccessToServiceAccountAsync(Guid id, Guid userId, AccessClientType accessType);
+    Task<Dictionary<Guid, (bool Read, bool Write, bool Manage)>> AccessToServiceAccountsAsync(IEnumerable<Guid> ids, Guid userId,
         AccessClientType accessType);
     Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId);
     Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);

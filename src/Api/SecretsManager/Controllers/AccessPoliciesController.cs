@@ -7,12 +7,17 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Enums.AccessPolicies;
+using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+
+#nullable enable
 
 namespace Bit.Api.SecretsManager.Controllers;
 
@@ -34,6 +39,8 @@ public class AccessPoliciesController : Controller
         _projectServiceAccountsAccessPoliciesUpdatesQuery;
     private readonly IUpdateProjectServiceAccountsAccessPoliciesCommand
         _updateProjectServiceAccountsAccessPoliciesCommand;
+    private readonly ISecretAccessPoliciesUpdatesQuery _secretAccessPoliciesUpdatesQuery;
+    private readonly IUpdateSecretAccessPoliciesCommand _updateSecretAccessPoliciesCommand;
 
 
     public AccessPoliciesController(
@@ -49,6 +56,8 @@ public class AccessPoliciesController : Controller
         IProjectServiceAccountsAccessPoliciesUpdatesQuery projectServiceAccountsAccessPoliciesUpdatesQuery,
         IUpdateServiceAccountGrantedPoliciesCommand updateServiceAccountGrantedPoliciesCommand,
         IUpdateProjectServiceAccountsAccessPoliciesCommand updateProjectServiceAccountsAccessPoliciesCommand,
+        ISecretAccessPoliciesUpdatesQuery secretAccessPoliciesUpdatesQuery,
+        IUpdateSecretAccessPoliciesCommand updateSecretAccessPoliciesCommand,
         IEventService eventService)
     {
         _authorizationService = authorizationService;
@@ -63,6 +72,8 @@ public class AccessPoliciesController : Controller
         _serviceAccountGrantedPolicyUpdatesQuery = serviceAccountGrantedPolicyUpdatesQuery;
         _projectServiceAccountsAccessPoliciesUpdatesQuery = projectServiceAccountsAccessPoliciesUpdatesQuery;
         _updateProjectServiceAccountsAccessPoliciesCommand = updateProjectServiceAccountsAccessPoliciesCommand;
+        _secretAccessPoliciesUpdatesQuery = secretAccessPoliciesUpdatesQuery;
+        _updateSecretAccessPoliciesCommand = updateSecretAccessPoliciesCommand;
         _eventService = eventService;
     }
 
@@ -129,7 +140,7 @@ public class AccessPoliciesController : Controller
     public async Task<ProjectPeopleAccessPoliciesResponseModel> GetProjectPeopleAccessPoliciesAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
-        var (_, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
+        var (_, userId) = await CheckUserHasManageAccessToProjectAsync(project);
         var results = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(id, userId);
         return new ProjectPeopleAccessPoliciesResponseModel(results, userId);
     }
@@ -154,7 +165,9 @@ public class AccessPoliciesController : Controller
         }
 
         var userId = _userService.GetProperUserId(User)!.Value;
+        var currentPolicies = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(id, userId) ?? [];
         var results = await _accessPolicyRepository.ReplaceProjectPeopleAsync(peopleAccessPolicies, userId);
+        await LogProjectPeopleAccessPolicyChangesAsync(currentPolicies, results, userId, project.OrganizationId);
         return new ProjectPeopleAccessPoliciesResponseModel(results, userId);
     }
 
@@ -200,6 +213,11 @@ public class AccessPoliciesController : Controller
         GetServiceAccountGrantedPoliciesAsync([FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
         var authorizationResult =
             await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Update);
 
@@ -228,7 +246,9 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
+        var userId = _userService.GetProperUserId(User)!.Value;
         await _updateServiceAccountGrantedPoliciesCommand.UpdateAsync(grantedPoliciesUpdates);
+        await LogServiceAccountGrantedPolicyChangesAsync(grantedPoliciesUpdates, userId);
         return await GetServiceAccountGrantedPoliciesAsync(serviceAccount);
     }
 
@@ -238,9 +258,10 @@ public class AccessPoliciesController : Controller
             [FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToProjectAsync(project);
+        await CheckUserHasManageAccessToProjectAsync(project);
         var results =
-            await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id);
+            await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id)
+            ?? new ProjectServiceAccountsAccessPolicies();
         return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
     }
 
@@ -261,9 +282,12 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
+        var userId = _userService.GetProperUserId(User)!.Value;
         await _updateProjectServiceAccountsAccessPoliciesCommand.UpdateAsync(accessPoliciesUpdates);
+        await LogProjectServiceAccountAccessPolicyChangesAsync(accessPoliciesUpdates, userId);
 
-        var results = await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id);
+        var results = await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(id)
+            ?? new ProjectServiceAccountsAccessPolicies();
         return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
     }
 
@@ -271,6 +295,11 @@ public class AccessPoliciesController : Controller
     public async Task<SecretAccessPoliciesResponseModel> GetSecretAccessPoliciesAsync(Guid secretId)
     {
         var secret = await _secretRepository.GetByIdAsync(secretId);
+        if (secret == null)
+        {
+            throw new NotFoundException();
+        }
+
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.ReadAccessPolicies);
 
         if (!authorizationResult.Succeeded)
@@ -279,11 +308,57 @@ public class AccessPoliciesController : Controller
         }
 
         var userId = _userService.GetProperUserId(User)!.Value;
-        var accessPolicies = await _accessPolicyRepository.GetSecretAccessPoliciesAsync(secretId, userId);
+        var accessPolicies = await _accessPolicyRepository.GetSecretAccessPoliciesAsync(secretId, userId)
+            ?? new SecretAccessPolicies { SecretId = secretId, OrganizationId = secret!.OrganizationId };
         return new SecretAccessPoliciesResponseModel(accessPolicies, userId);
     }
 
-    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(
+    [HttpPut("/secrets/{secretId}/access-policies")]
+    public async Task<SecretAccessPoliciesResponseModel> PutSecretAccessPoliciesAsync(
+        [FromRoute] Guid secretId,
+        [FromBody] SecretAccessPoliciesRequestsModel request)
+    {
+        var secret = await _secretRepository.GetByIdAsync(secretId);
+        if (secret == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(User, secret.OrganizationId);
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
+
+        var totalPolicies =
+            (request.UserAccessPolicyRequests?.Count() ?? 0) +
+            (request.GroupAccessPolicyRequests?.Count() ?? 0) +
+            (request.ServiceAccountAccessPolicyRequests?.Count() ?? 0);
+        if (totalPolicies == 0)
+        {
+            throw new BadRequestException("At least one policy entry is required.");
+        }
+
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var accessPoliciesUpdates = await _secretAccessPoliciesUpdatesQuery.GetAsync(
+            request.ToSecretAccessPolicies(secretId, secret.OrganizationId), userId);
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User, accessPoliciesUpdates, SecretAccessPoliciesOperations.Updates);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        await _updateSecretAccessPoliciesCommand.UpdateAsync(accessPoliciesUpdates);
+        await LogSecretAccessPolicyChangesAsync(accessPoliciesUpdates, userId);
+
+        var results = await _accessPolicyRepository.GetSecretAccessPoliciesAsync(secretId, userId)
+            ?? new SecretAccessPolicies { SecretId = secretId, OrganizationId = secret.OrganizationId };
+        return new SecretAccessPoliciesResponseModel(results, userId);
+    }
+
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasManageAccessToProjectAsync(
         Project project)
     {
         if (project == null)
@@ -299,7 +374,7 @@ public class AccessPoliciesController : Controller
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, project.OrganizationId);
 
         var access = await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient);
-        if (!access.Write || accessClient == AccessClientType.ServiceAccount)
+        if (!access.Manage)
         {
             throw new NotFoundException();
         }
@@ -342,7 +417,7 @@ public class AccessPoliciesController : Controller
         return new ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(results);
     }
 
-    public async Task LogAccessPolicyServiceAccountChanges(IEnumerable<BaseAccessPolicy> currentPolicies, IEnumerable<BaseAccessPolicy> updatedPolicies, Guid userId)
+    private async Task LogAccessPolicyServiceAccountChanges(IEnumerable<BaseAccessPolicy> currentPolicies, IEnumerable<BaseAccessPolicy> updatedPolicies, Guid userId)
     {
         foreach (var current in currentPolicies.OfType<GroupServiceAccountAccessPolicy>())
         {
@@ -375,5 +450,180 @@ public class AccessPoliciesController : Controller
                 await _eventService.LogServiceAccountPeopleEventAsync(userId, policy, EventType.ServiceAccount_UserAdded, _currentContext.IdentityClientType);
             }
         }
+
+        foreach (var policy in updatedPolicies.OfType<UserServiceAccountAccessPolicy>())
+        {
+            var existing = currentPolicies.OfType<UserServiceAccountAccessPolicy>()
+                .FirstOrDefault(p => p.OrganizationUserId == policy.OrganizationUserId);
+            if (existing != null && PermissionsChanged(existing, policy))
+            {
+                await _eventService.LogServiceAccountPeopleEventAsync(userId, policy,
+                    EventType.ServiceAccount_UserPermissionUpdated, _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var policy in updatedPolicies.OfType<GroupServiceAccountAccessPolicy>())
+        {
+            var existing = currentPolicies.OfType<GroupServiceAccountAccessPolicy>()
+                .FirstOrDefault(p => p.GroupId == policy.GroupId);
+            if (existing != null && PermissionsChanged(existing, policy))
+            {
+                await _eventService.LogServiceAccountGroupEventAsync(userId, policy,
+                    EventType.ServiceAccount_GroupPermissionUpdated, _currentContext.IdentityClientType);
+            }
+        }
     }
+
+    private async Task LogProjectPeopleAccessPolicyChangesAsync(
+        IEnumerable<BaseAccessPolicy> before,
+        IEnumerable<BaseAccessPolicy> after,
+        Guid userId,
+        Guid organizationId)
+    {
+        foreach (var policy in after.OfType<UserProjectAccessPolicy>())
+        {
+            var existing = before.OfType<UserProjectAccessPolicy>()
+                .FirstOrDefault(p => p.OrganizationUserId == policy.OrganizationUserId);
+            var type = existing is null ? EventType.Project_UserAccessGranted
+                : PermissionsChanged(existing, policy) ? EventType.Project_UserAccessUpdated
+                : (EventType?)null;
+            if (type.HasValue)
+            {
+                await _eventService.LogProjectAccessPolicyEventAsync(userId, organizationId, policy, type.Value,
+                    _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var policy in before.OfType<UserProjectAccessPolicy>())
+        {
+            if (!after.OfType<UserProjectAccessPolicy>().Any(p => p.OrganizationUserId == policy.OrganizationUserId))
+            {
+                await _eventService.LogProjectAccessPolicyEventAsync(userId, organizationId, policy,
+                    EventType.Project_UserAccessRevoked, _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var policy in after.OfType<GroupProjectAccessPolicy>())
+        {
+            var existing = before.OfType<GroupProjectAccessPolicy>()
+                .FirstOrDefault(p => p.GroupId == policy.GroupId);
+            var type = existing is null ? EventType.Project_GroupAccessGranted
+                : PermissionsChanged(existing, policy) ? EventType.Project_GroupAccessUpdated
+                : (EventType?)null;
+            if (type.HasValue)
+            {
+                await _eventService.LogProjectAccessPolicyEventAsync(userId, organizationId, policy, type.Value,
+                    _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var policy in before.OfType<GroupProjectAccessPolicy>())
+        {
+            if (!after.OfType<GroupProjectAccessPolicy>().Any(p => p.GroupId == policy.GroupId))
+            {
+                await _eventService.LogProjectAccessPolicyEventAsync(userId, organizationId, policy,
+                    EventType.Project_GroupAccessRevoked, _currentContext.IdentityClientType);
+            }
+        }
+    }
+
+    private async Task LogProjectServiceAccountAccessPolicyChangesAsync(
+        ProjectServiceAccountsAccessPoliciesUpdates? updates,
+        Guid userId)
+    {
+        if (updates is null) return;
+        foreach (var update in updates.ServiceAccountAccessPolicyUpdates)
+        {
+            var type = update.Operation switch
+            {
+                AccessPolicyOperation.Create => EventType.Project_ServiceAccountAccessGranted,
+                AccessPolicyOperation.Update => EventType.Project_ServiceAccountAccessUpdated,
+                AccessPolicyOperation.Delete => EventType.Project_ServiceAccountAccessRevoked,
+                _ => (EventType?)null
+            };
+            if (type.HasValue)
+            {
+                await _eventService.LogProjectAccessPolicyEventAsync(userId, updates.OrganizationId,
+                    update.AccessPolicy, type.Value, _currentContext.IdentityClientType);
+            }
+        }
+    }
+
+    private async Task LogSecretAccessPolicyChangesAsync(
+        SecretAccessPoliciesUpdates updates,
+        Guid userId)
+    {
+        foreach (var update in updates.UserAccessPolicyUpdates)
+        {
+            var type = update.Operation switch
+            {
+                AccessPolicyOperation.Create => EventType.Secret_UserAccessGranted,
+                AccessPolicyOperation.Update => EventType.Secret_UserAccessUpdated,
+                AccessPolicyOperation.Delete => EventType.Secret_UserAccessRevoked,
+                _ => (EventType?)null
+            };
+            if (type.HasValue)
+            {
+                await _eventService.LogSecretAccessPolicyEventAsync(userId, updates.OrganizationId,
+                    update.AccessPolicy, type.Value, _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var update in updates.GroupAccessPolicyUpdates)
+        {
+            var type = update.Operation switch
+            {
+                AccessPolicyOperation.Create => EventType.Secret_GroupAccessGranted,
+                AccessPolicyOperation.Update => EventType.Secret_GroupAccessUpdated,
+                AccessPolicyOperation.Delete => EventType.Secret_GroupAccessRevoked,
+                _ => (EventType?)null
+            };
+            if (type.HasValue)
+            {
+                await _eventService.LogSecretAccessPolicyEventAsync(userId, updates.OrganizationId,
+                    update.AccessPolicy, type.Value, _currentContext.IdentityClientType);
+            }
+        }
+
+        foreach (var update in updates.ServiceAccountAccessPolicyUpdates)
+        {
+            var type = update.Operation switch
+            {
+                AccessPolicyOperation.Create => EventType.Secret_ServiceAccountAccessGranted,
+                AccessPolicyOperation.Update => EventType.Secret_ServiceAccountAccessUpdated,
+                AccessPolicyOperation.Delete => EventType.Secret_ServiceAccountAccessRevoked,
+                _ => (EventType?)null
+            };
+            if (type.HasValue)
+            {
+                await _eventService.LogSecretAccessPolicyEventAsync(userId, updates.OrganizationId,
+                    update.AccessPolicy, type.Value, _currentContext.IdentityClientType);
+            }
+        }
+    }
+
+    private async Task LogServiceAccountGrantedPolicyChangesAsync(
+        ServiceAccountGrantedPoliciesUpdates? updates,
+        Guid userId)
+    {
+        if (updates is null) return;
+        foreach (var update in updates.ProjectGrantedPolicyUpdates)
+        {
+            var type = update.Operation switch
+            {
+                AccessPolicyOperation.Create => EventType.Project_ServiceAccountAccessGranted,
+                AccessPolicyOperation.Update => EventType.Project_ServiceAccountAccessUpdated,
+                AccessPolicyOperation.Delete => EventType.Project_ServiceAccountAccessRevoked,
+                _ => (EventType?)null
+            };
+            if (type.HasValue)
+            {
+                await _eventService.LogProjectAccessPolicyEventAsync(userId, updates.OrganizationId,
+                    update.AccessPolicy, type.Value, _currentContext.IdentityClientType);
+            }
+        }
+    }
+
+    private static bool PermissionsChanged(BaseAccessPolicy before, BaseAccessPolicy after) =>
+        before.Read != after.Read || before.Write != after.Write || before.Manage != after.Manage;
 }

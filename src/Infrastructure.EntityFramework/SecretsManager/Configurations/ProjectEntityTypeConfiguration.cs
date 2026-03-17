@@ -24,6 +24,17 @@ public class ProjectEntityTypeConfiguration : IEntityTypeConfiguration<Project>
             .HasIndex(s => s.OrganizationId)
             .IsClustered(false);
 
+        builder
+            .HasIndex(s => s.CreatedByServiceAccountId)
+            .IsClustered(false);
+
+        builder
+            .HasOne(p => p.CreatedByServiceAccount)
+            .WithMany()
+            .HasForeignKey(p => p.CreatedByServiceAccountId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.ToTable(nameof(Project));
     }
 }

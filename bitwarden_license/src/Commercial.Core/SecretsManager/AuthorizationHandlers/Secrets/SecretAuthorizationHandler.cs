@@ -160,15 +160,9 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
     {
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
 
-        // Only users and admins can read access policies
-        if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
-        {
-            return;
-        }
-
         var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
 
-        if (access.Write)
+        if (access.Manage)
         {
             context.Succeed(requirement);
         }

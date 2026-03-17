@@ -38,11 +38,21 @@ public class CreateProjectCommand : ICreateProjectCommand
             throw new NotFoundException();
         }
 
+        if (identityClientType == IdentityClientType.ServiceAccount)
+        {
+            project.CreatedByServiceAccountId = id;
+        }
+
         var createdProject = await _projectRepository.CreateAsync(project);
 
         if (identityClientType == IdentityClientType.User)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId, id);
+
+            if (orgUser == null)
+            {
+                throw new NotFoundException();
+            }
 
             var accessPolicy = new UserProjectAccessPolicy()
             {
@@ -50,6 +60,7 @@ public class CreateProjectCommand : ICreateProjectCommand
                 GrantedProjectId = createdProject.Id,
                 Read = true,
                 Write = true,
+                Manage = true,
             };
 
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
@@ -63,6 +74,7 @@ public class CreateProjectCommand : ICreateProjectCommand
                 GrantedProjectId = createdProject.Id,
                 Read = true,
                 Write = true,
+                Manage = true,
             };
 
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { serviceAccountProjectAccessPolicy });

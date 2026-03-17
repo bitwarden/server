@@ -118,7 +118,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId, clientType);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
-                (true, true));
+                (true, true, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -196,7 +196,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).ReturnsForAnyArgs(
-                (read, write));
+                (read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -223,7 +223,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).ReturnsForAnyArgs(
-                (read, write));
+                (read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -286,7 +286,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -322,7 +322,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId, clientType);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
-                (true, true));
+                (true, true, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -361,7 +361,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, Arg.Any<Guid>(), Arg.Any<AccessClientType>()).Returns(
-            (true, true));
+            (true, true, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -408,7 +408,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>()).Returns(
-                (read, write));
+                (read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -445,10 +445,10 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>()).Returns(
-            (read, write));
+            (read, write, false));
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
-                (projectRead, projectWrite));
+                (projectRead, projectWrite, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -474,10 +474,10 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>()).Returns(
-            (read, write));
+            (read, write, false));
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
-                (read, write));
+                (read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -540,7 +540,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -621,7 +621,7 @@ public class SecretAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, write)); // manage mirrors write: handler requires Manage for ReadAccessPolicies
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 

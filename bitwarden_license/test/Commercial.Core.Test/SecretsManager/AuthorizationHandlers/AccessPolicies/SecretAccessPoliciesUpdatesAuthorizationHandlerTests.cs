@@ -102,7 +102,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretAsync(resource.SecretId, userId, accessClientType)
-            .Returns((readAccess, writeAccess));
+            .Returns((readAccess, writeAccess, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -305,6 +305,34 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
     }
 
     [Theory]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, false)]
+    [BitAutoData(AccessClientType.User, false, false)]
+    [BitAutoData(AccessClientType.User, true, false)]
+    public async Task Handler_CanCreateAsync_UserHasNoManageAccessToSecret_DoesNotSucceed(
+        AccessClientType accessClientType,
+        bool readAccess,
+        bool writeAccess,
+        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
+        SecretAccessPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretAccessPoliciesOperations.Create;
+        resource = SetAllToCreates(resource);
+        SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretAsync(resource.SecretId, userId, accessClientType)
+            .Returns((readAccess, writeAccess, false));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
     [BitAutoData(false, false, false)]
     [BitAutoData(true, false, false)]
     [BitAutoData(false, true, false)]
@@ -482,6 +510,96 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         Assert.True(authzContext.HasSucceeded);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Handler_CanUpdateAsync_SA_ManageGrant_IsCreator_Success(
+        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
+        SecretAccessPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretAccessPoliciesOperations.Updates;
+        resource = AddManageServiceAccountUpdate(resource, userId);
+        SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
+        SetupAllServiceAccountAccess(sutProvider, resource, userId, AccessClientType.ServiceAccount);
+        sutProvider.GetDependency<IProjectRepository>()
+            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
+            .Returns(userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.True(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Handler_CanUpdateAsync_SA_ManageGrant_NotCreator_DoesNotSucceed(
+        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
+        SecretAccessPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretAccessPoliciesOperations.Updates;
+        resource = AddManageServiceAccountUpdate(resource, userId);
+        SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
+        sutProvider.GetDependency<IProjectRepository>()
+            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
+            .Returns(Guid.NewGuid());
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Handler_CanUpdateAsync_SA_ManageGrant_NullCreator_DoesNotSucceed(
+        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
+        SecretAccessPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretAccessPoliciesOperations.Updates;
+        resource = AddManageServiceAccountUpdate(resource, userId);
+        SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
+        sutProvider.GetDependency<IProjectRepository>()
+            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
+            .Returns((Guid?)null);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Handler_CanUpdateAsync_SA_NoManageGrant_DoesNotCheckCreator_Success(
+        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
+        SecretAccessPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretAccessPoliciesOperations.Updates;
+        resource = RemoveAllServiceAccountCreates(resource);
+        resource = ClearAllManageFlags(resource);
+        SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.True(authzContext.HasSucceeded);
+        await sutProvider.GetDependency<IProjectRepository>()
+            .DidNotReceive()
+            .GetProjectCreatorServiceAccountIdBySecretIdAsync(Arg.Any<Guid>());
+    }
+
     private static void SetupNoServiceAccountAccess(
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
@@ -494,7 +612,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
             .ToList();
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
-            .Returns(createServiceAccountIds.ToDictionary(id => id, _ => (false, false)));
+            .Returns(createServiceAccountIds.ToDictionary(id => id, _ => (false, false, false)));
     }
 
     private static void SetupPartialServiceAccountAccess(
@@ -506,8 +624,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         var accessResult = resource.ServiceAccountAccessPolicyUpdates
             .Where(x => x.Operation == AccessPolicyOperation.Create)
             .Select(x => x.AccessPolicy.ServiceAccountId!.Value)
-            .ToDictionary(id => id, _ => (true, true));
-        accessResult[accessResult.First().Key] = (true, true);
+            .ToDictionary(id => id, _ => (true, true, false));
+        accessResult[accessResult.First().Key] = (true, true, false);
         accessResult.Remove(accessResult.Last().Key);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
@@ -523,9 +641,9 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         var accessResult = resource.ServiceAccountAccessPolicyUpdates
             .Where(x => x.Operation == AccessPolicyOperation.Create)
             .Select(x => x.AccessPolicy.ServiceAccountId!.Value)
-            .ToDictionary(id => id, _ => (false, false));
+            .ToDictionary(id => id, _ => (false, false, false));
 
-        accessResult[accessResult.First().Key] = (true, true);
+        accessResult[accessResult.First().Key] = (true, true, false);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
             .Returns(accessResult);
@@ -540,7 +658,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         var accessResult = resource.ServiceAccountAccessPolicyUpdates
             .Where(x => x.Operation == AccessPolicyOperation.Create)
             .Select(x => x.AccessPolicy.ServiceAccountId!.Value)
-            .ToDictionary(id => id, _ => (true, true));
+            .ToDictionary(id => id, _ => (true, true, true));
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
             .Returns(accessResult);
@@ -571,7 +689,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
 
         sutProvider.GetDependency<ISecretRepository>()
             .AccessToSecretAsync(resource.SecretId, userId, accessClientType)
-            .Returns((true, true));
+            .Returns((true, true, true));
 
         sutProvider.GetDependency<ISameOrganizationQuery>()
             .OrgUsersInTheSameOrgAsync(Arg.Any<List<Guid>>(), resource.OrganizationId)
@@ -652,5 +770,98 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         }
 
         return resource;
+    }
+
+    private static SecretAccessPoliciesUpdates AddManageServiceAccountUpdate(
+        SecretAccessPoliciesUpdates resource, Guid serviceAccountId)
+    {
+        resource.ServiceAccountAccessPolicyUpdates = resource.ServiceAccountAccessPolicyUpdates.Append(
+            new ServiceAccountSecretAccessPolicyUpdate
+            {
+                Operation = AccessPolicyOperation.Create,
+                AccessPolicy = new ServiceAccountSecretAccessPolicy
+                {
+                    ServiceAccountId = serviceAccountId,
+                    GrantedSecretId = resource.SecretId,
+                    Read = true,
+                    Write = true,
+                    Manage = true
+                }
+            });
+        return resource;
+    }
+
+    private static SecretAccessPoliciesUpdates ClearAllManageFlags(SecretAccessPoliciesUpdates resource)
+    {
+        foreach (var u in resource.UserAccessPolicyUpdates) u.AccessPolicy.Manage = false;
+        foreach (var u in resource.GroupAccessPolicyUpdates) u.AccessPolicy.Manage = false;
+        foreach (var u in resource.ServiceAccountAccessPolicyUpdates) u.AccessPolicy.Manage = false;
+        return resource;
+    }
+
+    // H-1: SA Update with Manage — only the creator SA may escalate to Manage via Update
+    private static SecretAccessPoliciesUpdates AddManageServiceAccountUpdateOperation(
+        SecretAccessPoliciesUpdates resource, Guid serviceAccountId)
+    {
+        resource.ServiceAccountAccessPolicyUpdates = resource.ServiceAccountAccessPolicyUpdates.Append(
+            new ServiceAccountSecretAccessPolicyUpdate
+            {
+                Operation = AccessPolicyOperation.Update,
+                AccessPolicy = new ServiceAccountSecretAccessPolicy
+                {
+                    ServiceAccountId = serviceAccountId,
+                    GrantedSecretId = resource.SecretId,
+                    Read = true,
+                    Write = true,
+                    Manage = true
+                }
+            });
+        return resource;
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Handler_CanUpdateAsync_SA_ManageGrant_ViaUpdate_IsCreator_Succeeds(
+        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
+        SecretAccessPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretAccessPoliciesOperations.Updates;
+        resource = AddManageServiceAccountUpdateOperation(resource, userId);
+        SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
+        SetupAllServiceAccountAccess(sutProvider, resource, userId, AccessClientType.ServiceAccount);
+        sutProvider.GetDependency<IProjectRepository>()
+            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
+            .Returns(userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.True(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Handler_CanUpdateAsync_SA_ManageGrant_ViaUpdate_NotCreator_DoesNotSucceed(
+        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
+        SecretAccessPoliciesUpdates resource,
+        Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        // H-1 regression: a SA that is NOT the creator must not escalate to Manage via Update.
+        var requirement = SecretAccessPoliciesOperations.Updates;
+        resource = AddManageServiceAccountUpdateOperation(resource, userId);
+        SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
+        sutProvider.GetDependency<IProjectRepository>()
+            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
+            .Returns(Guid.NewGuid()); // different SA is the creator
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, resource);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
     }
 }

@@ -51,9 +51,9 @@ public class NoopProjectRepository : IProjectRepository
         return Task.FromResult(null as IEnumerable<Project>);
     }
 
-    public Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType)
+    public Task<(bool Read, bool Write, bool Manage)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType)
     {
-        return Task.FromResult((false, false));
+        return Task.FromResult((false, false, false));
     }
 
     public Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId)
@@ -74,12 +74,22 @@ public class NoopProjectRepository : IProjectRepository
 
     public Task<ProjectCounts> GetProjectCountsByIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
     {
-        return Task.FromResult(null as ProjectCounts);
+        return Task.FromResult(new ProjectCounts());
     }
 
-    public Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds,
+    public Task<Dictionary<Guid, (bool Read, bool Write, bool Manage)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds,
         Guid userId, AccessClientType accessType)
     {
-        return Task.FromResult(null as Dictionary<Guid, (bool Read, bool Write)>);
+        return Task.FromResult(new Dictionary<Guid, (bool Read, bool Write, bool Manage)>());
+    }
+
+    public Task<Guid?> GetProjectCreatorServiceAccountIdAsync(Guid projectId)
+    {
+        return Task.FromResult(null as Guid?);
+    }
+
+    public Task<Guid?> GetProjectCreatorServiceAccountIdBySecretIdAsync(Guid secretId)
+    {
+        return Task.FromResult(null as Guid?);
     }
 }

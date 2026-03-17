@@ -39,13 +39,8 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : Authoriz
             return;
         }
 
-        // Only users and admins should be able to manipulate access policies
         var (accessClient, userId) =
             await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
-        {
-            return;
-        }
 
         switch (requirement)
         {
@@ -67,9 +62,32 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : Authoriz
         var access =
             await _projectRepository.AccessToProjectAsync(resource.ProjectId, userId,
                 accessClient);
-        if (!access.Write)
+        if (!access.Manage)
         {
             return;
+        }
+
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            var hasManageGrant = resource.ServiceAccountAccessPolicyUpdates
+                .Any(u => (u.Operation == AccessPolicyOperation.Create || u.Operation == AccessPolicyOperation.Update)
+                          && u.AccessPolicy.Manage);
+            if (hasManageGrant)
+            {
+                var creatorId = await _projectRepository.GetProjectCreatorServiceAccountIdAsync(resource.ProjectId);
+                if (creatorId != userId)
+                {
+                    return;
+                }
+
+                if (resource.ServiceAccountAccessPolicyUpdates.Any(u =>
+                        (u.Operation == AccessPolicyOperation.Create || u.Operation == AccessPolicyOperation.Update) &&
+                        u.AccessPolicy.Manage &&
+                        u.AccessPolicy.ServiceAccountId != userId))
+                {
+                    return;
+                }
+            }
         }
 
         var serviceAccountIds = resource.ServiceAccountAccessPolicyUpdates.Select(update =>
@@ -84,7 +102,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : Authoriz
         }
 
         // Users can only create access policies for service accounts they have access to.
-        // User can delete and update any service account access policy if they have write access to the project.
+        // Users can delete and update any service account access policy if they have Manage access to the project.
         var serviceAccountIdsToCheck = resource.ServiceAccountAccessPolicyUpdates
             .Where(update => update.Operation == AccessPolicyOperation.Create).Select(update =>
                 update.AccessPolicy.ServiceAccountId!.Value).ToList();
@@ -99,7 +117,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandler : Authoriz
             await _serviceAccountRepository.AccessToServiceAccountsAsync(serviceAccountIdsToCheck, userId,
                 accessClient);
         if (serviceAccountsAccess.Count == serviceAccountIdsToCheck.Count &&
-            serviceAccountsAccess.All(a => a.Value.Write))
+            serviceAccountsAccess.All(a => a.Value.Manage))
         {
             context.Succeed(requirement);
         }

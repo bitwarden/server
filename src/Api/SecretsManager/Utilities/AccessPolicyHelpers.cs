@@ -35,10 +35,16 @@ public static class AccessPolicyHelpers
 
     public static void CheckAccessPoliciesHaveReadPermission(IEnumerable<BaseAccessPolicy> accessPolicies)
     {
-        var accessPoliciesPermission = accessPolicies.All(policy => policy.Read);
-        if (!accessPoliciesPermission)
+        foreach (var policy in accessPolicies)
         {
-            throw new BadRequestException("Resources must be Read = true");
+            if (!policy.Read)
+            {
+                throw new BadRequestException("Resources must be Read = true");
+            }
+            if (policy.Manage && !policy.Write)
+            {
+                throw new BadRequestException("Manage permission requires Write permission.");
+            }
         }
     }
 }

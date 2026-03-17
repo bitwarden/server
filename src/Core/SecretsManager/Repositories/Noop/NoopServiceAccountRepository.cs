@@ -39,27 +39,20 @@ public class NoopServiceAccountRepository : IServiceAccountRepository
         return Task.FromResult(0);
     }
 
-    public Task<bool> UserHasReadAccessToServiceAccount(Guid id, Guid userId)
+    public Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
-        return Task.FromResult(false);
+        return Task.FromResult(Enumerable.Empty<ServiceAccount>());
     }
 
-    public Task<bool> UserHasWriteAccessToServiceAccount(Guid id, Guid userId)
+    public Task<(bool Read, bool Write, bool Manage)> AccessToServiceAccountAsync(Guid id, Guid userId, AccessClientType accessType)
     {
-        return Task.FromResult(false);
+        return Task.FromResult((false, false, false));
     }
 
-    public Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType) => throw new NotImplementedException();
-
-    public Task<(bool Read, bool Write)> AccessToServiceAccountAsync(Guid id, Guid userId, AccessClientType accessType)
-    {
-        return Task.FromResult((false, false));
-    }
-
-    public Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToServiceAccountsAsync(IEnumerable<Guid> ids,
+    public Task<Dictionary<Guid, (bool Read, bool Write, bool Manage)>> AccessToServiceAccountsAsync(IEnumerable<Guid> ids,
         Guid userId, AccessClientType accessType)
     {
-        return Task.FromResult(null as Dictionary<Guid, (bool Read, bool Write)>);
+        return Task.FromResult(new Dictionary<Guid, (bool Read, bool Write, bool Manage)>());
     }
 
     public Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)

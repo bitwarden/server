@@ -2223,6 +2223,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Write")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
@@ -2302,8 +2306,14 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("CreatedByServiceAccountId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("CreatedByServiceAccountId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("DeletedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -3221,6 +3231,11 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "CreatedByServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("CreatedByServiceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")

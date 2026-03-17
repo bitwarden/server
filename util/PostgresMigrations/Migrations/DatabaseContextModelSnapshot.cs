@@ -2240,6 +2240,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("Write")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
 
@@ -2319,8 +2323,14 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CreatedByServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id")
                         .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("CreatedByServiceAccountId")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("DeletedDate")
                         .HasAnnotation("SqlServer:Clustered", false);
@@ -3238,6 +3248,11 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "CreatedByServiceAccount")
+                        .WithMany()
+                        .HasForeignKey("CreatedByServiceAccountId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")

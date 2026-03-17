@@ -100,7 +100,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
         SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(resource.ServiceAccountId, userId, accessClientType)
-            .Returns((saReadAccess, saWriteAccess));
+            .Returns((saReadAccess, saWriteAccess, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -121,7 +121,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
         SetupUserSubstitutes(sutProvider, AccessClientType.NoAccessCheck, resource, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(resource.ServiceAccountId, userId, AccessClientType.NoAccessCheck)
-            .Returns((true, true));
+            .Returns((true, true, false));
         sutProvider.GetDependency<IProjectRepository>()
             .ProjectsAreInOrganization(Arg.Any<List<Guid>>(), resource.OrganizationId)
             .Returns(false);
@@ -148,7 +148,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
 
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
-            .Returns(projectIds.ToDictionary(projectId => projectId, _ => (false, false)));
+            .Returns(projectIds.ToDictionary(projectId => projectId, _ => (false, false, false)));
 
 
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -172,8 +172,8 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
         var requirement = ServiceAccountGrantedPoliciesOperations.Updates;
         var projectIds = SetupProjectAccessTest(sutProvider, accessClientType, resource, userId);
 
-        var accessResult = projectIds.ToDictionary(projectId => projectId, _ => (false, false));
-        accessResult[projectIds.First()] = (true, true);
+        var accessResult = projectIds.ToDictionary(projectId => projectId, _ => (false, false, false));
+        accessResult[projectIds.First()] = (true, true, false);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
             .Returns(accessResult);
@@ -200,7 +200,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
         var requirement = ServiceAccountGrantedPoliciesOperations.Updates;
         var projectIds = SetupProjectAccessTest(sutProvider, accessClientType, resource, userId);
 
-        var accessResult = projectIds.ToDictionary(projectId => projectId, _ => (false, false));
+        var accessResult = projectIds.ToDictionary(projectId => projectId, _ => (false, false, false));
         accessResult.Remove(projectIds.First());
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
@@ -229,7 +229,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
 
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
-            .Returns(projectIds.ToDictionary(projectId => projectId, _ => (true, true)));
+            .Returns(projectIds.ToDictionary(projectId => projectId, _ => (true, true, true))); // Manage required
 
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
@@ -261,7 +261,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
 
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(resource.ServiceAccountId, userId, accessClientType)
-            .Returns((true, true));
+            .Returns((true, true, true));
         sutProvider.GetDependency<IProjectRepository>()
             .ProjectsAreInOrganization(Arg.Any<List<Guid>>(), resource.OrganizationId)
             .Returns(true);

@@ -38,13 +38,8 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
             return;
         }
 
-        // Only users and admins should be able to manipulate access policies
         var (accessClient, userId) =
             await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
-        {
-            return;
-        }
 
         switch (requirement)
         {
@@ -65,7 +60,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
         var access =
             await _serviceAccountRepository.AccessToServiceAccountAsync(resource.ServiceAccountId, userId,
                 accessClient);
-        if (access.Write)
+        if (access.Manage)
         {
             var projectIdsToCheck = resource.ProjectGrantedPolicyUpdates.Select(update =>
                 update.AccessPolicy.GrantedProjectId!.Value).ToList();
@@ -79,7 +74,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
 
             var projectsAccess =
                 await _projectRepository.AccessToProjectsAsync(projectIdsToCheck, userId, accessClient);
-            if (projectsAccess.Count == projectIdsToCheck.Count && projectsAccess.All(a => a.Value.Write))
+            if (projectsAccess.Count == projectIdsToCheck.Count && projectsAccess.All(a => a.Value.Manage))
             {
                 context.Succeed(requirement);
             }

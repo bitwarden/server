@@ -12,6 +12,7 @@ public abstract class BaseAccessPolicy
     // Access
     public bool Read { get; set; }
     public bool Write { get; set; }
+    public bool Manage { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;

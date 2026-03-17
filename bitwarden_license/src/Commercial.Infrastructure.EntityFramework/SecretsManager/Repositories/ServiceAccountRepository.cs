@@ -53,6 +53,10 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasWriteAccessToServiceAccount(userId)),
+            AccessClientType.ServiceAccount => query.Where(sa =>
+                sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                sa.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
@@ -87,7 +91,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         await transaction.CommitAsync();
     }
 
-    public async Task<(bool Read, bool Write)> AccessToServiceAccountAsync(Guid id, Guid userId,
+    public async Task<(bool Read, bool Write, bool Manage)> AccessToServiceAccountAsync(Guid id, Guid userId,
         AccessClientType accessType)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
@@ -98,10 +102,10 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         var accessQuery = BuildServiceAccountAccessQuery(serviceAccountQuery, userId, accessType);
         var access = await accessQuery.FirstOrDefaultAsync();
 
-        return access == null ? (false, false) : (access.Read, access.Write);
+        return access == null ? (false, false, false) : (access.Read, access.Write, access.Manage);
     }
 
-    public async Task<Dictionary<Guid, (bool Read, bool Write)>> AccessToServiceAccountsAsync(
+    public async Task<Dictionary<Guid, (bool Read, bool Write, bool Manage)>> AccessToServiceAccountsAsync(
         IEnumerable<Guid> ids,
         Guid userId,
         AccessClientType accessType)
@@ -112,7 +116,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         var serviceAccountsQuery = dbContext.ServiceAccount.Where(p => ids.Contains(p.Id));
         var accessQuery = BuildServiceAccountAccessQuery(serviceAccountsQuery, userId, accessType);
 
-        return await accessQuery.ToDictionaryAsync(access => access.Id, access => (access.Read, access.Write));
+        return await accessQuery.ToDictionaryAsync(access => access.Id, access => (access.Read, access.Write, access.Manage));
     }
 
     public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
@@ -213,13 +217,13 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return results;
     }
 
-    private record ServiceAccountAccess(Guid Id, bool Read, bool Write);
+    private record ServiceAccountAccess(Guid Id, bool Read, bool Write, bool Manage);
 
     private static IQueryable<ServiceAccountAccess> BuildServiceAccountAccessQuery(IQueryable<ServiceAccount> serviceAccountQuery, Guid userId,
         AccessClientType accessType) =>
         accessType switch
         {
-            AccessClientType.NoAccessCheck => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, true, true)),
+            AccessClientType.NoAccessCheck => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, true, true, true)),
             AccessClientType.User => serviceAccountQuery.Select(sa => new ServiceAccountAccess
             (
                 sa.Id,
@@ -228,10 +232,13 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
                     ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
                 sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
                 sa.GroupAccessPolicies.Any(ap =>
-                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
+                sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Manage) ||
+                sa.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Manage))
             )),
-            AccessClientType.ServiceAccount => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, false, false)),
-            _ => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, false, false))
+            AccessClientType.ServiceAccount => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, false, false, false)),
+            _ => serviceAccountQuery.Select(sa => new ServiceAccountAccess(sa.Id, false, false, false))
         };
 
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>

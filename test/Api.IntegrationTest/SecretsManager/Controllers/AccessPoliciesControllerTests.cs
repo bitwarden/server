@@ -1121,6 +1121,277 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         Assert.Equal(currentOrgUser.Id, result.UserAccessPolicies.First().OrganizationUserId);
     }
 
+    [Fact]
+    public async Task PutProjectPeopleAccessPolicies_RemoveLastManageGrant_ReturnsBadRequest()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var (_, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+
+        await _accessPolicyRepository.CreateManyAsync(
+        [
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = orgUser.Id,
+                Read = true,
+                Write = true,
+                Manage = true
+            }
+        ]);
+
+        var request = new PeopleAccessPoliciesRequestModel
+        {
+            UserAccessPolicyRequests =
+            [
+                new AccessPolicyRequest { GranteeId = orgUser.Id, Read = true, Write = true, Manage = false }
+            ]
+        };
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutProjectPeopleAccessPolicies_RemoveSecondToLastManageGrant_ReturnsSuccess()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var (_, orgUserA) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        var (_, orgUserB) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+
+        await _accessPolicyRepository.CreateManyAsync(
+        [
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = orgUserA.Id,
+                Read = true,
+                Write = true,
+                Manage = true
+            },
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = orgUserB.Id,
+                Read = true,
+                Write = true,
+                Manage = true
+            }
+        ]);
+
+        var request = new PeopleAccessPoliciesRequestModel
+        {
+            UserAccessPolicyRequests =
+            [
+                new AccessPolicyRequest { GranteeId = orgUserA.Id, Read = true, Write = true, Manage = true }
+            ]
+        };
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task PutProjectPeopleAccessPolicies_ManageOmittedInRequest_SetsManageToFalse()
+    {
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = organizationUser.OrganizationId,
+            Name = _mockEncryptedString
+        });
+
+        var (_, orgUserA) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        var (_, orgUserB) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+
+        await _accessPolicyRepository.CreateManyAsync(
+        [
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = orgUserA.Id,
+                Read = true,
+                Write = true,
+                Manage = true
+            },
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = orgUserB.Id,
+                Read = true,
+                Write = true,
+                Manage = false
+            }
+        ]);
+
+        // Manage field intentionally omitted — should default to false per bool binding design
+        var requestBody = $@"{{""userAccessPolicyRequests"":[{{""granteeId"":""{orgUserA.Id}"",""read"":true,""write"":true,""manage"":true}},{{""granteeId"":""{orgUserB.Id}"",""read"":true,""write"":true}}]}}";
+        var content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.PutAsync($"/projects/{project.Id}/access-policies/people", content);
+
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+        var orgUserBPolicy = result?.UserAccessPolicies.FirstOrDefault(p => p.OrganizationUserId == orgUserB.Id);
+        Assert.NotNull(orgUserBPolicy);
+        Assert.False(orgUserBPolicy.Manage, "Absent manage field must default to false — documented bool binding behavior");
+    }
+
+    [Fact]
+    public async Task GetThenPutProjectPeopleAccessPolicies_ManageTruePreserved()
+    {
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = organizationUser.OrganizationId,
+            Name = _mockEncryptedString
+        });
+
+        var (_, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+
+        await _accessPolicyRepository.CreateManyAsync(
+        [
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = orgUser.Id,
+                Read = true,
+                Write = true,
+                Manage = true
+            }
+        ]);
+
+        var getResponse = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
+        getResponse.EnsureSuccessStatusCode();
+        var getResult = await getResponse.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+        Assert.NotNull(getResult);
+        Assert.True(getResult.UserAccessPolicies.First().Manage, "GET response must include manage:true");
+
+        var putRequest = new PeopleAccessPoliciesRequestModel
+        {
+            UserAccessPolicyRequests =
+            [
+                new AccessPolicyRequest
+                {
+                    GranteeId = orgUser.Id,
+                    Read = getResult.UserAccessPolicies.First().Read,
+                    Write = getResult.UserAccessPolicies.First().Write,
+                    Manage = getResult.UserAccessPolicies.First().Manage
+                }
+            ]
+        };
+
+        var putResponse = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", putRequest);
+        putResponse.EnsureSuccessStatusCode();
+
+        var putResult = await putResponse.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+        Assert.NotNull(putResult);
+        Assert.True(putResult.UserAccessPolicies.First().Manage, "manage:true must survive a GET→PUT round-trip");
+    }
+
+    [Fact]
+    public async Task PutProjectPeopleAccessPolicies_WriteOnlyCallerWithoutManage_ReturnsNotFound()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var (email, writeOnlyOrgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await _loginHelper.LoginAsync(email);
+
+        await _accessPolicyRepository.CreateManyAsync(
+        [
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = writeOnlyOrgUser.Id,
+                Read = true,
+                Write = true,
+                Manage = false
+            }
+        ]);
+
+        var request = new PeopleAccessPoliciesRequestModel
+        {
+            UserAccessPolicyRequests =
+            [
+                new AccessPolicyRequest { GranteeId = writeOnlyOrgUser.Id, Read = true, Write = true, Manage = false }
+            ]
+        };
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutSecretAccessPolicies_ValidRequest_Returns200()
+    {
+        var (secretId, _) = await SetupSecretAccessPoliciesTest(PermissionType.RunAsAdmin);
+        var (_, granteeOrgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+
+        var request = new SecretAccessPoliciesRequestsModel
+        {
+            UserAccessPolicyRequests = new List<AccessPolicyRequest>
+            {
+                new() { GranteeId = granteeOrgUser.Id, Read = true, Write = true, Manage = false }
+            },
+            GroupAccessPolicyRequests = new List<AccessPolicyRequest>(),
+            ServiceAccountAccessPolicyRequests = new List<AccessPolicyRequest>()
+        };
+
+        var response = await _client.PutAsJsonAsync($"/secrets/{secretId}/access-policies", request);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<SecretAccessPoliciesResponseModel>();
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.UserAccessPolicies);
+        Assert.Equal(granteeOrgUser.Id, result.UserAccessPolicies.First().OrganizationUserId);
+    }
+
+    [Fact]
+    public async Task PutSecretAccessPolicies_EmptyBody_Returns400()
+    {
+        var (secretId, _) = await SetupSecretAccessPoliciesTest(PermissionType.RunAsAdmin);
+
+        var request = new SecretAccessPoliciesRequestsModel
+        {
+            UserAccessPolicyRequests = new List<AccessPolicyRequest>(),
+            GroupAccessPolicyRequests = new List<AccessPolicyRequest>(),
+            ServiceAccountAccessPolicyRequests = new List<AccessPolicyRequest>()
+        };
+
+        var response = await _client.PutAsJsonAsync($"/secrets/{secretId}/access-policies", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private async Task<(Guid ProjectId, Guid ServiceAccountId)> CreateServiceAccountProjectAccessPolicyAsync(
         Guid organizationId)
     {
@@ -1164,7 +1435,8 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
                 GrantedProjectId = project.Id,
                 OrganizationUserId = organizationUser.Id,
                 Read = true,
-                Write = true
+                Write = true,
+                Manage = true
             }
         };
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
@@ -1214,7 +1486,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         {
             UserAccessPolicyRequests = new List<AccessPolicyRequest>
             {
-                new() { GranteeId = currentUser.Id, Read = true, Write = true }
+                new() { GranteeId = currentUser.Id, Read = true, Write = true, Manage = true }
             }
         };
         return (project, request);

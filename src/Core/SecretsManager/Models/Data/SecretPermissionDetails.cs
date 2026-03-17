@@ -10,4 +10,5 @@ public class SecretPermissionDetails
     public Secret Secret { get; set; }
     public bool Read { get; set; }
     public bool Write { get; set; }
+    public bool Manage { get; set; }
 }

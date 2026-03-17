@@ -193,7 +193,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
@@ -253,7 +253,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
@@ -312,7 +312,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
@@ -371,7 +371,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
@@ -430,7 +430,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
@@ -489,7 +489,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
@@ -548,7 +548,7 @@ public class ServiceAccountAuthorizationHandlerTests
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
+            .Returns((read, write, false));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
