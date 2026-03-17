@@ -523,8 +523,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
         SetupAllServiceAccountAccess(sutProvider, resource, userId, AccessClientType.ServiceAccount);
         sutProvider.GetDependency<IProjectRepository>()
-            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
-            .Returns(userId);
+            .IsServiceAccountCreatorOfAnyProjectForSecretAsync(resource.SecretId, userId)
+            .Returns(true);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -545,30 +545,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         resource = AddManageServiceAccountUpdate(resource, userId);
         SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
         sutProvider.GetDependency<IProjectRepository>()
-            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
-            .Returns(Guid.NewGuid());
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
-
-        await sutProvider.Sut.HandleAsync(authzContext);
-
-        Assert.False(authzContext.HasSucceeded);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Handler_CanUpdateAsync_SA_ManageGrant_NullCreator_DoesNotSucceed(
-        SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
-        SecretAccessPoliciesUpdates resource,
-        Guid userId,
-        ClaimsPrincipal claimsPrincipal)
-    {
-        var requirement = SecretAccessPoliciesOperations.Updates;
-        resource = AddManageServiceAccountUpdate(resource, userId);
-        SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
-        sutProvider.GetDependency<IProjectRepository>()
-            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
-            .Returns((Guid?)null);
+            .IsServiceAccountCreatorOfAnyProjectForSecretAsync(resource.SecretId, userId)
+            .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -597,7 +575,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         Assert.True(authzContext.HasSucceeded);
         await sutProvider.GetDependency<IProjectRepository>()
             .DidNotReceive()
-            .GetProjectCreatorServiceAccountIdBySecretIdAsync(Arg.Any<Guid>());
+            .IsServiceAccountCreatorOfAnyProjectForSecretAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
     private static void SetupNoServiceAccountAccess(
@@ -832,8 +810,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
         SetupAllServiceAccountAccess(sutProvider, resource, userId, AccessClientType.ServiceAccount);
         sutProvider.GetDependency<IProjectRepository>()
-            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
-            .Returns(userId);
+            .IsServiceAccountCreatorOfAnyProjectForSecretAsync(resource.SecretId, userId)
+            .Returns(true);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -855,8 +833,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         resource = AddManageServiceAccountUpdateOperation(resource, userId);
         SetupSameOrganizationRequest(sutProvider, AccessClientType.ServiceAccount, resource, userId);
         sutProvider.GetDependency<IProjectRepository>()
-            .GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId)
-            .Returns(Guid.NewGuid()); // different SA is the creator
+            .IsServiceAccountCreatorOfAnyProjectForSecretAsync(resource.SecretId, userId)
+            .Returns(false); // different SA is the creator
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 

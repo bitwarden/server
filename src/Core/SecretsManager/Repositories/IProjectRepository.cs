@@ -25,5 +25,5 @@ public interface IProjectRepository
     Task<Dictionary<Guid, (bool Read, bool Write, bool Manage)>> AccessToProjectsAsync(IEnumerable<Guid> projectIds, Guid userId,
         AccessClientType accessType);
     Task<Guid?> GetProjectCreatorServiceAccountIdAsync(Guid projectId);
-    Task<Guid?> GetProjectCreatorServiceAccountIdBySecretIdAsync(Guid secretId);
+    Task<bool> IsServiceAccountCreatorOfAnyProjectForSecretAsync(Guid secretId, Guid serviceAccountId);
 }

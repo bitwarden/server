@@ -3,9 +3,7 @@ using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;
@@ -34,9 +32,6 @@ public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
                 (accessClientType, userId));
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(resource.Id, userId, accessClientType)
             .Returns((read, write, manage));
-        sutProvider.GetDependency<IAccessPolicyRepository>()
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
-            .Returns(Enumerable.Empty<BaseAccessPolicy>());
     }
 
     private static void SetupOrganizationUsers(SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider,
@@ -179,40 +174,7 @@ public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
     [Theory]
     [BitAutoData(AccessClientType.User)]
     [BitAutoData(AccessClientType.NoAccessCheck)]
-    public async Task ReplaceProjectPeople_RemovesLastManageGrant_ThrowsBadRequest(
-        AccessClientType accessClient,
-        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        ProjectPeopleAccessPolicies resource,
-        ClaimsPrincipal claimsPrincipal,
-        Guid userId)
-    {
-        var requirement = ProjectPeopleAccessPoliciesOperations.Replace;
-        SetupUserPermission(sutProvider, accessClient, resource, userId);
-
-        // Replacement has no Manage grants
-        resource.UserAccessPolicies = resource.UserAccessPolicies?
-            .Select(ap => { ap.Manage = false; return ap; })
-            .ToList();
-        resource.GroupAccessPolicies = resource.GroupAccessPolicies?
-            .Select(ap => { ap.Manage = false; return ap; })
-            .ToList();
-
-        // But currently there IS a human Manage grant
-        var existingManagePolicy = new UserProjectAccessPolicy { Manage = true };
-        sutProvider.GetDependency<IAccessPolicyRepository>()
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
-            .Returns(new BaseAccessPolicy[] { existingManagePolicy });
-
-        var authzContext = new AuthorizationHandlerContext(
-            new List<IAuthorizationRequirement> { requirement }, claimsPrincipal, resource);
-
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.HandleAsync(authzContext));
-    }
-
-    [Theory]
-    [BitAutoData(AccessClientType.User)]
-    [BitAutoData(AccessClientType.NoAccessCheck)]
-    public async Task ReplaceProjectPeople_NoExistingManageGrants_ZeroNewManage_Succeeds(
+    public async Task ReplaceProjectPeople_ZeroNewManage_Succeeds(
         AccessClientType accessClient,
         SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider,
         ProjectPeopleAccessPolicies resource,
@@ -224,16 +186,12 @@ public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
         SetupOrganizationUsers(sutProvider, resource);
         SetupGroups(sutProvider, resource);
 
-        // Replacement has no Manage grants
         resource.UserAccessPolicies = resource.UserAccessPolicies?
             .Select(ap => { ap.Manage = false; return ap; })
             .ToList();
         resource.GroupAccessPolicies = resource.GroupAccessPolicies?
             .Select(ap => { ap.Manage = false; return ap; })
             .ToList();
-
-        // No existing human Manage grants — lockout does not trigger
-        // (SetupUserPermission already returns Enumerable.Empty for this mock)
 
         var authzContext = new AuthorizationHandlerContext(
             new List<IAuthorizationRequirement> { requirement }, claimsPrincipal, resource);

@@ -317,15 +317,13 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
             .FirstOrDefaultAsync();
     }
 
-    public async Task<Guid?> GetProjectCreatorServiceAccountIdBySecretIdAsync(Guid secretId)
+    public async Task<bool> IsServiceAccountCreatorOfAnyProjectForSecretAsync(Guid secretId, Guid serviceAccountId)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         return await dbContext.Secret
             .Where(s => s.Id == secretId && s.DeletedDate == null)
             .SelectMany(s => s.Projects!)
-            .Where(p => p.DeletedDate == null)
-            .Select(p => p.CreatedByServiceAccountId)
-            .FirstOrDefaultAsync();
+            .AnyAsync(p => p.DeletedDate == null && p.CreatedByServiceAccountId == serviceAccountId);
     }
 }

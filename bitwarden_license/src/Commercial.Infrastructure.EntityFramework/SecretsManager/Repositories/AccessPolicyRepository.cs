@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Enums.AccessPolicies;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
@@ -171,6 +172,19 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             ap.Discriminator != AccessPolicyDiscriminator.ServiceAccountProject &&
             (((UserProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id ||
              ((GroupProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id)).ToListAsync();
+
+        // Lockout: if any current policies have Manage, the replacement must retain at least one.
+        var newUserManageCount = peopleAccessPolicies.UserAccessPolicies?.Count(ap => ap.Manage) ?? 0;
+        var newGroupManageCount = peopleAccessPolicies.GroupAccessPolicies?.Count(ap => ap.Manage) ?? 0;
+        if (newUserManageCount + newGroupManageCount == 0)
+        {
+            var hasCurrentHumanManage = peoplePolicyEntities.Any(ap => ap.Manage);
+            if (hasCurrentHumanManage)
+            {
+                throw new BadRequestException(
+                    "At least one user or group must retain Manage permission on this project.");
+            }
+        }
 
         var userPolicyEntities =
             peoplePolicyEntities.Where(ap => ap.GetType() == typeof(UserProjectAccessPolicy)).ToList();
@@ -462,7 +476,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         var currentDate = DateTime.UtcNow;
 

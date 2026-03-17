@@ -88,8 +88,8 @@ public class NoopProjectRepository : IProjectRepository
         return Task.FromResult(null as Guid?);
     }
 
-    public Task<Guid?> GetProjectCreatorServiceAccountIdBySecretIdAsync(Guid secretId)
+    public Task<bool> IsServiceAccountCreatorOfAnyProjectForSecretAsync(Guid secretId, Guid serviceAccountId)
     {
-        return Task.FromResult(null as Guid?);
+        return Task.FromResult(false);
     }
 }

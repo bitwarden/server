@@ -53,10 +53,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasWriteAccessToServiceAccount(userId)),
-            AccessClientType.ServiceAccount => query.Where(sa =>
-                sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-                sa.GroupAccessPolicies.Any(ap =>
-                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
+            AccessClientType.ServiceAccount => query.Where(_ => false),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 

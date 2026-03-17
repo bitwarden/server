@@ -86,8 +86,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
                     (u.Operation == AccessPolicyOperation.Create || u.Operation == AccessPolicyOperation.Update) && u.AccessPolicy.Manage);
             if (hasManageGrant)
             {
-                var creatorId = await _projectRepository.GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId);
-                if (creatorId != userId)
+                if (!await _projectRepository.IsServiceAccountCreatorOfAnyProjectForSecretAsync(resource.SecretId, userId))
                 {
                     return;
                 }
@@ -133,8 +132,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
                 resource.ServiceAccountAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage);
             if (hasManageGrant)
             {
-                var creatorId = await _projectRepository.GetProjectCreatorServiceAccountIdBySecretIdAsync(resource.SecretId);
-                if (creatorId != userId)
+                if (!await _projectRepository.IsServiceAccountCreatorOfAnyProjectForSecretAsync(resource.SecretId, userId))
                 {
                     return;
                 }

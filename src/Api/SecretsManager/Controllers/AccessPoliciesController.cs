@@ -176,7 +176,7 @@ public class AccessPoliciesController : Controller
         [FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        var (_, userId) = await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
+        var (_, userId) = await CheckUserHasManageAccessToServiceAccountAsync(serviceAccount);
         var results = await _accessPolicyRepository.GetPeoplePoliciesByGrantedServiceAccountIdAsync(id, userId);
         return new ServiceAccountPeopleAccessPoliciesResponseModel(results, userId);
     }
@@ -382,7 +382,7 @@ public class AccessPoliciesController : Controller
         return (accessClient, userId);
     }
 
-    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToServiceAccountAsync(
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasManageAccessToServiceAccountAsync(
         ServiceAccount serviceAccount)
     {
         if (serviceAccount == null)
@@ -399,7 +399,7 @@ public class AccessPoliciesController : Controller
 
         var access =
             await _serviceAccountRepository.AccessToServiceAccountAsync(serviceAccount.Id, userId, accessClient);
-        if (!access.Write)
+        if (!access.Manage)
         {
             throw new NotFoundException();
         }
