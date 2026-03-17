@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -22,7 +23,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.AdminConsole.Controllers;
 
 
 // Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
@@ -30,6 +31,12 @@ namespace Bit.Api.Test.Controllers;
 [SutProviderCustomize]
 public class PoliciesControllerTests
 {
+    [Fact]
+    public void AllActionMethodsHaveAuthorization()
+    {
+        ControllerAuthorizationTestHelpers.AssertAllHttpMethodsHaveAuthorization(
+            typeof(PoliciesController));
+    }
 
     [Theory]
     [BitAutoData]
