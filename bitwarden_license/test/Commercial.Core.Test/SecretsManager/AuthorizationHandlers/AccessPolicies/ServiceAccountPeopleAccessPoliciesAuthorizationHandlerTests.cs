@@ -23,7 +23,8 @@ public class ServiceAccountPeopleAccessPoliciesAuthorizationHandlerTests
         SutProvider<ServiceAccountPeopleAccessPoliciesAuthorizationHandler> sutProvider,
         AccessClientType accessClientType, ServiceAccountPeopleAccessPolicies resource, Guid userId = new(),
         bool read = true,
-        bool write = true)
+        bool write = true,
+        bool manage = true)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
             .Returns(true);
@@ -32,7 +33,7 @@ public class ServiceAccountPeopleAccessPoliciesAuthorizationHandlerTests
                 (accessClientType, userId));
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(resource.Id, userId, accessClientType)
-            .Returns((read, write, write)); // manage mirrors write: handler requires Manage for Replace
+            .Returns((read, write, manage));
     }
 
     private static void SetupOrganizationUsers(
@@ -157,22 +158,26 @@ public class ServiceAccountPeopleAccessPoliciesAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.User, false, false, false)]
-    [BitAutoData(AccessClientType.User, false, true, true)]
-    [BitAutoData(AccessClientType.User, true, false, false)]
-    [BitAutoData(AccessClientType.User, true, true, true)]
-    [BitAutoData(AccessClientType.NoAccessCheck, false, false, false)]
-    [BitAutoData(AccessClientType.NoAccessCheck, false, true, true)]
-    [BitAutoData(AccessClientType.NoAccessCheck, true, false, false)]
-    [BitAutoData(AccessClientType.NoAccessCheck, true, true, true)]
+    [BitAutoData(AccessClientType.User, false, false, false, false)]
+    [BitAutoData(AccessClientType.User, false, false, true, true)]
+    [BitAutoData(AccessClientType.User, false, true, false, false)]
+    [BitAutoData(AccessClientType.User, true, false, true, true)]
+    [BitAutoData(AccessClientType.User, true, true, false, false)]
+    [BitAutoData(AccessClientType.User, true, true, true, true)]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, false, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, false, true, true)]
+    [BitAutoData(AccessClientType.NoAccessCheck, false, true, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, false, true, true)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, true, false, false)]
+    [BitAutoData(AccessClientType.NoAccessCheck, true, true, true, true)]
     public async Task ReplaceServiceAccountPeople_AccessCheck(AccessClientType accessClient, bool read, bool write,
-        bool expected,
+        bool manage, bool expected,
         SutProvider<ServiceAccountPeopleAccessPoliciesAuthorizationHandler> sutProvider,
         ServiceAccountPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal, Guid userId)
     {
         var requirement = ServiceAccountPeopleAccessPoliciesOperations.Replace;
-        SetupUserPermission(sutProvider, accessClient, resource, userId, read, write);
+        SetupUserPermission(sutProvider, accessClient, resource, userId, read, write, manage);
         SetupOrganizationUsers(sutProvider, resource);
         SetupGroups(sutProvider, resource);
 

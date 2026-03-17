@@ -229,7 +229,7 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandlerTests
 
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
-            .Returns(projectIds.ToDictionary(projectId => projectId, _ => (true, true, true))); // Manage required
+            .Returns(projectIds.ToDictionary(projectId => projectId, _ => (true, true, true)));
 
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);

@@ -485,7 +485,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        // SS-2 regression: Update op with Manage=true must trigger the delegation guard,
+        // Update op with Manage=true must trigger the delegation guard,
         // not bypass it by using a non-Create operation.
         var requirement = ProjectServiceAccountsAccessPoliciesOperations.Updates;
         SetupUserSubstitutes(sutProvider, AccessClientType.ServiceAccount, resource, userId);
@@ -498,7 +498,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
         {
             new()
             {
-                Operation = AccessPolicyOperation.Update,   // <-- Update, not Create
+                Operation = AccessPolicyOperation.Update,
                 AccessPolicy = new ServiceAccountProjectAccessPolicy
                 {
                     ServiceAccountId = userId,
@@ -512,7 +512,7 @@ public class ProjectServiceAccountsAccessPoliciesAuthorizationHandlerTests
 
         sutProvider.GetDependency<IProjectRepository>()
             .GetProjectCreatorServiceAccountIdAsync(resource.ProjectId)
-            .Returns(Guid.NewGuid()); // different SA created the project
+            .Returns(Guid.NewGuid());
 
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);

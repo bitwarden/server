@@ -312,7 +312,7 @@ public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
         Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
-        // SS-1 regression: even when the SA is the project creator it must not be able to
+        // Even when the SA is the project creator it must not be able to
         // grant access to users from a different organization.
         var requirement = ProjectPeopleAccessPoliciesOperations.Replace;
         SetupUserPermission(sutProvider, AccessClientType.ServiceAccount, resource, userId);
