@@ -709,12 +709,18 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
-        var cipher = await GetByIdAsync(id, user.Id);
+        var updatedCipher = await GetByIdAsync(id, user.Id);
         var response = new CipherResponseModel(
-            cipher,
+            updatedCipher,
             user,
             await _applicationCacheService.GetOrganizationAbilitiesAsync(),
             _globalSettings);
@@ -1382,12 +1388,22 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
+
         var attachments = cipher?.GetAttachments();
 
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
         {
             throw new NotFoundException();
         }
+
+        await _cipherService.ValidateCipherEditForAttachmentAsync(cipher, userId, orgAdmin, attachment.Size);
 
         return new AttachmentUploadDataResponseModel
         {
@@ -1409,6 +1425,13 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
         var attachments = cipher?.GetAttachments();
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
         {
@@ -1417,7 +1440,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, userId, orgAdmin);
         });
     }
 
@@ -1498,8 +1521,50 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
         return new AttachmentResponseModel(result);
+    }
+
+    /// <summary>
+    /// Serves a locally stored attachment file using a time-limited, signed token.
+    /// This endpoint replaces direct static file access for self-hosted environments
+    /// to ensure that only authorized users can download attachment files.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("attachment/download")]
+    public async Task<IActionResult> DownloadAttachmentAsync([FromQuery] string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new NotFoundException();
+        }
+
+        (Guid cipherId, string attachmentId) = _attachmentStorageService.ParseAttachmentDownloadToken(token);
+
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var attachments = cipher.GetAttachments();
+        if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
+        {
+            throw new NotFoundException();
+        }
+
+        var stream = await _attachmentStorageService.GetAttachmentReadStreamAsync(cipher, attachmentData);
+        if (stream == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return File(stream, "application/octet-stream", attachmentData.FileName);
     }
 
     [HttpPost("{id}/attachment/{attachmentId}/share")]
