@@ -63,7 +63,6 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
     private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IOrganizationUpdateKeysCommand _organizationUpdateKeysCommand;
     private readonly IOrganizationUpdateCommand _organizationUpdateCommand;
@@ -88,7 +87,6 @@ public class OrganizationsController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
         IOrganizationDeleteCommand organizationDeleteCommand,
-        IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
         IOrganizationUpdateKeysCommand organizationUpdateKeysCommand,
         IOrganizationUpdateCommand organizationUpdateCommand)
@@ -112,7 +110,6 @@ public class OrganizationsController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
         _organizationDeleteCommand = organizationDeleteCommand;
-        _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _organizationUpdateKeysCommand = organizationUpdateKeysCommand;
         _organizationUpdateCommand = organizationUpdateCommand;
