@@ -69,8 +69,13 @@ public static class Constants
         /// This value must match what Stripe uses for the `Country` field value for the United States.
         /// </summary>
         public const string UnitedStates = "US";
-    }
 
+        /// <summary>
+        /// Abbreviation for Switzerland.
+        /// This value must match what Stripe uses for the `Country` field value for Switzerland.
+        /// </summary>
+        public const string Switzerland = "CH";
+    }
 
     /// <summary>
     /// Constants for our browser extensions IDs
