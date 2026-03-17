@@ -69,8 +69,13 @@ public static class Constants
         /// This value must match what Stripe uses for the `Country` field value for the United States.
         /// </summary>
         public const string UnitedStates = "US";
-    }
 
+        /// <summary>
+        /// Abbreviation for Switzerland.
+        /// This value must match what Stripe uses for the `Country` field value for Switzerland.
+        /// </summary>
+        public const string Switzerland = "CH";
+    }
 
     /// <summary>
     /// Constants for our browser extensions IDs
@@ -143,6 +148,7 @@ public static class FeatureFlagKeys
     public const string RefactorMembersComponent = "pm-29503-refactor-members-inheritance";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
+    public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -151,15 +157,10 @@ public static class FeatureFlagKeys
     public const string DesktopMigrationMilestone4 = "desktop-ui-migration-milestone-4";
 
     /* Auth Team */
-    public const string TwoFactorExtensionDataPersistence = "pm-9115-two-factor-extension-data-persistence";
-    public const string BrowserExtensionLoginApproval = "pm-14938-browser-extension-login-approvals";
-    public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
-    public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
     public const string Otp6Digits = "pm-18612-otp-6-digits";
     public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
-    public const string OrganizationConfirmationEmail = "pm-28402-update-confirmed-to-org-email-template";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
@@ -198,7 +199,6 @@ public static class FeatureFlagKeys
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
-    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
@@ -208,6 +208,9 @@ public static class FeatureFlagKeys
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
     public const string UnlockViaSdk = "unlock-via-sdk";
+    public const string UseSdkForKeyConnectorMigration = "use-sdk-for-key-connector-migration";
+    public const string UseUnlockServiceForPasswordLogin = "use-unlock-service-for-password-login";
+    public const string UseUnlockServiceForKeyConnectorLogin = "use-unlock-service-for-key-connector-login";
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
@@ -229,8 +232,6 @@ public static class FeatureFlagKeys
     /* Platform Team */
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
-    public const string PushNotificationsWhenLocked = "pm-19388-push-notifications-when-locked";
-    public const string PushNotificationsWhenInactive = "pm-25130-receive-push-notifications-for-inactive-users";
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
 
     /* Tools Team */

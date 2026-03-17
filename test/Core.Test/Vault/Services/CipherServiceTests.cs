@@ -2575,4 +2575,153 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
     }
+
+    [Theory, BitAutoData]
+    public async Task UploadFileForExistingAttachmentAsync_ReadOnlyUser_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        cipher.UserId = null;
+
+        var attachment = new CipherAttachment.MetaData
+        {
+            Size = 100,
+            FileName = "test.txt"
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id)
+            .Returns(false);
+
+        using var stream = new MemoryStream(new byte[100]);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UploadFileForExistingAttachmentAsync(stream, cipher, attachment, savingUserId, false));
+        Assert.Equal("You do not have permissions to edit this.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_ReadOnlyUser_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id)
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, false, 100));
+        Assert.Equal("You do not have permissions to edit this.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_OrgAdmin_BypassesEditCheck(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        cipher.UserId = null;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id)
+            .Returns(false);
+
+        var organization = new Organization
+        {
+            Id = cipher.OrganizationId.Value,
+            MaxStorageGb = 100
+        };
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(cipher.OrganizationId.Value)
+            .Returns(organization);
+
+        await sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, true, 100);
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_ZeroRequestLength_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.UserId = savingUserId;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, true, 0));
+        Assert.Equal("No data to attach.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_UserWithEditPermission_Succeeds(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, User user)
+    {
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        user.Id = savingUserId;
+        user.Premium = true;
+        user.MaxStorageGb = 1;
+        user.Storage = 0;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(savingUserId)
+            .Returns(user);
+
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(user)
+            .Returns(true);
+
+        await sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, false, 100);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_NullCipher_ThrowsNotFoundException(
+    string attachmentId, SutProvider<CipherService> sutProvider)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentDownloadDataAsync(null, attachmentId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_AttachmentNotFound_ThrowsNotFoundException(
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipher = new Cipher { Id = Guid.NewGuid(), Attachments = null };
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentDownloadDataAsync(cipher, "nonexistent"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_ReturnsUrlFromStorageService(
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var attachmentId = Guid.NewGuid().ToString();
+        var expectedUrl = "https://example.com/download?token=abc";
+
+        var metaData = new CipherAttachment.MetaData
+        {
+            AttachmentId = attachmentId,
+            FileName = "test.txt",
+            Size = 100,
+        };
+
+        var cipher = new Cipher
+        {
+            Id = cipherId,
+            Attachments = System.Text.Json.JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, metaData } }),
+        };
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .GetAttachmentDownloadUrlAsync(cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(expectedUrl);
+
+        var result = await sutProvider.Sut.GetAttachmentDownloadDataAsync(cipher, attachmentId);
+
+        Assert.Equal(expectedUrl, result.Url);
+        Assert.Equal(attachmentId, result.Id);
+    }
 }

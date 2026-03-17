@@ -10,6 +10,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -19,7 +20,6 @@ using Bit.Core.Utilities;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
-
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
 using Subscription = Stripe.Subscription;
@@ -602,23 +602,13 @@ public class SubscriberService(
 
         if (isBusinessUseSubscriber)
         {
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
             switch (customer)
             {
-                case
-                {
-                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: not TaxExempt.Reverse
-                }:
+                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                    when determinedTaxExemptStatus != customerTaxExemptStatus:
                     await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
-                    break;
-                case
-                {
-                    Address.Country: Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: TaxExempt.Reverse
-                }:
-                    await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = TaxExempt.None });
+                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
                     break;
             }
 
@@ -637,8 +627,8 @@ public class SubscriberService(
             {
                 User => true,
                 Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
-                                             customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
-                Provider => customer.Address.Country == Core.Constants.CountryAbbreviations.UnitedStates || (customer.TaxIds?.Any() ?? false),
+                                             TaxHelpers.IsDirectTaxCountry(customer.Address?.Country) || (customer.TaxIds?.Any() ?? false),
+                Provider provider => TaxHelpers.IsDirectTaxCountry(customer.Address?.Country) || (customer.TaxIds?.Any() ?? false),
                 _ => false
             };
 

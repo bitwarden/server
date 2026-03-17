@@ -11,7 +11,9 @@ public record RevokeOrganizationUsersRequest(
 
 public record RevokeOrganizationUsersValidationRequest(
     Guid OrganizationId,
-    ICollection<Guid> OrganizationUserIdsToRevoke,
-    IActingUser PerformedBy,
-    ICollection<OrganizationUser> OrganizationUsersToRevoke
-) : RevokeOrganizationUsersRequest(OrganizationId, OrganizationUserIdsToRevoke, PerformedBy);
+    ICollection<OrganizationUser> OrganizationUsersToRevoke,
+    IActingUser PerformedBy
+)
+{
+    public ICollection<Guid> OrganizationUserIdsToRevoke => OrganizationUsersToRevoke.Select(x => x.Id).ToArray();
+}

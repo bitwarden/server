@@ -49,6 +49,30 @@ public class InMemoryApplicationCacheService : IVCurrentInMemoryApplicationCache
         return _providerAbilities;
     }
 
+#nullable enable
+    public async Task<ProviderAbility?> GetProviderAbilityAsync(Guid providerId)
+    {
+        (await GetProviderAbilitiesAsync()).TryGetValue(providerId, out var providerAbility);
+        return providerAbility;
+    }
+#nullable disable
+
+    public async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync(IEnumerable<Guid> providerIds)
+    {
+        var allProviderAbilities = await GetProviderAbilitiesAsync();
+        return providerIds
+            .Where(allProviderAbilities.ContainsKey)
+            .ToDictionary(id => id, id => allProviderAbilities[id]);
+    }
+
+    public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds)
+    {
+        var allOrganizationAbilities = await GetOrganizationAbilitiesAsync();
+        return orgIds
+            .Where(allOrganizationAbilities.ContainsKey)
+            .ToDictionary(id => id, id => allOrganizationAbilities[id]);
+    }
+
     public virtual async Task UpsertProviderAbilityAsync(Provider provider)
     {
         await InitProviderAbilitiesAsync();

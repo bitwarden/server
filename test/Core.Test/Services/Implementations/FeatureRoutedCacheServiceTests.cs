@@ -80,6 +80,123 @@ public class FeatureRoutedCacheServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetProviderAbilityAsync_WhenProviderExists_ReturnsAbility(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        ProviderAbility providerAbility)
+    {
+        // Arrange
+        var allAbilities = new Dictionary<Guid, ProviderAbility> { [providerAbility.Id] = providerAbility };
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(allAbilities);
+
+        // Act
+        var result = await sutProvider.Sut.GetProviderAbilityAsync(providerAbility.Id);
+
+        // Assert
+        Assert.Equal(providerAbility, result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetProviderAbilityAsync_WhenProviderDoesNotExist_ReturnsNull(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid providerId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+
+        // Act
+        var result = await sutProvider.Sut.GetProviderAbilityAsync(providerId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetProviderAbilitiesAsync_ReturnsOnlyMatchingAbilities(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        ProviderAbility matchedAbility,
+        ProviderAbility unmatchedAbility)
+    {
+        // Arrange
+        var allAbilities = new Dictionary<Guid, ProviderAbility>
+        {
+            [matchedAbility.Id] = matchedAbility,
+            [unmatchedAbility.Id] = unmatchedAbility
+        };
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(allAbilities);
+
+        // Act
+        var result = await sutProvider.Sut.GetProviderAbilitiesAsync([matchedAbility.Id]);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(matchedAbility, result[matchedAbility.Id]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetProviderAbilitiesAsync_WhenNoIdsMatched_ReturnsEmptyDictionary(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid missingProviderId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+
+        // Act
+        var result = await sutProvider.Sut.GetProviderAbilitiesAsync([missingProviderId]);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationAbilitiesAsync_ReturnsOnlyMatchingAbilities(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        OrganizationAbility matchedAbility,
+        OrganizationAbility unmatchedAbility)
+    {
+        // Arrange
+        var allAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            [matchedAbility.Id] = matchedAbility,
+            [unmatchedAbility.Id] = unmatchedAbility
+        };
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(allAbilities);
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync([matchedAbility.Id]);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(matchedAbility, result[matchedAbility.Id]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationAbilitiesAsync_WhenNoIdsMatched_ReturnsEmptyDictionary(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid missingOrgId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync([missingOrgId]);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Theory, BitAutoData]
     public async Task UpsertOrganizationAbilityAsync_CallsInMemoryService(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         Organization organization)
