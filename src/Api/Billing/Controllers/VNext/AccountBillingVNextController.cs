@@ -1,6 +1,5 @@
 ﻿using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
-using Bit.Api.Billing.Models.Requests.Portal;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
 using Bit.Api.Billing.Models.Responses.Portal;
@@ -12,7 +11,10 @@ using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
+using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,15 +29,17 @@ public class AccountBillingVNextController(
     ICreateBillingPortalSessionCommand createBillingPortalSessionCommand,
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
+    ICurrentContext currentContext,
+    IGetApplicableDiscountsQuery getApplicableDiscountsQuery,
     IGetBitwardenSubscriptionQuery getBitwardenSubscriptionQuery,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IGetUserLicenseQuery getUserLicenseQuery,
+    GlobalSettings globalSettings,
     IReinstateSubscriptionCommand reinstateSubscriptionCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
     IUpdatePremiumStorageCommand updatePremiumStorageCommand,
-    IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand,
-    IGetApplicableDiscountsQuery getApplicableDiscountsQuery) : BaseBillingController
+    IUpgradePremiumToOrganizationCommand upgradePremiumToOrganizationCommand) : BaseBillingController
 {
     [HttpGet("credit")]
     [InjectUser]
@@ -154,17 +158,20 @@ public class AccountBillingVNextController(
     /// <summary>
     /// Creates a Stripe billing portal session for the authenticated user.
     /// The portal allows users to manage their subscription, payment methods, and billing history.
+    /// The return URL is automatically determined based on the client type (mobile, web, desktop, etc.).
     /// </summary>
     /// <param name="user">The authenticated user</param>
-    /// <param name="request">Portal session configuration including return URL</param>
     /// <returns>Portal session URL for redirection</returns>
     [HttpPost("portal-session")]
     [InjectUser]
-    public async Task<IResult> CreatePortalSessionAsync(
-        [BindNever] User user,
-        [FromBody] PortalSessionRequest request)
+    public async Task<IResult> CreatePortalSessionAsync([BindNever] User user)
     {
-        var result = await createBillingPortalSessionCommand.Run(user, request.ReturnUrl!);
+        // Mobile clients use deep link callbacks, all others redirect to web vault
+        var returnUrl = DeviceTypes.ToClientType(currentContext.DeviceType) == ClientType.Mobile
+            ? "bitwarden://premium-upgrade-callback"
+            : $"{globalSettings.BaseServiceUri.Vault}/#/settings/subscription/premium";
+
+        var result = await createBillingPortalSessionCommand.Run(user, returnUrl);
         return Handle(result.Map(url => new PortalSessionResponse { Url = url }));
     }
 
