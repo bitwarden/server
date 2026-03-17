@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Test.Common.Helpers;
