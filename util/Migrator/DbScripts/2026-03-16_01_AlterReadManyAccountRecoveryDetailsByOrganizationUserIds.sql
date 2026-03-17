@@ -14,13 +14,15 @@ BEGIN
         U.[MasterPasswordSalt],
         OU.[ResetPasswordKey],
         O.[PrivateKey] AS EncryptedPrivateKey
-    FROM @OrganizationUserIds AS OUIDs
-    INNER JOIN [dbo].[OrganizationUser] AS OU
-        ON OUIDs.[Id] = OU.[Id]
-    INNER JOIN [dbo].[Organization] AS O
-        ON OU.[OrganizationId] = O.[Id]
-    INNER JOIN [dbo].[User] U
-        ON U.[Id] = OU.[UserId]
-    WHERE OU.[OrganizationId] = @OrganizationId
+    FROM
+        @OrganizationUserIds AS OUIDs
+    INNER JOIN
+        [dbo].[OrganizationUser] AS OU ON OUIDs.[Id] = OU.[Id]
+    INNER JOIN
+        [dbo].[Organization] AS O ON OU.[OrganizationId] = O.[Id]
+    INNER JOIN
+        [dbo].[User] U ON U.[Id] = OU.[UserId]
+    WHERE
+        OU.[OrganizationId] = @OrganizationId
 END
 GO
