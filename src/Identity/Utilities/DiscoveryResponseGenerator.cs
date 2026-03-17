@@ -29,12 +29,6 @@ public class DiscoveryResponseGenerator : Duende.IdentityServer.ResponseHandling
         string baseUrl, string issuerUri)
     {
         var dict = await base.CreateDiscoveryDocumentAsync(baseUrl, issuerUri);
-
-        // Remove metadata for endpoints/features we don't support
-        dict.Remove("revocation_endpoint_auth_methods_supported");
-        dict.Remove("introspection_endpoint_auth_methods_supported");
-        dict.Remove("backchannel_authentication_request_signing_alg_values_supported");
-
         return CoreHelpers.AdjustIdentityServerConfig(dict, _globalSettings.BaseServiceUri.Identity,
             _globalSettings.BaseServiceUri.InternalIdentity);
     }
