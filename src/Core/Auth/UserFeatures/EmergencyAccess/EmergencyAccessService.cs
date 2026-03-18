@@ -75,6 +75,11 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Not a premium user.");
         }
 
+        if (grantorUser.Email.Equals(emergencyContactEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BadRequestException("You cannot add yourself as an emergency access contact.");
+        }
+
         if (accessType == EmergencyAccessType.Takeover && grantorUser.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
