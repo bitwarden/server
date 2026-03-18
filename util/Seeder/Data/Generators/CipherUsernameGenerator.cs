@@ -11,6 +11,8 @@ namespace Bit.Seeder.Data.Generators;
 /// </summary>
 internal sealed class CipherUsernameGenerator
 {
+    private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
+
     private const int NamePoolSize = 1500;
 
     private static readonly string[] PersonalEmailDomains =
@@ -78,7 +80,8 @@ internal sealed class CipherUsernameGenerator
     internal string GenerateByIndex(int index, int totalHint = 1000, string? domain = null)
     {
         var category = _distribution.Select(index, totalHint);
-        var seededFaker = new Faker { Random = new Randomizer(_seed + index) };
+        var seededFaker = _threadFaker.Value!;
+        seededFaker.Random = new Randomizer(_seed + index);
 
         var offset = GetDeterministicOffset(index);
         var firstName = _firstNames[(index + offset) % _firstNames.Length];

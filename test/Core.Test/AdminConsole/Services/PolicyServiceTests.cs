@@ -1,15 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -124,35 +121,126 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetMasterPasswordPolicyForUserAsync_WithFeatureFlagEnabled_EvaluatesPolicyRequirement(User user, SutProvider<PolicyService> sutProvider)
+    public async Task GetMasterPasswordPolicyForUserAsync_ReturnsEnforcedOptions(User user, SutProvider<PolicyService> sutProvider)
     {
-        SetupUserPolicies(user.Id, sutProvider);
-        var policyRequirement = new MasterPasswordPolicyRequirement
+        // Arrange: Create three policies with different requirements to test combining behavior
+        var policy1 = new Policy
         {
-            Enabled = true,
-            EnforcedOptions = new MasterPasswordPolicyData()
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            Type = PolicyType.MasterPassword,
+            Enabled = true
         };
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<MasterPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
+        policy1.SetDataModel(new MasterPasswordPolicyData
+        {
+            MinComplexity = 3,
+            MinLength = 12,
+            RequireLower = true,
+            RequireUpper = false,
+            RequireNumbers = true,
+            RequireSpecial = false,
+            EnforceOnLogin = true
+        });
 
+        var policy2 = new Policy
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            Type = PolicyType.MasterPassword,
+            Enabled = true
+        };
+        policy2.SetDataModel(new MasterPasswordPolicyData
+        {
+            MinComplexity = 4,
+            MinLength = 10,
+            RequireLower = false,
+            RequireUpper = true,
+            RequireNumbers = false,
+            RequireSpecial = true,
+            EnforceOnLogin = false
+        });
+
+        var policy3 = new Policy
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            Type = PolicyType.MasterPassword,
+            Enabled = true
+        };
+        policy3.SetDataModel(new MasterPasswordPolicyData
+        {
+            MinComplexity = 2,
+            MinLength = 15,
+            RequireLower = false,
+            RequireUpper = false,
+            RequireNumbers = false,
+            RequireSpecial = false,
+            EnforceOnLogin = false
+        });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns([policy1, policy2, policy3]);
+
+        // Act
         var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
 
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.PolicyRequirements);
-        await sutProvider.GetDependency<IPolicyRepository>().DidNotReceive().GetManyByUserIdAsync(user.Id);
-        await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsync<MasterPasswordPolicyRequirement>(user.Id);
+        // Assert: Verify that policies were combined correctly
+        Assert.NotNull(result);
+
+        // MinComplexity and MinLength should take the highest values
+        Assert.Equal(4, result.MinComplexity); // highest from policy2
+        Assert.Equal(15, result.MinLength); // highest from policy3
+
+        // Boolean flags should use OR logic (true if any policy has true)
+        Assert.True(result.RequireLower); // true from policy1
+        Assert.True(result.RequireUpper); // true from policy2
+        Assert.True(result.RequireNumbers); // true from policy1
+        Assert.True(result.RequireSpecial); // true from policy2
+        Assert.True(result.EnforceOnLogin); // true from policy1
     }
 
     [Theory, BitAutoData]
-    public async Task GetMasterPasswordPolicyForUserAsync_WithFeatureFlagDisabled_EvaluatesPolicyDetails(User user, SutProvider<PolicyService> sutProvider)
+    public async Task GetMasterPasswordPolicyForUserAsync_WithNoPolicies_ReturnsNull(User user, SutProvider<PolicyService> sutProvider)
     {
-        SetupUserPolicies(user.Id, sutProvider);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(false);
+        // Arrange: No enabled policies
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<Policy>());
 
+        // Act
         var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
 
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.PolicyRequirements);
-        await sutProvider.GetDependency<IPolicyRepository>().Received(1).GetManyByUserIdAsync(user.Id);
-        await sutProvider.GetDependency<IPolicyRequirementQuery>().DidNotReceive().GetAsync<MasterPasswordPolicyRequirement>(user.Id);
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMasterPasswordPolicyForUserAsync_WithDisabledPolicies_ReturnsNull(User user, SutProvider<PolicyService> sutProvider)
+    {
+        // Arrange: Policies exist but are disabled
+        var disabledPolicy = new Policy
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            Type = PolicyType.MasterPassword,
+            Enabled = false
+        };
+        disabledPolicy.SetDataModel(new MasterPasswordPolicyData
+        {
+            MinComplexity = 3,
+            MinLength = 12
+        });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<Policy> { disabledPolicy });
+
+        // Act
+        var result = await sutProvider.Sut.GetMasterPasswordPolicyForUserAsync(user);
+
+        // Assert
+        Assert.Null(result);
     }
 
     private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)

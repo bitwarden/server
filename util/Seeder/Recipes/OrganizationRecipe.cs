@@ -30,9 +30,9 @@ public class OrganizationRecipe(
     /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(string presetName, string? password = null)
+    public SeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
     {
-        var result = _orchestrator.Execute(presetName, passwordHasher, manglerService, password);
+        var result = _orchestrator.Execute(presetName, passwordHasher, manglerService, password, kdfIterations);
 
         return new SeedResult(
             result.OrganizationId,

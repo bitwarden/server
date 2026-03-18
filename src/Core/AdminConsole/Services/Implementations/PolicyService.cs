@@ -3,8 +3,6 @@
 
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -21,39 +19,21 @@ public class PolicyService : IPolicyService
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly GlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
-        GlobalSettings globalSettings,
-        IFeatureService featureService,
-        IPolicyRequirementQuery policyRequirementQuery)
+        GlobalSettings globalSettings)
     {
         _applicationCacheService = applicationCacheService;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
         _globalSettings = globalSettings;
-        _featureService = featureService;
-        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var masterPaswordPolicy = (await _policyRequirementQuery.GetAsync<MasterPasswordPolicyRequirement>(user.Id));
-
-            if (!masterPaswordPolicy.Enabled)
-            {
-                return null;
-            }
-
-            return masterPaswordPolicy.EnforcedOptions;
-        }
-
         var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
             .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
             .ToList();

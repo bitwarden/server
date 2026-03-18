@@ -7,6 +7,8 @@ namespace Bit.Seeder.Data.Generators;
 
 internal sealed class CardDataGenerator
 {
+    private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
+
     private readonly int _seed;
     private readonly GeographicRegion _region;
 
@@ -32,7 +34,8 @@ internal sealed class CardDataGenerator
     /// </summary>
     internal CardViewDto GenerateByIndex(int index)
     {
-        var seededFaker = new Faker { Random = new Randomizer(_seed + index) };
+        var seededFaker = _threadFaker.Value!;
+        seededFaker.Random = new Randomizer(_seed + index);
         var brands = _regionalBrands[_region];
         var brand = brands[index % brands.Length];
 
