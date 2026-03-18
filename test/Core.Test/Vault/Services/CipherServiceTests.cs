@@ -2000,6 +2000,8 @@ public class CipherServiceTests
         foreach (var cipher in ciphers)
         {
             cipher.OrganizationId = org.Id;
+            cipher.Attachments = JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
         }
 
         sutProvider.GetDependency<IOrganizationRepository>()
