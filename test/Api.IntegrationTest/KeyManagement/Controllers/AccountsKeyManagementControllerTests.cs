@@ -918,6 +918,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     {
         request.UnlockMethodData = new UnlockMethodRequestModel
         {
+            UnlockMethod = Api.KeyManagement.Enums.UnlockMethod.MasterPassword,
             MasterPasswordUnlockData = new MasterPasswordUnlockDataRequestModel
             {
                 Kdf = new KdfRequestModel

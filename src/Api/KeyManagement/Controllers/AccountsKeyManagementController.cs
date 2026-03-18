@@ -159,17 +159,22 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        switch (request.UnlockMethodData.GetUnlockMethod())
+        switch (request.UnlockMethodData.UnlockMethod)
         {
             case UnlockMethod.MasterPassword:
-                await MasterPasswordRotateUserAccountKeysAsync(request, user);
+                var dataModel = new MasterPasswordRotateUserAccountKeysData
+                {
+                    MasterPasswordUnlockData = request.UnlockMethodData.MasterPasswordUnlockData!.ToData(),
+                    BaseData = await ToBaseDataModelAsync(request, user),
+                };
+                await _rotateUserAccountKeysCommand.MasterPasswordRotateUserAccountKeysAsync(user, dataModel);
                 break;
             case UnlockMethod.Tde:
                 throw new BadRequestException("TDE not implemented");
             case UnlockMethod.KeyConnector:
                 throw new BadRequestException("Key connector not implemented");
             default:
-                throw new ArgumentOutOfRangeException(null, "Unrecognized unlock method");
+                throw new ArgumentOutOfRangeException(nameof(request.UnlockMethodData.UnlockMethod), "Unrecognized unlock method");
         }
     }
 
@@ -263,18 +268,6 @@ public class AccountsKeyManagementController : Controller
 
         var details = await _keyConnectorConfirmationDetailsQuery.Run(orgSsoIdentifier, user.Id);
         return new KeyConnectorConfirmationDetailsResponseModel(details);
-    }
-
-    private async Task MasterPasswordRotateUserAccountKeysAsync(RotateUserKeysRequestModel request, User user)
-    {
-        ArgumentNullException.ThrowIfNull(request.UnlockMethodData.MasterPasswordUnlockData);
-        var dataModel = new MasterPasswordRotateUserAccountKeysData
-        {
-            MasterPasswordUnlockData = request.UnlockMethodData.MasterPasswordUnlockData.ToData(),
-            BaseData = await ToBaseDataModelAsync(request, user),
-        };
-
-        await _rotateUserAccountKeysCommand.MasterPasswordRotateUserAccountKeysAsync(user, dataModel);
     }
 
     private async Task<BaseRotateUserAccountKeysData> ToBaseDataModelAsync(RotateUserKeysRequestModel request, User user)

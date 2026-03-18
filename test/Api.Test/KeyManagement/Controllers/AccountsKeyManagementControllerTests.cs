@@ -4,6 +4,7 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Controllers;
+using Bit.Api.KeyManagement.Enums;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
@@ -46,10 +47,11 @@ public class AccountsKeyManagementControllerTests
     public static IEnumerable<object[]> UnimplementedUnlockMethods => new List<object[]>
     {
         //TDE
-        new object[] { new UnlockMethodRequestModel { KeyConnectorKeyWrappedUserKey = null, MasterPasswordUnlockData = null }},
+        new object[] { new UnlockMethodRequestModel { UnlockMethod = UnlockMethod.Tde, KeyConnectorKeyWrappedUserKey = null, MasterPasswordUnlockData = null }},
         //Key connector
         new object[] {  new UnlockMethodRequestModel
         {
+            UnlockMethod = UnlockMethod.KeyConnector,
             KeyConnectorKeyWrappedUserKey = "wrapped-user-key", MasterPasswordUnlockData = null
         } },
 
@@ -672,32 +674,6 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserKeysAsync_InvalidUnlockMethod_Throws(
-        SutProvider<AccountsKeyManagementController> sutProvider, RotateUserKeysRequestModel request, User user)
-    {
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        request.UnlockMethodData = new UnlockMethodRequestModel()
-        {
-            MasterPasswordUnlockData = new MasterPasswordUnlockDataRequestModel()
-            {
-                Salt = "test",
-                MasterKeyWrappedUserKey = "test",
-                Kdf = new KdfRequestModel()
-                {
-                    Iterations = 6000,
-                    KdfType = KdfType.PBKDF2_SHA256,
-                }
-            },
-            KeyConnectorKeyWrappedUserKey = "test",
-        };
-
-
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RotateUserKeysAsync(request));
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task RotateUserKeysAsync_MasterPassword_Success(
         SutProvider<AccountsKeyManagementController> sutProvider, RotateUserKeysRequestModel request, User user)
     {
@@ -755,6 +731,7 @@ public class AccountsKeyManagementControllerTests
 
         request.UnlockMethodData = new UnlockMethodRequestModel()
         {
+            UnlockMethod = UnlockMethod.MasterPassword,
             MasterPasswordUnlockData = new MasterPasswordUnlockDataRequestModel()
             {
                 Salt = "test",

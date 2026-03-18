@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.KeyManagement.Enums;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Api.Test.KeyManagement.Models.Request;
@@ -14,18 +14,14 @@ public class UnlockMethodRequestModelTests
 
     private const string _salt = "mockSalt";
 
-    [Theory]
-    [BitAutoData(true, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(false, true)]
-    public void UnlockMethodRequestModel_ExpectedUnlockMethods_PassValidation(bool masterPasswordUnlockDataNull,
-        bool keyConnectorNull)
+    [Fact]
+    public void Validate_MasterPassword_ValidData_PassesValidation()
     {
         var model = new UnlockMethodRequestModel
         {
-            MasterPasswordUnlockData =
-                masterPasswordUnlockDataNull ? null : BuildMasterPasswordUnlockDataRequestModel(),
-            KeyConnectorKeyWrappedUserKey = keyConnectorNull ? null : _wrappedUserKey
+            UnlockMethod = UnlockMethod.MasterPassword,
+            MasterPasswordUnlockData = BuildMasterPasswordUnlockDataRequestModel(),
+            KeyConnectorKeyWrappedUserKey = null
         };
 
         var result = Validate(model);
@@ -33,10 +29,114 @@ public class UnlockMethodRequestModelTests
     }
 
     [Fact]
-    public void UnlockMethodRequestModel_BadData_ValidationFailure()
+    public void Validate_MasterPassword_MissingMasterPasswordUnlockData_FailsValidation()
     {
         var model = new UnlockMethodRequestModel
         {
+            UnlockMethod = UnlockMethod.MasterPassword,
+            MasterPasswordUnlockData = null,
+            KeyConnectorKeyWrappedUserKey = null
+        };
+
+        var result = Validate(model);
+        Assert.Single(result);
+        Assert.NotNull(result.First().ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_MasterPassword_KeyConnectorKeyPresent_FailsValidation()
+    {
+        var model = new UnlockMethodRequestModel
+        {
+            UnlockMethod = UnlockMethod.MasterPassword,
+            MasterPasswordUnlockData = BuildMasterPasswordUnlockDataRequestModel(),
+            KeyConnectorKeyWrappedUserKey = _wrappedUserKey
+        };
+
+        var result = Validate(model);
+        Assert.Single(result);
+        Assert.NotNull(result.First().ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_Tde_NoExtraData_PassesValidation()
+    {
+        var model = new UnlockMethodRequestModel
+        {
+            UnlockMethod = UnlockMethod.Tde,
+            MasterPasswordUnlockData = null,
+            KeyConnectorKeyWrappedUserKey = null
+        };
+
+        var result = Validate(model);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Validate_Tde_MasterPasswordUnlockDataPresent_FailsValidation()
+    {
+        var model = new UnlockMethodRequestModel
+        {
+            UnlockMethod = UnlockMethod.Tde,
+            MasterPasswordUnlockData = BuildMasterPasswordUnlockDataRequestModel(),
+            KeyConnectorKeyWrappedUserKey = null
+        };
+
+        var result = Validate(model);
+        Assert.Single(result);
+        Assert.NotNull(result.First().ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_Tde_KeyConnectorKeyPresent_FailsValidation()
+    {
+        var model = new UnlockMethodRequestModel
+        {
+            UnlockMethod = UnlockMethod.Tde,
+            MasterPasswordUnlockData = null,
+            KeyConnectorKeyWrappedUserKey = _wrappedUserKey
+        };
+
+        var result = Validate(model);
+        Assert.Single(result);
+        Assert.NotNull(result.First().ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_KeyConnector_ValidData_PassesValidation()
+    {
+        var model = new UnlockMethodRequestModel
+        {
+            UnlockMethod = UnlockMethod.KeyConnector,
+            MasterPasswordUnlockData = null,
+            KeyConnectorKeyWrappedUserKey = _wrappedUserKey
+        };
+
+        var result = Validate(model);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Validate_KeyConnector_MissingKeyConnectorKey_FailsValidation()
+    {
+        var model = new UnlockMethodRequestModel
+        {
+            UnlockMethod = UnlockMethod.KeyConnector,
+            MasterPasswordUnlockData = null,
+            KeyConnectorKeyWrappedUserKey = null
+        };
+
+        var result = Validate(model);
+        Assert.Single(result);
+        Assert.NotNull(result.First().ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_KeyConnector_MasterPasswordUnlockDataPresent_FailsValidation()
+    {
+        var model = new UnlockMethodRequestModel
+        {
+            UnlockMethod = UnlockMethod.KeyConnector,
             MasterPasswordUnlockData = BuildMasterPasswordUnlockDataRequestModel(),
             KeyConnectorKeyWrappedUserKey = _wrappedUserKey
         };
@@ -55,7 +155,7 @@ public class UnlockMethodRequestModelTests
 
     private static MasterPasswordUnlockDataRequestModel BuildMasterPasswordUnlockDataRequestModel() => new()
     {
-        Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 60000 },
+        Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600000 },
         MasterKeyWrappedUserKey = _wrappedUserKey,
         Salt = _salt
     };
