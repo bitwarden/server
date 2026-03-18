@@ -78,7 +78,7 @@ public class UpdateOrganizationSubscriptionCommand(
 
         await ReconcileTaxExemptionAsync(subscription.Customer);
 
-        var hasStructuralChanges = changeSet.Changes.Any(change => change.IsStructural);
+        var hasStructuralChanges = changeSet.ChargeImmediately;
         var isChargedAutomatically = subscription.CollectionMethod == CollectionMethod.ChargeAutomatically;
         var isBilledAnnually = subscription.Items.FirstOrDefault()?.Price.Recurring?.Interval == Intervals.Year;
 
