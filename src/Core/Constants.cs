@@ -69,8 +69,13 @@ public static class Constants
         /// This value must match what Stripe uses for the `Country` field value for the United States.
         /// </summary>
         public const string UnitedStates = "US";
-    }
 
+        /// <summary>
+        /// Abbreviation for Switzerland.
+        /// This value must match what Stripe uses for the `Country` field value for Switzerland.
+        /// </summary>
+        public const string Switzerland = "CH";
+    }
 
     /// <summary>
     /// Constants for our browser extensions IDs
@@ -194,7 +199,6 @@ public static class FeatureFlagKeys
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
-    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
