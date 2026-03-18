@@ -2769,4 +2769,43 @@ public class CipherServiceTests
         Assert.Equal(expectedUrl, result.Url);
         Assert.Equal(attachmentId, result.Id);
     }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentsForOrganizationAsync_OnlyDeletesAttachmentsForCiphersWithAttachments(
+        SutProvider<CipherService> sutProvider,
+        Guid organizationId,
+        List<Cipher> ciphersWithAttachments,
+        List<Cipher> ciphersWithoutAttachments)
+    {
+        foreach (var cipher in ciphersWithAttachments)
+        {
+            cipher.Attachments = JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
+        }
+
+        foreach (var cipher in ciphersWithoutAttachments)
+        {
+            cipher.Attachments = null;
+        }
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(ciphersWithAttachments.Concat(ciphersWithoutAttachments).ToList());
+
+        await sutProvider.Sut.DeleteAttachmentsForOrganizationAsync(organizationId);
+
+        foreach (var cipher in ciphersWithAttachments)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+
+        foreach (var cipher in ciphersWithoutAttachments)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .DidNotReceive()
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+    }
 }

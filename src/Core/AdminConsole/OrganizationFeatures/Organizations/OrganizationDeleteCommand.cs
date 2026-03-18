@@ -6,33 +6,30 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 {
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IAttachmentStorageService _attachmentStorageService;
-    private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly ICipherService _cipherService;
 
     public OrganizationDeleteCommand(
         IApplicationCacheService applicationCacheService,
-        IAttachmentStorageService attachmentStorageService,
-        ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
         IStripePaymentService paymentService,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        ICipherService cipherService)
     {
         _applicationCacheService = applicationCacheService;
-        _attachmentStorageService = attachmentStorageService;
-        _cipherRepository = cipherRepository;
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
+        _cipherService = cipherService;
     }
 
     public async Task DeleteAsync(Organization organization)
@@ -50,16 +47,9 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             catch (GatewayException) { }
         }
 
-        // Fetch cipher IDs before DB deletion so we can clean up attachment storage
-        var orgCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(organization.Id);
-
+        await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
-
-        foreach (var cipher in orgCiphers)
-        {
-            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
-        }
     }
 
     private async Task ValidateDeleteOrganizationAsync(Organization organization)

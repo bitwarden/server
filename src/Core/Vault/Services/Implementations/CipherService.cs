@@ -501,17 +501,23 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-        // Fetch cipher IDs before DB deletion so we can clean up attachment storage
-        var orgCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+
+        await DeleteAttachmentsForOrganizationAsync(organizationId);
 
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
 
-        foreach (var cipher in orgCiphers)
+        await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
+    }
+
+    public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
+    {
+        var ciphersWithAttachments = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(c => c.GetAttachments()?.Count > 0);
+
+        foreach (var cipher in ciphersWithAttachments)
         {
             await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
         }
-
-        await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
