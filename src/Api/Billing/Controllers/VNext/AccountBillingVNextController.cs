@@ -22,6 +22,7 @@ namespace Bit.Api.Billing.Controllers.VNext;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class AccountBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
+    ICreatePremiumCheckoutSessionCommand createPremiumCheckoutSessionCommand,
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
     IGetBitwardenSubscriptionQuery getBitwardenSubscriptionQuery,
     IGetCreditQuery getCreditQuery,
@@ -40,6 +41,22 @@ public class AccountBillingVNextController(
     {
         var credit = await getCreditQuery.Run(user);
         return TypedResults.Ok(credit);
+    }
+
+    [HttpPost("premium/checkout")]
+    [InjectUser]
+    public async Task<IResult> CreatePremiumCheckoutSessionAsync(
+        [BindNever] User user,
+        [FromBody] CreatePremiumCheckoutSessionRequest request,
+        [FromHeader(Name = "Bitwarden-Client-Version")] string? appVersion)
+    {
+        if (string.IsNullOrWhiteSpace(appVersion))
+        {
+            return Error.BadRequest("Bitwarden-Client-Version header is required.");
+        }
+
+        var result = await createPremiumCheckoutSessionCommand.Run(user, appVersion, request.Platform);
+        return Handle(result);
     }
 
     [HttpPost("credit/bitpay")]
