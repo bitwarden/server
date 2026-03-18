@@ -6,7 +6,6 @@ using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Data;
@@ -30,7 +29,6 @@ namespace Bit.Api.KeyManagement.Controllers;
 public class AccountsKeyManagementController : Controller
 {
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IRegenerateUserAsymmetricKeysCommand _regenerateUserAsymmetricKeysCommand;
     private readonly IUserService _userService;
@@ -50,7 +48,6 @@ public class AccountsKeyManagementController : Controller
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
 
     public AccountsKeyManagementController(IUserService userService,
-        IFeatureService featureService,
         IOrganizationUserRepository organizationUserRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         IKeyConnectorConfirmationDetailsQuery keyConnectorConfirmationDetailsQuery,
@@ -69,7 +66,6 @@ public class AccountsKeyManagementController : Controller
         ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
     {
         _userService = userService;
-        _featureService = featureService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
         _organizationUserRepository = organizationUserRepository;
         _emergencyAccessRepository = emergencyAccessRepository;
@@ -88,11 +84,6 @@ public class AccountsKeyManagementController : Controller
     [HttpPost("key-management/regenerate-keys")]
     public async Task RegenerateKeysAsync([FromBody] KeyRegenerationRequestModel request)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration))
-        {
-            throw new NotFoundException();
-        }
-
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
         var usersOrganizationAccounts = await _organizationUserRepository.GetManyByUserAsync(user.Id);
         var designatedEmergencyAccess = await _emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(user.Id);
