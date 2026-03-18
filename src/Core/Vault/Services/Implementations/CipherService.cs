@@ -511,12 +511,12 @@ public class CipherService : ICipherService
 
     public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
     {
-        var ciphersWithAttachments = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId))
-            .Where(c => c.GetAttachments()?.Count > 0);
+        var cipherIdsWithAttachments = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
 
-        foreach (var cipher in ciphersWithAttachments)
+        foreach (var cipherId in cipherIdsWithAttachments)
         {
-            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherId);
         }
     }
 
