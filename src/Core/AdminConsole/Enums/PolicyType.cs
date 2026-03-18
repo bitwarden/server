@@ -22,6 +22,7 @@ public enum PolicyType : byte
     AutotypeDefaultSetting = 17,
     AutomaticUserConfirmation = 18,
     BlockClaimedDomainAccountCreation = 19,
+    OrganizationUserNotificationPolicy = 20,
 }
 
 public static class PolicyTypeExtensions
@@ -54,6 +55,7 @@ public static class PolicyTypeExtensions
             PolicyType.AutotypeDefaultSetting => "Autotype default setting",
             PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
             PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
+            PolicyType.OrganizationUserNotificationPolicy => "Customized banner",
         };
     }
 }
