@@ -4,10 +4,12 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.Checkout;
 using Stripe.Tax;
 using Stripe.TestHelpers;
 using CustomerService = Stripe.CustomerService;
 using RefundService = Stripe.RefundService;
+using SessionService = Stripe.Checkout.SessionService;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
@@ -29,6 +31,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly RegistrationService _taxRegistrationService;
     private readonly CouponService _couponService;
     private readonly ProductService _productService;
+    private readonly SessionService _checkoutSessionsService;
 
     public StripeAdapter()
     {
@@ -48,6 +51,7 @@ public class StripeAdapter : IStripeAdapter
         _taxRegistrationService = new RegistrationService();
         _couponService = new CouponService();
         _productService = new ProductService();
+        _checkoutSessionsService = new SessionService();
     }
 
     /**************
@@ -94,6 +98,9 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null) =>
         _subscriptionService.CancelAsync(id, options);
+
+    public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
+        _subscriptionService.ListAsync(options);
 
     /*************
      ** INVOICE **
@@ -229,9 +236,9 @@ public class StripeAdapter : IStripeAdapter
     public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
         (await _productService.ListAsync(options)).Data;
 
-    /****************
-     ** SUBSCRIPTION **
-     ****************/
-    public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
-        _subscriptionService.ListAsync(options);
+    /***********************
+     ** CHECKOUT SESSION **
+     ***********************/
+    public Task<Session> CreateCheckoutSessionAsync(SessionCreateOptions options) =>
+        _checkoutSessionsService.CreateAsync(options);
 }

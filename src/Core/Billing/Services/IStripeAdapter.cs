@@ -3,6 +3,7 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.Checkout;
 using Stripe.Tax;
 
 namespace Bit.Core.Billing.Services;
@@ -52,4 +53,5 @@ public interface IStripeAdapter
     Task<Coupon> GetCouponAsync(string couponId, CouponGetOptions options = null);
     Task<List<Product>> ListProductsAsync(ProductListOptions options = null);
     Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null);
+    Task<Session> CreateCheckoutSessionAsync(SessionCreateOptions options);
 }
