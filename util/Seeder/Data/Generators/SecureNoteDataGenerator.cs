@@ -5,6 +5,8 @@ namespace Bit.Seeder.Data.Generators;
 
 internal sealed class SecureNoteDataGenerator(int seed)
 {
+    private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
+
     private readonly int _seed = seed;
 
     private static readonly string[] _noteCategories =
@@ -33,7 +35,8 @@ internal sealed class SecureNoteDataGenerator(int seed)
     internal (string name, string notes) GenerateByIndex(int index)
     {
         var category = _noteCategories[index % _noteCategories.Length];
-        var seededFaker = new Faker { Random = new Randomizer(_seed + index) };
+        var seededFaker = _threadFaker.Value!;
+        seededFaker.Random = new Randomizer(_seed + index);
         return (GenerateNoteName(category, seededFaker), GenerateNoteContent(category, seededFaker));
     }
 

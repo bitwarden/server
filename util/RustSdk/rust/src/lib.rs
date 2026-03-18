@@ -18,13 +18,17 @@ use bitwarden_crypto::{
 pub unsafe extern "C" fn generate_user_keys(
     email: *const c_char,
     password: *const c_char,
+    kdf_iterations: u32,
 ) -> *const c_char {
     let email = CStr::from_ptr(email).to_str().unwrap();
     let password = CStr::from_ptr(password).to_str().unwrap();
 
-    let kdf = Kdf::PBKDF2 {
-        iterations: NonZeroU32::new(5_000).unwrap(),
+    let iterations = match NonZeroU32::new(kdf_iterations) {
+        Some(iter) => iter,
+        None => return error_response("kdf_iterations must be non-zero"),
     };
+
+    let kdf = Kdf::PBKDF2 { iterations };
 
     let master_key = MasterKey::derive(password, email, &kdf).unwrap();
 
@@ -47,6 +51,11 @@ pub unsafe extern "C" fn generate_user_keys(
     let result = CString::new(json).unwrap();
 
     result.into_raw()
+}
+
+fn error_response(message: &str) -> *const c_char {
+    let json = serde_json::json!({ "error": message }).to_string();
+    CString::new(json).unwrap().into_raw()
 }
 
 fn keypair(key: &SymmetricCryptoKey) -> RsaKeyPair {
