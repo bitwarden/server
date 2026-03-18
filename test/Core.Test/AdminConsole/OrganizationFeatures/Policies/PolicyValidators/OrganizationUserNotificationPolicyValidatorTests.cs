@@ -14,7 +14,7 @@ public class OrganizationUserNotificationPolicyValidatorTests
     {
         var validator = new OrganizationUserNotificationPolicyValidator();
 
-        Assert.Equal(PolicyType.OrganizationUserNotificationPolicy, validator.Type);
+        Assert.Equal(PolicyType.OrganizationUserNotification, validator.Type);
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public class OrganizationUserNotificationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_ReturnsNoError(
-        [PolicyUpdate(PolicyType.OrganizationUserNotificationPolicy, true)] PolicyUpdate policyUpdate)
+        [PolicyUpdate(PolicyType.OrganizationUserNotification, true)] PolicyUpdate policyUpdate)
     {
         var validator = new OrganizationUserNotificationPolicyValidator();
 
@@ -38,7 +38,7 @@ public class OrganizationUserNotificationPolicyValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_DisablingPolicy_ReturnsNoError(
-        [PolicyUpdate(PolicyType.OrganizationUserNotificationPolicy, false)] PolicyUpdate policyUpdate)
+        [PolicyUpdate(PolicyType.OrganizationUserNotification, false)] PolicyUpdate policyUpdate)
     {
         var validator = new OrganizationUserNotificationPolicyValidator();
 

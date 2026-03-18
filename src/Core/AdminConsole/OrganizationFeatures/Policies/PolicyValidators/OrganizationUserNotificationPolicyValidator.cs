@@ -9,7 +9,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
 public class OrganizationUserNotificationPolicyValidator : IPolicyValidator, IEnforceDependentPoliciesEvent
 {
-    public PolicyType Type => PolicyType.OrganizationUserNotificationPolicy;
+    public PolicyType Type => PolicyType.OrganizationUserNotification;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(string.Empty);
     public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.CompletedTask;
