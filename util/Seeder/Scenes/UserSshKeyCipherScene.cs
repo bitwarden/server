@@ -20,6 +20,7 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
         public string? PrivateKey { get; set; }
         public string? PublicKey { get; set; }
         public string? Fingerprint { get; set; }
+        public string? Notes { get; set; }
     }
 
     public class Result
@@ -41,7 +42,7 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
             PublicKey = request.PublicKey,
             Fingerprint = request.Fingerprint
         };
-        var cipher = SshKeyCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, sshKey: sshKey);
+        var cipher = SshKeyCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, sshKey: sshKey, notes: request.Notes);
 
         await cipherRepository.CreateAsync(cipher);
 
