@@ -11,6 +11,7 @@ public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
     {
         var dbPolicy = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType);
 
+        // Remove this block and SynthesizeSendControlsStatusAsync once migration has run
         if (dbPolicy == null && policyType == PolicyType.SendControls)
         {
             return await SynthesizeSendControlsStatusAsync(organizationId);

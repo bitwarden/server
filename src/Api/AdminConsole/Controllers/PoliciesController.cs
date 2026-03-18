@@ -90,6 +90,9 @@ public class PoliciesController : Controller
         }
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+
+        // Once migration from legacy Send policies > SendControls has run, replace the rest of this method with:
+        // return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
         var responses = policies.Select(p => new PolicyResponseModel(p)).ToList();
 
         if (policies.Any(p => p.Type == PolicyType.SendControls))
