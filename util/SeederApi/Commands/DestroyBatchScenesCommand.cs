@@ -18,10 +18,7 @@ public class DestroyBatchScenesCommand(
             }
             catch (Exception ex)
             {
-                lock (exceptions)
-                {
-                    exceptions.Add(ex);
-                }
+                exceptions.Add(ex);
                 logger.LogError(ex, "Error deleting seeded data: {PlayId}", playId);
             }
         }
