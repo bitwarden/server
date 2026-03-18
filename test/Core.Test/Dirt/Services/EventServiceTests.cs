@@ -1,11 +1,14 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -270,5 +273,77 @@ public class EventServiceTests
             }).ToList();
 
         await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogUserEvent_IncludeAcceptedStatusOrgs_AcceptedOrgUser_CreatesOrgScopedEvent(
+        Guid userId, EventType eventType, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
+    {
+        orgUser.UserId = userId;
+        orgUser.Status = OrganizationUserStatusType.Accepted;
+
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+        };
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(orgAbilities);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(userId)
+            .Returns(new List<OrganizationUser> { orgUser });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), userId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogUserEventAsync(userId, eventType, includeAcceptedStatusOrgs: true);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.Any(e => e.OrganizationId == null && e.UserId == userId && e.Type == eventType)
+                && events.Any(e => e.OrganizationId == orgUser.OrganizationId && e.UserId == userId && e.Type == eventType)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogUserEvent_IncludeAcceptedStatusOrgs_InvitedOrgUser_DoesNotCreateOrgScopedEvent(
+        Guid userId, EventType eventType, OrganizationUser orgUser, SutProvider<EventService> sutProvider)
+    {
+        orgUser.UserId = userId;
+        orgUser.Status = OrganizationUserStatusType.Invited;
+
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { orgUser.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+        };
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(orgAbilities);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(userId)
+            .Returns(new List<OrganizationUser> { orgUser });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(
+            Arg.Any<IProviderUserRepository>(), userId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogUserEventAsync(userId, eventType, includeAcceptedStatusOrgs: true);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateAsync(Arg.Is<IEvent>(e =>
+                e.OrganizationId == null && e.UserId == userId && e.Type == eventType));
+        await sutProvider.GetDependency<IEventWriteService>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(default);
     }
 }
