@@ -22,7 +22,7 @@ internal static class SshKeyCipherSeeder
             Notes = notes,
             Type = CipherTypes.SshKey,
             SshKey = sshKey,
-            Reprompt = reprompt ? 1 : 0,
+            Reprompt = reprompt ? RepromptTypes.Password : RepromptTypes.None,
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
