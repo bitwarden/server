@@ -15,6 +15,9 @@ internal static class LoginCipherSeeder
         string? password = null,
         string? uri = null,
         string? notes = null,
+        bool reprompt = false,
+        bool deleted = false,
+        bool archived = false,
         IEnumerable<(string name, string value, int type)>? fields = null)
     {
         var cipherView = new CipherViewDto
@@ -29,6 +32,9 @@ internal static class LoginCipherSeeder
                 Password = password,
                 Uris = string.IsNullOrEmpty(uri) ? null : [new LoginUriViewDto { Uri = uri }]
             },
+            Reprompt = reprompt ? RepromptTypes.Password : RepromptTypes.None,
+            DeletedDate = deleted ? DateTime.UtcNow.AddDays(-1) : null,
+            ArchivedDate = archived ? DateTime.UtcNow.AddDays(-1) : null,
             Fields = fields?.Select(f => new FieldViewDto
             {
                 Name = f.name,
