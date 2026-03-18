@@ -4,6 +4,13 @@ run-name: Publish ${{ inputs.dry_run && '(Dry Run)' || '' }}
 on:
   workflow_dispatch:
     inputs:
+      publish_type:
+        description: "Publish Options"
+        required: false
+        default: "Initial Publish"
+        type: choice
+        options:
+          - Initial Publish
       version:
         description: 'Version to publish (default: latest release)'
         required: true
