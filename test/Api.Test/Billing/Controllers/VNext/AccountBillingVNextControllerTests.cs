@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
-using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Models.Api.Response;
@@ -9,7 +8,6 @@ using Bit.Core.Billing.Models.Api.Response.Premium;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
-using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Entities;

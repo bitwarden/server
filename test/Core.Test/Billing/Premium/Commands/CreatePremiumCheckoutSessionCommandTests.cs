@@ -25,7 +25,7 @@ public class CreatePremiumCheckoutSessionCommandTests
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
-    private readonly IUserService _userService= Substitute.For<IUserService>();
+    private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
     private readonly ILogger<CreatePremiumCheckoutSessionCommand> _logger = Substitute.For<ILogger<CreatePremiumCheckoutSessionCommand>>();
     private readonly ICreatePremiumCheckoutSessionCommand _command;

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Billing.Constants;
 
 namespace Bit.Api.Billing.Models.Requests.Premium;

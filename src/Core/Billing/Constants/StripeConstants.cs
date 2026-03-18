@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Enums;
-using Stripe;
 
 namespace Bit.Core.Billing.Constants;
 
