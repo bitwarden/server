@@ -133,9 +133,3 @@ public class AutoConfirmPushNotification
     /// </summary>
     public Guid TargetOrganizationUserId { get; set; }
 }
-
-public class PremiumStatusPushNotification
-{
-    public Guid UserId { get; set; }
-    public bool Premium { get; set; }
-}

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Microsoft.AspNetCore.SignalR;
