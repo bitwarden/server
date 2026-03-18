@@ -3,6 +3,7 @@ using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Api.KeyManagement.Models.Requests;
 
+// This request model is meant to be used when the user will be submitting a v2 encryption WrappedAccountCryptographicState payload.
 public class WrappedAccountCryptographicStateRequestModel
 {
     public required PublicKeyEncryptionKeyPairRequestModel PublicKeyEncryptionKeyPair { get; set; }
