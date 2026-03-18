@@ -181,6 +181,7 @@ public class PoliciesController : Controller
     }
 
     [HttpPut("{type}")]
+    [Authorize<ManagePoliciesRequirement>]
     public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
     {
         return await PutVNext(orgId, type, new SavePolicyRequest { Policy = model });
