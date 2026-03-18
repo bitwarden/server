@@ -17,6 +17,7 @@ internal static class LoginCipherSeeder
         string? notes = null,
         bool reprompt = false,
         bool deleted = false,
+        bool favorite = false,
         IEnumerable<(string name, string value, int type)>? fields = null)
     {
         var cipherView = new CipherViewDto
@@ -33,6 +34,7 @@ internal static class LoginCipherSeeder
             },
             Reprompt = reprompt ? RepromptTypes.Password : RepromptTypes.None,
             DeletedDate = deleted ? DateTime.UtcNow.AddDays(-1) : null,
+            Favorite = favorite,
             Fields = fields?.Select(f => new FieldViewDto
             {
                 Name = f.name,
