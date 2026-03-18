@@ -51,6 +51,9 @@ public class OrganizationArgs : IArgumentModel
     [Option("plan-type", Description = "Billing plan type: free, teams-monthly, teams-annually, enterprise-monthly, enterprise-annually, teams-starter, families-annually. Defaults to enterprise-annually.")]
     public string PlanType { get; set; } = "enterprise-annually";
 
+    [Option("kdf-iterations", Description = "KDF iteration count for all seeded users (default: 5000). Use 600000 for production-realistic e2e testing.")]
+    public int KdfIterations { get; set; } = 5_000;
+
     public void Validate()
     {
         if (Users < 1)
@@ -79,6 +82,11 @@ public class OrganizationArgs : IArgumentModel
         }
 
         PlanFeatures.Parse(PlanType);
+
+        if (KdfIterations < 5_000)
+        {
+            throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
     }
 
     public OrganizationVaultOptions ToOptions() => new()
@@ -94,7 +102,8 @@ public class OrganizationArgs : IArgumentModel
         Region = ParseGeographicRegion(Region),
         Density = DensityProfiles.Parse(Density),
         Password = Password,
-        PlanType = PlanFeatures.Parse(PlanType)
+        PlanType = PlanFeatures.Parse(PlanType),
+        KdfIterations = KdfIterations
     };
 
     private static OrgStructureModel? ParseOrgStructure(string? structure)
