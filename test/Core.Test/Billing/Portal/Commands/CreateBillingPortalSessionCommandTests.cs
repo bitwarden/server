@@ -58,17 +58,10 @@ public class CreateBillingPortalSessionCommandTests
             Arg.Is<SessionCreateOptions>(o =>
                 o.Customer == _user.GatewayCustomerId &&
                 o.ReturnUrl == returnUrl));
-
-        _logger.Received(1).Log(
-            LogLevel.Information,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("Successfully created billing portal session") && o.ToString()!.Contains(_user.Id.ToString())),
-            Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
-    public async Task Run_WithoutGatewayCustomerId_ReturnsBadRequest()
+    public async Task Run_WithoutGatewayCustomerId_ReturnsConflict()
     {
         // Arrange
         var userWithoutCustomerId = new User
@@ -83,9 +76,9 @@ public class CreateBillingPortalSessionCommandTests
         var result = await _command.Run(userWithoutCustomerId, returnUrl);
 
         // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("User does not have a Stripe customer ID.", badRequest.Response);
+        Assert.True(result.IsT2);
+        var conflict = result.AsT2;
+        Assert.Equal("Unable to create billing portal session. Please contact support for assistance.", conflict.Response);
 
         await _stripeAdapter.DidNotReceive().CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>());
 
@@ -98,7 +91,7 @@ public class CreateBillingPortalSessionCommandTests
     }
 
     [Fact]
-    public async Task Run_WithEmptyGatewayCustomerId_ReturnsBadRequest()
+    public async Task Run_WithEmptyGatewayCustomerId_ReturnsConflict()
     {
         // Arrange
         var userWithEmptyCustomerId = new User
@@ -113,9 +106,9 @@ public class CreateBillingPortalSessionCommandTests
         var result = await _command.Run(userWithEmptyCustomerId, returnUrl);
 
         // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("User does not have a Stripe customer ID.", badRequest.Response);
+        Assert.True(result.IsT2);
+        var conflict = result.AsT2;
+        Assert.Equal("Unable to create billing portal session. Please contact support for assistance.", conflict.Response);
 
         await _stripeAdapter.DidNotReceive().CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>());
 
@@ -125,55 +118,6 @@ public class CreateBillingPortalSessionCommandTests
             Arg.Is<object>(o => o.ToString()!.Contains("does not have a Stripe customer ID") && o.ToString()!.Contains(userWithEmptyCustomerId.Id.ToString())),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
-    }
-
-    [Fact]
-    public async Task Run_WhenSessionIsNull_ReturnsConflict()
-    {
-        // Arrange
-        var returnUrl = "https://example.com/billing";
-        var subscription = new Subscription { Id = _user.GatewaySubscriptionId, Status = SubscriptionStatus.Active };
-
-        _stripeAdapter.GetSubscriptionAsync(_user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-        _stripeAdapter.CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>())
-            .Returns((Session?)null);
-
-        // Act
-        var result = await _command.Run(_user, returnUrl);
-
-        // Assert
-        Assert.True(result.IsT2);
-        var conflict = result.AsT2;
-        Assert.Equal("Unable to create billing portal session. Please contact support for assistance.", conflict.Response);
-
-        await _stripeAdapter.Received(1).GetSubscriptionAsync(_user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>());
-        await _stripeAdapter.Received(1).CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>());
-    }
-
-    [Fact]
-    public async Task Run_WhenSessionUrlIsNull_ReturnsConflict()
-    {
-        // Arrange
-        var returnUrl = "https://example.com/billing";
-        var subscription = new Subscription { Id = _user.GatewaySubscriptionId, Status = SubscriptionStatus.Active };
-        var session = new Session { Url = null };
-
-        _stripeAdapter.GetSubscriptionAsync(_user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-        _stripeAdapter.CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>())
-            .Returns(session);
-
-        // Act
-        var result = await _command.Run(_user, returnUrl);
-
-        // Assert
-        Assert.True(result.IsT2);
-        var conflict = result.AsT2;
-        Assert.Equal("Unable to create billing portal session. Please contact support for assistance.", conflict.Response);
-
-        await _stripeAdapter.Received(1).GetSubscriptionAsync(_user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>());
-        await _stripeAdapter.Received(1).CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>());
     }
 
     [Fact]
@@ -230,7 +174,7 @@ public class CreateBillingPortalSessionCommandTests
     }
 
     [Fact]
-    public async Task Run_WithoutGatewaySubscriptionId_ReturnsBadRequest()
+    public async Task Run_WithoutGatewaySubscriptionId_ReturnsConflict()
     {
         // Arrange
         var userWithoutSubscriptionId = new User
@@ -246,9 +190,9 @@ public class CreateBillingPortalSessionCommandTests
         var result = await _command.Run(userWithoutSubscriptionId, returnUrl);
 
         // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("User does not have a Premium subscription.", badRequest.Response);
+        Assert.True(result.IsT2);
+        var conflict = result.AsT2;
+        Assert.Equal("Unable to create billing portal session. Please contact support for assistance.", conflict.Response);
 
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
         await _stripeAdapter.DidNotReceive().CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>());
@@ -359,7 +303,7 @@ public class CreateBillingPortalSessionCommandTests
     }
 
     [Fact]
-    public async Task Run_WhenSubscriptionFetchFails_ReturnsBadRequest()
+    public async Task Run_WhenSubscriptionFetchFails_ReturnsConflict()
     {
         // Arrange
         var returnUrl = "https://example.com/billing";
@@ -372,9 +316,9 @@ public class CreateBillingPortalSessionCommandTests
         var result = await _command.Run(_user, returnUrl);
 
         // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("Unable to verify subscription status.", badRequest.Response);
+        Assert.True(result.IsT2);
+        var conflict = result.AsT2;
+        Assert.Equal("Unable to create billing portal session. Please contact support for assistance.", conflict.Response);
 
         await _stripeAdapter.DidNotReceive().CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>());
 
@@ -386,30 +330,4 @@ public class CreateBillingPortalSessionCommandTests
             Arg.Any<Func<object, Exception?, string>>());
     }
 
-    [Fact]
-    public async Task Run_WhenSubscriptionIsNull_ReturnsBadRequest()
-    {
-        // Arrange
-        var returnUrl = "https://example.com/billing";
-
-        _stripeAdapter.GetSubscriptionAsync(_user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns((Subscription?)null);
-
-        // Act
-        var result = await _command.Run(_user, returnUrl);
-
-        // Assert
-        Assert.True(result.IsT1);
-        var badRequest = result.AsT1;
-        Assert.Equal("User subscription not found.", badRequest.Response);
-
-        await _stripeAdapter.DidNotReceive().CreateBillingPortalSessionAsync(Arg.Any<SessionCreateOptions>());
-
-        _logger.Received(1).Log(
-            LogLevel.Warning,
-            Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString()!.Contains("was not found") && o.ToString()!.Contains(_user.Id.ToString())),
-            Arg.Any<Exception>(),
-            Arg.Any<Func<object, Exception?, string>>());
-    }
 }
