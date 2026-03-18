@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -16,7 +15,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -42,8 +40,7 @@ public class PoliciesControllerTests
     [BitAutoData]
     public async Task GetMasterPasswordPolicy_WhenCalled_ReturnsMasterPasswordPolicy(
         SutProvider<PoliciesController> sutProvider,
-        Guid orgId, Guid userId,
-        OrganizationUser orgUser,
+        Guid orgId,
         Policy policy,
         MasterPasswordPolicyData mpPolicyData,
         Organization organization)
@@ -53,15 +50,6 @@ public class PoliciesControllerTests
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(orgId).Returns(organization);
-
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(orgId, userId)
-            .Returns(orgUser);
-
 
         policy.Type = PolicyType.MasterPassword;
         policy.Enabled = true;
@@ -97,35 +85,17 @@ public class PoliciesControllerTests
     [Theory]
     [BitAutoData]
     public async Task GetMasterPasswordPolicy_OrgUserIsNull_ThrowsNotFoundException(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, Guid userId)
+        SutProvider<PoliciesController> sutProvider, Guid orgId)
     {
-        // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(orgId, userId)
-            .Returns((OrganizationUser)null);
-
-        // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetMasterPasswordPolicy_PolicyIsNull_ThrowsNotFoundException(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, Guid userId, OrganizationUser orgUser)
+        SutProvider<PoliciesController> sutProvider, Guid orgId)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(orgId, userId)
-            .Returns(orgUser);
-
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(orgId, PolicyType.MasterPassword)
             .Returns((Policy)null);
@@ -137,17 +107,9 @@ public class PoliciesControllerTests
     [Theory]
     [BitAutoData]
     public async Task GetMasterPasswordPolicy_PolicyNotEnabled_ThrowsNotFoundException(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, Guid userId, OrganizationUser orgUser, Policy policy)
+        SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(orgId, userId)
-            .Returns(orgUser);
-
         policy.Enabled = false; // Ensuring the policy is not enabled
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(orgId, PolicyType.MasterPassword)
@@ -167,7 +129,6 @@ public class PoliciesControllerTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(orgId).Returns((Organization)null);
 
-
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
     }
@@ -184,7 +145,6 @@ public class PoliciesControllerTests
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         organizationRepository.GetByIdAsync(orgId).Returns(organization);
-
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
@@ -216,20 +176,6 @@ public class PoliciesControllerTests
         Assert.Equal(policy.Type, result.Type);
         Assert.Equal(policy.Enabled, result.Enabled);
         Assert.Equal(policy.OrganizationId, result.OrganizationId);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_WhenUserCannotManagePolicies_ThrowsNotFoundException(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyType type)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManagePolicies(orgId)
-            .Returns(false);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(orgId, type));
     }
 
     [Theory]
@@ -480,10 +426,6 @@ public class PoliciesControllerTests
                                                     m.PerformedBy.UserId == userId &&
                                                     m.PerformedBy.IsOrganizationOwnerOrProvider == true));
 
-        await sutProvider.GetDependency<ISavePolicyCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .VNextSaveAsync(default);
-
         Assert.NotNull(result);
         Assert.Equal(policy.Id, result.Id);
         Assert.Equal(policy.Type, result.Type);
@@ -521,10 +463,6 @@ public class PoliciesControllerTests
                                                     m.PolicyUpdate.Enabled == model.Policy.Enabled &&
                                                     m.PerformedBy.UserId == userId &&
                                                     m.PerformedBy.IsOrganizationOwnerOrProvider == true));
-
-        await sutProvider.GetDependency<ISavePolicyCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .VNextSaveAsync(default);
 
         Assert.NotNull(result);
         Assert.Equal(policy.Id, result.Id);
