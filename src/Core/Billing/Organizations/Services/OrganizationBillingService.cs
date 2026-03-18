@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
@@ -8,6 +7,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -17,7 +17,9 @@ using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
+using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
 using Subscription = Stripe.Subscription;
+
 
 namespace Bit.Core.Billing.Organizations.Services;
 
@@ -238,7 +240,7 @@ public class OrganizationBillingService(
             };
 
             if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
+                !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
             {
                 customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
             }
@@ -491,23 +493,13 @@ public class OrganizationBillingService(
         }
 
         List<string> expansions = ["tax", "tax_ids"];
-
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
         customer = customer switch
         {
-            { Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.UpdateCustomerAsync(customer.Id,
-                    new CustomerUpdateOptions
-                    {
-                        Expand = expansions,
-                        TaxExempt = StripeConstants.TaxExempt.Reverse
-                    }),
-            { Address.Country: Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.UpdateCustomerAsync(customer.Id,
-                    new CustomerUpdateOptions
-                    {
-                        Expand = expansions,
-                        TaxExempt = StripeConstants.TaxExempt.None
-                    }),
+            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                when determinedTaxExemptStatus != customerTaxExemptStatus =>
+                await stripeAdapter.UpdateCustomerAsync(customer.Id,
+                    new CustomerUpdateOptions { Expand = expansions, TaxExempt = determinedTaxExemptStatus }),
             _ => customer
         };
 
