@@ -14,7 +14,6 @@ using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +34,6 @@ public class AccountBillingVNextController(
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
     IGetUserLicenseQuery getUserLicenseQuery,
-    GlobalSettings globalSettings,
     IReinstateSubscriptionCommand reinstateSubscriptionCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand,
     IUpdatePremiumStorageCommand updatePremiumStorageCommand,
@@ -155,21 +153,16 @@ public class AccountBillingVNextController(
         return Handle(result);
     }
 
-    /// <summary>
-    /// Creates a Stripe billing portal session for the authenticated user.
-    /// The portal allows users to manage their subscription, payment methods, and billing history.
-    /// The return URL is automatically determined based on the client type (mobile, web, desktop, etc.).
-    /// </summary>
-    /// <param name="user">The authenticated user</param>
-    /// <returns>Portal session URL for redirection</returns>
     [HttpPost("portal-session")]
     [InjectUser]
     public async Task<IResult> CreatePortalSessionAsync([BindNever] User user)
     {
-        // Mobile clients use deep link callbacks, all others redirect to web vault
-        var returnUrl = DeviceTypes.ToClientType(currentContext.DeviceType) == ClientType.Mobile
-            ? "bitwarden://premium-upgrade-callback"
-            : $"{globalSettings.BaseServiceUri.Vault}/#/settings/subscription/premium";
+        if (DeviceTypes.ToClientType(currentContext.DeviceType) != ClientType.Mobile)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var returnUrl = "bitwarden://premium-upgrade-callback";
 
         var result = await createBillingPortalSessionCommand.Run(user, returnUrl);
         return Handle(result.Map(url => new PortalSessionResponse { Url = url }));

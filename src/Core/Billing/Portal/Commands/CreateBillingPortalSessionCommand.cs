@@ -32,14 +32,14 @@ public class CreateBillingPortalSessionCommand(
             {
                 _logger.LogWarning("{Command}: User ({UserId}) does not have a Stripe customer ID",
                     CommandName, user.Id);
-                return new BadRequest("User does not have a Stripe customer ID.");
+                return DefaultConflict;
             }
 
             if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
             {
                 _logger.LogWarning("{Command}: User ({UserId}) does not have a subscription",
                     CommandName, user.Id);
-                return new BadRequest("User does not have a Premium subscription.");
+                return DefaultConflict;
             }
 
             // Fetch the subscription to validate its status
@@ -53,14 +53,7 @@ public class CreateBillingPortalSessionCommand(
                 _logger.LogError(stripeException,
                     "{Command}: Failed to fetch subscription ({SubscriptionId}) for user ({UserId})",
                     CommandName, user.GatewaySubscriptionId, user.Id);
-                return new BadRequest("Unable to verify subscription status.");
-            }
-
-            if (subscription == null)
-            {
-                _logger.LogWarning("{Command}: Subscription ({SubscriptionId}) for user ({UserId}) was not found",
-                    CommandName, user.GatewaySubscriptionId, user.Id);
-                return new BadRequest("User subscription not found.");
+                return DefaultConflict;
             }
 
             // Only allow portal access for active or past_due subscriptions
@@ -79,14 +72,6 @@ public class CreateBillingPortalSessionCommand(
             };
 
             var session = await stripeAdapter.CreateBillingPortalSessionAsync(options);
-
-            if (session?.Url == null)
-            {
-                return DefaultConflict;
-            }
-
-            _logger.LogInformation("{Command}: Successfully created billing portal session for user ({UserId})",
-                CommandName, user.Id);
 
             return session.Url;
         });
