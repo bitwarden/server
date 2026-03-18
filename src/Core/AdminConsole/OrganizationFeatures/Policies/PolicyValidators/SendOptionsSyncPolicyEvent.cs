@@ -24,7 +24,7 @@ public class SendOptionsSyncPolicyEvent(IPolicyRepository policyRepository) : IO
     {
         var organizationId = policyRequest.PolicyUpdate.OrganizationId;
 
-        // Step 1: sync SendOptionsPolicy.Data.DisableSend -> SendControlsPolicy.Data.DisableSend
+        // Step 1: sync SendOptionsPolicy.Data.DisableHideEmail -> SendControlsPolicy.Data.DisableHideEmail
         var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
             organizationId, PolicyType.SendControls) ?? new Policy
             {

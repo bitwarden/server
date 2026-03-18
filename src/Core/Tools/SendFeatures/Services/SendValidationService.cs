@@ -64,8 +64,6 @@ public class SendValidationService : ISendValidationService
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SendControls))
         {
-
-
             if (sendControlsRequirement.DisableSend || disableSendRequirement.DisableSend)
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
