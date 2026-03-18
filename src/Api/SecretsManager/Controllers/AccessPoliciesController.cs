@@ -324,22 +324,7 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(User, secret.OrganizationId);
-        if (accessClient == AccessClientType.ServiceAccount)
-        {
-            throw new NotFoundException();
-        }
-
-        var totalPolicies =
-            (request.UserAccessPolicyRequests?.Count() ?? 0) +
-            (request.GroupAccessPolicyRequests?.Count() ?? 0) +
-            (request.ServiceAccountAccessPolicyRequests?.Count() ?? 0);
-        if (totalPolicies == 0)
-        {
-            throw new BadRequestException("At least one policy entry is required.");
-        }
-
-        var userId = _userService.GetProperUserId(User)!.Value;
+        var (_, userId) = await _accessClientQuery.GetAccessClientAsync(User, secret.OrganizationId);
         var accessPoliciesUpdates = await _secretAccessPoliciesUpdatesQuery.GetAsync(
             request.ToSecretAccessPolicies(secretId, secret.OrganizationId), userId);
 
@@ -417,7 +402,7 @@ public class AccessPoliciesController : Controller
         return new ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(results);
     }
 
-    private async Task LogAccessPolicyServiceAccountChanges(IEnumerable<BaseAccessPolicy> currentPolicies, IEnumerable<BaseAccessPolicy> updatedPolicies, Guid userId)
+    internal async Task LogAccessPolicyServiceAccountChanges(IEnumerable<BaseAccessPolicy> currentPolicies, IEnumerable<BaseAccessPolicy> updatedPolicies, Guid userId)
     {
         foreach (var current in currentPolicies.OfType<GroupServiceAccountAccessPolicy>())
         {

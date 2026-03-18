@@ -173,19 +173,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             (((UserProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id ||
              ((GroupProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id)).ToListAsync();
 
-        // Lockout: if any current policies have Manage, the replacement must retain at least one.
-        var newUserManageCount = peopleAccessPolicies.UserAccessPolicies?.Count(ap => ap.Manage) ?? 0;
-        var newGroupManageCount = peopleAccessPolicies.GroupAccessPolicies?.Count(ap => ap.Manage) ?? 0;
-        if (newUserManageCount + newGroupManageCount == 0)
-        {
-            var hasCurrentHumanManage = peoplePolicyEntities.Any(ap => ap.Manage);
-            if (hasCurrentHumanManage)
-            {
-                throw new BadRequestException(
-                    "At least one user or group must retain Manage permission on this project.");
-            }
-        }
-
         var userPolicyEntities =
             peoplePolicyEntities.Where(ap => ap.GetType() == typeof(UserProjectAccessPolicy)).ToList();
         var groupPolicyEntities =
@@ -479,6 +466,19 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         var currentDate = DateTime.UtcNow;
+        var secretId = accessPoliciesUpdates.SecretId;
+
+        var currentUserPolicies = await dbContext.UserSecretAccessPolicy
+            .Where(ap => ap.GrantedSecretId == secretId)
+            .ToListAsync();
+
+        var currentGroupPolicies = await dbContext.GroupSecretAccessPolicy
+            .Where(ap => ap.GrantedSecretId == secretId)
+            .ToListAsync();
+
+        var currentSAPolicies = await dbContext.ServiceAccountSecretAccessPolicy
+            .Where(ap => ap.GrantedSecretId == secretId)
+            .ToListAsync();
 
         // Delete removed policies
         var userIdsToDelete = accessPoliciesUpdates.UserAccessPolicyUpdates
@@ -520,9 +520,8 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                      .Where(u => u.Operation != AccessPolicyOperation.Delete))
         {
             var entity = MapToEntity(update.AccessPolicy);
-            var existing = await dbContext.UserSecretAccessPolicy
-                .FirstOrDefaultAsync(ap => ap.GrantedSecretId == accessPoliciesUpdates.SecretId &&
-                                           ap.OrganizationUserId == update.AccessPolicy.OrganizationUserId);
+            var existing = currentUserPolicies.FirstOrDefault(ap =>
+                ap.OrganizationUserId == update.AccessPolicy.OrganizationUserId);
             if (existing != null)
             {
                 existing.Read = entity.Read;
@@ -542,9 +541,8 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                      .Where(u => u.Operation != AccessPolicyOperation.Delete))
         {
             var entity = MapToEntity(update.AccessPolicy);
-            var existing = await dbContext.GroupSecretAccessPolicy
-                .FirstOrDefaultAsync(ap => ap.GrantedSecretId == accessPoliciesUpdates.SecretId &&
-                                           ap.GroupId == update.AccessPolicy.GroupId);
+            var existing = currentGroupPolicies.FirstOrDefault(ap =>
+                ap.GroupId == update.AccessPolicy.GroupId);
             if (existing != null)
             {
                 existing.Read = entity.Read;
@@ -564,9 +562,8 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                      .Where(u => u.Operation != AccessPolicyOperation.Delete))
         {
             var entity = MapToEntity(update.AccessPolicy);
-            var existing = await dbContext.ServiceAccountSecretAccessPolicy
-                .FirstOrDefaultAsync(ap => ap.GrantedSecretId == accessPoliciesUpdates.SecretId &&
-                                           ap.ServiceAccountId == update.AccessPolicy.ServiceAccountId);
+            var existing = currentSAPolicies.FirstOrDefault(ap =>
+                ap.ServiceAccountId == update.AccessPolicy.ServiceAccountId);
             if (existing != null)
             {
                 existing.Read = entity.Read;

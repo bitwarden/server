@@ -80,8 +80,10 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
         if (accessClient == AccessClientType.ServiceAccount)
         {
             var hasManageGrant =
-                resource.UserAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage) ||
-                resource.GroupAccessPolicyUpdates.Any(u => u.AccessPolicy.Manage) ||
+                resource.UserAccessPolicyUpdates.Any(u =>
+                    (u.Operation == AccessPolicyOperation.Create || u.Operation == AccessPolicyOperation.Update) && u.AccessPolicy.Manage) ||
+                resource.GroupAccessPolicyUpdates.Any(u =>
+                    (u.Operation == AccessPolicyOperation.Create || u.Operation == AccessPolicyOperation.Update) && u.AccessPolicy.Manage) ||
                 resource.ServiceAccountAccessPolicyUpdates.Any(u =>
                     (u.Operation == AccessPolicyOperation.Create || u.Operation == AccessPolicyOperation.Update) && u.AccessPolicy.Manage);
             if (hasManageGrant)

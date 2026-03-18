@@ -4,6 +4,7 @@ using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;

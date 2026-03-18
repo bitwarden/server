@@ -4,7 +4,7 @@ using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Api.SecretsManager.Models.Request;
 
-public class AccessPolicyRequest
+public class AccessPolicyRequest : IValidatableObject
 {
     [Required]
     public Guid GranteeId { get; set; }
@@ -17,6 +17,16 @@ public class AccessPolicyRequest
 
     [Required]
     public bool Manage { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Manage && !Write)
+        {
+            yield return new ValidationResult(
+                "Write must be true when Manage is true.",
+                [nameof(Write), nameof(Manage)]);
+        }
+    }
 
     public UserProjectAccessPolicy ToUserProjectAccessPolicy(Guid projectId, Guid organizationId) =>
         new()

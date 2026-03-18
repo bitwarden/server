@@ -321,9 +321,13 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        return await dbContext.Secret
+        var projectCreatorIds = await dbContext.Secret
             .Where(s => s.Id == secretId && s.DeletedDate == null)
             .SelectMany(s => s.Projects!)
-            .AnyAsync(p => p.DeletedDate == null && p.CreatedByServiceAccountId == serviceAccountId);
+            .Where(p => p.DeletedDate == null)
+            .Select(p => p.CreatedByServiceAccountId)
+            .ToListAsync();
+
+        return projectCreatorIds.Count > 0 && projectCreatorIds.All(id => id == serviceAccountId);
     }
 }
