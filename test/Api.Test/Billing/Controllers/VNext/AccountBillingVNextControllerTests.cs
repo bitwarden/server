@@ -12,7 +12,6 @@ using Bit.Core.Billing.Subscriptions.Queries;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -22,6 +21,7 @@ using Stripe;
 using Xunit;
 using BadRequest = Bit.Core.Billing.Commands.BadRequest;
 using Conflict = Bit.Core.Billing.Commands.Conflict;
+using NotFound = Microsoft.AspNetCore.Http.HttpResults.NotFound;
 
 namespace Bit.Api.Test.Billing.Controllers.VNext;
 
@@ -33,7 +33,6 @@ public class AccountBillingVNextControllerTests
     private readonly IGetApplicableDiscountsQuery _getApplicableDiscountsQuery;
     private readonly ICreateBillingPortalSessionCommand _createBillingPortalSessionCommand;
     private readonly ICurrentContext _currentContext;
-    private readonly GlobalSettings _globalSettings;
     private readonly AccountBillingVNextController _sut;
 
     public AccountBillingVNextControllerTests()
@@ -44,11 +43,6 @@ public class AccountBillingVNextControllerTests
         _getApplicableDiscountsQuery = Substitute.For<IGetApplicableDiscountsQuery>();
         _createBillingPortalSessionCommand = Substitute.For<ICreateBillingPortalSessionCommand>();
         _currentContext = Substitute.For<ICurrentContext>();
-        _globalSettings = new GlobalSettings
-        {
-            BaseServiceUri = new GlobalSettings.BaseServiceUriSettings(new GlobalSettings())
-        };
-        _globalSettings.BaseServiceUri.Vault = "https://vault.bitwarden.com";
 
         _sut = new AccountBillingVNextController(
             _createBillingPortalSessionCommand,
@@ -60,7 +54,6 @@ public class AccountBillingVNextControllerTests
             Substitute.For<Core.Billing.Payment.Queries.IGetCreditQuery>(),
             Substitute.For<Core.Billing.Payment.Queries.IGetPaymentMethodQuery>(),
             _getUserLicenseQuery,
-            _globalSettings,
             Substitute.For<IReinstateSubscriptionCommand>(),
             Substitute.For<Core.Billing.Payment.Commands.IUpdatePaymentMethodCommand>(),
             _updatePremiumStorageCommand,
@@ -316,9 +309,9 @@ public class AccountBillingVNextControllerTests
     {
         // Arrange
         var portalUrl = "https://billing.stripe.com/session/test123";
-        var expectedReturnUrl = "https://vault.bitwarden.com/#/settings/subscription/premium";
+        var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
 
-        _currentContext.DeviceType.Returns(DeviceType.ChromeBrowser);
+        _currentContext.DeviceType.Returns(DeviceType.Android);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
             .Returns(new BillingCommandResult<string>(portalUrl));
 
@@ -331,14 +324,14 @@ public class AccountBillingVNextControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreatePortalSessionAsync_NoCustomerId_ReturnsBadRequestAsync(User user)
+    public async Task CreatePortalSessionAsync_NoCustomerId_ReturnsConflictAsync(User user)
     {
         // Arrange
         var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
 
-        _currentContext.DeviceType.Returns(DeviceType.Android);
+        _currentContext.DeviceType.Returns(DeviceType.AndroidAmazon);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
-            .Returns(new BillingCommandResult<string>(new BadRequest("User does not have a Stripe customer ID.")));
+            .Returns(new BillingCommandResult<string>(new Conflict("Unable to create billing portal session. Please contact support for assistance.")));
 
         // Act
         var result = await _sut.CreatePortalSessionAsync(user);
@@ -349,14 +342,14 @@ public class AccountBillingVNextControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreatePortalSessionAsync_NoSubscriptionId_ReturnsBadRequestAsync(User user)
+    public async Task CreatePortalSessionAsync_NoSubscriptionId_ReturnsConflictAsync(User user)
     {
         // Arrange
         var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
 
         _currentContext.DeviceType.Returns(DeviceType.iOS);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
-            .Returns(new BillingCommandResult<string>(new BadRequest("User does not have a Premium subscription.")));
+            .Returns(new BillingCommandResult<string>(new Conflict("Unable to create billing portal session. Please contact support for assistance.")));
 
         // Act
         var result = await _sut.CreatePortalSessionAsync(user);
@@ -370,9 +363,9 @@ public class AccountBillingVNextControllerTests
     public async Task CreatePortalSessionAsync_InvalidSubscriptionStatus_ReturnsBadRequestAsync(User user)
     {
         // Arrange
-        var expectedReturnUrl = "https://vault.bitwarden.com/#/settings/subscription/premium";
+        var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
 
-        _currentContext.DeviceType.Returns((DeviceType?)null);
+        _currentContext.DeviceType.Returns(DeviceType.iOS);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
             .Returns(new BillingCommandResult<string>(new BadRequest("Your subscription cannot be managed in its current status.")));
 
@@ -385,14 +378,14 @@ public class AccountBillingVNextControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreatePortalSessionAsync_SubscriptionNotFound_ReturnsBadRequestAsync(User user)
+    public async Task CreatePortalSessionAsync_SubscriptionNotFound_ReturnsConflictAsync(User user)
     {
         // Arrange
-        var expectedReturnUrl = "https://vault.bitwarden.com/#/settings/subscription/premium";
+        var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
 
-        _currentContext.DeviceType.Returns(DeviceType.WindowsDesktop);
+        _currentContext.DeviceType.Returns(DeviceType.Android);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
-            .Returns(new BillingCommandResult<string>(new BadRequest("User subscription not found.")));
+            .Returns(new BillingCommandResult<string>(new Conflict("Unable to create billing portal session. Please contact support for assistance.")));
 
         // Act
         var result = await _sut.CreatePortalSessionAsync(user);
@@ -406,10 +399,10 @@ public class AccountBillingVNextControllerTests
     public async Task CreatePortalSessionAsync_StripeException_ReturnsServerErrorAsync(User user)
     {
         // Arrange
-        var expectedReturnUrl = "https://vault.bitwarden.com/#/settings/subscription/premium";
+        var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
         var exception = new StripeException("Stripe API error");
 
-        _currentContext.DeviceType.Returns(DeviceType.MacOsDesktop);
+        _currentContext.DeviceType.Returns(DeviceType.iOS);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
             .Returns(new BillingCommandResult<string>(new Unhandled(exception)));
 
@@ -425,9 +418,9 @@ public class AccountBillingVNextControllerTests
     public async Task CreatePortalSessionAsync_SessionWithNullUrl_ReturnsServerErrorAsync(User user)
     {
         // Arrange
-        var expectedReturnUrl = "https://vault.bitwarden.com/#/settings/subscription/premium";
+        var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
 
-        _currentContext.DeviceType.Returns(DeviceType.ChromeExtension);
+        _currentContext.DeviceType.Returns(DeviceType.Android);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
             .Returns(new BillingCommandResult<string>(new Conflict("Unable to create billing portal session. Please contact support for assistance.")));
 
@@ -443,9 +436,9 @@ public class AccountBillingVNextControllerTests
     public async Task CreatePortalSessionAsync_NullSession_ReturnsServerErrorAsync(User user)
     {
         // Arrange
-        var expectedReturnUrl = "https://vault.bitwarden.com/#/settings/subscription/premium";
+        var expectedReturnUrl = "bitwarden://premium-upgrade-callback";
 
-        _currentContext.DeviceType.Returns(DeviceType.LinuxDesktop);
+        _currentContext.DeviceType.Returns(DeviceType.iOS);
         _createBillingPortalSessionCommand.Run(user, expectedReturnUrl)
             .Returns(new BillingCommandResult<string>(new Conflict("Unable to create billing portal session. Please contact support for assistance.")));
 
@@ -455,5 +448,19 @@ public class AccountBillingVNextControllerTests
         // Assert
         Assert.IsAssignableFrom<IResult>(result);
         await _createBillingPortalSessionCommand.Received(1).Run(user, expectedReturnUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreatePortalSessionAsync_NonMobileDevice_ReturnsNotFoundAsync(User user)
+    {
+        // Arrange
+        _currentContext.DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        // Act
+        var result = await _sut.CreatePortalSessionAsync(user);
+
+        // Assert
+        Assert.IsType<NotFound>(result);
+        await _createBillingPortalSessionCommand.DidNotReceiveWithAnyArgs().Run(Arg.Any<User>(), Arg.Any<string>());
     }
 }
