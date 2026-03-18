@@ -22,7 +22,6 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
         public string? Notes { get; set; }
         public bool Reprompt { get; set; }
         public bool Deleted { get; set; }
-        public bool Archived { get; set; }
         public IEnumerable<(string name, string value, int type)>? Fields { get; set; }
     }
 
@@ -39,7 +38,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, uri: request.Uri, notes: request.Notes, fields: request.Fields, reprompt: request.Reprompt, deleted: request.Deleted, archived: request.Archived);
+        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, uri: request.Uri, notes: request.Notes, fields: request.Fields, reprompt: request.Reprompt, deleted: request.Deleted);
 
         await cipherRepository.CreateAsync(cipher);
 
