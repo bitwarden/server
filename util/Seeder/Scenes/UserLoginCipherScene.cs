@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Seeder.Factories;
@@ -40,6 +41,10 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
         }
 
         var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, uri: request.Uri, notes: request.Notes, fields: request.Fields, reprompt: request.Reprompt, deleted: request.Deleted, favorite: request.Favorite);
+        cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
+        {
+            { request.UserId.ToString().ToUpperInvariant(), true}
+        });
 
         await cipherRepository.CreateAsync(cipher);
 
