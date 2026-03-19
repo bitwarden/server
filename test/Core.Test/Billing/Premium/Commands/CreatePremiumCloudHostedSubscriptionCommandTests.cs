@@ -250,7 +250,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
 
         var mockSubscription = Substitute.For<StripeSubscription>();
         mockSubscription.Id = "sub_123";
-        mockSubscription.Status = "active";
+        mockSubscription.Status = "incomplete";
         mockSubscription.LatestInvoiceId = "in_123";
 
         var mockInvoice = Substitute.For<Invoice>();
