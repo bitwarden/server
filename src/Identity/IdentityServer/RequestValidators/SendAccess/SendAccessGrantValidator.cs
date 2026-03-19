@@ -41,6 +41,16 @@ public class SendAccessGrantValidator(
                 // null send scenario.
                 context.Result = await _sendNeverAuthenticateValidator.ValidateRequestAsync(context, never, sendIdGuid);
                 return;
+            case SendInaccessible:
+                // send exists but is not accessible (expired, disabled, max access exceeded, or past deletion date).
+                context.Result = new GrantValidationResult(
+                    TokenRequestErrors.InvalidGrant,
+                    SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId,
+                    new Dictionary<string, object>
+                    {
+                        { SendAccessConstants.SendAccessError, SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId }
+                    });
+                return;
             case NotAuthenticated:
                 // automatically issue access token
                 context.Result = BuildBaseSuccessResult(sendIdGuid);
