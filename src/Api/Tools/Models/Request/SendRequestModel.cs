@@ -264,7 +264,7 @@ public class SendRequestModel
                     existingSend.Password = null;
                     break;
                 case Core.Tools.Enums.AuthType.Password:
-                    existingSend.Password = authorizationService.HashPassword(Password);
+                    existingSend.Password = authorizationService.HashPassword(Password!);
                     existingSend.Emails = null;
                     break;
                 case Core.Tools.Enums.AuthType.None:
