@@ -621,6 +621,7 @@ public class RotateUserAccountKeysCommandTests
 
         // The email is the salt for the KDF and is validated currently.
         user.Email = model.MasterPasswordUnlockData.Salt;
+        user.MasterPasswordSalt = null;
     }
 
     private static void SetV1ExistingUser(User user, IUserSignatureKeyPairRepository userSignatureKeyPairRepository)
