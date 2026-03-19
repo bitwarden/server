@@ -353,7 +353,7 @@ public class SendsController : Controller
             throw new BadRequestException("Email verified Sends require a premium membership");
         }
 
-        var (send, data) = model.ToSend(userId, file.FileName, _sendAuthorizationService);
+        var (send, data) = model.ToSend(userId, file.FileName!, _sendAuthorizationService);
         var uploadUrl = await _nonAnonymousSendCommand.SaveFileSendAsync(send, data, model.FileLength.Value);
         return new SendFileUploadDataResponseModel
         {
