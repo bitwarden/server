@@ -709,12 +709,18 @@ public class CiphersController : Controller
     public async Task<CipherResponseModel> PutPartial(Guid id, [FromBody] CipherPartialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
-        var cipher = await GetByIdAsync(id, user.Id);
+        var updatedCipher = await GetByIdAsync(id, user.Id);
         var response = new CipherResponseModel(
-            cipher,
+            updatedCipher,
             user,
             await _applicationCacheService.GetOrganizationAbilitiesAsync(),
             _globalSettings);
@@ -1382,12 +1388,22 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
+
         var attachments = cipher?.GetAttachments();
 
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachment) || attachment.Validated)
         {
             throw new NotFoundException();
         }
+
+        await _cipherService.ValidateCipherEditForAttachmentAsync(cipher, userId, orgAdmin, attachment.Size);
 
         return new AttachmentUploadDataResponseModel
         {
@@ -1409,6 +1425,13 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+
+        var orgAdmin = false;
+        if (cipher.OrganizationId.HasValue &&
+            await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+        {
+            orgAdmin = true;
+        }
         var attachments = cipher?.GetAttachments();
         if (attachments == null || !attachments.TryGetValue(attachmentId, out var attachmentData))
         {
@@ -1417,7 +1440,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream) =>
         {
-            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData);
+            await _cipherService.UploadFileForExistingAttachmentAsync(stream, cipher, attachmentData, userId, orgAdmin);
         });
     }
 

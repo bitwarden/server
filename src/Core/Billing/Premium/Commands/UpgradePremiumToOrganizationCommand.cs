@@ -1,13 +1,16 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -58,8 +61,9 @@ public class UpgradePremiumToOrganizationCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     ICollectionRepository collectionRepository,
+    IBraintreeService braintreeService,
     IApplicationCacheService applicationCacheService,
-    IBraintreeService braintreeService)
+    IPushNotificationService pushNotificationService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -119,9 +123,7 @@ public class UpgradePremiumToOrganizationCommand(
                     Country = billingAddress.Country,
                     PostalCode = billingAddress.PostalCode
                 },
-                TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates
-                    ? TaxExempt.Reverse
-                    : TaxExempt.None
+                TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country),
             });
 
         await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions);
@@ -146,10 +148,27 @@ public class UpgradePremiumToOrganizationCommand(
         user.GatewaySubscriptionId = null;
         user.GatewayCustomerId = null;
         user.RevisionDate = DateTime.UtcNow;
+
         await userService.SaveUserAsync(user);
+        await SendPremiumStatusNotificationAsync(user);
 
         return organization.Id;
+
     });
+
+    private async Task SendPremiumStatusNotificationAsync(User user) =>
+        await pushNotificationService.PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.PremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium,
+            },
+            ExcludeCurrentContext = false,
+        });
 
     private List<SubscriptionItemOptions> BuildSubscriptionItemOptions(
         Subscription currentSubscription,

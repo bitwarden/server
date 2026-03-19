@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
 using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
@@ -157,24 +158,29 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        var nonUSBusinessUse =
-            organization.PlanType.GetProductTier() != ProductTierType.Families &&
-            customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates;
+        var isBusinessUse = organization.PlanType.GetProductTier() != ProductTierType.Families;
 
-        if (nonUSBusinessUse && customer.TaxExempt != TaxExempt.Reverse)
+        if (isBusinessUse)
         {
-            try
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
+            switch (customer)
             {
-                await stripeFacade.UpdateCustomer(subscription.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Failed to set organization's ({OrganizationID}) to reverse tax exemption while processing event with ID {EventID}",
-                    organization.Id,
-                    eventId);
+                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                    when determinedTaxExemptStatus != customerTaxExemptStatus:
+                    try
+                    {
+                        await stripeFacade.UpdateCustomer(subscription.CustomerId,
+                            new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                    }
+                    catch (Exception exception)
+                    {
+                        logger.LogError(
+                            exception,
+                            "Failed to set organization's ({OrganizationID}) to the required tax exemption while processing event with ID {EventID}",
+                            organization.Id,
+                            eventId);
+                    }
+                    break;
             }
         }
 
@@ -449,22 +455,25 @@ public class UpcomingInvoiceHandler(
         Customer customer,
         string eventId)
     {
-        if (customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates &&
-            customer.TaxExempt != TaxExempt.Reverse)
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
+        switch (customer)
         {
-            try
-            {
-                await stripeFacade.UpdateCustomer(subscription.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = TaxExempt.Reverse });
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Failed to set provider's ({ProviderID}) to reverse tax exemption while processing event with ID {EventID}",
-                    provider.Id,
-                    eventId);
-            }
+            case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                when determinedTaxExemptStatus != customerTaxExemptStatus:
+                try
+                {
+                    await stripeFacade.UpdateCustomer(subscription.CustomerId,
+                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(
+                        exception,
+                        "Failed to set provider's ({ProviderID}) to the required tax exemption while processing event with ID {EventID}",
+                        provider.Id,
+                        eventId);
+                }
+                break;
         }
 
         if (!subscription.AutomaticTax.Enabled)
