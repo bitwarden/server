@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Models;
@@ -388,6 +387,55 @@ public class ProviderBillingServiceTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(Arg.Is<Organization>(
             org => org.GatewayCustomerId == "customer_id"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateCustomer_ForClientOrg_USCustomer_SetsTaxExemptToNone(
+        Provider provider,
+        Organization organization,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        organization.GatewayCustomerId = null;
+        organization.Name = "Name";
+
+        var providerCustomer = new Customer
+        {
+            Address = new Address
+            {
+                Country = "US",
+                PostalCode = "12345",
+                Line1 = "123 Main St.",
+                Line2 = "Unit 4",
+                City = "Fake Town",
+                State = "Fake State"
+            },
+            TaxIds = new StripeList<TaxId>
+            {
+                Data =
+                [
+                    new TaxId { Type = "TYPE", Value = "VALUE" }
+                ]
+            },
+            TaxExempt = null
+        };
+
+        sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider, Arg.Is<CustomerGetOptions>(
+                options => options.Expand.Contains("tax") && options.Expand.Contains("tax_ids")))
+            .Returns(providerCustomer);
+
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
+            .Returns(new Bit.Core.Settings.GlobalSettings.BaseServiceUriSettings(new Bit.Core.Settings.GlobalSettings())
+            {
+                CloudRegion = "US"
+            });
+
+        sutProvider.GetDependency<IStripeAdapter>().CreateCustomerAsync(Arg.Any<CustomerCreateOptions>())
+            .Returns(new Customer { Id = "customer_id" });
+
+        await sutProvider.Sut.CreateCustomerForClientOrganization(provider, organization);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CreateCustomerAsync(
+            Arg.Is<CustomerCreateOptions>(options => options.TaxExempt == StripeConstants.TaxExempt.None));
     }
 
     #endregion
@@ -934,17 +982,11 @@ public class ProviderBillingServiceTests
                 o.TaxIdData.FirstOrDefault().Value == billingAddress.TaxId.Value))
             .Throws<StripeException>();
 
-        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns("setup_intent_id");
-
         await Assert.ThrowsAsync<StripeException>(() =>
             sutProvider.Sut.SetupCustomer(provider, tokenizedPaymentMethod, billingAddress));
 
-        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_id");
-
         await stripeAdapter.Received(1).CancelSetupIntentAsync("setup_intent_id", Arg.Is<SetupIntentCancelOptions>(options =>
             options.CancellationReason == "abandoned"));
-
-        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).RemoveSetupIntentForSubscriber(provider.Id);
     }
 
     [Theory, BitAutoData]
@@ -1031,7 +1073,8 @@ public class ProviderBillingServiceTests
 
         Assert.Equivalent(expected, actual);
 
-        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_id");
+        await stripeAdapter.Received(1).UpdateSetupIntentAsync("setup_intent_id",
+            Arg.Is<SetupIntentUpdateOptions>(options => options.Customer == expected.Id));
     }
 
     [Theory, BitAutoData]
@@ -1532,15 +1575,12 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-
-        const string setupIntentId = "seti_123";
-
-        sutProvider.GetDependency<ISetupIntentCache>().GetSetupIntentIdForSubscriber(provider.Id).Returns(setupIntentId);
-
-        sutProvider.GetDependency<IStripeAdapter>().GetSetupIntentAsync(setupIntentId, Arg.Is<SetupIntentGetOptions>(options =>
-            options.Expand.Contains("payment_method"))).Returns(new SetupIntent
+        sutProvider.GetDependency<IStripeAdapter>().ListSetupIntentsAsync(Arg.Is<SetupIntentListOptions>(options =>
+            options.Customer == customer.Id &&
+            options.Expand.Contains("data.payment_method"))).Returns([
+            new SetupIntent
             {
-                Id = setupIntentId,
+                Id = "seti_123",
                 Status = "requires_action",
                 NextAction = new SetupIntentNextAction
                 {
@@ -1550,7 +1590,8 @@ public class ProviderBillingServiceTests
                 {
                     UsBankAccount = new PaymentMethodUsBankAccount()
                 }
-            });
+            }
+        ]);
 
         sutProvider.GetDependency<IStripeAdapter>().CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(
             sub =>

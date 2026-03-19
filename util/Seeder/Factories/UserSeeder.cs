@@ -11,23 +11,26 @@ internal static class UserSeeder
 {
     internal const string DefaultPassword = "asdfasdfasdf";
 
-    internal static User Create(
+    internal static (User user, UserKeys keys) Create(
         string email,
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService,
+        string? name = null,
         bool emailVerified = true,
         bool premium = false,
         UserKeys? keys = null,
-        string? password = null)
+        string? password = null,
+        int kdfIterations = 5_000)
     {
         // When keys are provided, caller owns email/key consistency - don't mangle
         var mangledEmail = keys == null ? manglerService.Mangle(email) : email;
 
-        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, password ?? DefaultPassword);
+        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, password ?? DefaultPassword, kdfIterations);
 
         var user = new User
         {
             Id = CoreHelpers.GenerateComb(),
+            Name = name ?? mangledEmail.Split('@')[0],
             Email = mangledEmail,
             EmailVerified = emailVerified,
             MasterPassword = null,
@@ -38,11 +41,11 @@ internal static class UserSeeder
             Premium = premium,
             ApiKey = Guid.NewGuid().ToString("N")[..30],
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 5_000
+            KdfIterations = kdfIterations
         };
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
 
-        return user;
+        return (user, keys);
     }
 }

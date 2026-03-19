@@ -8,7 +8,6 @@ using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
@@ -36,35 +35,15 @@ namespace Bit.Api.Test.KeyManagement.Controllers;
 [JsonDocumentCustomize]
 public class AccountsKeyManagementControllerTests
 {
-    [Theory]
-    [BitAutoData]
-    public async Task RegenerateKeysAsync_FeatureFlagOff_Throws(
-        SutProvider<AccountsKeyManagementController> sutProvider,
-        KeyRegenerationRequestModel data)
-    {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Is(FeatureFlagKeys.PrivateKeyRegeneration))
-            .Returns(false);
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
-
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RegenerateKeysAsync(data));
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs(0)
-            .GetManyByUserAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IEmergencyAccessRepository>().ReceivedWithAnyArgs(0)
-            .GetManyDetailsByGranteeIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IRegenerateUserAsymmetricKeysCommand>().ReceivedWithAnyArgs(0)
-            .RegenerateKeysAsync(Arg.Any<UserAsymmetricKeys>(),
-                Arg.Any<ICollection<OrganizationUser>>(),
-                Arg.Any<ICollection<EmergencyAccessDetails>>());
-    }
+    private static readonly string _mockEncryptedType2String =
+        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private static readonly string _mockEncryptedType7String = "7.AOs41Hd8OQiCPXjyJKCiDA==";
 
     [Theory]
     [BitAutoData]
     public async Task RegenerateKeysAsync_UserNull_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
         KeyRegenerationRequestModel data)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Is(FeatureFlagKeys.PrivateKeyRegeneration))
-            .Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.RegenerateKeysAsync(data));
@@ -85,8 +64,6 @@ public class AccountsKeyManagementControllerTests
         KeyRegenerationRequestModel data, User user, ICollection<OrganizationUser> orgUsers,
         ICollection<EmergencyAccessDetails> accessDetails)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Is(FeatureFlagKeys.PrivateKeyRegeneration))
-            .Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(Arg.Is(user.Id)).Returns(orgUsers);
         sutProvider.GetDependency<IEmergencyAccessRepository>().GetManyDetailsByGranteeIdAsync(Arg.Is(user.Id))
@@ -109,7 +86,8 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysSuccess(SutProvider<AccountsKeyManagementController> sutProvider,
+    public async Task RotateUserAccountKeys_UserCryptoV1_Success(
+        SutProvider<AccountsKeyManagementController> sutProvider,
         RotateUserAccountKeysAndDataRequestModel data, User user)
     {
         data.AccountKeys.SignatureKeyPair = null;
@@ -234,6 +212,62 @@ public class AccountsKeyManagementControllerTests
         {
             Assert.NotEmpty(ex.ModelState!.Values);
         }
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithV2UpgradeToken_PassesTokenToCommand(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        RotateUserAccountKeysAndDataRequestModel data,
+        User user)
+    {
+        // Arrange
+        data.AccountKeys.SignatureKeyPair = null;
+        data.AccountUnlockData.V2UpgradeToken = new V2UpgradeTokenRequestModel
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>()
+            .RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
+            .Returns(IdentityResult.Success);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(data);
+
+        // Assert
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .RotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<RotateUserAccountKeysData>(d =>
+                d.V2UpgradeToken != null &&
+                d.V2UpgradeToken.WrappedUserKey1 == _mockEncryptedType7String &&
+                d.V2UpgradeToken.WrappedUserKey2 == _mockEncryptedType2String));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserAccountKeys_WithoutV2UpgradeToken_PassesNullToCommand(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        RotateUserAccountKeysAndDataRequestModel data,
+        User user)
+    {
+        // Arrange
+        data.AccountKeys.SignatureKeyPair = null;
+        data.AccountUnlockData.V2UpgradeToken = null;
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>()
+            .RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
+            .Returns(IdentityResult.Success);
+
+        // Act
+        await sutProvider.Sut.RotateUserAccountKeysAsync(data);
+
+        // Assert
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .RotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<RotateUserAccountKeysData>(d =>
+                d.V2UpgradeToken == null));
     }
 
     [Theory]
@@ -429,7 +463,7 @@ public class AccountsKeyManagementControllerTests
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostConvertToKeyConnectorAsync());
 
         await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
-            .ConvertToKeyConnectorAsync(Arg.Any<User>());
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>());
     }
 
     [Theory]
@@ -441,7 +475,7 @@ public class AccountsKeyManagementControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
         sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>())
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>())
             .Returns(IdentityResult.Failed(new IdentityError { Description = "convert to key connector error" }));
 
         var badRequestException =
@@ -450,7 +484,7 @@ public class AccountsKeyManagementControllerTests
         Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
         Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
         await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser));
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Any<string?>());
     }
 
     [Theory]
@@ -462,13 +496,68 @@ public class AccountsKeyManagementControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(expectedUser);
         sutProvider.GetDependency<IUserService>()
-            .ConvertToKeyConnectorAsync(Arg.Any<User>())
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string?>())
             .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.PostConvertToKeyConnectorAsync();
 
         await sutProvider.GetDependency<IUserService>().Received(1)
-            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser));
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Any<string?>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostEnrollToKeyConnectorAsync_UserNull_Throws(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        KeyConnectorEnrollmentRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.PostEnrollToKeyConnectorAsync(data));
+
+        await sutProvider.GetDependency<IUserService>().ReceivedWithAnyArgs(0)
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostEnrollToKeyConnectorAsync_ConvertToKeyConnectorFails_ThrowsBadRequestWithErrorResponse(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser,
+        KeyConnectorEnrollmentRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IUserService>()
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns(IdentityResult.Failed(new IdentityError { Description = "convert to key connector error" }));
+
+        var badRequestException =
+            await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PostEnrollToKeyConnectorAsync(data));
+
+        Assert.Equal(1, badRequestException.ModelState!.ErrorCount);
+        Assert.Equal("convert to key connector error", badRequestException.ModelState.Root.Errors[0].ErrorMessage);
+        await sutProvider.GetDependency<IUserService>().Received(1)
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostEnrollToKeyConnectorAsync_ConvertToKeyConnectorSucceeds_OkResponse(
+        SutProvider<AccountsKeyManagementController> sutProvider,
+        User expectedUser,
+        KeyConnectorEnrollmentRequestModel data)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(expectedUser);
+        sutProvider.GetDependency<IUserService>()
+            .ConvertToKeyConnectorAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns(IdentityResult.Success);
+
+        await sutProvider.Sut.PostEnrollToKeyConnectorAsync(data);
+
+        await sutProvider.GetDependency<IUserService>().Received(1)
+            .ConvertToKeyConnectorAsync(Arg.Is(expectedUser), Arg.Is(data.KeyConnectorKeyWrappedUserKey));
     }
 
     [Theory]

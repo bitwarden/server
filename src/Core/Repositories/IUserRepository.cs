@@ -4,12 +4,12 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 
-#nullable enable
-
 namespace Bit.Core.Repositories;
 
 public interface IUserRepository : IRepository<User, Guid>
 {
+    Task<User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId);
+    Task<User?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId);
     Task<User?> GetByEmailAsync(string email);
     Task<IEnumerable<User>> GetManyByEmailsAsync(IEnumerable<string> emails);
     Task<User?> GetBySsoUserAsync(string externalId, Guid? organizationId);

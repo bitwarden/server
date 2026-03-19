@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -18,9 +17,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
-using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
-using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
@@ -1343,318 +1340,6 @@ public class CipherServiceTests
             Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
-    private class SaveDetailsAsyncDependencies
-    {
-        public CipherDetails CipherDetails { get; set; }
-        public SutProvider<CipherService> SutProvider { get; set; }
-    }
-
-    private static SaveDetailsAsyncDependencies GetSaveDetailsAsyncDependencies(
-        SutProvider<CipherService> sutProvider,
-        string newPassword,
-        bool permission,
-        string? key = null,
-        string? totp = null,
-        CipherLoginFido2CredentialData[]? passkeys = null,
-        CipherFieldData[]? fields = null,
-        string? existingKey = "OriginalKey"
-        )
-    {
-        var cipherDetails = new CipherDetails
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid(),
-            Type = CipherType.Login,
-            UserId = Guid.NewGuid(),
-            RevisionDate = DateTime.UtcNow,
-            Key = key,
-        };
-
-        var newLoginData = new CipherLoginData
-        {
-            Username = "user",
-            Password = newPassword,
-            Totp = totp,
-            Fido2Credentials = passkeys,
-            Fields = fields
-        };
-
-        cipherDetails.Data = JsonSerializer.Serialize(newLoginData);
-
-        var existingCipher = new Cipher
-        {
-            Id = cipherDetails.Id,
-            Type = CipherType.Login,
-            Key = existingKey,
-            Data = JsonSerializer.Serialize(
-                new CipherLoginData
-                {
-                    Username = "user",
-                    Password = "OriginalPassword",
-                    Totp = "OriginalTotp",
-                    Fido2Credentials = []
-                }
-            ),
-        };
-
-        sutProvider.GetDependency<ICipherRepository>()
-            .GetByIdAsync(cipherDetails.Id)
-            .Returns(existingCipher);
-
-        sutProvider.GetDependency<ICipherRepository>()
-            .ReplaceAsync(Arg.Any<CipherDetails>())
-            .Returns(Task.CompletedTask);
-
-        var permissions = new Dictionary<Guid, OrganizationCipherPermission>
-        {
-            {
-                cipherDetails.Id,
-                new OrganizationCipherPermission
-                {
-                    ViewPassword = permission,
-                    Edit = permission
-                }
-            }
-        };
-
-        sutProvider.GetDependency<IGetCipherPermissionsForUserQuery>()
-            .GetByOrganization(cipherDetails.OrganizationId.Value)
-            .Returns(permissions);
-
-        return new SaveDetailsAsyncDependencies
-        {
-            CipherDetails = cipherDetails,
-            SutProvider = sutProvider,
-        };
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_PasswordNotChangedWithoutViewPasswordPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false);
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Equal("OriginalPassword", updatedLoginData.Password);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_PasswordNotChangedWithoutEditPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false);
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Equal("OriginalPassword", updatedLoginData.Password);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_PasswordChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true);
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Equal("NewPassword", updatedLoginData.Password);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_CipherKeyChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(
-            sutProvider,
-            newPassword: "NewPassword",
-            permission: true,
-            key: "NewKey");
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        Assert.Equal("NewKey", deps.CipherDetails.Key);
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received()
-            .ReplaceAsync(Arg.Is<CipherDetails>(c => c.Id == deps.CipherDetails.Id && c.Key == "NewKey"));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_CipherKeyNotChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(
-            sutProvider,
-            newPassword: "NewPassword",
-            permission: false,
-            key: "NewKey"
-        );
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        Assert.Equal("OriginalKey", deps.CipherDetails.Key);
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received()
-            .ReplaceAsync(Arg.Is<CipherDetails>(c => c.Id == deps.CipherDetails.Id && c.Key == "OriginalKey"));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_TotpChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false, totp: "NewTotp");
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Equal("OriginalTotp", updatedLoginData.Totp);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_TotpChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true, totp: "NewTotp");
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Equal("NewTotp", updatedLoginData.Totp);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_Fido2CredentialsChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var passkeys = new[]
-        {
-            new CipherLoginFido2CredentialData
-            {
-                CredentialId = "CredentialId",
-                UserHandle = "UserHandle",
-            }
-        };
-
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false, passkeys: passkeys);
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Empty(updatedLoginData.Fido2Credentials);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveDetailsAsync_Fido2CredentialsChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var passkeys = new[]
-        {
-            new CipherLoginFido2CredentialData
-            {
-                CredentialId = "CredentialId",
-                UserHandle = "UserHandle",
-            }
-        };
-
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true, passkeys: passkeys);
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Equal(passkeys.Length, updatedLoginData.Fido2Credentials.Length);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SaveDetailsAsync_HiddenFieldsChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: false, fields:
-        [
-            new CipherFieldData
-            {
-                Name = "FieldName",
-                Value = "FieldValue",
-                Type = FieldType.Hidden,
-            }
-        ]);
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Empty(updatedLoginData.Fields);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SaveDetailsAsync_HiddenFieldsChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
-    {
-        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", permission: true, fields:
-        [
-            new CipherFieldData
-            {
-                Name = "FieldName",
-                Value = "FieldValue",
-                Type = FieldType.Hidden,
-            }
-        ]);
-
-        await deps.SutProvider.Sut.SaveDetailsAsync(
-            deps.CipherDetails,
-            deps.CipherDetails.UserId.Value,
-            deps.CipherDetails.RevisionDate,
-            null,
-            true);
-
-        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
-        Assert.Single(updatedLoginData.Fields.ToArray());
-    }
-
     [Theory]
     [BitAutoData]
     public async Task DeleteAsync_WithPersonalCipherOwner_DeletesCipher(
@@ -2574,5 +2259,154 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UploadFileForExistingAttachmentAsync_ReadOnlyUser_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        cipher.UserId = null;
+
+        var attachment = new CipherAttachment.MetaData
+        {
+            Size = 100,
+            FileName = "test.txt"
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id)
+            .Returns(false);
+
+        using var stream = new MemoryStream(new byte[100]);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UploadFileForExistingAttachmentAsync(stream, cipher, attachment, savingUserId, false));
+        Assert.Equal("You do not have permissions to edit this.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_ReadOnlyUser_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id)
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, false, 100));
+        Assert.Equal("You do not have permissions to edit this.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_OrgAdmin_BypassesEditCheck(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        cipher.UserId = null;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id)
+            .Returns(false);
+
+        var organization = new Organization
+        {
+            Id = cipher.OrganizationId.Value,
+            MaxStorageGb = 100
+        };
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(cipher.OrganizationId.Value)
+            .Returns(organization);
+
+        await sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, true, 100);
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceive()
+            .GetCanEditByIdAsync(savingUserId, cipher.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_ZeroRequestLength_ThrowsBadRequest(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId)
+    {
+        cipher.UserId = savingUserId;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, true, 0));
+        Assert.Equal("No data to attach.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherEditForAttachmentAsync_UserWithEditPermission_Succeeds(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, User user)
+    {
+        cipher.UserId = savingUserId;
+        cipher.OrganizationId = null;
+
+        user.Id = savingUserId;
+        user.Premium = true;
+        user.MaxStorageGb = 1;
+        user.Storage = 0;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(savingUserId)
+            .Returns(user);
+
+        sutProvider.GetDependency<IUserService>()
+            .CanAccessPremium(user)
+            .Returns(true);
+
+        await sutProvider.Sut.ValidateCipherEditForAttachmentAsync(cipher, savingUserId, false, 100);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_NullCipher_ThrowsNotFoundException(
+    string attachmentId, SutProvider<CipherService> sutProvider)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentDownloadDataAsync(null, attachmentId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_AttachmentNotFound_ThrowsNotFoundException(
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipher = new Cipher { Id = Guid.NewGuid(), Attachments = null };
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetAttachmentDownloadDataAsync(cipher, "nonexistent"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAttachmentDownloadDataAsync_ReturnsUrlFromStorageService(
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var attachmentId = Guid.NewGuid().ToString();
+        var expectedUrl = "https://example.com/download?token=abc";
+
+        var metaData = new CipherAttachment.MetaData
+        {
+            AttachmentId = attachmentId,
+            FileName = "test.txt",
+            Size = 100,
+        };
+
+        var cipher = new Cipher
+        {
+            Id = cipherId,
+            Attachments = System.Text.Json.JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, metaData } }),
+        };
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .GetAttachmentDownloadUrlAsync(cipher, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(expectedUrl);
+
+        var result = await sutProvider.Sut.GetAttachmentDownloadDataAsync(cipher, attachmentId);
+
+        Assert.Equal(expectedUrl, result.Url);
+        Assert.Equal(attachmentId, result.Id);
     }
 }

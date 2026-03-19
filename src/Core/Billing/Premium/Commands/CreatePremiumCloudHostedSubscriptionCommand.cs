@@ -1,10 +1,11 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -37,22 +38,17 @@ public interface ICreatePremiumCloudHostedSubscriptionCommand
     /// Creates a premium cloud-hosted subscription for the specified user.
     /// </summary>
     /// <param name="user">The user to create the premium subscription for. Must not yet be a premium user.</param>
-    /// <param name="paymentMethod">The tokenized payment method containing the payment type and token for billing.</param>
-    /// <param name="billingAddress">The billing address information required for tax calculation and customer creation.</param>
-    /// <param name="additionalStorageGb">Additional storage in GB beyond the base 1GB included with premium (must be >= 0).</param>
+    /// <param name="subscriptionPurchase">The subscription purchase details including payment method, billing address, storage, and optional coupon.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
-        PaymentMethod paymentMethod,
-        BillingAddress billingAddress,
-        short additionalStorageGb);
+        PremiumSubscriptionPurchase subscriptionPurchase);
 }
 
 public class CreatePremiumCloudHostedSubscriptionCommand(
     IBraintreeGateway braintreeGateway,
     IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     IUserService userService,
@@ -60,7 +56,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
     ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger,
     IPricingClient pricingClient,
     IHasPaymentMethodQuery hasPaymentMethodQuery,
-    IUpdatePaymentMethodCommand updatePaymentMethodCommand)
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
+    ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
     private static readonly List<string> _expand = ["tax"];
@@ -68,9 +65,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
     public Task<BillingCommandResult<None>> Run(
         User user,
-        PaymentMethod paymentMethod,
-        BillingAddress billingAddress,
-        short additionalStorageGb) => HandleAsync<None>(async () =>
+        PremiumSubscriptionPurchase subscriptionPurchase) => HandleAsync<None>(async () =>
     {
         // A "terminal" subscription is one that has ended and cannot be renewed/reactivated.
         // These are: 'canceled' (user canceled) and 'incomplete_expired' (payment failed and time expired).
@@ -83,9 +78,26 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Already a premium user.");
         }
 
-        if (additionalStorageGb < 0)
+        if (subscriptionPurchase.AdditionalStorageGb is < 0)
         {
             return new BadRequest("Additional storage must be greater than 0.");
+        }
+
+        // Validate all provided coupons. Fail fast if any coupon is invalid to prevent charging more than expected.
+        var validatedCoupons = (subscriptionPurchase.Coupons ?? [])
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .ToList();
+
+        if (validatedCoupons.Count > 0)
+        {
+            var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                user, validatedCoupons, DiscountTierType.Premium);
+
+            if (!allValid)
+            {
+                return new BadRequest("Discount expired. Please review your cart total and try again");
+            }
         }
 
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
@@ -97,7 +109,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
          */
         if (string.IsNullOrEmpty(user.GatewayCustomerId))
         {
-            customer = await CreateCustomerAsync(user, paymentMethod, billingAddress);
+            customer = await CreateCustomerAsync(user, subscriptionPurchase.PaymentMethod, subscriptionPurchase.BillingAddress);
         }
         /*
          * An existing customer without a payment method starting a new subscription indicates a user who previously
@@ -108,9 +120,9 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
          * Additionally, if this is a resubscribe scenario with a tokenized payment method, we should update the payment method
          * to ensure the new payment method is used instead of the old one.
          */
-        else if (paymentMethod.IsTokenized && (!await hasPaymentMethodQuery.Run(user) || hasTerminalSubscription))
+        else if (subscriptionPurchase.PaymentMethod.IsTokenized && (!await hasPaymentMethodQuery.Run(user) || hasTerminalSubscription))
         {
-            await updatePaymentMethodCommand.Run(user, paymentMethod.AsTokenized, billingAddress);
+            await updatePaymentMethodCommand.Run(user, subscriptionPurchase.PaymentMethod.AsTokenized, subscriptionPurchase.BillingAddress);
             customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
         }
         else
@@ -118,11 +130,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
         }
 
-        customer = await ReconcileBillingLocationAsync(customer, billingAddress);
+        customer = await ReconcileBillingLocationAsync(customer, subscriptionPurchase.BillingAddress);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, additionalStorageGb > 0 ? additionalStorageGb : null);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, validatedCoupons);
 
-        paymentMethod.Switch(
+        subscriptionPurchase.PaymentMethod.Switch(
             tokenized =>
             {
                 // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
@@ -153,7 +165,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
-        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + additionalStorageGb);
+        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + subscriptionPurchase.AdditionalStorageGb.GetValueOrDefault(0));
         user.LicenseKey = CoreHelpers.SecureRandomString(20);
         user.RevisionDate = DateTime.UtcNow;
 
@@ -218,21 +230,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         var tokenizedPaymentMethod = paymentMethod.AsTokenized;
         switch (tokenizedPaymentMethod.Type)
         {
-            case TokenizablePaymentMethodType.BankAccount:
-                {
-                    var setupIntent =
-                        (await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions { PaymentMethod = tokenizedPaymentMethod.Token }))
-                        .FirstOrDefault();
-
-                    if (setupIntent == null)
-                    {
-                        _logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
-                        throw new BillingException();
-                    }
-
-                    await setupIntentCache.Set(user.Id, setupIntent.Id);
-                    break;
-                }
             case TokenizablePaymentMethodType.Card:
                 {
                     customerCreateOptions.PaymentMethod = tokenizedPaymentMethod.Token;
@@ -267,11 +264,6 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
             switch (tokenizedPaymentMethod.Type)
             {
-                case TokenizablePaymentMethodType.BankAccount:
-                    {
-                        await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
-                        break;
-                    }
                 case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
                     {
                         await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
@@ -319,7 +311,8 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Guid userId,
         Customer customer,
         Pricing.Premium.Plan premiumPlan,
-        int? storage)
+        int? storage,
+        IReadOnlyList<string> validatedCoupons)
     {
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
@@ -360,6 +353,13 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                 : null,
             OffSession = true
         };
+
+        if (validatedCoupons.Count > 0)
+        {
+            subscriptionCreateOptions.Discounts = validatedCoupons
+                .Select(c => new SubscriptionDiscountOptions { Coupon = c })
+                .ToList();
+        }
 
         var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 

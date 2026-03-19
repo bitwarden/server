@@ -39,14 +39,23 @@
 
     <mj-text align="center" font-size="12px" line-height="16px" color="#5A6D91">
       <p style="margin-bottom: 5px; margin-top: 5px">
-        © {{ CurrentYear }} Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102, Santa
-        Barbara, CA, USA
+        © {{ CurrentYear }} Bitwarden Inc. 1 N. Calle Cesar Chavez, Suite 102,
+        Santa Barbara, CA, USA
       </p>
       <p style="margin-top: 5px">
         Always confirm you are on a trusted Bitwarden domain before logging
         in:<br />
-        <a href="https://bitwarden.com/" style="text-decoration:none;color:#175ddc; font-weight:400">bitwarden.com</a> |
-        <a href="https://bitwarden.com/help/emails-from-bitwarden/" style="text-decoration:none; color:#175ddc; font-weight:400">Learn why we include this</a>
+        <a
+          href="https://bitwarden.com/"
+          style="text-decoration: none; color: #175ddc; font-weight: 400"
+          >bitwarden.com</a
+        >
+        |
+        <a
+          href="https://bitwarden.com/help/emails-from-bitwarden/"
+          style="text-decoration: none; color: #175ddc; font-weight: 400"
+          >Learn why we include this</a
+        >
       </p>
     </mj-text>
   </mj-column>

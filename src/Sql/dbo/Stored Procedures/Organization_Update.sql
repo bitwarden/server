@@ -61,7 +61,8 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @SyncSeats BIT = 0,
     @UseAutomaticUserConfirmation BIT = 0,
     @UsePhishingBlocker BIT = 0,
-    @UseDisableSmAdsForUsers BIT = 0
+    @UseDisableSmAdsForUsers BIT = 0,
+    @UseMyItems BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -131,7 +132,8 @@ BEGIN
         [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
         [UsePhishingBlocker] = @UsePhishingBlocker,
         [MaxStorageGbIncreased] = @MaxStorageGb,
-        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers
+        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
+        [UseMyItems] = @UseMyItems
     WHERE
         [Id] = @Id;
 END

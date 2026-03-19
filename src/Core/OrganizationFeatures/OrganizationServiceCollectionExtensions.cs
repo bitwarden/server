@@ -73,6 +73,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
+        services.AddOrganizationFeatureCommands();
+    }
+
+    private static void AddOrganizationFeatureCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationAutoConfirmEnabledNotificationCommand, OrganizationAutoConfirmEnabledNotificationCommand>();
     }
 
     private static void AddOrganizationSignUpCommands(this IServiceCollection services)
@@ -215,6 +221,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();
         services.AddScoped<IInviteUsersPasswordManagerValidator, InviteUsersPasswordManagerValidator>();
         services.AddScoped<IInviteUsersEnvironmentValidator, InviteUsersEnvironmentValidator>();
+        services.AddScoped<IInitPendingOrganizationValidator, InitPendingOrganizationValidator>();
         services.AddScoped<IInitPendingOrganizationCommand, InitPendingOrganizationCommand>();
         services.AddScoped<IImportOrganizationUsersAndGroupsCommand, ImportOrganizationUsersAndGroupsCommand>();
     }
