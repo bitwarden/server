@@ -8,7 +8,7 @@ public class CustomerSetup
 {
     public TokenizedPaymentSource? TokenizedPaymentSource { get; set; }
     public TaxInformation? TaxInformation { get; set; }
-    public string? Coupon { get; set; }
+    public string[]? Coupons { get; set; }
 
     public bool IsBillable => TokenizedPaymentSource != null && TaxInformation != null;
 }
