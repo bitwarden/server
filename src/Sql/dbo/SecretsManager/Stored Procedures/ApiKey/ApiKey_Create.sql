@@ -1,6 +1,8 @@
 CREATE PROCEDURE [dbo].[ApiKey_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @ServiceAccountId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
+    @CollectionId UNIQUEIDENTIFIER,
     @Name VARCHAR(200),
     @ClientSecretHash VARCHAR(128),
     @Scope NVARCHAR(4000),
@@ -17,6 +19,8 @@ BEGIN
     (
         [Id],
         [ServiceAccountId],
+        [OrganizationId],
+        [CollectionId],
         [Name],
         [ClientSecretHash],
         [Scope],
@@ -30,6 +34,8 @@ BEGIN
     (
         @Id,
         @ServiceAccountId,
+        @OrganizationId,
+        @CollectionId,
         @Name,
         @ClientSecretHash,
         @Scope,

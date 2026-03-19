@@ -8,5 +8,7 @@ public interface IApiKeyRepository : IRepository<ApiKey, Guid>
 {
     Task<ApiKeyDetails> GetDetailsByIdAsync(Guid id);
     Task<ICollection<ApiKey>> GetManyByServiceAccountIdAsync(Guid id);
+    Task<ICollection<ApiKey>> GetManyByCollectionIdAsync(Guid collectionId);
+    Task<ApiKey?> GetByClientSecretHashAsync(string clientSecretHash);
     Task DeleteManyAsync(IEnumerable<ApiKey> objs);
 }

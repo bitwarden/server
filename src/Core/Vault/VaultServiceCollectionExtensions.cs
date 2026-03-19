@@ -28,5 +28,6 @@ public static class VaultServiceCollectionExtensions
         services.AddScoped<IUnarchiveCiphersCommand, UnarchiveCiphersCommand>();
         services.AddScoped<IMarkNotificationsForTaskAsDeletedCommand, MarkNotificationsForTaskAsDeletedCommand>();
         services.AddScoped<IGetTaskMetricsForOrganizationQuery, GetTaskMetricsForOrganizationQuery>();
+        services.AddScoped<ICreateCollectionApiKeyCommand, CreateCollectionApiKeyCommand>();
     }
 }

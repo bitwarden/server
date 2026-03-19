@@ -63,7 +63,8 @@ public static class ServiceCollectionExtensions
             .AddClientStore<DynamicClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
             .AddExtensionGrantValidator<WebAuthnGrantValidator>()
-            .AddExtensionGrantValidator<SendAccessGrantValidator>();
+            .AddExtensionGrantValidator<SendAccessGrantValidator>()
+            .AddExtensionGrantValidator<VaultApiKeyGrantValidator>();
 
         if (!globalSettings.SelfHosted)
         {

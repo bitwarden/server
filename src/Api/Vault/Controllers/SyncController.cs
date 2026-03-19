@@ -118,6 +118,24 @@ public class SyncController : Controller
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
 
+        // Collection-scoped API key: filter ciphers and collections to the scoped collection only
+        if (_currentContext.CollectionId.HasValue)
+        {
+            var scopedCollectionId = _currentContext.CollectionId.Value;
+            if (collections != null)
+            {
+                collections = collections.Where(c => c.Id == scopedCollectionId);
+            }
+            if (collectionCiphersGroupDict != null)
+            {
+                var cipherIdsInCollection = collectionCiphersGroupDict
+                    .Where(kvp => kvp.Value.Any(cc => cc.CollectionId == scopedCollectionId))
+                    .Select(kvp => kvp.Key)
+                    .ToHashSet();
+                ciphers = ciphers.Where(c => cipherIdsInCollection.Contains(c.Id)).ToList();
+            }
+        }
+
         var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);

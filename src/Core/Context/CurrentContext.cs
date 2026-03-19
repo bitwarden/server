@@ -38,6 +38,7 @@ public class CurrentContext(
     public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
     public virtual Guid? OrganizationId { get; set; }
+    public virtual Guid? CollectionId { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
     public virtual bool ClientVersionIsPrerelease { get; set; }
@@ -153,6 +154,13 @@ public class CurrentContext(
         if (IdentityClientType == IdentityClientType.ServiceAccount)
         {
             ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
+        }
+
+        // Parse collection_id claim for collection-scoped API keys
+        var collectionIdClaim = GetClaimValue(claimsDict, "collection_id");
+        if (collectionIdClaim != null && Guid.TryParse(collectionIdClaim, out var collectionIdGuid))
+        {
+            CollectionId = collectionIdGuid;
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);

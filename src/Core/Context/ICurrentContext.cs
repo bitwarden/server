@@ -30,6 +30,11 @@ public interface ICurrentContext
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
+    /// <summary>
+    /// When the current identity is a collection-scoped API key, this contains the collection ID
+    /// from the JWT claims. Used to filter vault queries to only items in this collection.
+    /// </summary>
+    Guid? CollectionId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
     string ClientId { get; set; }
     Version? ClientVersion { get; set; }

@@ -37,6 +37,26 @@ public class ApiKeyRepository : Repository<Core.SecretsManager.Entities.ApiKey, 
         return Mapper.Map<List<Core.SecretsManager.Entities.ApiKey>>(apiKeys);
     }
 
+    public async Task<ICollection<Core.SecretsManager.Entities.ApiKey>> GetManyByCollectionIdAsync(Guid collectionId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var apiKeys = await GetDbSet(dbContext).Where(e => e.CollectionId == collectionId).ToListAsync();
+
+        return Mapper.Map<List<Core.SecretsManager.Entities.ApiKey>>(apiKeys);
+    }
+
+    public async Task<Core.SecretsManager.Entities.ApiKey?> GetByClientSecretHashAsync(string clientSecretHash)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var apiKey = await GetDbSet(dbContext)
+            .Where(e => e.ClientSecretHash == clientSecretHash)
+            .FirstOrDefaultAsync();
+
+        return apiKey == null ? null : Mapper.Map<Core.SecretsManager.Entities.ApiKey>(apiKey);
+    }
+
     public async Task DeleteManyAsync(IEnumerable<Core.SecretsManager.Entities.ApiKey> objs)
     {
         using var scope = ServiceScopeFactory.CreateScope();

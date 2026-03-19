@@ -20,6 +20,14 @@ public class ApiKeyEntityTypeConfiguration : IEntityTypeConfiguration<ApiKey>
             .HasIndex(s => s.ServiceAccountId)
             .IsClustered(false);
 
+        builder
+            .HasIndex(s => s.CollectionId)
+            .IsClustered(false);
+
+        builder
+            .HasIndex(s => s.OrganizationId)
+            .IsClustered(false);
+
         builder.ToTable(nameof(ApiKey));
     }
 }

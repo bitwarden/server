@@ -46,6 +46,28 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
         return results.ToList();
     }
 
+    public async Task<ICollection<ApiKey>> GetManyByCollectionIdAsync(Guid collectionId)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<ApiKey>(
+            $"[{Schema}].[ApiKey_ReadByCollectionId]",
+            new { CollectionId = collectionId },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
+
+    public async Task<ApiKey> GetByClientSecretHashAsync(string clientSecretHash)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<ApiKey>(
+            $"[{Schema}].[ApiKey_ReadByClientSecretHash]",
+            new { ClientSecretHash = clientSecretHash },
+            commandType: CommandType.StoredProcedure);
+
+        return results.SingleOrDefault();
+    }
+
     public async Task DeleteManyAsync(IEnumerable<ApiKey> objs)
     {
         using var connection = new SqlConnection(ConnectionString);

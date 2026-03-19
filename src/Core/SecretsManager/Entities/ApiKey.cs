@@ -10,6 +10,16 @@ public class ApiKey : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid? ServiceAccountId { get; set; }
+    /// <summary>
+    /// Direct organization reference for collection-scoped API keys.
+    /// For service account keys, the org is derived via the ServiceAccount relationship.
+    /// </summary>
+    public Guid? OrganizationId { get; set; }
+    /// <summary>
+    /// When set, this API key can only access vault items within this collection.
+    /// NULL means organization-wide access (backwards compatible).
+    /// </summary>
+    public Guid? CollectionId { get; set; }
     [MaxLength(200)]
     public required string Name { get; set; }
     [MaxLength(128)]

@@ -2451,4 +2451,233 @@ public class CiphersControllerTests
         Assert.Equal(fileName, fileResult.FileDownloadName);
         Assert.Same(stream, fileResult.FileStream);
     }
+
+    #region Collection-Scoped API Key Filtering
+
+    [Theory, BitAutoData]
+    public async Task Get_WithCollectionScope_CipherInCollection_ReturnsCipher(
+        User user, SutProvider<CiphersController> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+        var cipher = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            OrganizationId = orgId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(cipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .CollectionId.Returns(collectionId);
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdCipherIdAsync(user.Id, cipherId)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = cipherId, CollectionId = collectionId }
+            });
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { Id = orgId } }
+            });
+
+        var result = await sutProvider.Sut.Get(cipherId);
+        Assert.NotNull(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Get_WithCollectionScope_CipherNotInCollection_ThrowsNotFound(
+        User user, SutProvider<CiphersController> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+        var collectionId = Guid.NewGuid();
+        var otherCollectionId = Guid.NewGuid();
+        var cipher = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            OrganizationId = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(cipher);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .CollectionId.Returns(collectionId);
+
+        // Cipher belongs to a different collection
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdCipherIdAsync(user.Id, cipherId)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = cipherId, CollectionId = otherCollectionId }
+            });
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(cipherId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAll_WithCollectionScope_FiltersToScopedCollection(
+        User user, SutProvider<CiphersController> sutProvider)
+    {
+        var collectionId = Guid.NewGuid();
+        var otherCollectionId = Guid.NewGuid();
+        var orgId = Guid.NewGuid();
+
+        var cipher1 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            OrganizationId = orgId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+        var cipher2 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            OrganizationId = orgId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+        var cipher3 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            OrganizationId = orgId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, withOrganizations: true)
+            .Returns(new List<CipherDetails> { cipher1, cipher2, cipher3 });
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .Organizations.Returns(new List<CurrentContextOrganization>
+            {
+                new() { Id = orgId }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .CollectionId.Returns(collectionId);
+
+        // cipher1 and cipher3 are in the scoped collection, cipher2 is in a different collection
+        var collectionCiphers = new List<CollectionCipher>
+        {
+            new() { CipherId = cipher1.Id, CollectionId = collectionId },
+            new() { CipherId = cipher2.Id, CollectionId = otherCollectionId },
+            new() { CipherId = cipher3.Id, CollectionId = collectionId }
+        };
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(collectionCiphers);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { Id = orgId } }
+            });
+
+        var result = await sutProvider.Sut.GetAll();
+
+        // Only cipher1 and cipher3 should be returned (in the scoped collection)
+        Assert.Equal(2, result.Data.Count());
+        var resultIds = result.Data.Select(r => r.Id).ToHashSet();
+        Assert.Contains(cipher1.Id, resultIds);
+        Assert.Contains(cipher3.Id, resultIds);
+        Assert.DoesNotContain(cipher2.Id, resultIds);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAll_WithoutCollectionScope_ReturnsAllCiphers(
+        User user, SutProvider<CiphersController> sutProvider)
+    {
+        var orgId = Guid.NewGuid();
+        var cipher1 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            OrganizationId = orgId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+        var cipher2 = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            OrganizationId = orgId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, withOrganizations: true)
+            .Returns(new List<CipherDetails> { cipher1, cipher2 });
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .Organizations.Returns(new List<CurrentContextOrganization>
+            {
+                new() { Id = orgId }
+            });
+
+        // No collection scope
+        sutProvider.GetDependency<ICurrentContext>()
+            .CollectionId.Returns((Guid?)null);
+
+        var collectionCiphers = new List<CollectionCipher>
+        {
+            new() { CipherId = cipher1.Id, CollectionId = Guid.NewGuid() },
+            new() { CipherId = cipher2.Id, CollectionId = Guid.NewGuid() }
+        };
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(collectionCiphers);
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { Id = orgId } }
+            });
+
+        var result = await sutProvider.Sut.GetAll();
+
+        // Both ciphers should be returned when no collection scope
+        Assert.Equal(2, result.Data.Count());
+    }
+
+    #endregion
 }

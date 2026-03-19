@@ -14,6 +14,8 @@ public class ApiKeyDetails : ApiKey
     {
         Id = apiKey.Id;
         ServiceAccountId = apiKey.ServiceAccountId;
+        OrganizationId = apiKey.OrganizationId;
+        CollectionId = apiKey.CollectionId;
         Name = apiKey.Name;
         ClientSecretHash = apiKey.ClientSecretHash;
         Scope = apiKey.Scope;
@@ -39,4 +41,16 @@ public class ServiceAccountApiKeyDetails : ApiKeyDetails
     }
 
     public Guid ServiceAccountOrganizationId { get; set; }
+}
+
+public class CollectionApiKeyDetails : ApiKeyDetails
+{
+    public CollectionApiKeyDetails()
+    {
+    }
+
+    [SetsRequiredMembers]
+    public CollectionApiKeyDetails(ApiKey apiKey) : base(apiKey)
+    {
+    }
 }

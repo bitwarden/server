@@ -91,6 +91,12 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Collection-scoped API key: verify the cipher belongs to the scoped collection
+        if (_currentContext.CollectionId.HasValue)
+        {
+            await EnsureCipherInScopedCollectionAsync(id);
+        }
+
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
         return new CipherResponseModel(cipher, user, organizationAbilities, _globalSettings);
@@ -122,6 +128,12 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Collection-scoped API key: verify the cipher belongs to the scoped collection
+        if (_currentContext.CollectionId.HasValue)
+        {
+            await EnsureCipherInScopedCollectionAsync(id);
+        }
+
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
         return new CipherDetailsResponseModel(cipher, user, organizationAbilities, _globalSettings, collectionCiphers);
@@ -147,6 +159,18 @@ public class CiphersController : Controller
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
+
+        // Collection-scoped API key: filter ciphers to only those in the scoped collection
+        if (_currentContext.CollectionId.HasValue && collectionCiphersGroupDict != null)
+        {
+            var scopedCollectionId = _currentContext.CollectionId.Value;
+            var cipherIdsInCollection = collectionCiphersGroupDict
+                .Where(kvp => kvp.Value.Any(cc => cc.CollectionId == scopedCollectionId))
+                .Select(kvp => kvp.Key)
+                .ToHashSet();
+            ciphers = ciphers.Where(c => cipherIdsInCollection.Contains(c.Id)).ToList();
+        }
+
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         var responses = ciphers.Select(cipher => new CipherDetailsResponseModel(
             cipher,
@@ -1697,6 +1721,21 @@ public class CiphersController : Controller
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
         return await _cipherRepository.GetByIdAsync(cipherId, userId);
+    }
+
+    /// <summary>
+    /// Verifies that a cipher belongs to the collection scoped in the current API key.
+    /// Throws NotFoundException if the cipher is not in the scoped collection.
+    /// </summary>
+    private async Task EnsureCipherInScopedCollectionAsync(Guid cipherId)
+    {
+        var scopedCollectionId = _currentContext.CollectionId.Value;
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, cipherId);
+        if (!collectionCiphers.Any(cc => cc.CollectionId == scopedCollectionId))
+        {
+            throw new NotFoundException();
+        }
     }
 
     private DateTime? GetLastKnownRevisionDateFromForm()
