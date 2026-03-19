@@ -33,7 +33,7 @@ public class OrganizationUserResetPasswordDetails
         KdfIterations = user.KdfIterations;
         KdfMemory = user.KdfMemory;
         KdfParallelism = user.KdfParallelism;
-        MasterPasswordSalt = user.MasterPasswordSalt;
+        MasterPasswordSalt = user.GetMasterPasswordSalt();
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = org.PrivateKey;
     }
