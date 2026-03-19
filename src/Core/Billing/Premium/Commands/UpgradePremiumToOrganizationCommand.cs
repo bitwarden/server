@@ -149,7 +149,7 @@ public class UpgradePremiumToOrganizationCommand(
             await CreateDefaultCollectionAsync(organization, organizationUser, collectionName);
         }
 
-        // Remove subscription from user
+        // Remove subscription from a user
         user.Premium = false;
         user.PremiumExpirationDate = null;
         user.GatewaySubscriptionId = null;
