@@ -1,4 +1,4 @@
-using Bit.SharedWeb.Swagger;
+﻿using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.OpenApi;
