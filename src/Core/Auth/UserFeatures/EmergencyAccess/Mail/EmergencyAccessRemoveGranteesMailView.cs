@@ -6,7 +6,7 @@ public class EmergencyAccessRemoveGranteesMailView : BaseMailView
 {
 
     public required IEnumerable<string> RemovedGranteeEmails { get; set; }
-    public static string EmergencyAccessHelpPageUrl => "https://bitwarden.com/help/emergency-access/";
+    public string EmergencyFindAccessHelpPageUrl => "https://bitwarden.com/help/emergency-access/";
 }
 
 public class EmergencyAccessRemoveGranteesMail : BaseMail<EmergencyAccessRemoveGranteesMailView>
