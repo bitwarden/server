@@ -116,7 +116,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
     public string GetMasterPasswordSalt()
     {
-        return Email.ToLowerInvariant().Trim();
+        return MasterPasswordSalt ?? Email.ToLowerInvariant().Trim();
     }
 
     public void SetNewId()

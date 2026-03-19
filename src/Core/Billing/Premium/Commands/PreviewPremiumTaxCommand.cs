@@ -62,17 +62,25 @@ public class PreviewPremiumTaxCommand(
                 });
             }
 
-            // Validate coupon and only apply if valid. If invalid, proceed without the discount.
-            if (!string.IsNullOrWhiteSpace(preview.Coupon))
+            // Validate all coupons at once. If all are eligible, apply them; otherwise skip gracefully.
+            if (preview.Coupons is { Length: > 0 })
             {
-                var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
-                    user,
-                    preview.Coupon.Trim(),
-                    DiscountTierType.Premium);
+                var trimmedCoupons = preview.Coupons
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Select(c => c.Trim())
+                    .ToArray();
 
-                if (isValid)
+                if (trimmedCoupons.Length > 0)
                 {
-                    options.Discounts = [new InvoiceDiscountOptions { Coupon = preview.Coupon.Trim() }];
+                    var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                        user, trimmedCoupons, DiscountTierType.Premium);
+
+                    if (allValid)
+                    {
+                        options.Discounts = trimmedCoupons
+                            .Select(c => new InvoiceDiscountOptions { Coupon = c })
+                            .ToList();
+                    }
                 }
             }
 

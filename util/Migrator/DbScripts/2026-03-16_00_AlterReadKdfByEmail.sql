@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[User_ReadKdfByEmail]
+CREATE OR ALTER PROCEDURE [dbo].[User_ReadKdfByEmail]
     @Email NVARCHAR(256)
 AS
 BEGIN
@@ -15,3 +15,4 @@ BEGIN
     WHERE
         [Email] = @Email
 END
+GO
