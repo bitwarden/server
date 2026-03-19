@@ -300,7 +300,6 @@ jobs:
     permissions:
       id-token: write
       actions: read
-      packages: read
     steps:
       - name: Check out repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -326,13 +325,13 @@ jobs:
           # Set proper setup image based on branch
           case "$GITHUB_REF" in
             "refs/heads/main")
-                SETUP_IMAGE="ghcr.io/bitwarden/setup:dev"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:dev"
                 ;;
             "refs/heads/rc")
-                SETUP_IMAGE="ghcr.io/bitwarden/setup:rc"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:rc"
                 ;;
             "refs/heads/hotfix-rc")
-                SETUP_IMAGE="ghcr.io/bitwarden/setup:hotfix-rc"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:hotfix-rc"
                 ;;
           esac
 
