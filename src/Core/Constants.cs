@@ -69,8 +69,13 @@ public static class Constants
         /// This value must match what Stripe uses for the `Country` field value for the United States.
         /// </summary>
         public const string UnitedStates = "US";
-    }
 
+        /// <summary>
+        /// Abbreviation for Switzerland.
+        /// This value must match what Stripe uses for the `Country` field value for Switzerland.
+        /// </summary>
+        public const string Switzerland = "CH";
+    }
 
     /// <summary>
     /// Constants for our browser extensions IDs
@@ -194,7 +199,6 @@ public static class FeatureFlagKeys
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
-    public const string WindowsBiometricsV2 = "pm-25373-windows-biometrics-v2";
     public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string DisableType0Decryption = "pm-25174-disable-type-0-decryption";
@@ -204,6 +208,9 @@ public static class FeatureFlagKeys
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
     public const string SdkKeyRotation = "pm-30144-sdk-key-rotation";
     public const string UnlockViaSdk = "unlock-via-sdk";
+    public const string UseSdkForKeyConnectorMigration = "use-sdk-for-key-connector-migration";
+    public const string UseUnlockServiceForPasswordLogin = "use-unlock-service-for-password-login";
+    public const string UseUnlockServiceForKeyConnectorLogin = "use-unlock-service-for-key-connector-login";
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
 
@@ -257,6 +264,7 @@ public static class FeatureFlagKeys
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
     public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
+    public const string PM31948_OrgUserNotificationBanner = "pm-31948-org-user-notification-banner";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";

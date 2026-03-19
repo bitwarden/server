@@ -104,4 +104,10 @@ public class OrganizationVaultOptions
     /// Billing plan type for the organization.
     /// </summary>
     public PlanType PlanType { get; init; } = PlanType.EnterpriseAnnually;
+
+    /// <summary>
+    /// KDF iteration count for all seeded users. Defaults to 5,000 for fast seeding.
+    /// Use 600,000 for production-realistic e2e testing.
+    /// </summary>
+    public int KdfIterations { get; init; } = 5_000;
 }
