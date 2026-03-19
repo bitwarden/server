@@ -1,4 +1,7 @@
-﻿using Bit.Core.Vault.Entities;
+﻿using System.Security.Cryptography;
+using System.Text.Json;
+using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Models;
 
@@ -17,7 +20,9 @@ internal static class LoginCipherSeeder
         string? notes = null,
         bool reprompt = false,
         bool deleted = false,
-        IEnumerable<(string name, string value, int type)>? fields = null)
+        IEnumerable<(string name, string value, int type)>? fields = null,
+        IEnumerable<(string rpName, string userName)>? passkeys = null
+        )
     {
         var cipherView = new CipherViewDto
         {
@@ -29,7 +34,8 @@ internal static class LoginCipherSeeder
             {
                 Username = username,
                 Password = password,
-                Uris = string.IsNullOrEmpty(uri) ? null : [new LoginUriViewDto { Uri = uri }]
+                Uris = string.IsNullOrEmpty(uri) ? null : [new LoginUriViewDto { Uri = uri }],
+                Fido2Credentials = passkeys == null ? null : passkeys.Select(r => PasskeyViewFactory.Create(r.rpName, r.userName)).ToList()
             },
             Reprompt = reprompt ? RepromptTypes.Password : RepromptTypes.None,
             DeletedDate = deleted ? DateTime.UtcNow.AddDays(-1) : null,
@@ -73,5 +79,33 @@ internal static class LoginCipherSeeder
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, organizationId, userId);
+    }
+}
+
+public class PasskeyViewFactory
+{
+    public static Fido2CredentialViewDto Create(string rpName, string userName)
+    {
+        // Generate ECDSA P-256 private key in PKCS#8 format
+        using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var keyValue = CoreHelpers.Base64UrlEncode(ecdsa.ExportPkcs8PrivateKey());
+
+        // Generate 16-byte random user handle and encode as unpadded base64url
+        var userHandleBytes = new byte[16];
+        new Random().NextBytes(userHandleBytes);
+        var userHandle = CoreHelpers.Base64UrlEncode(userHandleBytes);
+
+        return new Fido2CredentialViewDto
+        {
+            Discoverable = JsonSerializer.Serialize(true),
+            CredentialId = JsonSerializer.Serialize(Guid.NewGuid()),
+            KeyValue = keyValue,
+            Counter = "0",
+            RpId = rpName,
+            RpName = rpName,
+            UserHandle = userHandle,
+            UserName = userName,
+            UserDisplayName = userName,
+        };
     }
 }
