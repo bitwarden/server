@@ -19,12 +19,13 @@ internal static class UserSeeder
         bool emailVerified = true,
         bool premium = false,
         UserKeys? keys = null,
-        string? password = null)
+        string? password = null,
+        int kdfIterations = 5_000)
     {
         // When keys are provided, caller owns email/key consistency - don't mangle
         var mangledEmail = keys == null ? manglerService.Mangle(email) : email;
 
-        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, password ?? DefaultPassword);
+        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, password ?? DefaultPassword, kdfIterations);
 
         var user = new User
         {
@@ -40,7 +41,7 @@ internal static class UserSeeder
             Premium = premium,
             ApiKey = Guid.NewGuid().ToString("N")[..30],
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 5_000
+            KdfIterations = kdfIterations
         };
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);

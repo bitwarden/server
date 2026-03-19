@@ -88,6 +88,10 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+          - project_name: SeederApi
+            base_path: ./util
+            platforms: linux/amd64,linux/arm64
+            dotnet: true
           - project_name: Setup
             base_path: ./util
             dotnet: true
@@ -222,6 +226,7 @@ jobs:
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "platforms: ${{ matrix.platforms }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate image tags(s)
         id: image-tags
@@ -241,16 +246,22 @@ jobs:
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
+      - name: Set platforms
+        id: platforms
+        run: |
+          PLATFORMS="${{ matrix.platforms }}"
+          if [ -z "$PLATFORMS" ]; then
+            PLATFORMS="linux/amd64,linux/arm/v7,linux/arm64"
+          fi
+          echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
+
       - name: Build Docker image
         id: build-artifacts
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: |
-            linux/amd64,
-            linux/arm/v7,
-            linux/arm64
+          platforms: ${{ steps.platforms.outputs.platforms }}
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 

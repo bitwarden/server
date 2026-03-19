@@ -85,7 +85,7 @@ public class SendOrganizationInvitesCommand(
 
     private async Task<string> GetInviterEmailAsync(Guid? invitingUserId)
     {
-        if (!invitingUserId.HasValue)
+        if (!invitingUserId.HasValue || invitingUserId.Value == Guid.Empty)
         {
             return null;
         }

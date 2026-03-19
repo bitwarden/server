@@ -4,6 +4,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    DECLARE @UserIds [dbo].[GuidIdArray]
+
     -- Parse the JSON string
     DECLARE @OrganizationUserInput AS TABLE (
         [Id] UNIQUEIDENTIFIER,
@@ -75,9 +77,9 @@ BEGIN
         @OrganizationUserInput OUI ON OU.Id = OUI.Id
 
     -- Bump account revision dates
-    EXEC [dbo].[User_BumpManyAccountRevisionDates]
-    (
-        SELECT [UserId]
-        FROM @OrganizationUserInput
-    )
+    INSERT INTO @UserIds
+    SELECT [UserId]
+    FROM @OrganizationUserInput
+
+    EXEC [dbo].[User_BumpManyAccountRevisionDates] @UserIds
 END

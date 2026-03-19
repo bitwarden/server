@@ -6,7 +6,6 @@ using Bit.Api.KeyManagement.Models.Responses;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Data;
@@ -30,7 +29,6 @@ namespace Bit.Api.KeyManagement.Controllers;
 public class AccountsKeyManagementController : Controller
 {
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
-    private readonly IFeatureService _featureService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IRegenerateUserAsymmetricKeysCommand _regenerateUserAsymmetricKeysCommand;
     private readonly IUserService _userService;
@@ -50,7 +48,6 @@ public class AccountsKeyManagementController : Controller
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
 
     public AccountsKeyManagementController(IUserService userService,
-        IFeatureService featureService,
         IOrganizationUserRepository organizationUserRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         IKeyConnectorConfirmationDetailsQuery keyConnectorConfirmationDetailsQuery,
@@ -69,7 +66,6 @@ public class AccountsKeyManagementController : Controller
         ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
     {
         _userService = userService;
-        _featureService = featureService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
         _organizationUserRepository = organizationUserRepository;
         _emergencyAccessRepository = emergencyAccessRepository;
@@ -88,11 +84,6 @@ public class AccountsKeyManagementController : Controller
     [HttpPost("key-management/regenerate-keys")]
     public async Task RegenerateKeysAsync([FromBody] KeyRegenerationRequestModel request)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration) && !_featureService.IsEnabled(FeatureFlagKeys.DataRecoveryTool))
-        {
-            throw new NotFoundException();
-        }
-
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
         var usersOrganizationAccounts = await _organizationUserRepository.GetManyByUserAsync(user.Id);
         var designatedEmergencyAccess = await _emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(user.Id);
@@ -160,7 +151,7 @@ public class AccountsKeyManagementController : Controller
         {
             // V1 account registration
             // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
-            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key, model.OrgIdentifier);
+            var result = await _userService.SetKeyConnectorKeyAsync(model.ToUser(user), model.Key!, model.OrgIdentifier);
             if (result.Succeeded)
             {
                 return;
@@ -184,7 +175,30 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user);
+        var result = await _userService.ConvertToKeyConnectorAsync(user, null);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("key-connector/enroll")]
+    public async Task PostEnrollToKeyConnectorAsync([FromBody] KeyConnectorEnrollmentRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var result = await _userService.ConvertToKeyConnectorAsync(user, model.KeyConnectorKeyWrappedUserKey);
         if (result.Succeeded)
         {
             return;

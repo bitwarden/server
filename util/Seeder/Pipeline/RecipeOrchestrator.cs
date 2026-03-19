@@ -25,15 +25,21 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
         string presetName,
         IPasswordHasher<User> passwordHasher,
         IManglerService manglerService,
-        string? password = null)
+        string? password = null,
+        int? kdfIterations = null)
     {
         var reader = new SeedReader();
+
+        // Read preset to extract kdfIterations before building services.
+        // CLI --kdf-iterations takes precedence over the preset value.
+        var preset = reader.Read<Models.SeedPreset>($"presets.{presetName}");
+        var effectiveKdf = kdfIterations ?? preset.KdfIterations ?? 5_000;
 
         var services = new ServiceCollection();
         services.AddSingleton(passwordHasher);
         services.AddSingleton(manglerService);
         services.AddSingleton<ISeedReader>(reader);
-        services.AddSingleton(new SeederSettings(password));
+        services.AddSingleton(new SeederSettings(password, effectiveKdf));
         services.AddSingleton(db);
 
         PresetLoader.RegisterRecipe(presetName, reader, services);
@@ -56,7 +62,7 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
         var services = new ServiceCollection();
         services.AddSingleton(passwordHasher);
         services.AddSingleton(manglerService);
-        services.AddSingleton(new SeederSettings(options.Password));
+        services.AddSingleton(new SeederSettings(options.Password, options.KdfIterations));
 
         var recipeName = "from-options";
         var builder = services.AddRecipe(recipeName);
@@ -74,6 +80,10 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
         if (options.StructureModel.HasValue)
         {
             builder.AddCollections(options.StructureModel.Value);
+        }
+        else if (options.Collections > 0)
+        {
+            builder.AddCollections(options.Collections, options.Density);
         }
         else if (options.Ciphers > 0)
         {
