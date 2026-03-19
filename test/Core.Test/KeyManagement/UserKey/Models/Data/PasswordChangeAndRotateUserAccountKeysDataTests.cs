@@ -21,6 +21,7 @@ public class PasswordChangeAndRotateUserAccountKeysDataTests
     private static void SetupValidUser(User user)
     {
         user.Email = "test@example.com";
+        user.MasterPasswordSalt = null;
         user.Kdf = ValidKdf.KdfType;
         user.KdfIterations = ValidKdf.Iterations;
         user.KdfMemory = ValidKdf.Memory;
