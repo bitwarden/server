@@ -17,12 +17,12 @@ public interface ISubscriptionDiscountService
     Task<IEnumerable<DiscountEligibility>> GetEligibleDiscountsAsync(User user);
 
     /// <summary>
-    /// Performs a server-side eligibility recheck for a specific coupon before subscription creation,
-    /// confirming the coupon exists, is active, and the user still qualifies for it on the specified tier.
+    /// Performs a server-side eligibility recheck for the provided coupon IDs before subscription creation,
+    /// confirming every coupon exists, is active, and the user qualifies for each on the specified tier.
     /// </summary>
     /// <param name="user">The user to validate eligibility for.</param>
-    /// <param name="coupon">The Stripe coupon ID to validate.</param>
+    /// <param name="couponIds">The Stripe coupon IDs to validate.</param>
     /// <param name="tierType">The product tier the user intends to subscribe to.</param>
-    /// <returns><see langword="true"/> if the discount exists and the user is eligible for the given tier; otherwise <see langword="false"/>.</returns>
-    Task<bool> ValidateDiscountEligibilityForUserAsync(User user, string coupon, DiscountTierType tierType);
+    /// <returns><see langword="true"/> if all coupons are found in the user's eligible discounts and tier eligibility is <see langword="true"/> for <paramref name="tierType"/>; otherwise <see langword="false"/>.</returns>
+    Task<bool> ValidateDiscountEligibilityForUserAsync(User user, IReadOnlyList<string> couponIds, DiscountTierType tierType);
 }
