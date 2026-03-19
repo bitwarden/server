@@ -16,6 +16,7 @@ internal static class LoginCipherSeeder
         Guid? userId = null,
         string? username = null,
         string? password = null,
+        string? totp = null,
         string? uri = null,
         string? notes = null,
         bool reprompt = false,
@@ -34,6 +35,7 @@ internal static class LoginCipherSeeder
             {
                 Username = username,
                 Password = password,
+                Totp = totp,
                 Uris = string.IsNullOrEmpty(uri) ? null : [new LoginUriViewDto { Uri = uri }],
                 Fido2Credentials = passkeys == null ? null : passkeys.Select(r => PasskeyViewFactory.Create(r.rpName, r.userName)).ToList()
             },
