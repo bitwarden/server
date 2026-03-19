@@ -205,7 +205,7 @@ public static class EventIntegrationsServiceCollectionExtensions
             CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
             CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
         {
-            services.AddHttpClient(SlackService.HttpClientName).AddSsrfProtection();
+            services.AddHttpClient(SlackService.HttpClientName);
             services.TryAddSingleton<ISlackService, SlackService>();
         }
         else
@@ -235,7 +235,7 @@ public static class EventIntegrationsServiceCollectionExtensions
             CoreHelpers.SettingHasValue(globalSettings.Teams.ClientSecret) &&
             CoreHelpers.SettingHasValue(globalSettings.Teams.Scopes))
         {
-            services.AddHttpClient(TeamsService.HttpClientName).AddSsrfProtection();
+            services.AddHttpClient(TeamsService.HttpClientName);
             services.TryAddSingleton<TeamsService>();
             services.TryAddSingleton<IBot>(sp => sp.GetRequiredService<TeamsService>());
             services.TryAddSingleton<ITeamsService>(sp => sp.GetRequiredService<TeamsService>());
@@ -299,8 +299,8 @@ public static class EventIntegrationsServiceCollectionExtensions
         services.AddSlackService(globalSettings);
         services.AddTeamsService(globalSettings);
         services.TryAddSingleton(TimeProvider.System);
-        services.AddHttpClient(WebhookIntegrationHandler.HttpClientName).AddSsrfProtection();
-        services.AddHttpClient(DatadogIntegrationHandler.HttpClientName).AddSsrfProtection();
+        services.AddHttpClient(WebhookIntegrationHandler.HttpClientName);
+        services.AddHttpClient(DatadogIntegrationHandler.HttpClientName);
 
         // Add integration handlers
         services.TryAddSingleton<IIntegrationHandler<SlackIntegrationConfigurationDetails>, SlackIntegrationHandler>();
