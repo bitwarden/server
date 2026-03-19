@@ -50,7 +50,7 @@ public class SsoRequestValidatorTests
         await sutProvider.GetDependency<IPolicyService>().DidNotReceive()
             .AnyPoliciesApplicableToUserAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>(), Arg.Any<OrganizationUserStatusType>());
         await sutProvider.GetDependency<IPolicyRequirementQuery>().DidNotReceive()
-            .GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>());
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -66,7 +66,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = false };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         // Act
@@ -79,7 +79,7 @@ public class SsoRequestValidatorTests
         Assert.Null(context.CustomResponse);
 
         // Should use the new policy requirement query when feature flag is enabled
-        await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsync<RequireSsoPolicyRequirement>(user.Id);
+        await sutProvider.GetDependency<IPolicyRequirementQuery>().Received(1).GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id);
         await sutProvider.GetDependency<IPolicyService>().DidNotReceive()
             .AnyPoliciesApplicableToUserAsync(Arg.Any<Guid>(), Arg.Any<PolicyType>(), Arg.Any<OrganizationUserStatusType>());
     }
@@ -117,7 +117,7 @@ public class SsoRequestValidatorTests
             PolicyType.RequireSso,
             OrganizationUserStatusType.Confirmed);
         await sutProvider.GetDependency<IPolicyRequirementQuery>().DidNotReceive()
-            .GetAsync<RequireSsoPolicyRequirement>(Arg.Any<Guid>());
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -132,7 +132,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
@@ -208,7 +208,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
@@ -245,7 +245,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
@@ -285,7 +285,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
@@ -319,7 +319,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = false };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         // Act
@@ -347,7 +347,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
@@ -383,7 +383,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
@@ -418,7 +418,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = true };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         sutProvider.GetDependency<IUserSsoOrganizationIdentifierQuery>()
@@ -452,7 +452,7 @@ public class SsoRequestValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         var requirement = new RequireSsoPolicyRequirement { SsoRequired = false };
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<RequireSsoPolicyRequirement>(user.Id)
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .Returns(requirement);
 
         // Act

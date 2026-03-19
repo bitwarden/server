@@ -18,6 +18,7 @@ public class SendRequestModelTests
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             DeletionDate = deletionDate,
             Disabled = false,
             ExpirationDate = null,
@@ -123,11 +124,12 @@ public class SendRequestModelTests
     }
 
     [Fact]
-    public void UpdateSend_WithExistingPasswordAuth_WhenNoAuthInRequest_PreservesPasswordAuth()
+    public void UpdateSend_WithExistingAndRequestPasswordAuth_PreservesExistingPasswordHash()
     {
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             DeletionDate = deletionDate,
             Disabled = false,
             Key = "encrypted_key",
@@ -154,11 +156,12 @@ public class SendRequestModelTests
     }
 
     [Fact]
-    public void UpdateSend_WithExistingEmailAuth_WhenNoAuthInRequest_ClearsEmailsAndSetsAuthTypeNone()
+    public void UpdateSend_ChangingFromEmailToNone_ClearsEmailsAndSetsAuthTypeNone()
     {
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
         {
+            AuthType = AuthType.None,
             DeletionDate = deletionDate,
             Disabled = false,
             Key = "encrypted_key",

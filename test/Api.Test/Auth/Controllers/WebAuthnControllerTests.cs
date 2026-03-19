@@ -106,7 +106,7 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = false });
 
         // Act & Assert
@@ -123,7 +123,7 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = true });
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Protect(Arg.Any<WebAuthnCredentialCreateOptionsTokenable>()).Returns("token");
@@ -329,7 +329,7 @@ public class WebAuthnControllerTests
             .Returns(token);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = false });
 
         // Act & Assert
@@ -359,7 +359,7 @@ public class WebAuthnControllerTests
             .Returns(token);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<RequireSsoPolicyRequirement>(user.Id)
+            .GetAsyncVNext<RequireSsoPolicyRequirement>(user.Id)
             .ReturnsForAnyArgs(new RequireSsoPolicyRequirement { CanUsePasskeyLogin = true });
 
         // Act

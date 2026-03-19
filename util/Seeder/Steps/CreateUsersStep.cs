@@ -25,6 +25,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
             : UserStatusDistributions.AllConfirmed;
 
         var password = context.GetPassword();
+        var kdfIterations = context.GetKdfIterations();
         var mangler = context.GetMangler();
         var passwordHasher = context.GetPasswordHasher();
 
@@ -41,8 +42,8 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
 
         Parallel.For(0, count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
         {
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password);
-            var (user, _) = UserSeeder.Create(mangledEmails[i], passwordHasher, mangler, keys: userKeys, password: password);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmails[i], password, kdfIterations);
+            var (user, _) = UserSeeder.Create(mangledEmails[i], passwordHasher, mangler, keys: userKeys, password: password, kdfIterations: kdfIterations);
 
             var memberOrgKey = StatusRequiresOrgKey(statuses[i])
                 ? RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey)

@@ -395,15 +395,16 @@ public class SendsController : Controller
     [DisableFormValueModelBinding]
     public async Task PostFileForExistingSend(string id, string fileId)
     {
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         if (!Request?.ContentType?.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
         }
 
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
-        if (send == null)
+        if (send == null || send.UserId != userId)
         {
-            throw new BadRequestException("Could not locate send");
+            throw new NotFoundException();
         }
 
         await Request.GetFileAsync(async (stream) =>

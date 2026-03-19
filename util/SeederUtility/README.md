@@ -51,6 +51,9 @@ dotnet run -- organization -n FreeOrg -d free.example -u 1 -c 10 -g 1 --plan-typ
 
 # Teams plan org
 dotnet run -- organization -n TeamsOrg -d teams.example -u 20 -c 200 -g 5 --plan-type teams-annually
+
+# Production-realistic KDF iterations (600k) for e2e auth testing
+dotnet run -- organization -n E2eOrg -d e2e.example -u 5 -c 25 --kdf-iterations 600000 --mangle
 ```
 
 ### `seed` - Fixture-Based Seeding
@@ -71,5 +74,8 @@ dotnet run -- seed --preset qa.stark-free-basic --mangle
 dotnet run -- seed --preset scale.xs-central-perk --mangle
 
 dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
+
+# Override KDF iterations for a preset (overrides preset's kdfIterations value)
+dotnet run -- seed --preset qa.enterprise-basic --kdf-iterations 600000 --mangle
 ```
 
