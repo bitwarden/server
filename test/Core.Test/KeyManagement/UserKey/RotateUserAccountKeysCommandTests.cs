@@ -813,6 +813,7 @@ public class RotateUserAccountKeysCommandTests
         user.KdfParallelism = model.MasterPasswordUnlockData.Kdf.Parallelism;
         // For now email and salt are coupled. This will be changed later to read from user.Salt.
         user.Email = model.MasterPasswordUnlockData.Salt;
+        user.MasterPasswordSalt = null;
         user.Key = _mockEncryptedType2String;
         user.MasterPassword = "mockMasterPasswordAuthenticationHash";
     }
