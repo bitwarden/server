@@ -154,10 +154,17 @@ public class OrganizationSubscriptionChangeSetBuilder(Plan currentPlan)
     /// </summary>
     public OrganizationSubscriptionChangeSetBuilder ChangePasswordManagerPrice(Plan targetPlan)
     {
+        // When transitioning from a non-seat-based plan (e.g. Families, qty=1 in Stripe)
+        // to a seat-based plan (e.g. Teams/Enterprise), explicitly set the quantity to the
+        // current plan's BaseSeats so the seats carry over correctly.
+        int? quantity = currentPlan.HasNonSeatBasedPasswordManagerPlan() && !targetPlan.HasNonSeatBasedPasswordManagerPlan()
+            ? currentPlan.PasswordManager.BaseSeats
+            : null;
+
         _changes.Add(new ChangeItemPrice(
             GetPasswordManagerPriceId(currentPlan),
             GetPasswordManagerPriceId(targetPlan),
-            null));
+            quantity));
         _chargeImmediately = true;
         return this;
     }

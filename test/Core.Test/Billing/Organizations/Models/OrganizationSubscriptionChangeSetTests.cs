@@ -148,7 +148,7 @@ public class OrganizationSubscriptionChangeSetBuilderTests
     }
 
     [Fact]
-    public void ChangePasswordManagerPrice_NonSeatBased_UsesStripePlanId()
+    public void ChangePasswordManagerPrice_NonSeatBased_UsesStripePlanId_AndSetsBaseSeatsQuantity()
     {
         var currentPlan = GetPlan(PlanType.FamiliesAnnually);
         var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
@@ -165,6 +165,8 @@ public class OrganizationSubscriptionChangeSetBuilderTests
         Assert.Equal(currentPlan.PasswordManager.StripePlanId, priceChange.CurrentPriceId);
         // Enterprise is seat-based, so should use StripeSeatPlanId
         Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId);
+        // Quantity should carry over Families BaseSeats (6) to the seat-based plan
+        Assert.Equal(currentPlan.PasswordManager.BaseSeats, priceChange.Quantity);
     }
 
     [Fact]
