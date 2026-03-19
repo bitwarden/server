@@ -47,11 +47,11 @@ public class RequireSsoPolicyRequirementFactory : BasePolicyRequirementFactory<R
 
     public override RequireSsoPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
+        policyDetails = policyDetails.ToList();
         var result = new RequireSsoPolicyRequirement
         {
-            CanUsePasskeyLogin = policyDetails.All(p =>
-                p.OrganizationUserStatus == OrganizationUserStatusType.Revoked ||
-                p.OrganizationUserStatus == OrganizationUserStatusType.Invited),
+            CanUsePasskeyLogin = !policyDetails.Any(p =>
+                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
 
             SsoRequired = policyDetails.Any(p =>
                 p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed)
