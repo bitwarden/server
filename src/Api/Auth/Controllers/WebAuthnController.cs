@@ -146,7 +146,7 @@ public class WebAuthnController : Controller
             return;
         }
 
-        var requireSsoPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireSsoPolicyRequirement>(userId);
+        var requireSsoPolicyRequirement = await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(userId);
 
         if (!requireSsoPolicyRequirement.CanUsePasskeyLogin)
         {

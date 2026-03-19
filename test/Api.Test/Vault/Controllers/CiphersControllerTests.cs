@@ -18,6 +18,7 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -58,6 +59,24 @@ public class CiphersControllerTests
 
         Assert.Equal(folderId, result.FolderId);
         Assert.Equal(isFavorite, result.Favorite);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutPartialShouldThrowNotFoundExceptionWhenCipherDoesNotExist(User user, Guid folderId, SutProvider<CiphersController> sutProvider)
+    {
+        var isFavorite = true;
+        var cipherId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceive()
+            .UpdatePartialAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -2155,6 +2174,150 @@ public class CiphersControllerTests
         Assert.True(result.Favorite);
     }
 
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrl_WithReadOnlyUser_ThrowsBadRequest(
+        Guid cipherId, string attachmentId, Guid userId, Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        var attachmentData = new CipherAttachment.MetaData
+        {
+            Size = 100,
+            FileName = "test.txt",
+            Validated = false
+        };
+
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = "{}",
+            Edit = false
+        };
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, attachmentData }
+        });
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).ReturnsNull();
+        sutProvider.GetDependency<ICipherService>()
+            .ValidateCipherEditForAttachmentAsync(cipherDetails, userId, false, attachmentData.Size)
+            .ThrowsAsync(new BadRequestException("You do not have permissions to edit this."));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RenewFileUploadUrl(cipherId, attachmentId));
+        Assert.Equal("You do not have permissions to edit this.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task RenewFileUploadUrl_WithOrgAdmin_Success(
+        OrganizationUserType userType, Guid cipherId, string attachmentId, Guid userId,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        var attachmentData = new CipherAttachment.MetaData
+        {
+            Size = 100,
+            FileName = "test.txt",
+            Validated = false
+        };
+
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            OrganizationId = organization.Id,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, attachmentData }
+        });
+
+        organization.Type = userType;
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Cipher> { cipherDetails });
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = true });
+
+        var expectedUrl = "https://example.com/upload";
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .GetAttachmentUploadUrlAsync(cipherDetails, Arg.Any<CipherAttachment.MetaData>())
+            .Returns(expectedUrl);
+
+        var result = await sutProvider.Sut.RenewFileUploadUrl(cipherId, attachmentId);
+
+        Assert.Equal(expectedUrl, result.Url);
+        await sutProvider.GetDependency<ICipherService>().Received(1)
+            .ValidateCipherEditForAttachmentAsync(cipherDetails, userId, true, attachmentData.Size);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrl_WithMissingAttachment_ThrowsNotFoundException(
+        Guid cipherId, string attachmentId, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RenewFileUploadUrl(cipherId, attachmentId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrl_WithValidatedAttachment_ThrowsNotFoundException(
+        Guid cipherId, string attachmentId, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        var attachmentData = new CipherAttachment.MetaData
+        {
+            Size = 100,
+            FileName = "test.txt",
+            Validated = true
+        };
+
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            Type = CipherType.Login,
+            Data = "{}"
+        };
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, attachmentData }
+        });
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RenewFileUploadUrl(cipherId, attachmentId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostFileForExistingAttachment_WithInvalidContentType_ThrowsBadRequest(
+        Guid cipherId, string attachmentId, Guid userId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.ContentType = "application/json";
+        sutProvider.Sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostFileForExistingAttachment(cipherId, attachmentId));
+        Assert.Equal("Invalid content.", exception.Message);
+    }
     [Theory, BitAutoData]
     public async Task GetAttachmentData_CipherNotFound_ThrowsNotFoundException(
         Guid cipherId, string attachmentId, Guid userId,
