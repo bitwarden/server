@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
@@ -138,15 +139,21 @@ public class UpgradePremiumToOrganizationCommandTests
     private readonly ICollectionRepository _collectionRepository = Substitute.For<ICollectionRepository>();
     private readonly IApplicationCacheService _applicationCacheService = Substitute.For<IApplicationCacheService>();
     private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
+    private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
     private readonly UpgradePremiumToOrganizationCommand _command;
 
     public UpgradePremiumToOrganizationCommandTests()
     {
-        // Default: non-PayPal customer (no Braintree metadata)
+        // Default: card customer with a default payment method and a payment method present
         _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>())
-            .Returns(Task.FromResult(new Customer { Metadata = new Dictionary<string, string>() }));
+            .Returns(Task.FromResult(new Customer
+            {
+                Metadata = new Dictionary<string, string>(),
+                InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = "pm_card_123" }
+            }));
+        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(true);
 
         _command = new UpgradePremiumToOrganizationCommand(
             _logger,
@@ -158,6 +165,7 @@ public class UpgradePremiumToOrganizationCommandTests
             _organizationApiKeyRepository,
             _collectionRepository,
             _braintreeService,
+            _hasPaymentMethodQuery,
             _applicationCacheService,
             _pushNotificationService);
     }
@@ -1356,52 +1364,6 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithNonPayPalCustomer_DoesNotPayViaPayPal(User user)
-    {
-        // Arrange
-        user.Premium = true;
-        user.GatewaySubscriptionId = "sub_123";
-        user.GatewayCustomerId = "cus_123";
-
-        var mockSubscription = new Subscription
-        {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
-                ]
-            },
-            Metadata = new Dictionary<string, string>()
-        };
-
-        // Customer with no Braintree metadata
-        var stripeCustomer = new Customer { Metadata = new Dictionary<string, string>() };
-
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
-        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
-        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(stripeCustomer);
-        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
-        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
-        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
-        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
-        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
-
-        // Assert
-        Assert.True(result.Success);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            "sub_123",
-            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == null));
-        await _braintreeService.DidNotReceive().PayInvoice(Arg.Any<SubscriberId>(), Arg.Any<Invoice>());
-    }
-
-    [Theory, BitAutoData]
     public async Task Run_WithSpanishNIF_SetsTaxExemptToReverse_CreatesBothSpanishNIFAndEUVAT(User user)
     {
         // Arrange
@@ -1524,4 +1486,90 @@ public class UpgradePremiumToOrganizationCommandTests
                 options.TaxExempt == StripeConstants.TaxExempt.None));
         await _stripeAdapter.DidNotReceive().CreateTaxIdAsync(Arg.Any<string>(), Arg.Any<TaxIdCreateOptions>());
     }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithNoPaymentMethod_ReturnsBadRequest(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _hasPaymentMethodQuery.Run(user).Returns(false);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.IsT1);
+        Assert.Equal("No payment method found for the user. Please add a payment method to upgrade to Organization plan.", result.AsT1.Response);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithUnverifiedBankAccount_SetsDefaultIncompleteAndDoesNotPayViaBraintree(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Customer with no default payment method and no PayPal — unverified bank account
+        var bankAccountCustomer = new Customer
+        {
+            Metadata = new Dictionary<string, string>(),
+            InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = null }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(bankAccountCustomer);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == "default_incomplete"));
+        await _braintreeService.DidNotReceive().PayInvoice(Arg.Any<SubscriberId>(), Arg.Any<Invoice>());
+    }
+
 }
