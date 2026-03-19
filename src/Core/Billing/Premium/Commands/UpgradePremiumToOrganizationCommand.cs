@@ -3,6 +3,7 @@ using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -61,6 +62,7 @@ public class UpgradePremiumToOrganizationCommand(
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     ICollectionRepository collectionRepository,
     IBraintreeService braintreeService,
+    IHasPaymentMethodQuery hasPaymentMethodQuery,
     IApplicationCacheService applicationCacheService,
     IPushNotificationService pushNotificationService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
@@ -112,6 +114,12 @@ public class UpgradePremiumToOrganizationCommand(
         // Create the Organization entity
         var organization = BuildOrganization(
             organizationId, user, organizationName, publicKey, encryptedPrivateKey, targetPlan, currentSubscription.Id);
+
+        var hasPaymentMethod = await hasPaymentMethodQuery.Run(user);
+        if (!hasPaymentMethod)
+        {
+            return new BadRequest("No payment method found for the user. Please add a payment method to upgrade to Organization plan.");
+        }
 
         // Update customer billing address for tax calculation
         var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId,
