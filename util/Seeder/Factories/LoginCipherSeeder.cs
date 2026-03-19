@@ -44,7 +44,7 @@ internal static class LoginCipherSeeder
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, organizationId, userId);
+        return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, organizationId, userId, deletedDate: cipherView.DeletedDate);
     }
 
     internal static Cipher CreateFromSeed(
