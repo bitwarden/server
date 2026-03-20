@@ -175,7 +175,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_NotLoggedIn_Unauthorized(
         RotateUserAccountKeysAndDataRequestModel request)
     {
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
@@ -185,7 +185,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     [Theory]
     [BitAutoData]
-    public async Task RotateUserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync_Success(RotateUserAccountKeysAndDataRequestModel request)
     {
         var user = await SetupUserForKeyRotationAsync();
         SetupRotateUserAccountUnlockData(request, user);
