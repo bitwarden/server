@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_UpdateMany]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateMany]
     @jsonData NVARCHAR(MAX)
 AS
 BEGIN
