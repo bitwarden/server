@@ -84,7 +84,7 @@ public class SyncResponseModel() : ResponseModel("sync")
                         Parallelism = user.KdfParallelism
                     },
                     MasterKeyEncryptedUserKey = user.Key!,
-                    Salt = user.Email.ToLowerInvariant()
+                    Salt = user.GetMasterPasswordSalt()
                 }
                 : null,
             WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null,

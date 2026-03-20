@@ -9,7 +9,6 @@ using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
@@ -59,33 +58,9 @@ public class AccountsKeyManagementControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegenerateKeysAsync_FeatureFlagOff_Throws(
-        SutProvider<AccountsKeyManagementController> sutProvider,
-        KeyRegenerationRequestModel data)
-    {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Is(FeatureFlagKeys.PrivateKeyRegeneration))
-            .Returns(false);
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
-
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RegenerateKeysAsync(data));
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs(0)
-            .GetManyByUserAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IEmergencyAccessRepository>().ReceivedWithAnyArgs(0)
-            .GetManyDetailsByGranteeIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IRegenerateUserAsymmetricKeysCommand>().ReceivedWithAnyArgs(0)
-            .RegenerateKeysAsync(Arg.Any<UserAsymmetricKeys>(),
-                Arg.Any<ICollection<OrganizationUser>>(),
-                Arg.Any<ICollection<EmergencyAccessDetails>>());
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task RegenerateKeysAsync_UserNull_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
         KeyRegenerationRequestModel data)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Is(FeatureFlagKeys.PrivateKeyRegeneration))
-            .Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.RegenerateKeysAsync(data));
@@ -106,8 +81,6 @@ public class AccountsKeyManagementControllerTests
         KeyRegenerationRequestModel data, User user, ICollection<OrganizationUser> orgUsers,
         ICollection<EmergencyAccessDetails> accessDetails)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Is(FeatureFlagKeys.PrivateKeyRegeneration))
-            .Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(Arg.Is(user.Id)).Returns(orgUsers);
         sutProvider.GetDependency<IEmergencyAccessRepository>().GetManyDetailsByGranteeIdAsync(Arg.Is(user.Id))
