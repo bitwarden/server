@@ -78,9 +78,8 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
         {
             var existingPlan = await _pricingClient.GetPlanOrThrow(sponsoredOrganization.PlanType);
-            var changeSet = OrganizationSubscriptionChangeSet.Builder()
-                .RemoveItem(existingPlan.PasswordManager.StripePlanId)
-                .AddItem(sponsoredPlan.StripePlanId, 1)
+            var changeSet = OrganizationSubscriptionChangeSet.Builder(existingPlan)
+                .EstablishSponsorship(sponsoredPlan)
                 .Build();
 
             var result = await _updateOrganizationSubscriptionCommand.Run(sponsoredOrganization, changeSet);
