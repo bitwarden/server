@@ -185,6 +185,46 @@
         }
       }
     },
+    "collectionAssignments": {
+      "type": "array",
+      "description": "Maps ciphers to specific collections. Each entry is a (cipher, collection) tuple. When present, replaces round-robin collection assignment.",
+      "items": {
+        "type": "object",
+        "required": ["cipher", "collection"],
+        "additionalProperties": false,
+        "properties": {
+          "cipher": { "type": "string", "description": "Cipher name from the cipher fixture." },
+          "collection": { "type": "string", "description": "Collection name from the roster." }
+        }
+      }
+    },
+    "folderAssignments": {
+      "type": "array",
+      "description": "Maps ciphers to specific folders for specific users. Each entry is a (cipher, user, folder) tuple.",
+      "items": {
+        "type": "object",
+        "required": ["cipher", "folder", "user"],
+        "additionalProperties": false,
+        "properties": {
+          "cipher": { "type": "string", "description": "Cipher name from the cipher fixture." },
+          "folder": { "type": "string", "description": "Folder name from the user's folders in the roster." },
+          "user": { "type": "string", "description": "User email prefix (e.g., 'john.doe') from the roster." }
+        }
+      }
+    },
+    "favoriteAssignments": {
+      "type": "array",
+      "description": "Marks specific ciphers as favorites for specific users. Each entry is a (cipher, user) tuple.",
+      "items": {
+        "type": "object",
+        "required": ["cipher", "user"],
+        "additionalProperties": false,
+        "properties": {
+          "cipher": { "type": "string", "description": "Cipher name from the cipher fixture." },
+          "user": { "type": "string", "description": "User email prefix (e.g., 'john.doe') from the roster." }
+        }
+      }
+    },
     "kdfIterations": {
       "type": "integer",
       "minimum": 5000,

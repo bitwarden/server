@@ -89,6 +89,7 @@ internal record SeedRosterUser
     public string Role { get; init; } = "user";
     public string? Branch { get; init; }
     public string? Department { get; init; }
+    public List<string>? Folders { get; init; }
 }
 
 internal record SeedRosterGroup

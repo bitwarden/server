@@ -65,6 +65,9 @@ dotnet run -- seed --list
 # Load the Dunder Mifflin preset (58 users, 14 groups, 15 collections, ciphers)
 dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full
 
+# Zero Knowledge Labs — 429 users, named folders, favorites
+dotnet run -- seed --preset qa.zero-knowledge-labs-enterprise --mangle
+
 # Load with ID mangling for test isolation
 dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --mangle
 
@@ -78,4 +81,3 @@ dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --password "MyTest
 # Override KDF iterations for a preset (overrides preset's kdfIterations value)
 dotnet run -- seed --preset qa.enterprise-basic --kdf-iterations 600000 --mangle
 ```
-
