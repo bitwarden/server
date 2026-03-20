@@ -1,4 +1,4 @@
-// FIXME: Update this file to be null safe and then delete the line below
+﻿// FIXME: Update this file to be null safe and then delete the line below
 
 #nullable disable
 
@@ -244,7 +244,7 @@ public class StripeAdapter : IStripeAdapter
      **********************/
     public Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options) =>
         _billingPortalSessionService.CreateAsync(options);
-    
+
     /***********************
      ** CHECKOUT SESSION **
      ***********************/
