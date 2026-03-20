@@ -22,7 +22,6 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Vault.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
@@ -57,11 +56,6 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public AccountsKeyManagementControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration, Arg.Any<bool>())
-                .Returns(true);
-        });
         _factory.SubstituteService<IPushNotificationService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
@@ -85,30 +79,6 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     {
         _client.Dispose();
         return Task.CompletedTask;
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task RegenerateKeysAsync_FeatureFlagTurnedOff_NotFound(KeyRegenerationRequestModel request)
-    {
-        // Localize factory to inject a false value for the feature flag.
-        var localFactory = new ApiApplicationFactory();
-        localFactory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService.IsEnabled(FeatureFlagKeys.PrivateKeyRegeneration, Arg.Any<bool>())
-                .Returns(false);
-        });
-        var localClient = localFactory.CreateClient();
-        var localEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        var localLoginHelper = new LoginHelper(localFactory, localClient);
-        await localFactory.LoginWithNewAccount(localEmail);
-        await localLoginHelper.LoginAsync(localEmail);
-
-        request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
-
-        var response = await localClient.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
