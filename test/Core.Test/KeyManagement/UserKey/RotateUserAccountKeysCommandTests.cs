@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
@@ -7,6 +8,7 @@ using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Bit.Core.Platform.Push;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
@@ -591,6 +593,135 @@ public class RotateUserAccountKeysCommandTests
             .PushLogOutAsync(user.Id);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_MissingUser_Throws(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, MasterPasswordRotateUserAccountKeysData model) =>
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(null, model));
+
+    [Theory]
+    [BitAutoData(true, true)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, false)]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_UserIsNotMasterPasswordUser_Throws(bool keyNull,
+        bool masterPasswordNull,
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        if (keyNull)
+        {
+            user.Key = null;
+        }
+
+        if (masterPasswordNull)
+        {
+            user.MasterPassword = null;
+        }
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_EmailChange_Throws(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        user.Email += ".different-domain";
+
+        await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_ChangedKdf_Throws(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        user.Kdf = KdfType.PBKDF2_SHA256;
+
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V2User_Success(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        Assert.Equal(model.MasterPasswordUnlockData.MasterKeyWrappedUserKey, user.Key);
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V1User_WithNewV2UpgradeToken_PersistsToken(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV1ExistingUser(user, signatureRepository);
+        SetV1ModelUser(model.BaseData);
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        model.BaseData.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        Assert.NotNull(user.V2UpgradeToken);
+        Assert.Contains(_mockEncryptedType7String, user.V2UpgradeToken);
+        Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
+        Assert.Equal(originalSecurityStamp, user.SecurityStamp);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KeyRotation);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task MasterPasswordRotateUserAccountKeysAsync_V2User_WithV2UpgradeToken_IgnoresTokenAndLogsOut(
+        SutProvider<RotateUserAccountKeysCommand> sutProvider, User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        model = SetupTestData(model);
+        SetupUserKdf(user, model);
+        var signatureRepository = sutProvider.GetDependency<IUserSignatureKeyPairRepository>();
+        SetV2ExistingUser(user, signatureRepository);
+        SetV2ModelUser(model.BaseData);
+        var originalSecurityStamp = user.SecurityStamp = Guid.NewGuid().ToString();
+        model.BaseData.V2UpgradeToken = new V2UpgradeTokenData
+        {
+            WrappedUserKey1 = _mockEncryptedType7String,
+            WrappedUserKey2 = _mockEncryptedType2String
+        };
+
+        await sutProvider.Sut.MasterPasswordRotateUserAccountKeysAsync(user, model);
+
+        Assert.Null(user.V2UpgradeToken);
+        Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushLogOutAsync(user.Id);
+    }
+
     // Helper functions to set valid test parameters that match each other to the model and user.
     private static void SetTestKdfAndSaltForUserAndModel(User user, PasswordChangeAndRotateUserAccountKeysData model)
     {
@@ -656,5 +787,34 @@ public class RotateUserAccountKeysCommandTests
             SecurityState = "abc",
             SecurityVersion = 2,
         };
+    }
+
+    private static MasterPasswordRotateUserAccountKeysData SetupTestData(MasterPasswordRotateUserAccountKeysData model)
+    {
+        var testKdf = new KdfSettings { KdfType = KdfType.Argon2id, Iterations = 3, Memory = 64, Parallelism = 4 };
+        model = new MasterPasswordRotateUserAccountKeysData
+        {
+            MasterPasswordUnlockData = new MasterPasswordUnlockData
+            {
+                Kdf = testKdf,
+                MasterKeyWrappedUserKey = _mockEncryptedType2String,
+                Salt = _mockSalt
+            },
+            BaseData = model.BaseData
+        };
+        return model;
+    }
+
+    private static void SetupUserKdf(User user, MasterPasswordRotateUserAccountKeysData model)
+    {
+        user.Kdf = model.MasterPasswordUnlockData.Kdf.KdfType;
+        user.KdfIterations = model.MasterPasswordUnlockData.Kdf.Iterations;
+        user.KdfMemory = model.MasterPasswordUnlockData.Kdf.Memory;
+        user.KdfParallelism = model.MasterPasswordUnlockData.Kdf.Parallelism;
+        // For now email and salt are coupled. This will be changed later to read from user.Salt.
+        user.Email = model.MasterPasswordUnlockData.Salt;
+        user.MasterPasswordSalt = null;
+        user.Key = _mockEncryptedType2String;
+        user.MasterPassword = "mockMasterPasswordAuthenticationHash";
     }
 }

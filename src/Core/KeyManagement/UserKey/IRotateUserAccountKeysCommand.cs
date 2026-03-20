@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
@@ -21,6 +22,16 @@ public interface IRotateUserAccountKeysCommand
     /// <exception cref="ArgumentNullException">User must be provided.</exception>
     /// <exception cref="InvalidOperationException">User KDF settings and email must match the model provided settings.</exception>
     Task<IdentityResult> PasswordChangeAndRotateUserAccountKeysAsync(User user, PasswordChangeAndRotateUserAccountKeysData model);
+
+    /// <summary>
+    /// For a master password user, rotates the user key and updates all encrypted data without changing the master password.
+    /// </summary>
+    /// <param name="model">Rotation data. All encrypted data must be included or the request will be rejected.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is null.</exception>
+    /// <exception cref="BadRequestException">Thrown when <paramref name="user"/> is not a master password user.</exception>
+    /// <exception cref="BadRequestException">Thrown when <paramref name="user"/> salt does not match <paramref name="model"/> MasterPasswordUnlockData.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="user"/> KDF settings do not match <paramref name="model"/> MasterPasswordUnlockData.</exception>
+    Task MasterPasswordRotateUserAccountKeysAsync(User user, MasterPasswordRotateUserAccountKeysData model);
 }
 
 /// <summary>
