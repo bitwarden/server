@@ -402,7 +402,7 @@ public class SyncControllerTests
         Assert.Equal(kdfMemory, result.UserDecryption.MasterPasswordUnlock.Kdf.Memory);
         Assert.Equal(kdfParallelism, result.UserDecryption.MasterPasswordUnlock.Kdf.Parallelism);
         Assert.Equal(user.Key, result.UserDecryption.MasterPasswordUnlock.MasterKeyEncryptedUserKey);
-        Assert.Equal(user.Email.ToLower(), result.UserDecryption.MasterPasswordUnlock.Salt);
+        Assert.Equal(user.GetMasterPasswordSalt(), result.UserDecryption.MasterPasswordUnlock.Salt);
     }
 
     private async Task AssertMethodsCalledAsync(IUserService userService,

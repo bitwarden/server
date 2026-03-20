@@ -173,4 +173,6 @@ server {
     proxy_pass http://scim:5000/;
   }
 {{/if}}
+
+  include /etc/bitwarden/nginx/extra-locations/*.conf;
 }
