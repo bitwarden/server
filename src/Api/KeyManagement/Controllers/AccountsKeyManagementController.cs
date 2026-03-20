@@ -12,9 +12,9 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
-using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -93,7 +93,7 @@ public class AccountsKeyManagementController : Controller
 
 
     [HttpPost("key-management/rotate-user-account-keys")]
-    public async Task RotateUserAccountKeysAsync([FromBody] RotateUserAccountKeysAndDataRequestModel model)
+    public async Task PasswordChangeAndRotateUserAccountKeysAsync([FromBody] RotateUserAccountKeysAndDataRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -101,25 +101,32 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var dataModel = new RotateUserAccountKeysData
+        var dataModel = new PasswordChangeAndRotateUserAccountKeysData
         {
             OldMasterKeyAuthenticationHash = model.OldMasterKeyAuthenticationHash,
-
-            AccountKeys = model.AccountKeys.ToAccountKeysData(),
-
-            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToUnlockData(),
-            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
-            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
-            DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
-            V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
-
-            Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
-            Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
-            Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+            MasterPasswordHint = model.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordHint,
+            MasterPasswordAuthenticationData = model.AccountUnlockData.MasterPasswordUnlockData.ToAuthenticationData(),
+            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToMasterPasswordUnlockData(),
+            BaseData = new BaseRotateUserAccountKeysData
+            {
+                AccountKeys = model.AccountKeys.ToAccountKeysData(),
+                EmergencyAccesses =
+                    await _emergencyAccessValidator.ValidateAsync(user,
+                        model.AccountUnlockData.EmergencyAccessUnlockData),
+                OrganizationUsers =
+                    await _organizationUserValidator.ValidateAsync(user,
+                        model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
+                WebAuthnKeys =
+                    await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
+                DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
+                V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
+                Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
+                Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
+                Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends)
+            }
         };
 
-        var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysAsync(user, dataModel);
+        var result = await _rotateUserAccountKeysCommand.PasswordChangeAndRotateUserAccountKeysAsync(user, dataModel);
         if (result.Succeeded)
         {
             return;
