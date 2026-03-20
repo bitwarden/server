@@ -4,13 +4,12 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
-using Stripe.BillingPortal;
-using Stripe.Checkout;
 using Stripe.Tax;
 using Stripe.TestHelpers;
+using BillingPortalSessionService = Stripe.BillingPortal.SessionService;
+using CheckoutSessionService = Stripe.Checkout.SessionService;
 using CustomerService = Stripe.CustomerService;
 using RefundService = Stripe.RefundService;
-using SessionService = Stripe.Checkout.SessionService;
 
 namespace Bit.Core.Billing.Services.Implementations;
 
@@ -32,8 +31,8 @@ public class StripeAdapter : IStripeAdapter
     private readonly RegistrationService _taxRegistrationService;
     private readonly CouponService _couponService;
     private readonly ProductService _productService;
-    private readonly SessionService _billingPortalSessionService;
-    private readonly SessionService _checkoutSessionsService;
+    private readonly BillingPortalSessionService _billingPortalSessionService;
+    private readonly CheckoutSessionService _checkoutSessionsService;
 
     public StripeAdapter()
     {
@@ -53,8 +52,8 @@ public class StripeAdapter : IStripeAdapter
         _taxRegistrationService = new RegistrationService();
         _couponService = new CouponService();
         _productService = new ProductService();
-        _billingPortalSessionService = new SessionService();
-        _checkoutSessionsService = new SessionService();
+        _billingPortalSessionService = new BillingPortalSessionService();
+        _checkoutSessionsService = new CheckoutSessionService();
     }
 
     /**************
@@ -242,12 +241,12 @@ public class StripeAdapter : IStripeAdapter
     /**********************
      ** BILLING PORTAL **
      **********************/
-    public Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options) =>
+    public Task<Stripe.BillingPortal.Session> CreateBillingPortalSessionAsync(Stripe.BillingPortal.SessionCreateOptions options) =>
         _billingPortalSessionService.CreateAsync(options);
 
     /***********************
      ** CHECKOUT SESSION **
      ***********************/
-    public Task<Session> CreateCheckoutSessionAsync(SessionCreateOptions options) =>
+    public Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options) =>
         _checkoutSessionsService.CreateAsync(options);
 }
