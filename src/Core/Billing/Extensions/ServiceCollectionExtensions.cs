@@ -4,6 +4,7 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment;
+using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
@@ -44,6 +45,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IBraintreeService, BraintreeService>();
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
+        services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)

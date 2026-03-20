@@ -169,8 +169,10 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (orgInviteTokenProvided && orgUserId.HasValue)
         {
             // We have token data so validate it
-            if (OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-                    _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email))
+            var tokenValidationError = OrgUserInviteTokenable.ValidateOrgUserInvite(
+                _orgUserInviteTokenDataFactory, orgInviteToken, orgUserId.Value, user.Email);
+
+            if (tokenValidationError == null)
             {
                 return;
             }
@@ -181,7 +183,7 @@ public class RegisterUserCommand : IRegisterUserCommand
                 throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
             }
 
-            throw new BadRequestException("Organization invite token is invalid.");
+            throw new BadRequestException(tokenValidationError.ErrorMessage);
         }
 
         // no token data or missing token data
