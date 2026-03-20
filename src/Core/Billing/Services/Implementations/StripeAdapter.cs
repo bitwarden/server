@@ -1,9 +1,10 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 
 #nullable disable
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.BillingPortal;
 using Stripe.Checkout;
 using Stripe.Tax;
 using Stripe.TestHelpers;
@@ -31,6 +32,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly RegistrationService _taxRegistrationService;
     private readonly CouponService _couponService;
     private readonly ProductService _productService;
+    private readonly SessionService _billingPortalSessionService;
     private readonly SessionService _checkoutSessionsService;
 
     public StripeAdapter()
@@ -51,6 +53,7 @@ public class StripeAdapter : IStripeAdapter
         _taxRegistrationService = new RegistrationService();
         _couponService = new CouponService();
         _productService = new ProductService();
+        _billingPortalSessionService = new SessionService();
         _checkoutSessionsService = new SessionService();
     }
 
@@ -236,6 +239,12 @@ public class StripeAdapter : IStripeAdapter
     public async Task<List<Product>> ListProductsAsync(ProductListOptions options = null) =>
         (await _productService.ListAsync(options)).Data;
 
+    /**********************
+     ** BILLING PORTAL **
+     **********************/
+    public Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options) =>
+        _billingPortalSessionService.CreateAsync(options);
+    
     /***********************
      ** CHECKOUT SESSION **
      ***********************/

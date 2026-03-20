@@ -81,6 +81,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public bool SkipTrial { get; set; }
 
+    public string[] Coupons { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -114,6 +116,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
             },
             InitiationPath = InitiationPath,
             SkipTrial = SkipTrial,
+            Coupons = Coupons,
             Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
         };
 
