@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -31,6 +32,18 @@ public class PolicyResponseModel : ResponseModel
             Data = JsonSerializer.Deserialize<Dictionary<string, object>>(policy.Data);
         }
         RevisionDate = policy.RevisionDate;
+    }
+
+    public PolicyResponseModel(PolicyStatus policyStatus, string obj = "policy")
+        : base(obj)
+    {
+        OrganizationId = policyStatus.OrganizationId;
+        Type = policyStatus.Type;
+        Enabled = policyStatus.Enabled;
+        if (!string.IsNullOrWhiteSpace(policyStatus.Data))
+        {
+            Data = JsonSerializer.Deserialize<Dictionary<string, object>>(policyStatus.Data);
+        }
     }
 
     public Guid Id { get; set; }

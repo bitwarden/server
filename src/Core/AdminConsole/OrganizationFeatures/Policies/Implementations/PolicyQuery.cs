@@ -7,6 +7,24 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
 {
+    public async Task<IEnumerable<PolicyStatus>> GetAllAsync(Guid organizationId)
+    {
+        var policies = await policyRepository.GetManyByOrganizationIdAsync(organizationId);
+        var results = policies.Select(p => new PolicyStatus(organizationId, p.Type, p)).ToList();
+
+        // Remove this block once migration from legacy Send policies > SendControls has run
+        if (policies.All(p => p.Type != PolicyType.SendControls))
+        {
+            var synthesized = await SynthesizeSendControlsStatusAsync(organizationId);
+            if (synthesized.Enabled)
+            {
+                results.Add(synthesized);
+            }
+        }
+
+        return results;
+    }
+
     public async Task<PolicyStatus> RunAsync(Guid organizationId, PolicyType policyType)
     {
         var dbPolicy = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, policyType);

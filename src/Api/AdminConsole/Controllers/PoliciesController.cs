@@ -8,7 +8,6 @@ using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
@@ -89,37 +88,10 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-
-        // Once migration from legacy Send policies > SendControls has run, replace the rest of this method with:
-        // return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
-        var responses = policies.Select(p => new PolicyResponseModel(p)).ToList();
-
-        if (policies.Any(p => p.Type == PolicyType.SendControls))
-        {
-            return new ListResponseModel<PolicyResponseModel>(responses);
-        }
-
-        var sendControlsStatus = await _policyQuery.RunAsync(orgIdGuid, PolicyType.SendControls);
-        if (!sendControlsStatus.Enabled)
-        {
-            return new ListResponseModel<PolicyResponseModel>(responses);
-        }
-
-        var data = sendControlsStatus.GetDataModel<SendControlsPolicyData>();
-        responses.Add(new PolicyResponseModel
-        {
-            OrganizationId = sendControlsStatus.OrganizationId,
-            Type = sendControlsStatus.Type,
-            Enabled = sendControlsStatus.Enabled,
-            Data = new Dictionary<string, object>
-            {
-                ["disableSend"] = data.DisableSend,
-                ["disableHideEmail"] = data.DisableHideEmail,
-            },
-        });
-
-        return new ListResponseModel<PolicyResponseModel>(responses);
+        // Once migration from legacy Send policies > SendControls has run, replace _policyQuery.GetAllAsync
+        // with a direct _policyRepository.GetManyByOrganizationIdAsync call
+        var policies = await _policyQuery.GetAllAsync(orgIdGuid);
+        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
     }
 
     [AllowAnonymous]
