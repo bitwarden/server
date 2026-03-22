@@ -157,7 +157,6 @@ public static class FeatureFlagKeys
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
