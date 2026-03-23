@@ -10,6 +10,9 @@ public partial class SendKeyAndDataNotNull : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.Sql("UPDATE `Send` SET `Key` = '' WHERE `Key` IS NULL;");
+        migrationBuilder.Sql("UPDATE `Send` SET `Data` = '' WHERE `Data` IS NULL;");
+
         migrationBuilder.AlterColumn<string>(
             name: "Key",
             table: "Send",
