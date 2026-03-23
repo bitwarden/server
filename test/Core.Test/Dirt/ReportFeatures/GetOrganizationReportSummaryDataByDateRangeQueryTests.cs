@@ -62,7 +62,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetOrganizationReportSummaryDataByDateRangeAsync_ShouldReturnTopSixResults(
+    public async Task GetOrganizationReportSummaryDataByDateRangeAsync_ShouldReturnAllResults(
         SutProvider<GetOrganizationReportSummaryDataByDateRangeQuery> sutProvider)
     {
         // Arrange
@@ -110,7 +110,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(6, result.Count());
+        Assert.Equal(12, result.Count());
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .Received(1).GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
     }
