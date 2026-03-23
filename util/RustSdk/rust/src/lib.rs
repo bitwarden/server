@@ -5,13 +5,15 @@ mod cipher;
 use std::{
     ffi::{c_char, CStr, CString},
     num::NonZeroU32,
+    sync::LazyLock,
 };
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 
 use bitwarden_crypto::{
-    BitwardenLegacyKeyBytes, HashPurpose, Kdf, KeyEncryptable, MasterKey, PrivateKey, PublicKey,
-    RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey, UnsignedSharedKey, UserKey,
+    BitwardenLegacyKeyBytes, HashPurpose, Kdf, KeyEncryptable, MasterKey, Pkcs8PrivateKeyBytes,
+    PrivateKey, PublicKey, RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey, UnsignedSharedKey,
+    UserKey,
 };
 
 #[no_mangle]
@@ -58,7 +60,14 @@ fn error_response(message: &str) -> *const c_char {
     CString::new(json).unwrap().into_raw()
 }
 
-fn keypair(key: &SymmetricCryptoKey) -> RsaKeyPair {
+/// Cached DER-encoded RSA key material derived from the seeded PEM constant.
+/// Parsed once on first use; only the per-user symmetric encryption remains per-call.
+struct CachedRsaMaterial {
+    private_der: Pkcs8PrivateKeyBytes,
+    public_der: SpkiPublicKeyBytes,
+}
+
+static SEEDED_RSA_MATERIAL: LazyLock<CachedRsaMaterial> = LazyLock::new(|| {
     const RSA_PRIVATE_KEY: &str = "-----BEGIN PRIVATE KEY-----
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCXRVrCX+2hfOQS
 8HzYUS2oc/jGVTZpv+/Ryuoh9d8ihYX9dd0cYh2tl6KWdFc88lPUH11Oxqy20Rk2
@@ -88,14 +97,27 @@ WjyxP5ZvXu7U96jaJRI8PFMoE06WeVYcdIzrID2HvqH+w0UQJFrLJ/0Mn4stFAEz
 XKZBokBGnjFnTnKcs7nv/O8=
 -----END PRIVATE KEY-----";
 
-    let private_key = PrivateKey::from_pem(RSA_PRIVATE_KEY).unwrap();
-    let public_key = private_key.to_public_key().to_der().unwrap();
+    let private_key = PrivateKey::from_pem(RSA_PRIVATE_KEY).expect("seeded RSA PEM must be valid");
+    let public_der = private_key
+        .to_public_key()
+        .to_der()
+        .expect("seeded public key DER conversion must succeed");
+    let private_der = private_key
+        .to_der()
+        .expect("seeded private key DER conversion must succeed");
 
-    let p = private_key.to_der().unwrap();
+    CachedRsaMaterial {
+        private_der,
+        public_der,
+    }
+});
+
+fn keypair(key: &SymmetricCryptoKey) -> RsaKeyPair {
+    let material = &*SEEDED_RSA_MATERIAL;
 
     RsaKeyPair {
-        private: p.encrypt_with_key(key).unwrap(),
-        public: public_key.into(),
+        private: material.private_der.clone().encrypt_with_key(key).unwrap(),
+        public: material.public_der.clone().into(),
     }
 }
 
@@ -157,5 +179,72 @@ pub unsafe extern "C" fn generate_user_organization_key(
 pub unsafe extern "C" fn free_c_string(str: *mut c_char) {
     unsafe {
         drop(CString::from_raw(str));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitwarden_crypto::SymmetricCryptoKey;
+
+    #[test]
+    fn keypair_produces_valid_encstring_format() {
+        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let pair = keypair(&key);
+
+        let private_str = pair.private.to_string();
+        let public_str = pair.public.to_string();
+
+        assert!(
+            private_str.starts_with("2."),
+            "encrypted private key must be EncString format, got: {}",
+            &private_str[..20.min(private_str.len())]
+        );
+        assert!(
+            !public_str.is_empty(),
+            "public key must be non-empty"
+        );
+    }
+
+    #[test]
+    fn keypair_different_keys_produce_different_private_keys() {
+        let key1 = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let key2 = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+
+        let pair1 = keypair(&key1);
+        let pair2 = keypair(&key2);
+
+        assert_ne!(
+            pair1.private.to_string(),
+            pair2.private.to_string(),
+            "different symmetric keys must produce different encrypted private keys"
+        );
+        assert_eq!(
+            pair1.public.to_string(),
+            pair2.public.to_string(),
+            "public key must be identical regardless of symmetric key (same PEM source)"
+        );
+    }
+
+    #[test]
+    fn keypair_same_key_produces_consistent_public_key() {
+        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+
+        let pair1 = keypair(&key);
+        let pair2 = keypair(&key);
+
+        assert_eq!(
+            pair1.public.to_string(),
+            pair2.public.to_string(),
+            "cached public key must be stable across calls"
+        );
+        assert!(
+            pair1.private.to_string().starts_with("2."),
+            "first call must produce valid EncString"
+        );
+        assert!(
+            pair2.private.to_string().starts_with("2."),
+            "second call must produce valid EncString"
+        );
     }
 }

@@ -452,4 +452,33 @@ public sealed class RustSdkCipherTests
         Assert.DoesNotContain("BEGIN FAKE OPENSSH PRIVATE KEY", cipher.Data);
         Assert.DoesNotContain("ssh-ed25519", cipher.Data);
     }
+
+    [Fact]
+    public void GenerateUserKeys_ReturnsValidKeys()
+    {
+        var keys = RustSdkService.GenerateUserKeys("test@example.com", "TestPassword123!", 5000);
+
+        Assert.NotNull(keys.MasterPasswordHash);
+        Assert.NotEmpty(keys.MasterPasswordHash);
+        Assert.NotNull(keys.Key);
+        Assert.NotEmpty(keys.Key);
+        Assert.NotNull(keys.EncryptedUserKey);
+        Assert.StartsWith("2.", keys.EncryptedUserKey);
+        Assert.NotNull(keys.PublicKey);
+        Assert.NotEmpty(keys.PublicKey);
+        Assert.NotNull(keys.PrivateKey);
+        Assert.StartsWith("2.", keys.PrivateKey);
+    }
+
+    [Fact]
+    public void GenerateUserKeys_PublicKey_WorksWithOrganizationKeyWrapping()
+    {
+        var userKeys = RustSdkService.GenerateUserKeys("test@example.com", "TestPassword123!", 5000);
+        var orgKeys = RustSdkService.GenerateOrganizationKeys();
+
+        var wrappedOrgKey = RustSdkService.GenerateUserOrganizationKey(userKeys.PublicKey, orgKeys.Key);
+
+        Assert.NotNull(wrappedOrgKey);
+        Assert.NotEmpty(wrappedOrgKey);
+    }
 }
