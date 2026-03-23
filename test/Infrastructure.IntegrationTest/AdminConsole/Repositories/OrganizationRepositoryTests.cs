@@ -365,6 +365,57 @@ public class OrganizationRepositoryTests
         Assert.Null(orgUserAfter.UserId);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetAbilityAsync_WithExistingOrganization_ReturnsCorrectAbility(
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        // Act
+        var result = await organizationRepository.GetAbilityAsync(organization.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(organization.Id, result.Id);
+        Assert.Equal(organization.UseEvents, result.UseEvents);
+        Assert.Equal(organization.Use2fa, result.Use2fa);
+        Assert.Equal(organization.Use2fa && organization.TwoFactorProviders != null && organization.TwoFactorProviders != "{}", result.Using2fa);
+        Assert.Equal(organization.UsersGetPremium, result.UsersGetPremium);
+        Assert.Equal(organization.Enabled, result.Enabled);
+        Assert.Equal(organization.UseSso, result.UseSso);
+        Assert.Equal(organization.UseKeyConnector, result.UseKeyConnector);
+        Assert.Equal(organization.UseScim, result.UseScim);
+        Assert.Equal(organization.UseResetPassword, result.UseResetPassword);
+        Assert.Equal(organization.UseCustomPermissions, result.UseCustomPermissions);
+        Assert.Equal(organization.UsePolicies, result.UsePolicies);
+        Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
+        Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
+        Assert.Equal(organization.LimitItemDeletion, result.LimitItemDeletion);
+        Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
+        Assert.Equal(organization.UseOrganizationDomains, result.UseOrganizationDomains);
+        Assert.Equal(organization.UseAdminSponsoredFamilies, result.UseAdminSponsoredFamilies);
+        Assert.Equal(organization.UseAutomaticUserConfirmation, result.UseAutomaticUserConfirmation);
+        Assert.Equal(organization.UseDisableSmAdsForUsers, result.UseDisableSmAdsForUsers);
+        Assert.Equal(organization.UsePhishingBlocker, result.UsePhishingBlocker);
+        Assert.Equal(organization.UseMyItems, result.UseMyItems);
+
+        // Clean up
+        await organizationRepository.DeleteAsync(organization);
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetAbilityAsync_WithNonExistentOrganization_ReturnsNull(
+        IOrganizationRepository organizationRepository)
+    {
+        // Act
+        var result = await organizationRepository.GetAbilityAsync(Guid.NewGuid());
+
+        // Assert
+        Assert.Null(result);
+    }
+
     private static async Task<(User user, Organization organization, OrganizationUser organizationUser)>
         CreatePendingOrganizationWithUserAsync(
             IUserRepository userRepository,

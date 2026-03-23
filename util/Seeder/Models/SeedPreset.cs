@@ -12,6 +12,9 @@ internal record SeedPreset
     public SeedPresetPersonalCiphers? PersonalCiphers { get; init; }
     public int? KdfIterations { get; init; }
     public SeedPresetDensity? Density { get; init; }
+    public List<SeedCollectionAssignment>? CollectionAssignments { get; init; }
+    public List<SeedFolderAssignment>? FolderAssignments { get; init; }
+    public List<SeedFavoriteAssignment>? FavoriteAssignments { get; init; }
 }
 
 internal record SeedPresetOrganization
@@ -54,4 +57,23 @@ internal record SeedPresetCiphers
 internal record SeedPresetPersonalCiphers
 {
     public int CountPerUser { get; init; }
+}
+
+internal record SeedCollectionAssignment
+{
+    public required string Cipher { get; init; }
+    public required string Collection { get; init; }
+}
+
+internal record SeedFolderAssignment
+{
+    public required string Cipher { get; init; }
+    public required string Folder { get; init; }
+    public required string User { get; init; }
+}
+
+internal record SeedFavoriteAssignment
+{
+    public required string Cipher { get; init; }
+    public required string User { get; init; }
 }

@@ -818,8 +818,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
             .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
                 cs.Changes.Count == 2 &&
-                cs.Changes[0].IsItemQuantityUpdate &&
-                cs.Changes[1].IsItemQuantityUpdate));
+                !cs.ChargeImmediately));
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustSmSeatsAsync(default, default, default);
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
@@ -862,8 +861,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().Received(1)
             .Run(organization, Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
                 cs.Changes.Count == 2 &&
-                cs.Changes[0].IsItemQuantityUpdate &&
-                cs.Changes[1].IsItemAddition));
+                !cs.ChargeImmediately));
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()
             .AdjustSmSeatsAsync(default, default, default);
         await sutProvider.GetDependency<IStripePaymentService>().DidNotReceiveWithAnyArgs()

@@ -356,7 +356,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_StructuralChange_SetsAlwaysInvoiceProration()
+    public async Task Run_ChargeImmediately_SetsAlwaysInvoiceProration()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
@@ -364,10 +364,10 @@ public class UpdateOrganizationSubscriptionCommandTests
         SetupGetSubscription(organization, subscription);
         SetupUpdateSubscription(subscription);
 
-        // AddItem is structural (IsStructural = !IsItemQuantityUpdate = true)
         var changeSet = new OrganizationSubscriptionChangeSet
         {
-            Changes = [new AddItem("price_storage", 1)]
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
         };
 
         var result = await _command.Run(organization, changeSet);
@@ -380,7 +380,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_NonStructuralChange_SetsCreateProrationsProration()
+    public async Task Run_NotChargeImmediately_SetsCreateProrationsProration()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
@@ -388,7 +388,6 @@ public class UpdateOrganizationSubscriptionCommandTests
         SetupGetSubscription(organization, subscription);
         SetupUpdateSubscription(subscription);
 
-        // UpdateItemQuantity is non-structural
         var changeSet = new OrganizationSubscriptionChangeSet
         {
             Changes = [new UpdateItemQuantity("price_seats", 10)]
@@ -404,7 +403,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_StructuralChange_ChargeAutomatically_SetsPendingIfIncomplete()
+    public async Task Run_ChargeImmediately_ChargeAutomatically_SetsPendingIfIncomplete()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(
@@ -416,7 +415,8 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
-            Changes = [new AddItem("price_storage", 1)]
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
         };
 
         var result = await _command.Run(organization, changeSet);
@@ -429,7 +429,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_StructuralChange_SendInvoice_NoPaymentBehavior()
+    public async Task Run_ChargeImmediately_SendInvoice_NoPaymentBehavior()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(
@@ -441,7 +441,8 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
-            Changes = [new AddItem("price_storage", 1)]
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
         };
 
         var result = await _command.Run(organization, changeSet);
@@ -454,7 +455,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_NonStructuralChange_ChargeAutomatically_NoPaymentBehavior()
+    public async Task Run_NotChargeImmediately_ChargeAutomatically_NoPaymentBehavior()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(
@@ -532,7 +533,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_AnnualBilling_Structural_NoPendingInvoiceItemInterval()
+    public async Task Run_AnnualBilling_ChargeImmediately_NoPendingInvoiceItemInterval()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(
@@ -545,7 +546,8 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
-            Changes = [new AddItem("price_storage", 1)]
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
         };
 
         var result = await _command.Run(organization, changeSet);
@@ -611,7 +613,8 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
-            Changes = [new AddItem("price_storage", 1)]
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
         };
 
         var result = await _command.Run(organization, changeSet);
@@ -624,7 +627,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_SendInvoice_Structural_NonDraftInvoice_DoesNotFinalizeOrSend()
+    public async Task Run_SendInvoice_ChargeImmediately_NonDraftInvoice_DoesNotFinalizeOrSend()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(
@@ -647,7 +650,8 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
-            Changes = [new AddItem("price_storage", 1)]
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
         };
 
         var result = await _command.Run(organization, changeSet);
@@ -660,7 +664,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_ChargeAutomatically_Structural_DoesNotProcessInvoice()
+    public async Task Run_ChargeAutomatically_ChargeImmediately_DoesNotProcessInvoice()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(
@@ -680,7 +684,8 @@ public class UpdateOrganizationSubscriptionCommandTests
 
         var changeSet = new OrganizationSubscriptionChangeSet
         {
-            Changes = [new AddItem("price_storage", 1)]
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
         };
 
         var result = await _command.Run(organization, changeSet);
@@ -693,7 +698,7 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_SendInvoice_NonStructural_DoesNotProcessInvoice()
+    public async Task Run_SendInvoice_NotChargeImmediately_DoesNotProcessInvoice()
     {
         var organization = CreateOrganization();
         var subscription = CreateSubscription(
