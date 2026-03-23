@@ -207,7 +207,7 @@ public static class RecipeBuilderExtensions
     /// <param name="fixture">Cipher fixture name without extension</param>
     /// <returns>The builder for fluent chaining</returns>
     /// <exception cref="InvalidOperationException">Thrown when AddCiphers() was already called</exception>
-    public static RecipeBuilder UseCiphers(this RecipeBuilder builder, string fixture)
+    public static RecipeBuilder UseCiphers(this RecipeBuilder builder, string fixture, bool skipCollectionAssignment = false)
     {
         if (builder.HasGeneratedCiphers)
         {
@@ -216,7 +216,7 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasFixtureCiphers = true;
-        builder.AddStep(_ => new CreateCiphersStep(fixture));
+        builder.AddStep(_ => new CreateCiphersStep(fixture, skipCollectionAssignment));
         return builder;
     }
 
@@ -251,6 +251,84 @@ public static class RecipeBuilderExtensions
             builder.HasCipherFolderAssignment = true;
         }
         builder.AddStep(_ => new GenerateCiphersStep(count, typeDist, pwDist, assignFolders, density));
+        return builder;
+    }
+
+    /// <summary>
+    /// Create collection assignments mapping specific ciphers to specific collections.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="assignments">Collection assignment tuples from the preset</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no roster users or fixture ciphers exist</exception>
+    internal static RecipeBuilder CreateCipherCollections(this RecipeBuilder builder, List<SeedCollectionAssignment> assignments)
+    {
+        if (!builder.HasRosterUsers)
+        {
+            throw new InvalidOperationException(
+                "Collection assignments require roster users. Call UseRoster() first.");
+        }
+
+        // HasFixtureCiphers is mutually exclusive with HasGeneratedCiphers (enforced by UseCiphers/AddCiphers)
+        if (!builder.HasFixtureCiphers)
+        {
+            throw new InvalidOperationException(
+                "Collection assignments require fixture ciphers. Call UseCiphers() first.");
+        }
+
+        builder.AddStep(_ => new CreateCipherCollectionsStep(assignments));
+        return builder;
+    }
+
+    /// <summary>
+    /// Create folder assignments mapping specific ciphers to specific folders for specific users.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="assignments">Folder assignment tuples from the preset</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no roster users or fixture ciphers exist</exception>
+    internal static RecipeBuilder CreateCipherFolders(this RecipeBuilder builder, List<SeedFolderAssignment> assignments)
+    {
+        if (!builder.HasRosterUsers)
+        {
+            throw new InvalidOperationException(
+                "Folder assignments require roster users. Call UseRoster() first.");
+        }
+
+        // HasFixtureCiphers is mutually exclusive with HasGeneratedCiphers (enforced by UseCiphers/AddCiphers)
+        if (!builder.HasFixtureCiphers)
+        {
+            throw new InvalidOperationException(
+                "Folder assignments require fixture ciphers. Call UseCiphers() first.");
+        }
+
+        builder.AddStep(_ => new CreateCipherFoldersStep(assignments));
+        return builder;
+    }
+
+    /// <summary>
+    /// Create favorite assignments marking specific ciphers as favorites for specific users.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="assignments">Favorite assignment tuples from the preset</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no roster users or fixture ciphers exist</exception>
+    internal static RecipeBuilder CreateCipherFavorites(this RecipeBuilder builder, List<SeedFavoriteAssignment> assignments)
+    {
+        if (!builder.HasRosterUsers)
+        {
+            throw new InvalidOperationException(
+                "Favorite assignments require roster users. Call UseRoster() first.");
+        }
+
+        // HasFixtureCiphers is mutually exclusive with HasGeneratedCiphers (enforced by UseCiphers/AddCiphers)
+        if (!builder.HasFixtureCiphers)
+        {
+            throw new InvalidOperationException(
+                "Favorite assignments require fixture ciphers. Call UseCiphers() first.");
+        }
+
+        builder.AddStep(_ => new CreateCipherFavoritesStep(assignments));
         return builder;
     }
 
