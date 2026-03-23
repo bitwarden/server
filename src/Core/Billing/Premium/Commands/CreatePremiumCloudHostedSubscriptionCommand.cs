@@ -83,16 +83,21 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
-        // Validate coupon if provided. Return error if invalid to prevent charging more than expected.
-        string? validatedCoupon = null;
-        if (!string.IsNullOrWhiteSpace(subscriptionPurchase.Coupon))
+        // Validate all provided coupons. Fail fast if any coupon is invalid to prevent charging more than expected.
+        var validatedCoupons = (subscriptionPurchase.Coupons ?? [])
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .ToList();
+
+        if (validatedCoupons.Count > 0)
         {
-            var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(user, subscriptionPurchase.Coupon.Trim(), DiscountTierType.Premium);
-            if (!isValid)
+            var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                user, validatedCoupons, DiscountTierType.Premium);
+
+            if (!allValid)
             {
                 return new BadRequest("Discount expired. Please review your cart total and try again");
             }
-            validatedCoupon = subscriptionPurchase.Coupon.Trim();
         }
 
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
@@ -127,7 +132,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
         customer = await ReconcileBillingLocationAsync(customer, subscriptionPurchase.BillingAddress);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, validatedCoupon);
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, validatedCoupons);
 
         subscriptionPurchase.PaymentMethod.Switch(
             tokenized =>
@@ -307,7 +312,7 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         Customer customer,
         Pricing.Premium.Plan premiumPlan,
         int? storage,
-        string? validatedCoupon)
+        IReadOnlyList<string> validatedCoupons)
     {
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
@@ -349,9 +354,11 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             OffSession = true
         };
 
-        if (!string.IsNullOrWhiteSpace(validatedCoupon))
+        if (validatedCoupons.Count > 0)
         {
-            subscriptionCreateOptions.Discounts = [new SubscriptionDiscountOptions { Coupon = validatedCoupon }];
+            subscriptionCreateOptions.Discounts = validatedCoupons
+                .Select(c => new SubscriptionDiscountOptions { Coupon = c })
+                .ToList();
         }
 
         var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
