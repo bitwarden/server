@@ -319,6 +319,57 @@ public class PreviewOrganizationTaxCommandTests
     }
 
     [Fact]
+    public async Task Run_OrganizationSubscriptionPurchase_BusinessUseSwitzerland_UsesTaxExemptNone()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 3,
+                AdditionalStorage = 0,
+                Sponsored = false
+            }
+        };
+
+        var billingAddress = new BillingAddress
+        {
+            Country = "CH",
+            PostalCode = "3001"
+        };
+
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 220 }],
+            Total = 2920
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(_user, purchase, billingAddress);
+
+        Assert.True(result.IsT0);
+        var (tax, total) = result.AsT0;
+        Assert.Equal(2.20m, tax);
+        Assert.Equal(29.20m, total);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.AutomaticTax.Enabled == true &&
+            options.Currency == "usd" &&
+            options.CustomerDetails.Address.Country == "CH" &&
+            options.CustomerDetails.Address.PostalCode == "3001" &&
+            options.CustomerDetails.TaxExempt == TaxExempt.None &&
+            options.SubscriptionDetails.Items.Count == 1 &&
+            options.SubscriptionDetails.Items[0].Price == "2023-teams-org-seat-monthly" &&
+            options.SubscriptionDetails.Items[0].Quantity == 3 &&
+            options.Discounts == null));
+    }
+
+    [Fact]
     public async Task Run_OrganizationSubscriptionPurchase_SpanishNIFTaxId_AddsEUVATTaxId()
     {
         var purchase = new OrganizationSubscriptionPurchase

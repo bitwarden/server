@@ -42,7 +42,7 @@ public class SeedCommand
             var recipe = new OrganizationRecipe(db, mapper, passwordHasher, manglerService);
 
             Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
-            var result = recipe.Seed(args.Preset!, args.Password);
+            var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
 
             PrintSeedResult(result);
         }
