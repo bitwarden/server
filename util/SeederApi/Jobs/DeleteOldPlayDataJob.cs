@@ -30,6 +30,6 @@ public class DeleteOldPlayDataJob : BaseJob
         var olderThan = DateTime.UtcNow.AddDays(-1);
         var playIds = _getAllPlayIdsQuery.GetAllPlayIds(olderThan);
         await _destroyBatchScenesCommand.DestroyAsync(playIds);
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DeleteOldPlayDataJob. Deleted {playIdCount} root items", playIds.Count);
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DeleteOldPlayDataJob. Deleted {PlayIdCount} root items", playIds.Count);
     }
 }

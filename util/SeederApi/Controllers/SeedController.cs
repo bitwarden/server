@@ -78,8 +78,13 @@ public class SeedController(
     [HttpDelete]
     public async Task<IActionResult> DeleteAllAsync([FromBody] DateTime? olderThanRequest)
     {
-        var olderThan = olderThanRequest ?? DateTime.UtcNow.AddDays(-1);
-        logger.LogInformation("Deleting all seeded data older than {olderThan} UTC", olderThan);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var olderThan = olderThanRequest?.ToUniversalTime() ?? DateTime.UtcNow.AddDays(-1);
+        logger.LogInformation("Deleting all seeded data older than {OlderThan} UTC", olderThan);
 
         var playIds = getAllPlayIdsQuery.GetAllPlayIds(olderThan: olderThan);
 
