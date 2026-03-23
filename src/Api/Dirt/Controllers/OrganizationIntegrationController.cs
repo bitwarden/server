@@ -31,8 +31,17 @@ public class OrganizationIntegrationController(
             .ToList();
     }
 
+    /// <summary>
+    /// Creates a new organization integration. 
+    /// Validates that only one integration of each type can exist per organization.
+    /// </summary>
+    /// <param name="organizationId"></param>
+    /// <param name="model"></param>
+    /// <returns></returns>
+    /// <exception cref="NotFoundException">Not enough permissions to access the organization.</exception>
+    /// <exception cref="ConflictResult">When an integration of the same type already exists for the organization.</exception>
     [HttpPost("")]
-    public async Task<OrganizationIntegrationResponseModel> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
+    public async Task<ActionResult<OrganizationIntegrationResponseModel>> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
     {
         if (!await HasPermission(organizationId))
         {
@@ -40,9 +49,16 @@ public class OrganizationIntegrationController(
         }
 
         var integration = model.ToOrganizationIntegration(organizationId);
+
+        var canCreate = await createCommand.CanCreateAsync(integration);
+        if (!canCreate)
+        {
+            return Conflict();
+        }
+
         var created = await createCommand.CreateAsync(integration);
 
-        return new OrganizationIntegrationResponseModel(created);
+        return Ok(new OrganizationIntegrationResponseModel(created));
     }
 
     [HttpPut("{integrationId:guid}")]
