@@ -1,4 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using Bit.Core.Models.BitStripe;
@@ -54,4 +54,5 @@ public interface IStripeAdapter
     Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null);
     Task<Stripe.BillingPortal.Session> CreateBillingPortalSessionAsync(Stripe.BillingPortal.SessionCreateOptions options);
     Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options);
+    Task<Stripe.Checkout.Session> GetCheckoutSessionAsync(string id, Stripe.Checkout.SessionGetOptions options = null);
 }

@@ -1,4 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 
 #nullable disable
 
@@ -249,4 +249,7 @@ public class StripeAdapter : IStripeAdapter
      ***********************/
     public Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options) =>
         _checkoutSessionsService.CreateAsync(options);
+
+    public Task<Stripe.Checkout.Session> GetCheckoutSessionAsync(string id, Stripe.Checkout.SessionGetOptions options = null) =>
+        _checkoutSessionsService.GetAsync(id, options);
 }
