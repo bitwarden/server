@@ -41,6 +41,9 @@ public class Startup
         services.AddQueries();
 
         services.AddControllers();
+
+        Jobs.JobsHostedService.AddJobsServices(services);
+        services.AddHostedService<Jobs.JobsHostedService>();
     }
 
     public void Configure(
