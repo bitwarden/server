@@ -20,16 +20,17 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 * * * ?")
             .Build();
-        var everyDayAtMidnightUtc = TriggerBuilder.Create()
-            .WithIdentity("EveryDayAtMidnightUtc")
+        var everyFifteenMinutesTrigger = TriggerBuilder.Create()
+            .WithIdentity("everyFifteenMinutesTrigger")
             .StartNow()
-            .WithCronSchedule("0 0 0 * * ?")
+            .WithCronSchedule("0 */15 * ? * *")
             .Build();
+
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
             new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger),
-            new Tuple<Type, ITrigger>(typeof(DeleteOldPlayDataJob), everyDayAtMidnightUtc),
+            new Tuple<Type, ITrigger>(typeof(DeleteOldPlayDataJob), everyFifteenMinutesTrigger),
         };
 
         Jobs = jobs;
