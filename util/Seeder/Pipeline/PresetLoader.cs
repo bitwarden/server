@@ -38,7 +38,7 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+    /// Resolution order: Org → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
@@ -109,13 +109,30 @@ internal static class PresetLoader
             builder.AddFolders(density);
         }
 
+        var hasCollectionAssignments = preset.CollectionAssignments is { Count: > 0 };
+
         if (preset.Ciphers?.Fixture is not null)
         {
-            builder.UseCiphers(preset.Ciphers.Fixture);
+            builder.UseCiphers(preset.Ciphers.Fixture, skipCollectionAssignment: hasCollectionAssignments);
         }
         else if (preset.Ciphers is not null && preset.Ciphers.Count > 0)
         {
             builder.AddCiphers(preset.Ciphers.Count, assignFolders: preset.Ciphers.AssignFolders, density: density);
+        }
+
+        if (hasCollectionAssignments)
+        {
+            builder.CreateCipherCollections(preset.CollectionAssignments!);
+        }
+
+        if (preset.FolderAssignments is { Count: > 0 })
+        {
+            builder.CreateCipherFolders(preset.FolderAssignments);
+        }
+
+        if (preset.FavoriteAssignments is { Count: > 0 })
+        {
+            builder.CreateCipherFavorites(preset.FavoriteAssignments);
         }
 
         if (preset.PersonalCiphers is not null && preset.PersonalCiphers.CountPerUser > 0)

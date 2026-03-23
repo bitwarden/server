@@ -60,6 +60,35 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
             context.Registry.HardenedOrgUserIds.Add(orgUser.Id);
             context.Registry.UserDigests.Add(
                 new EntityRegistry.UserDigest(user.Id, orgUser.Id, userKeys.Key));
+            context.Registry.UserEmailPrefixToUserId[emailPrefix] = user.Id;
+
+            // Create named folders declared on this user
+            if (rosterUser.Folders is { Count: > 0 })
+            {
+                var namedFolders = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var folderName in rosterUser.Folders)
+                {
+                    if (namedFolders.ContainsKey(folderName))
+                    {
+                        throw new InvalidOperationException(
+                            $"Duplicate folder name '{folderName}' for user '{emailPrefix}' in roster '{fixtureName}'.");
+                    }
+
+                    var folder = FolderSeeder.Create(user.Id, userKeys.Key, folderName);
+                    context.Folders.Add(folder);
+                    namedFolders[folderName] = folder.Id;
+
+                    if (!context.Registry.UserFolderIds.TryGetValue(user.Id, out var folderIds))
+                    {
+                        folderIds = [];
+                        context.Registry.UserFolderIds[user.Id] = folderIds;
+                    }
+                    folderIds.Add(folder.Id);
+                }
+
+                context.Registry.UserNamedFolders[emailPrefix] = namedFolders;
+            }
         }
 
         // Phase 2: Create groups — build groupName → groupId lookup
@@ -94,6 +123,7 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
             var collection = CollectionSeeder.Create(orgId, orgKey, rosterCollection.Name);
             context.Collections.Add(collection);
             context.Registry.CollectionIds.Add(collection.Id);
+            context.Registry.FixtureCollectionNameToId[rosterCollection.Name] = collection.Id;
 
             if (rosterCollection.Groups is not null)
             {

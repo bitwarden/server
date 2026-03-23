@@ -45,7 +45,9 @@ Need to create test data?
 - **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+**Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
+
+**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
 
 See `Pipeline/` folder for implementation.
 
@@ -54,6 +56,7 @@ See `Pipeline/` folder for implementation.
 Steps execute sequentially (phase order preserved by RecipeExecutor). Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
 
 **Thread-safety requirements:**
+
 - `GeneratorContext` lazy properties (`??=`) must be force-initialized before any `Parallel.For` loop to prevent a data race
 - Generators use `ThreadLocal<Faker>` for thread-safe deterministic data generation
 - `ManglerService` and `SeederContext` are NOT thread-safe -- pre-compute their outputs before entering parallel loops
@@ -61,6 +64,7 @@ Steps execute sequentially (phase order preserved by RecipeExecutor). Within a s
 ## Performance A/B Testing
 
 When measuring step-level performance changes, use paired worktrees:
+
 - Create `server-PM-XXXXX/perf-baseline` and `server-PM-XXXXX/perf-optimized` worktrees
 - Both worktrees get `Stopwatch` timing in `RecipeExecutor.Execute()` (the baseline measurement)
 - Only the optimized worktree gets actual code changes

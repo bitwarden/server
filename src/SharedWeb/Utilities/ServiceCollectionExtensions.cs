@@ -23,6 +23,8 @@ using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
+using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
@@ -384,6 +386,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
         services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
+        services.AddTransient<IBusinessUnitConverter, NoopBusinessUnitConverter>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
