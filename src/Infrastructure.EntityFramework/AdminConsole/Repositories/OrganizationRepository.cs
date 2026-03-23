@@ -146,6 +146,20 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         }
     }
 
+#nullable enable
+    public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        return await GetDbSet(dbContext)
+            .Where(e => e.Id == organizationId)
+            .Select(e => new OrganizationAbility(e))
+            .SingleOrDefaultAsync();
+    }
+#nullable disable
+
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
         using var scope = ServiceScopeFactory.CreateScope();
