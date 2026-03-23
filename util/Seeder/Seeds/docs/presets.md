@@ -10,11 +10,11 @@ Test specific Bitwarden features. Fixture-based data for deterministic results.
 dotnet run -- seed --preset features.{name} --mangle
 ```
 
-| Preset            | Plan                | Features Enabled                                   | Org Fixture      | Roster       | Ciphers   |
-| ----------------- | ------------------- | -------------------------------------------------- | ---------------- | ------------ | --------- |
-| sso-enterprise    | enterprise-annually | SSO (OIDC, masterPassword) + requireSso policy     | verdant-health   | starter-team | sso-vault |
-| tde-enterprise    | enterprise-annually | SSO (OIDC, trustedDevices/TDE) + requireSso policy | obsidian-labs    | starter-team | tde-vault |
-| policy-enterprise | enterprise-annually | All policies except requireSso and require2fa      | pinnacle-designs | starter-team | —         |
+| Preset            | Features Enabled                                   | Org Fixture      | Roster       | Ciphers   |
+| ----------------- | -------------------------------------------------- | ---------------- | ------------ | --------- |
+| sso-enterprise    | SSO (OIDC, masterPassword) + requireSso policy     | verdant-health   | starter-team | sso-vault |
+| tde-enterprise    | SSO (OIDC, trustedDevices/TDE) + requireSso policy | obsidian-labs    | starter-team | tde-vault |
+| policy-enterprise | All policies except requireSso and require2fa      | pinnacle-designs | starter-team | —         |
 
 `policy-enterprise` has no ciphers — it exists purely for testing policy enforcement.
 
@@ -26,15 +26,18 @@ Known users, groups, collections, and permissions you can point a client to.
 dotnet run -- seed --preset qa.{name} --mangle
 ```
 
-| Preset                            | Plan                | Seats | Org Fixture       | Roster                 | Ciphers                | Use Case                           |
-| --------------------------------- | ------------------- | ----- | ----------------- | ---------------------- | ---------------------- | ---------------------------------- |
-| enterprise-basic                  | enterprise-annually | 10    | redwood-analytics | enterprise-basic       | enterprise-basic       | Standard enterprise org            |
-| collection-permissions-enterprise | enterprise-annually | 10    | cobalt-logistics  | collection-permissions | collection-permissions | Permission edge cases              |
-| dunder-mifflin-enterprise-full    | enterprise-annually | 70    | dunder-mifflin    | dunder-mifflin         | autofill-testing       | Large handcrafted org              |
-| families-basic                    | families-annually   | 6     | adams-family      | family                 | 150 generated          | Families plan with personal vaults |
-| stark-free-basic                  | free                | 2     | stark-industries  | 1 generated user       | autofill-testing       | Free plan personal vault           |
+| Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                    |
+| --------------------------------- | ------------------- | ---------------------- | ---------------------- | ------------------------------------------- |
+| enterprise-basic                  | redwood-analytics   | enterprise-basic       | enterprise-basic       | Standard enterprise org                     |
+| collection-permissions-enterprise | cobalt-logistics    | collection-permissions | collection-permissions | Permission edge cases                       |
+| dunder-mifflin-enterprise-full    | dunder-mifflin      | dunder-mifflin         | autofill-testing       | Large handcrafted org                       |
+| families-basic                    | adams-family        | family                 | 150 generated          | Families plan with personal vaults          |
+| stark-free-basic                  | stark-industries    | 1 generated user       | autofill-testing       | Free plan personal vault                    |
+| zero-knowledge-labs-enterprise    | zero-knowledge-labs | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites |
 
 `families-basic` and `stark-free-basic` mix fixtures with generated data (ciphers and personal ciphers).
+
+`zero-knowledge-labs-enterprise` uses all three assignment types: `collectionAssignments` (ciphers to department collections), `folderAssignments` (per-user folder organization), and `favoriteAssignments` (per-user favorites).
 
 ## Scale
 
@@ -44,17 +47,17 @@ Production-calibrated presets with density modeling. Realistic relationship patt
 dotnet run -- seed --preset scale.{name} --mangle
 ```
 
-| Preset                          | Tier | Archetype                   | Users  | Groups | Collections | Ciphers | Plan                |
-| ------------------------------- | ---- | --------------------------- | ------ | ------ | ----------- | ------- | ------------------- |
-| xs-central-perk                 | XS   | Family starter              | 6      | 2      | 10          | 200     | families-annually   |
-| sm-balanced-planet-express      | SM   | Small balanced              | 50     | 8      | 100         | 750     | teams-annually      |
-| sm-highperm-bluth-company       | SM   | Small hierarchical          | 50     | 4      | 25          | 500     | teams-annually      |
-| md-balanced-sterling-cooper     | MD   | Mid-market balanced         | 250    | 50     | 500         | 5,000   | enterprise-annually |
-| md-highcollection-umbrella-corp | MD   | Collection-heavy            | 200    | 8      | 800         | 3,000   | enterprise-annually |
-| lg-balanced-wayne-enterprises   | LG   | Large balanced              | 1,000  | 100    | 2,000       | 10,000  | enterprise-annually |
-| lg-highperm-tyrell-corp         | LG   | High permission density     | 2,500  | 75     | 2,300       | 17,000  | enterprise-annually |
-| xl-highperm-weyland-yutani      | XL   | Mega corp, many groups      | 5,000  | 500    | 1,200       | 15,000  | enterprise-annually |
-| xl-broad-initech                | XL   | Mega corp, many collections | 10,000 | 5      | 12,000      | 15,000  | enterprise-annually |
+| Preset                          | Tier | Archetype                   | Users  | Groups | Collections | Ciphers |
+| ------------------------------- | ---- | --------------------------- | ------ | ------ | ----------- | ------- |
+| xs-central-perk                 | XS   | Family starter              | 6      | 2      | 10          | 200     |
+| sm-balanced-planet-express      | SM   | Small balanced              | 50     | 8      | 100         | 750     |
+| sm-highperm-bluth-company       | SM   | Small hierarchical          | 50     | 4      | 25          | 500     |
+| md-balanced-sterling-cooper     | MD   | Mid-market balanced         | 250    | 50     | 500         | 5,000   |
+| md-highcollection-umbrella-corp | MD   | Collection-heavy            | 200    | 8      | 800         | 3,000   |
+| lg-balanced-wayne-enterprises   | LG   | Large balanced              | 1,000  | 100    | 2,000       | 10,000  |
+| lg-highperm-tyrell-corp         | LG   | High permission density     | 2,500  | 75     | 2,300       | 17,000  |
+| xl-highperm-weyland-yutani      | XL   | Mega corp, many groups      | 5,000  | 500    | 1,200       | 15,000  |
+| xl-broad-initech                | XL   | Mega corp, many collections | 10,000 | 5      | 12,000      | 15,000  |
 
 **Notes:**
 

@@ -9,7 +9,7 @@ namespace Bit.Seeder.Steps;
 /// <summary>
 /// Loads cipher items from a fixture and creates encrypted cipher entities.
 /// </summary>
-internal sealed class CreateCiphersStep(string fixtureName) : IStep
+internal sealed class CreateCiphersStep(string fixtureName, bool skipCollectionAssignment = false) : IStep
 {
     public void Execute(SeederContext context)
     {
@@ -35,8 +35,16 @@ internal sealed class CreateCiphersStep(string fixtureName) : IStep
 
             ciphers.Add(cipher);
 
-            // Collection assignment (mirrors GenerateCiphersStep logic)
-            if (collectionIds.Count <= 0)
+            if (context.Registry.FixtureCipherNameToId.ContainsKey(item.Name))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate cipher name '{item.Name}' in fixture '{fixtureName}'. " +
+                    "Cipher names must be unique for folder and favorite assignments.");
+            }
+            context.Registry.FixtureCipherNameToId[item.Name] = cipher.Id;
+
+            // Collection assignment (round-robin, skipped when collectionAssignments handles it)
+            if (skipCollectionAssignment || collectionIds.Count <= 0)
             {
                 continue;
             }

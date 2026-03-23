@@ -47,7 +47,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **Mix & Match**: Fixtures + generation in one preset
 - **Extensible**: Add entity types via new step implementations
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
 
 **Files**: `Pipeline/` folder
 

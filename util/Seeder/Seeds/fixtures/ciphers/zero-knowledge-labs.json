@@ -1,0 +1,3560 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "GitHub Enterprise",
+      "login": {
+        "username": "zkl-admin",
+        "password": "ghp_ZkL4b5R3p0S1t0ryT0k3n2024",
+        "uris": [
+          {
+            "uri": "https://github.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://github.com/zero-knowledge-labs",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPGHE"
+      },
+      "notes": "SSO via Okta"
+    },
+    {
+      "type": "login",
+      "name": "GitLab Self-Hosted",
+      "login": {
+        "username": "root",
+        "password": "GlabSelf-H0st3d2024",
+        "uris": [
+          {
+            "uri": "https://gitlab.zero-knowledge.example",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPGLS"
+      },
+      "notes": "Root account - break glass only"
+    },
+    {
+      "type": "login",
+      "name": "Bitbucket Cloud",
+      "login": {
+        "username": "zkl-workspace",
+        "password": "BbCl0udW0rkspace2024",
+        "uris": [
+          {
+            "uri": "https://bitbucket.org",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "AWS Console",
+      "login": {
+        "username": "zkl-root@zero-knowledge.example",
+        "password": "AwsR00tAccess2024#",
+        "uris": [
+          {
+            "uri": "https://aws.amazon.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://zero-knowledge-labs.signin.aws.amazon.com/console",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXP"
+      },
+      "notes": "MFA required. Use IAM roles."
+    },
+    {
+      "type": "login",
+      "name": "Google Cloud Console",
+      "login": {
+        "username": "admin@zero-knowledge.example",
+        "password": "GcPCl0udAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://console.cloud.google.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://console.cloud.google.com/home/dashboard?project=zkl-prod",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPGCP"
+      },
+      "notes": "Multi-project org"
+    },
+    {
+      "type": "login",
+      "name": "Azure Portal",
+      "login": {
+        "username": "admin@zeroknowledgelabs.onmicrosoft.com",
+        "password": "AzP0rtal2024#",
+        "uris": [
+          {
+            "uri": "https://portal.azure.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://portal.azure.com/#@zeroknowledgelabs.onmicrosoft.com",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPAZR"
+      },
+      "notes": "SSO via Okta"
+    },
+    {
+      "type": "login",
+      "name": "Azure DevOps",
+      "login": {
+        "username": "zkl-admin@zero-knowledge.example",
+        "password": "AzD3v0psT0k3n2024#",
+        "uris": [
+          {
+            "uri": "https://dev.azure.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPADO"
+      }
+    },
+    {
+      "type": "login",
+      "name": "GitHub Actions - Service Account",
+      "login": {
+        "username": "zkl-ci-bot",
+        "password": "ghp_C1B0tS3rvic3T0k3n2024",
+        "uris": [
+          {
+            "uri": "https://github.com/organizations/zero-knowledge-labs/settings/actions",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "CircleCI",
+      "login": {
+        "username": "zkl-admin@zero-knowledge.example",
+        "password": "C1rcl3C1Adm1n2024#",
+        "uris": [
+          {
+            "uri": "https://app.circleci.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Docker Hub",
+      "login": {
+        "username": "zeroknowledgelabs",
+        "password": "DkrHub0rg2024#",
+        "uris": [
+          {
+            "uri": "https://hub.docker.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://hub.docker.com/orgs/zeroknowledgelabs",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPDKR"
+      },
+      "notes": "Org account for CI publishing"
+    },
+    {
+      "type": "login",
+      "name": "Terraform Cloud",
+      "login": {
+        "username": "zkl-platform",
+        "password": "TfCl0udPlatf0rm2024#",
+        "uris": [
+          {
+            "uri": "https://app.terraform.io",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPTFC"
+      },
+      "notes": "Sentinel policies on prod"
+    },
+    {
+      "type": "login",
+      "name": "Cloudflare",
+      "login": {
+        "username": "infra@zero-knowledge.example",
+        "password": "CfDashb0ard2024#",
+        "uris": [
+          {
+            "uri": "https://dash.cloudflare.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPCFL"
+      },
+      "notes": "DNS and WAF for all domains"
+    },
+    {
+      "type": "login",
+      "name": "Fastly CDN",
+      "login": {
+        "username": "cdn@zero-knowledge.example",
+        "password": "FastlyCDN2024#",
+        "uris": [
+          {
+            "uri": "https://manage.fastly.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Vercel",
+      "login": {
+        "username": "deploy@zero-knowledge.example",
+        "password": "V3rc3lD3pl0y2024#",
+        "uris": [
+          {
+            "uri": "https://vercel.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Datadog",
+      "login": {
+        "username": "ops@zero-knowledge.example",
+        "password": "Datad0gM0n1t0r2024#",
+        "uris": [
+          {
+            "uri": "https://app.datadoghq.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://us5.datadoghq.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPDDO"
+      },
+      "notes": "SSO via Okta for most users"
+    },
+    {
+      "type": "login",
+      "name": "PagerDuty",
+      "login": {
+        "username": "oncall@zero-knowledge.example",
+        "password": "Pag3rDuty0nCall2024#",
+        "uris": [
+          {
+            "uri": "https://app.pagerduty.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "On-call schedules managed here"
+    },
+    {
+      "type": "login",
+      "name": "Sentry",
+      "login": {
+        "username": "errors@zero-knowledge.example",
+        "password": "S3ntryErrTrack2024#",
+        "uris": [
+          {
+            "uri": "https://sentry.io",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "One project per microservice"
+    },
+    {
+      "type": "login",
+      "name": "Grafana Cloud",
+      "login": {
+        "username": "admin",
+        "password": "GrafanaCl0udAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://grafana.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "New Relic",
+      "login": {
+        "username": "observability@zero-knowledge.example",
+        "password": "N3wR3l1c0bserv2024#",
+        "uris": [
+          {
+            "uri": "https://one.newrelic.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Jira",
+      "login": {
+        "username": "admin@zero-knowledge.example",
+        "password": "J1raAdm1nCons0le2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.atlassian.net",
+            "match": "domain"
+          },
+          {
+            "uri": "https://zero-knowledge-labs.atlassian.net/jira",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "SSO via Okta. Admin only."
+    },
+    {
+      "type": "login",
+      "name": "Confluence",
+      "login": {
+        "username": "admin@zero-knowledge.example",
+        "password": "C0nfluenceW1k12024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.atlassian.net/wiki",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://zero-knowledge-labs.atlassian.net/wiki",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Linear",
+      "login": {
+        "username": "pm@zero-knowledge.example",
+        "password": "L1nearPr0ject2024#",
+        "uris": [
+          {
+            "uri": "https://linear.app",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Notion",
+      "login": {
+        "username": "workspace@zero-knowledge.example",
+        "password": "N0t10nW0rkspace2024#",
+        "uris": [
+          {
+            "uri": "https://notion.so",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Slack",
+      "login": {
+        "username": "admin@zero-knowledge.example",
+        "password": "SlackW0rkspace2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.slack.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://app.slack.com/client/T0ZKLABS",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "Workspace admin account"
+    },
+    {
+      "type": "login",
+      "name": "Zoom",
+      "login": {
+        "username": "meetings@zero-knowledge.example",
+        "password": "Z00mM33t1ngs2024#",
+        "uris": [
+          {
+            "uri": "https://zoom.us",
+            "match": "domain"
+          },
+          {
+            "uri": "https://zoom.us/signin",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Microsoft Teams",
+      "login": {
+        "username": "admin@zeroknowledgelabs.onmicrosoft.com",
+        "password": "T3amsAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://teams.microsoft.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://teams.live.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Google Workspace Admin",
+      "login": {
+        "username": "admin@zero-knowledge.example",
+        "password": "GW0rkspaceAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://admin.google.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://workspace.google.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPGWA"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Okta SSO",
+      "login": {
+        "username": "admin@zero-knowledge.example",
+        "password": "0ktaSS0Adm1n2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.okta.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://zero-knowledge-labs.okta.com/app/UserHome",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "GEZDGNBVGY3TQOJQ"
+      },
+      "notes": "Break-glass super admin"
+    },
+    {
+      "type": "login",
+      "name": "Duo Security",
+      "login": {
+        "username": "duo-admin@zero-knowledge.example",
+        "password": "Du0S3cur1tyAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://admin-api.duosecurity.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPDUO"
+      },
+      "notes": "MFA provider admin API creds"
+    },
+    {
+      "type": "login",
+      "name": "Snyk",
+      "login": {
+        "username": "security@zero-knowledge.example",
+        "password": "SnykS3cur1tyScan2024#",
+        "uris": [
+          {
+            "uri": "https://app.snyk.io",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPSNK"
+      },
+      "notes": "Integrated with GitHub PRs"
+    },
+    {
+      "type": "login",
+      "name": "SonarCloud (Dev)",
+      "login": {
+        "username": "quality@zero-knowledge.example",
+        "password": "S0narC0deQual1ty2024#",
+        "uris": [
+          {
+            "uri": "https://sonarcloud.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "HackerOne",
+      "login": {
+        "username": "bugbounty@zero-knowledge.example",
+        "password": "Hack3r0neBugB0unty2024#",
+        "uris": [
+          {
+            "uri": "https://hackerone.com/zero-knowledge-labs",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "CrowdStrike Falcon",
+      "login": {
+        "username": "endpoint@zero-knowledge.example",
+        "password": "Cr0wdStr1keFalc0n2024#",
+        "uris": [
+          {
+            "uri": "https://falcon.crowdstrike.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Endpoint protection - all laptops"
+    },
+    {
+      "type": "login",
+      "name": "OpenAI Platform",
+      "login": {
+        "username": "ai@zero-knowledge.example",
+        "password": "0penA1Platf0rm2024#",
+        "uris": [
+          {
+            "uri": "https://platform.openai.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "$2K/month cap. Need approval."
+    },
+    {
+      "type": "login",
+      "name": "Anthropic Console",
+      "login": {
+        "username": "ml@zero-knowledge.example",
+        "password": "Anthr0picC0nsole2024#",
+        "uris": [
+          {
+            "uri": "https://console.anthropic.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "ML team experiments only"
+    },
+    {
+      "type": "login",
+      "name": "GitHub Copilot Business",
+      "login": {
+        "username": "zkl-admin",
+        "password": "C0p1lotBus1ness2024#",
+        "uris": [
+          {
+            "uri": "https://github.com/settings/copilot",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Salesforce",
+      "login": {
+        "username": "crm-admin@zero-knowledge.example",
+        "password": "Sal3sf0rceAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.lightning.force.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://login.salesforce.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "SSO via Okta. Break-glass."
+    },
+    {
+      "type": "login",
+      "name": "Zendesk",
+      "login": {
+        "username": "support@zero-knowledge.example",
+        "password": "Z3ndeskSupp0rt2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.zendesk.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://zero-knowledge-labs.zendesk.com/agent",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Stripe Dashboard",
+      "login": {
+        "username": "billing@zero-knowledge.example",
+        "password": "Str1peB1ll1ng2024#",
+        "uris": [
+          {
+            "uri": "https://dashboard.stripe.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://dashboard.stripe.com/login",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPSTR"
+      },
+      "notes": "PCI scope. Restrict access."
+    },
+    {
+      "type": "login",
+      "name": "HubSpot",
+      "login": {
+        "username": "marketing@zero-knowledge.example",
+        "password": "HubSp0tMark3t1ng2024#",
+        "uris": [
+          {
+            "uri": "https://app.hubspot.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://app.hubspot.com/login",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "Syncs with Salesforce nightly"
+    },
+    {
+      "type": "login",
+      "name": "BambooHR (Dev)",
+      "login": {
+        "username": "hr@zero-knowledge.example",
+        "password": "Bamb00HRP30ple2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.bamboohr.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://www.bamboohr.com/login",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Rippling",
+      "login": {
+        "username": "people-ops@zero-knowledge.example",
+        "password": "R1ppl1ngPayr0ll2024#",
+        "uris": [
+          {
+            "uri": "https://app.rippling.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "npm Registry",
+      "login": {
+        "username": "zkl-packages",
+        "password": "NpmPack@g3Pub2024#",
+        "uris": [
+          {
+            "uri": "https://www.npmjs.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPNPM"
+      },
+      "notes": "@zkl scoped packages"
+    },
+    {
+      "type": "login",
+      "name": "NuGet Gallery",
+      "login": {
+        "username": "zkl-nuget",
+        "password": "NuG3tPack@g3s2024#",
+        "uris": [
+          {
+            "uri": "https://www.nuget.org",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Postman",
+      "login": {
+        "username": "api@zero-knowledge.example",
+        "password": "P0stmanAp1T3st2024#",
+        "uris": [
+          {
+            "uri": "https://app.getpostman.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Shared collections from GitHub"
+    },
+    {
+      "type": "login",
+      "name": "Figma",
+      "login": {
+        "username": "design@zero-knowledge.example",
+        "password": "F1gmaD3s1gnT3am2024#",
+        "uris": [
+          {
+            "uri": "https://www.figma.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://www.figma.com/login",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "SSO via Okta. Admin seat."
+    },
+    {
+      "type": "secureNote",
+      "name": "Dev Environment Setup - macOS",
+      "notes": "# macOS Development Setup\n\n## Prerequisites\n- Homebrew: `/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"`\n- Xcode CLI: `xcode-select --install`\n\n## Core Tools\n```bash\nbrew install dotnet-sdk node@20 docker docker-compose rustup-init\nbrew install --cask visual-studio-code rider\nrustup default stable\n```\n\n## Database\n```bash\ndocker pull mcr.microsoft.com/mssql/server:2022-latest\ndocker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=S3curePa55w0rd' -p 1433:1433 --name zkl-mssql -d mcr.microsoft.com/mssql/server:2022-latest\n```\n\n## Environment Variables\n```bash\nexport ASPNETCORE_ENVIRONMENT=Development\nexport ZKL_DB_CONNECTION='Server=localhost;Database=vault;User Id=sa;Password=S3curePa55w0rd;'\n```\n\n## Verify\n```bash\ndotnet --version && node --version && docker --version && cargo --version\n```"
+    },
+    {
+      "type": "secureNote",
+      "name": "Dev Environment Setup - Linux",
+      "notes": "# Linux (Ubuntu/Debian) Development Setup\n\n## System Packages\n```bash\nsudo apt update && sudo apt install -y build-essential curl git wget unzip\n```\n\n## .NET SDK\n```bash\nwget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh\nchmod +x dotnet-install.sh && ./dotnet-install.sh --channel 8.0\n```\n\n## Node.js via nvm\n```bash\ncurl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash\nnvm install 20 && nvm use 20\n```\n\n## Docker\n```bash\ncurl -fsSL https://get.docker.com | sh\nsudo usermod -aG docker $USER\n```\n\n## WSL Notes (Windows Users)\n- Use WSL2 with Ubuntu 22.04\n- Mount host repos via /mnt/c/Users/...\n- Docker Desktop WSL2 backend recommended\n- Set `export DOCKER_HOST=unix:///var/run/docker.sock`"
+    },
+    {
+      "type": "secureNote",
+      "name": "Local Database Setup",
+      "notes": "# Local MSSQL Database Setup\n\n## Docker Compose (Recommended)\n```yaml\nversion: '3.8'\nservices:\n  mssql:\n    image: mcr.microsoft.com/mssql/server:2022-latest\n    environment:\n      - ACCEPT_EULA=Y\n      - SA_PASSWORD=S3curePa55w0rd\n      - MSSQL_PID=Developer\n    ports:\n      - '1433:1433'\n    volumes:\n      - mssql-data:/var/opt/mssql\nvolumes:\n  mssql-data:\n```\n\n## Connection Strings\n- Default: `Server=localhost;Database=vault;User Id=sa;Password=S3curePa55w0rd;TrustServerCertificate=True`\n- Named Instance: `Server=localhost\\SQLEXPRESS;Database=vault;Integrated Security=True`\n\n## Migrations\n```bash\npwsh dev/migrate.ps1\n# Or manually:\ndotnet run --project util/MsSqlMigratorUtility -- --database vault\n```\n\n## Useful Queries\n```sql\nSELECT name, state_desc FROM sys.databases;\nSELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';\n```"
+    },
+    {
+      "type": "secureNote",
+      "name": "VPN Configuration Notes",
+      "notes": "# VPN Configuration\n\n## Endpoints\n- US-East: `vpn-east.zero-knowledge.example:1194`\n- US-West: `vpn-west.zero-knowledge.example:1194`\n- EU-Central: `vpn-eu.zero-knowledge.example:1194`\n\n## Certificate Locations\n- CA Cert: `~/.config/zkl-vpn/ca.crt`\n- Client Cert: `~/.config/zkl-vpn/client.crt`\n- Client Key: `~/.config/zkl-vpn/client.key`\n\n## Connection\n```bash\nsudo openvpn --config ~/.config/zkl-vpn/zkl-prod.ovpn\n```\n\n## Troubleshooting\n- If DNS resolution fails: `sudo systemctl restart systemd-resolved`\n- Cert expired? Re-download from https://vpn-portal.zero-knowledge.example\n- Split tunnel: Only traffic to 10.0.0.0/8 routes through VPN"
+    },
+    {
+      "type": "secureNote",
+      "name": "AWS Access Setup",
+      "notes": "# AWS Access Configuration\n\n## Profile Setup (~/.aws/config)\n```ini\n[profile zkl-dev]\nregion = us-east-1\noutput = json\nrole_arn = arn:aws:iam::123456789012:role/ZKL-Developer\nsource_profile = zkl-sso\nmfa_serial = arn:aws:iam::123456789012:mfa/your-username\n\n[profile zkl-staging]\nregion = us-east-1\nrole_arn = arn:aws:iam::234567890123:role/ZKL-Staging-ReadOnly\nsource_profile = zkl-sso\n```\n\n## SSO Login\n```bash\naws sso login --profile zkl-dev\n```\n\n## MFA Instructions\n1. Install authenticator app (Duo recommended)\n2. Go to IAM > Users > your-user > Security Credentials\n3. Assign MFA device\n4. Use `aws sts get-session-token --serial-number <mfa-arn> --token-code <code>`\n\n## Role Assumption\n```bash\naws sts assume-role --role-arn arn:aws:iam::123456789012:role/ZKL-Developer --role-session-name dev-session\n```"
+    },
+    {
+      "type": "secureNote",
+      "name": "GCP Service Account Setup",
+      "notes": "# GCP Service Account Configuration\n\n## Project IDs\n- Dev: `zkl-dev-platform`\n- Staging: `zkl-staging-platform`\n- Production: `zkl-prod-platform` (restricted access)\n\n## Service Account Key Management\n```bash\n# Create key (admin only)\ngcloud iam service-accounts keys create key.json \\\n  --iam-account=svc-dev@zkl-dev-platform.iam.gserviceaccount.com\n\n# Activate\ngcloud auth activate-service-account --key-file=key.json\n```\n\n## Application Default Credentials\n```bash\ngcloud auth application-default login\nexport GOOGLE_APPLICATION_CREDENTIALS=~/.config/gcloud/application_default_credentials.json\n```\n\n## Key Rotation Policy\n- Keys rotate every 90 days\n- Old keys have 7-day grace period\n- Notify #platform-eng Slack channel before rotation"
+    },
+    {
+      "type": "secureNote",
+      "name": "On-Call Runbook",
+      "notes": "# On-Call Runbook\n\n## Severity Levels\n- SEV1 (Critical): Complete service outage, data loss risk. Response: 5 min. Escalate immediately.\n- SEV2 (Major): Significant degradation, feature unavailable. Response: 15 min.\n- SEV3 (Minor): Minor impact, workaround exists. Response: 1 hour.\n- SEV4 (Low): Cosmetic, no user impact. Response: next business day.\n\n## Escalation Chain\n1. Primary on-call engineer\n2. Secondary on-call engineer (15 min no-response)\n3. Engineering Manager (30 min no-response)\n4. VP Engineering (SEV1 only, 45 min no-response)\n5. CTO (SEV1 with data breach, immediate)\n\n## War Room Setup\n1. Create Slack channel: #incident-YYYY-MM-DD-brief-description\n2. Start Zoom bridge: On-Call War Room (always-on link)\n3. Assign roles: Incident Commander, Scribe, Communications\n4. Post status updates every 15 min (SEV1) or 30 min (SEV2)\n\n## Post-Incident\n- Blameless postmortem within 48 hours\n- Document in Confluence: Engineering > Postmortems\n- Action items tracked in Jira epic: INCIDENT-XXXX"
+    },
+    {
+      "type": "secureNote",
+      "name": "Code Review Checklist",
+      "notes": "# Code Review Checklist\n\n## Before Requesting Review\n- Self-reviewed the diff\n- Tests pass locally (dotnet test)\n- No secrets or PII in code\n- PR description explains WHY, not just WHAT\n- Linked Jira ticket in PR title: [ZKL-1234] Description\n\n## Reviewer Checklist\n- Logic correctness - does it do what it claims?\n- Edge cases - nulls, empty collections, boundaries\n- Security - input validation, SQL injection, XSS\n- Performance - N+1 queries, unnecessary allocations\n- Error handling - appropriate exceptions, logging\n- Naming - clear, consistent with codebase conventions\n- Tests - adequate coverage, testing behavior not implementation\n\n## Team Conventions\n- Approve with 'LGTM' or specific approval\n- Request changes with actionable feedback\n- Use 'nit:' prefix for non-blocking suggestions\n- Minimum 1 approval required, 2 for security-sensitive changes\n- Auto-merge enabled for PRs with 2+ approvals and green CI"
+    },
+    {
+      "type": "secureNote",
+      "name": "New Hire Engineering Onboarding",
+      "notes": "# New Hire Engineering Onboarding\n\n## Week 1 - Setup & Orientation\n- Laptop configured (macOS or Linux)\n- Accounts created: GitHub, Jira, Confluence, Slack, Okta, Duo\n- Dev environment set up (see 'Dev Environment Setup' notes)\n- VPN configured and tested\n- AWS/GCP access requested via IT ticket\n- Added to team Slack channels\n- 1:1 with Engineering Manager\n- Meet your onboarding buddy\n\n## Week 2 - Codebase Deep-Dive\n- Clone and build all repositories\n- Run full test suite successfully\n- Review Architecture Decision Records (ADRs)\n- Shadow a code review\n- First 'good first issue' PR submitted\n\n## Week 3-4 - Ramp Up\n- Complete first feature PR\n- Participate in sprint planning\n- Join on-call shadow rotation\n- Present at team demo\n\n## Key Contacts\n- IT Support: #it-help on Slack\n- Security Questions: #security on Slack\n- HR/Benefits: #people-ops on Slack"
+    },
+    {
+      "type": "secureNote",
+      "name": "Release Process",
+      "notes": "# Release Process\n\n## Branching Strategy\n- `main` - always deployable, protected\n- `release/vX.Y.Z` - cut from main for release candidates\n- `hotfix/description` - emergency fixes branched from latest release tag\n\n## Release Steps\n1. Cut release branch: `git checkout -b release/vX.Y.Z main`\n2. Bump version numbers in `Directory.Build.props`\n3. Run full regression: `dotnet test --configuration Release`\n4. Create RC tag: `git tag vX.Y.Z-rc1`\n5. Deploy to staging, run smoke tests\n6. QA sign-off (72-hour bake period for major releases)\n7. Merge to main, create release tag: `git tag vX.Y.Z`\n8. Deploy to production (blue-green deployment)\n9. Monitor dashboards for 1 hour post-deploy\n10. Announce in #engineering and #releases\n\n## Rollback Procedure\n1. Revert to previous blue/green slot\n2. Verify service health\n3. Create hotfix branch if needed\n4. Post-incident review if rollback was due to bug"
+    },
+    {
+      "type": "secureNote",
+      "name": "Incident Response Playbook",
+      "notes": "# Incident Response Playbook\n\n## Detection\n- Automated: PagerDuty alerts from Datadog monitors\n- Manual: User reports via Zendesk or #incidents Slack channel\n- Synthetic: Uptime checks from multiple regions\n\n## Response Steps\n1. Acknowledge the alert within SLA\n2. Assess severity using the On-Call Runbook severity matrix\n3. Communicate - post in #incidents with initial assessment\n4. Mitigate - apply immediate fix or workaround\n5. Resolve - deploy permanent fix\n6. Review - schedule blameless postmortem\n\n## Communication Templates\n- Internal: 'Investigating [service] [impact]. Updates every [N] min in #incident-[date]-[desc]'\n- External (if user-facing): 'We are aware of issues affecting [feature]. Our team is actively working on resolution. Updates at status.zero-knowledge.example'\n\n## War Room Roles\n- Incident Commander: Coordinates response, makes decisions\n- Scribe: Documents timeline, actions, decisions\n- Communications Lead: Handles stakeholder updates\n- Subject Matter Expert: Diagnoses and fixes the issue"
+    },
+    {
+      "type": "secureNote",
+      "name": "Architecture Decision Records Template",
+      "notes": "# Architecture Decision Record Template\n\n## ADR-XXXX: [Title]\n\n### Status\n[Proposed | Accepted | Deprecated | Superseded by ADR-YYYY]\n\n### Context\nWhat is the issue? What forces are at play? What decision needs to be made?\n\n### Decision\nWhat is the change that we're proposing and/or doing?\n\n### Consequences\nPositive:\n- ...\n\nNegative:\n- ...\n\nNeutral:\n- ...\n\n### Alternatives Considered\n1. [Alternative A]: Description. Rejected because...\n2. [Alternative B]: Description. Rejected because...\n\n---\n\n## Filing Instructions\n1. Copy this template\n2. Number sequentially (check last ADR number)\n3. Submit as PR to `docs/adrs/` directory\n4. Require 2 approvals from staff+ engineers\n5. Present at Architecture Review meeting\n\n## Where to Find ADRs\n- Repository: `github.com/zero-knowledge-labs/architecture`\n- Confluence: Engineering > Architecture > Decision Records"
+    },
+    {
+      "type": "card",
+      "name": "AWS Billing Credit Card",
+      "card": {
+        "cardholderName": "Zero Knowledge Labs Inc",
+        "brand": "Visa",
+        "number": "4532015112830366",
+        "expMonth": "06",
+        "expYear": "2027",
+        "code": "847"
+      }
+    },
+    {
+      "type": "card",
+      "name": "SaaS Subscriptions Corporate Card",
+      "card": {
+        "cardholderName": "Zero Knowledge Labs Finance",
+        "brand": "Mastercard",
+        "number": "5425233430109903",
+        "expMonth": "09",
+        "expYear": "2028",
+        "code": "234"
+      }
+    },
+    {
+      "type": "card",
+      "name": "Travel & Expenses Corporate Card",
+      "card": {
+        "cardholderName": "Zero Knowledge Labs T&E",
+        "brand": "Amex",
+        "number": "374245455400126",
+        "expMonth": "03",
+        "expYear": "2027",
+        "code": "5678"
+      }
+    },
+    {
+      "type": "identity",
+      "name": "Benefits Portal Profile",
+      "identity": {
+        "firstName": "Zero Knowledge",
+        "lastName": "Labs",
+        "company": "Zero Knowledge Labs Inc",
+        "email": "benefits@zero-knowledge.example",
+        "phone": "555-0100",
+        "address1": "100 Cipher Street",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "country": "US"
+      }
+    },
+    {
+      "type": "identity",
+      "name": "Payroll System Profile",
+      "identity": {
+        "firstName": "Zero Knowledge",
+        "lastName": "Labs",
+        "company": "Zero Knowledge Labs Inc",
+        "email": "payroll@zero-knowledge.example",
+        "phone": "555-0200",
+        "address1": "100 Cipher Street",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "country": "US"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Jenkins CI (Legacy - DO NOT USE)",
+      "notes": "Migrated to GitHub Actions Q2 2023. Leaving this here in case we need to reference old build configs.",
+      "login": {
+        "username": "ci-admin@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://jenkins.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Internal Wiki",
+      "login": {
+        "password": "W1k1Acc3ss2023#",
+        "uris": [
+          {
+            "uri": "https://wiki.internal.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Staging Database Credentials",
+      "login": {
+        "username": "staging_readonly",
+        "password": "St@g1ngR3ad0nly2024"
+      },
+      "notes": "Read-only staging access"
+    },
+    {
+      "type": "login",
+      "name": "Old Monitoring Service",
+      "login": {
+        "username": "alerts@zero-knowledge.example"
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "TODO: Document API Rate Limits",
+      "notes": ""
+    },
+    {
+      "type": "login",
+      "name": "AWS Console (old account - migrated)",
+      "notes": "DO NOT USE - migrated to new org account in Jan 2024. Keeping for audit trail. Old account will be decommissioned EOQ.",
+      "login": {
+        "username": "legacy-admin@zero-knowledge.example",
+        "password": "OldAws2022Acc0unt",
+        "uris": [
+          {
+            "uri": "https://old-account.signin.aws.amazon.com/console",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "https://internal-dashboard.zero-knowledge.example/admin",
+      "login": {
+        "username": "admin",
+        "password": "ChangeMeL8r2024",
+        "uris": [
+          {
+            "uri": "https://internal-dashboard.zero-knowledge.example/admin",
+            "match": "exact"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Office Wifi Passwords",
+      "notes": "Guest Network: ZKL-Guest / Welcome2ZKL\nCorporate WPA: ZKL-Corp / ask IT for current password\nConference Room AV: PIN 4521",
+      "login": {}
+    },
+    {
+      "type": "card",
+      "name": "Corporate Amex (Curtis has physical card)",
+      "card": {
+        "brand": "Amex",
+        "number": "0126"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Heroku (DECOMMISSIONED Q3 2023)",
+      "notes": "App migrated to AWS ECS. Account cancelled. Keeping entry for reference only.",
+      "login": {
+        "username": "platform@zero-knowledge.example",
+        "password": "H3r0kuL3gacy2022",
+        "uris": [
+          {
+            "uri": "https://dashboard.heroku.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Staging Environments (all)",
+      "login": {
+        "username": "qa-automation",
+        "password": "St@g1ngQA2024#",
+        "uris": [
+          {
+            "uri": "https://staging-api.zero-knowledge.example",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://staging-web.zero-knowledge.example",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://staging-admin.zero-knowledge.example",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Conference Room AV System PINs",
+      "notes": "Atlas (3rd floor): 4521\nOlympus (4th floor): 8834\nNebula (5th floor): 2209\nSomeone please update these they haven't been changed in 2 years"
+    },
+    {
+      "type": "login",
+      "name": "GitHub (old personal account - needs migration)",
+      "notes": "This is from before we had the org account. Some old repos still reference this. TODO: migrate remaining forks.",
+      "login": {
+        "username": "zkl-founder",
+        "password": "V3ryOldP@ss2019",
+        "uris": [
+          {
+            "uri": "https://gitlab.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "identity",
+      "name": "Emergency Contact - Office",
+      "identity": {
+        "firstName": "Building",
+        "lastName": "Management"
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Q3 2024 Infrastructure Audit - CONFIDENTIAL",
+      "notes": "## Executive Summary\nThird-party audit conducted by SecureReview Partners (Sep 2024).\n\n## Key Findings\n1. All production databases encrypted at rest (AES-256) - PASS\n2. TLS 1.3 enforced on all public endpoints - PASS\n3. IAM roles follow least-privilege principle - PASS with minor findings\n4. Secret rotation cadence: 87% compliance (target 95%) - NEEDS IMPROVEMENT\n5. Container image scanning: All images scanned pre-deployment - PASS\n6. Network segmentation between prod/staging - PASS\n7. Backup restoration tested quarterly - PASS\n8. Employee security training completion: 94% - PASS\n\n## Action Items\n- Increase secret rotation compliance to 95% by Q4 2024\n- Implement automated rotation for remaining 13% of secrets\n- Schedule follow-up audit for Q1 2025\n\n## Classification: Internal - Confidential\nDo not share outside of Security Engineering and Executive teams."
+    },
+    {
+      "type": "login",
+      "name": "MFA Backup Codes - Okta",
+      "notes": "Emergency bypass codes (one-time use):\n8374-2951\n6628-1047\n3391-8825\n7742-5563\n9918-3346",
+      "login": {
+        "totp": "MFAWJ3DPEHPK3PXPOKTA"
+      }
+    },
+    {
+      "type": "card",
+      "name": "Old Procurement Card (EXPIRED)",
+      "notes": "Card expired. New card issued to Finance team. Keeping for receipt reconciliation.",
+      "card": {
+        "cardholderName": "Zero Knowledge Labs Procurement",
+        "brand": "Visa",
+        "number": "4916338506082832",
+        "expMonth": "11",
+        "expYear": "2023"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Placeholder - API Integration (WIP)",
+      "notes": "Reserved for upcoming partner integration. Credentials TBD.",
+      "login": {
+        "username": "",
+        "password": "",
+        "uris": [
+          {
+            "uri": "https://api.partner-tbd.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "see 'AWS Console' for root credentials",
+      "notes": "Root account creds are in the 'AWS Console' entry. This note exists because people kept asking where they were."
+    },
+    {
+      "type": "login",
+      "name": "Datadog (Marcus's personal trial)",
+      "notes": "Marcus set this up for a POC before we got the enterprise license. Should probably delete but the dashboards are still useful for reference.",
+      "login": {
+        "username": "marcus.chen@zero-knowledge.example",
+        "password": "Dd0gTr1al2023",
+        "uris": [
+          {
+            "uri": "https://app.datadoghq.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Load Testing Environment",
+      "login": {
+        "username": "loadtest",
+        "password": "password123",
+        "uris": [
+          {
+            "uri": "https://loadtest.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Weak password - ephemeral env"
+    },
+    {
+      "type": "secureNote",
+      "name": "Board Meeting Zoom Bridge",
+      "notes": "https://zoom.us/j/98765432100?pwd=fakeZoomPassword123"
+    },
+    {
+      "type": "card",
+      "name": "Backup Visa (no CVV on file)",
+      "card": {
+        "cardholderName": "Zero Knowledge Labs Inc",
+        "brand": "Visa",
+        "number": "4539578763621486",
+        "expMonth": "08",
+        "expYear": "2026"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Something Important (ask Elena)",
+      "login": {
+        "password": "Kj29x!mQ84pLz"
+      }
+    },
+    {
+      "type": "identity",
+      "name": "Vendor Contact - CloudMatrix Solutions",
+      "identity": {
+        "company": "CloudMatrix Solutions"
+      }
+    },
+    {
+      "type": "login",
+      "name": "United Airlines MileagePlus",
+      "login": {
+        "username": "mchen@zero-knowledge.example",
+        "password": "Un1t3dMP2024#",
+        "uris": [
+          {
+            "uri": "https://www.united.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Delta SkyMiles",
+      "login": {
+        "username": "priya.narayanan@zero-knowledge.example",
+        "password": "D3ltaSkyM1les2024",
+        "uris": [
+          {
+            "uri": "https://www.delta.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "American Airlines AAdvantage",
+      "login": {
+        "username": "exec-travel@zero-knowledge.example",
+        "password": "AAdv@ntag3Exec2024",
+        "uris": [
+          {
+            "uri": "https://www.aa.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Southwest Airlines Rapid Rewards",
+      "login": {
+        "username": "travel@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://www.southwest.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Marriott Bonvoy",
+      "login": {
+        "username": "exec-travel@zero-knowledge.example",
+        "password": "M@rr10ttB0nv0y2024",
+        "uris": [
+          {
+            "uri": "https://www.marriott.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Hilton Honors",
+      "login": {
+        "username": "exec-travel@zero-knowledge.example",
+        "password": "H1lt0nH0n0rs2024#",
+        "uris": [
+          {
+            "uri": "https://www.hilton.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Hyatt World of Hyatt",
+      "login": {
+        "username": "travel@zero-knowledge.example",
+        "password": "HyattW0rld2024",
+        "uris": [
+          {
+            "uri": "https://www.hyatt.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "IHG One Rewards",
+      "notes": "Used for the Austin offsite. Think Catherine booked this one.",
+      "login": {
+        "username": "travel@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://www.ihg.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Expensify",
+      "login": {
+        "username": "finance@zero-knowledge.example",
+        "password": "Exp3ns1fyF1n2024#",
+        "uris": [
+          {
+            "uri": "https://www.expensify.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://www.expensify.com/signin",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Brex",
+      "login": {
+        "username": "catherine.okonkwo@zero-knowledge.example",
+        "password": "Br3xC0rp2024#",
+        "uris": [
+          {
+            "uri": "https://dashboard.brex.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPBRX"
+      },
+      "notes": "Catherine is primary admin"
+    },
+    {
+      "type": "login",
+      "name": "Concur Travel & Expense",
+      "login": {
+        "username": "admin@zero-knowledge.example",
+        "password": "C0ncurTrav3l2024",
+        "uris": [
+          {
+            "uri": "https://www.concursolutions.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Receipts required over $25"
+    },
+    {
+      "type": "login",
+      "name": "Uber for Business",
+      "login": {
+        "username": "exec-ops@zero-knowledge.example",
+        "password": "Ub3rBus1ness2024#",
+        "uris": [
+          {
+            "uri": "https://business.uber.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Lyft Business",
+      "login": {
+        "username": "exec-ops@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://www.lyftbusiness.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "OpenTable (team dinners)",
+      "notes": "Used for booking team dinners and client meals. Ask James for the company profile.",
+      "login": {
+        "username": "events@zero-knowledge.example",
+        "password": "0penT@ble2024",
+        "uris": [
+          {
+            "uri": "https://www.opentable.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Resy",
+      "login": {
+        "username": "marcus.chen@zero-knowledge.example",
+        "password": "R3syR3serv2024",
+        "uris": [
+          {
+            "uri": "https://resy.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "DoorDash for Work",
+      "login": {
+        "username": "office@zero-knowledge.example",
+        "password": "D00rD@shW0rk2024",
+        "uris": [
+          {
+            "uri": "https://www.doordash.com/business",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Navan (formerly TripActions)",
+      "login": {
+        "username": "travel@zero-knowledge.example",
+        "password": "N@vanTr@vel2024#",
+        "uris": [
+          {
+            "uri": "https://app.navan.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Primary travel booking tool"
+    },
+    {
+      "type": "login",
+      "name": "Global Entry / TSA PreCheck",
+      "notes": "Company-sponsored enrollment. Renewal tracked by People Ops.\nKnown Traveler Numbers on file with Navan.",
+      "login": {
+        "username": "exec-travel@zero-knowledge.example",
+        "password": "Gl0b@lEntry2024",
+        "uris": [
+          {
+            "uri": "https://ttp.cbp.dhs.gov",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Gartner Research Portal",
+      "login": {
+        "username": "cto@zero-knowledge.example",
+        "password": "G@rtnerR3search2024",
+        "uris": [
+          {
+            "uri": "https://www.gartner.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "5 seats. CTO office manages."
+    },
+    {
+      "type": "login",
+      "name": "Harvard Business Review",
+      "login": {
+        "username": "exec-team@zero-knowledge.example",
+        "password": "HBR2024Acc3ss",
+        "uris": [
+          {
+            "uri": "https://hbr.org",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Wall Street Journal",
+      "login": {
+        "username": "marcus.chen@zero-knowledge.example",
+        "password": "WSJ2024R3ader",
+        "uris": [
+          {
+            "uri": "https://www.wsj.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LinkedIn Recruiter (Executive)",
+      "login": {
+        "username": "talent@zero-knowledge.example",
+        "password": "L1nkR3cru1ter2024#",
+        "uris": [
+          {
+            "uri": "https://www.linkedin.com/talent",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://www.linkedin.com/talent",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "VP+ searches only"
+    },
+    {
+      "type": "login",
+      "name": "Greenhouse ATS (Executive)",
+      "login": {
+        "username": "hiring@zero-knowledge.example",
+        "password": "Gr33nh0useATS2024",
+        "uris": [
+          {
+            "uri": "https://app.greenhouse.io",
+            "match": "domain"
+          },
+          {
+            "uri": "https://app2.greenhouse.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "DocuSign (Executive)",
+      "login": {
+        "username": "legal@zero-knowledge.example",
+        "password": "D0cuS1gnL3gal2024#",
+        "uris": [
+          {
+            "uri": "https://app.docusign.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Board docs and exec contracts"
+    },
+    {
+      "type": "login",
+      "name": "Carta (Cap Table)",
+      "login": {
+        "username": "catherine.okonkwo@zero-knowledge.example",
+        "password": "C@rtaCap2024#",
+        "uris": [
+          {
+            "uri": "https://app.carta.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPCRT"
+      },
+      "notes": "CFO, GC, and CEO access only"
+    },
+    {
+      "type": "login",
+      "name": "AngelList / Wellfound",
+      "login": {
+        "username": "hr@zero-knowledge.example",
+        "password": "W3llfound2024",
+        "uris": [
+          {
+            "uri": "https://wellfound.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "WeWork Members Portal",
+      "notes": "SF office - 100 Cipher Street\nAll Access pass for execs. Regular employees use HQ badge.",
+      "login": {
+        "username": "office@zero-knowledge.example",
+        "password": "W3W0rkSF2024",
+        "uris": [
+          {
+            "uri": "https://members.wework.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "FedEx Business Account",
+      "login": {
+        "username": "shipping@zero-knowledge.example",
+        "password": "F3dExBus2024#",
+        "uris": [
+          {
+            "uri": "https://www.fedex.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Calendly (exec scheduling)",
+      "login": {
+        "username": "marcus.chen@zero-knowledge.example",
+        "password": "C@l3ndlyExec2024",
+        "uris": [
+          {
+            "uri": "https://calendly.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Loom (board presentations)",
+      "login": {
+        "username": "exec-team@zero-knowledge.example",
+        "password": "L00mPr3s2024",
+        "uris": [
+          {
+            "uri": "https://www.loom.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Marriott - can't remember which location",
+      "notes": "Pretty sure this was the Nashville offsite? Or maybe Austin. The confirmation email should be in James's inbox somewhere.",
+      "login": {
+        "username": "james.whitfield@zero-knowledge.example"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Some airline thing (Elena created this)",
+      "login": {
+        "password": "Trav3l2023Temp"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Hotel Booking - RSA Conference 2024",
+      "notes": "Booked through Navan but saved creds here just in case. May be expired by now.",
+      "login": {
+        "username": "travel@zero-knowledge.example",
+        "password": "RSAConf2024Book",
+        "uris": [
+          {
+            "uri": "https://www.marriott.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://app.navan.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Board Meeting Notes - Q4 2024 (DRAFT)",
+      "notes": ""
+    },
+    {
+      "type": "card",
+      "name": "CEO Travel Card (physical card with Marcus)",
+      "card": {
+        "brand": "Visa",
+        "number": "8492"
+      }
+    },
+    {
+      "type": "card",
+      "name": "CFO Corporate Card",
+      "card": {
+        "cardholderName": "Catherine Okonkwo",
+        "brand": "Mastercard",
+        "number": "5412751234567890",
+        "expMonth": "01",
+        "expYear": "2028",
+        "code": "771"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Priority Pass (airport lounges)",
+      "login": {
+        "username": "ZKL-CORP-2024",
+        "uris": [
+          {
+            "uri": "https://www.prioritypass.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Clear Plus (airport security)",
+      "notes": "Company covers CLEAR for VP+ level. Enrollment managed through People Ops.",
+      "login": {
+        "username": "exec-benefits@zero-knowledge.example",
+        "password": "Cl3@rPlus2024",
+        "uris": [
+          {
+            "uri": "https://www.clearme.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "SF Office Door Codes",
+      "notes": "Front entrance: 7734#\nServer room: 2891# (SRE + IT only)\nExec suite (5th floor): 4456#\nLast updated: October 2024\n\nNOTE: Please update these quarterly per security policy. We are overdue."
+    },
+    {
+      "type": "login",
+      "name": "Investor Portal - Series C Dashboard",
+      "login": {
+        "username": "marcus.chen@zero-knowledge.example",
+        "password": "Inv3st0rP0rtal2024#",
+        "uris": [
+          {
+            "uri": "https://investor.zero-knowledge.example",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPINVSTR"
+      }
+    },
+    {
+      "type": "login",
+      "name": "AWS re:Invent Registration",
+      "notes": "Annual conference. This was for re:Invent 2024. Need to re-register for 2025 when it opens.",
+      "login": {
+        "username": "priya.narayanan@zero-knowledge.example",
+        "password": "r3Inv3nt2024Reg",
+        "uris": [
+          {
+            "uri": "https://reinvent.awsevents.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "identity",
+      "name": "Company Registration - Delaware",
+      "identity": {
+        "company": "Zero Knowledge Labs Inc",
+        "address1": "1209 Orange Street",
+        "city": "Wilmington",
+        "state": "DE",
+        "postalCode": "19801",
+        "country": "US"
+      }
+    },
+    {
+      "type": "login",
+      "name": "DocuSign (Legal)",
+      "login": {
+        "username": "legal@zero-knowledge.example",
+        "password": "D0cuS1gn2024#",
+        "uris": [
+          {
+            "uri": "https://app.docusign.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Ironclad CLM",
+      "login": {
+        "username": "contracts@zero-knowledge.example",
+        "password": "1r0ncl@dCLM2024#",
+        "uris": [
+          {
+            "uri": "https://app.ironcladapp.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "All vendor agreements here"
+    },
+    {
+      "type": "login",
+      "name": "Drata (SOC 2 Compliance)",
+      "login": {
+        "username": "compliance@zero-knowledge.example",
+        "password": "Dr@t@SOC2024#",
+        "uris": [
+          {
+            "uri": "https://app.drata.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPDRATA"
+      },
+      "notes": "Auto evidence collection"
+    },
+    {
+      "type": "login",
+      "name": "Vanta",
+      "login": {
+        "username": "compliance@zero-knowledge.example",
+        "password": "V@nt@Compl2024#",
+        "uris": [
+          {
+            "uri": "https://app.vanta.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "OneTrust (Privacy & GRC)",
+      "login": {
+        "username": "privacy@zero-knowledge.example",
+        "password": "0n3TrustGRC2024#",
+        "uris": [
+          {
+            "uri": "https://app.onetrust.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Westlaw Legal Research",
+      "login": {
+        "username": "legal-research@zero-knowledge.example",
+        "password": "W3stl@wR3search2024",
+        "uris": [
+          {
+            "uri": "https://www.westlaw.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LexisNexis",
+      "login": {
+        "username": "legal-research@zero-knowledge.example",
+        "password": "L3x1sN3x1s2024",
+        "uris": [
+          {
+            "uri": "https://www.lexisnexis.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Delaware Division of Corporations",
+      "notes": "Annual franchise tax filing due March 1st. Entity #: 7654321",
+      "login": {
+        "username": "legal@zero-knowledge.example",
+        "password": "D3l@w@reCorp2024",
+        "uris": [
+          {
+            "uri": "https://icis.corp.delaware.gov",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "USPTO (Trademark Portal)",
+      "login": {
+        "username": "ip@zero-knowledge.example",
+        "password": "USPT0Tm@rk2024",
+        "uris": [
+          {
+            "uri": "https://www.uspto.gov",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Diligent Boards (Board Portal)",
+      "login": {
+        "username": "arthur.kensington@zero-knowledge.example",
+        "password": "D1l1gentB0@rd2024#",
+        "uris": [
+          {
+            "uri": "https://boardeffect.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "HelloSign (backup e-sign)",
+      "notes": "We primarily use DocuSign now. HelloSign kept for some vendor contracts that reference it.",
+      "login": {
+        "username": "legal@zero-knowledge.example",
+        "password": "H3lloS1gn2023",
+        "uris": [
+          {
+            "uri": "https://app.hellosign.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "California Secretary of State",
+      "notes": "Statement of Information due every odd year by April 30.",
+      "login": {
+        "username": "legal@zero-knowledge.example",
+        "password": "CAS0S2024F1l1ng",
+        "uris": [
+          {
+            "uri": "https://bizfileonline.sos.ca.gov",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "GDPR Data Subject Request Portal",
+      "login": {
+        "username": "privacy@zero-knowledge.example",
+        "password": "GDPRDSR2024#",
+        "uris": [
+          {
+            "uri": "https://dsr-portal.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Avalara (Tax Compliance)",
+      "login": {
+        "username": "tax@zero-knowledge.example",
+        "password": "Av@l@r@Tax2024",
+        "uris": [
+          {
+            "uri": "https://admin.avalara.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Insurance Policy Numbers",
+      "notes": "## Active Policies (2024-2025)\n- D&O Insurance: Policy #ZKL-DO-2024-7891 (Chubb)\n- E&O / Professional Liability: Policy #ZKL-EO-2024-4523 (Hartford)\n- Cyber Insurance: Policy #ZKL-CY-2024-8834 (Coalition)\n- General Liability: Policy #ZKL-GL-2024-2201 (Travelers)\n- Workers Comp: Policy #ZKL-WC-2024-5567 (State Fund)\n\nRenewal dates: All renew June 1st. Broker contact: insurance@brokerpartners.example"
+    },
+    {
+      "type": "secureNote",
+      "name": "SOC 2 Type II Audit Schedule",
+      "notes": "## 2025 Audit Timeline\n- Auditor: Schellman & Company\n- Audit window: Jan 1 - Dec 31, 2024 (Type II)\n- Fieldwork: Feb 2025\n- Draft report: March 2025\n- Final report: April 2025\n\n## Evidence Collection Owners\n- Access controls: IT / Raymond Park\n- Change management: Engineering / Elena Vasquez\n- Incident response: SRE / Curtis Washington\n- Risk assessment: Compliance / Evelyn Hartmann\n- Vendor management: Legal / Arthur Kensington"
+    },
+    {
+      "type": "secureNote",
+      "name": "Annual filing calendar (not up to date)",
+      "notes": ""
+    },
+    {
+      "type": "login",
+      "name": "old Vanta account (migrated to Drata)",
+      "notes": "We switched from Vanta to Drata for SOC 2 automation in 2024. Historical evidence still in old Vanta.",
+      "login": {
+        "username": "compliance@zero-knowledge.example",
+        "password": "V@nt@Old2023"
+      }
+    },
+    {
+      "type": "login",
+      "name": "SEC EDGAR (if/when needed)",
+      "notes": "Pre-IPO placeholder. We'll need this if we go public.",
+      "login": {}
+    },
+    {
+      "type": "identity",
+      "name": "Registered Agent - Delaware",
+      "identity": {
+        "company": "Corporation Trust Company",
+        "address1": "1209 Orange Street",
+        "city": "Wilmington",
+        "state": "DE",
+        "postalCode": "19801",
+        "country": "US",
+        "phone": "302-555-0100"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Google Ads",
+      "login": {
+        "username": "ads@zero-knowledge.example",
+        "password": "G00gleAds2024#",
+        "uris": [
+          {
+            "uri": "https://ads.google.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://ads.google.com/aw/overview",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "$15K monthly budget"
+    },
+    {
+      "type": "login",
+      "name": "Meta Business Suite",
+      "login": {
+        "username": "social@zero-knowledge.example",
+        "password": "M3t@Bus1ness2024#",
+        "uris": [
+          {
+            "uri": "https://business.facebook.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://business.facebook.com/latest",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LinkedIn Campaign Manager",
+      "login": {
+        "username": "ads@zero-knowledge.example",
+        "password": "L1nkC@mpa1gn2024",
+        "uris": [
+          {
+            "uri": "https://www.linkedin.com/campaignmanager",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Google Analytics 4",
+      "login": {
+        "username": "analytics@zero-knowledge.example",
+        "password": "GA4Analyt1cs2024#",
+        "uris": [
+          {
+            "uri": "https://analytics.google.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://analytics.google.com/analytics/web",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "All web properties"
+    },
+    {
+      "type": "login",
+      "name": "Mixpanel",
+      "login": {
+        "username": "product-analytics@zero-knowledge.example",
+        "password": "M1xp@nel2024#",
+        "uris": [
+          {
+            "uri": "https://mixpanel.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Ahrefs",
+      "login": {
+        "username": "seo@zero-knowledge.example",
+        "password": "Ahr3fsSE02024#",
+        "uris": [
+          {
+            "uri": "https://app.ahrefs.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "SEMrush",
+      "login": {
+        "username": "seo@zero-knowledge.example",
+        "password": "S3mRushSE02024",
+        "uris": [
+          {
+            "uri": "https://www.semrush.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Mailchimp",
+      "login": {
+        "username": "email@zero-knowledge.example",
+        "password": "M@1lCh1mpEm@il2024#",
+        "uris": [
+          {
+            "uri": "https://login.mailchimp.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://login.mailchimp.com/signup",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "Newsletter and drip campaigns"
+    },
+    {
+      "type": "login",
+      "name": "SendGrid",
+      "login": {
+        "username": "transactional@zero-knowledge.example",
+        "password": "S3ndGr1dTx2024#",
+        "uris": [
+          {
+            "uri": "https://app.sendgrid.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Transactional email. API in Vault."
+    },
+    {
+      "type": "login",
+      "name": "Hootsuite",
+      "login": {
+        "username": "social@zero-knowledge.example",
+        "password": "H00tsu1teS0c1al2024",
+        "uris": [
+          {
+            "uri": "https://hootsuite.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Buffer",
+      "login": {
+        "username": "social@zero-knowledge.example",
+        "password": "Buff3rS0c1al2024",
+        "uris": [
+          {
+            "uri": "https://publish.buffer.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Adobe Creative Cloud",
+      "login": {
+        "username": "design@zero-knowledge.example",
+        "password": "Ad0b3CC2024#",
+        "uris": [
+          {
+            "uri": "https://account.adobe.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://creative.adobe.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Canva Teams",
+      "login": {
+        "username": "design@zero-knowledge.example",
+        "password": "C@nvaT3ams2024",
+        "uris": [
+          {
+            "uri": "https://www.canva.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Figma - Marketing Workspace",
+      "login": {
+        "username": "marketing-design@zero-knowledge.example",
+        "password": "F1gmaM@rk2024#",
+        "uris": [
+          {
+            "uri": "https://www.figma.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Webflow",
+      "login": {
+        "username": "web@zero-knowledge.example",
+        "password": "W3bfl0wCMS2024#",
+        "uris": [
+          {
+            "uri": "https://webflow.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Marketing site CMS"
+    },
+    {
+      "type": "login",
+      "name": "WordPress (Blog)",
+      "login": {
+        "username": "content-admin",
+        "password": "WPBl0gAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://blog.zero-knowledge.example/wp-admin",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "Bridget manages editorial"
+    },
+    {
+      "type": "login",
+      "name": "Marketo",
+      "login": {
+        "username": "marketing-ops@zero-knowledge.example",
+        "password": "M@rk3t0Ops2024#",
+        "uris": [
+          {
+            "uri": "https://app-sjst.marketo.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Amplitude",
+      "login": {
+        "username": "product@zero-knowledge.example",
+        "password": "Ampl1tud3Pr0d2024",
+        "uris": [
+          {
+            "uri": "https://app.amplitude.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Hotjar",
+      "login": {
+        "username": "ux@zero-knowledge.example",
+        "password": "H0tj@rUX2024",
+        "uris": [
+          {
+            "uri": "https://insights.hotjar.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "YouTube Brand Account",
+      "login": {
+        "username": "video@zero-knowledge.example",
+        "password": "YTBr@ndAcc2024#",
+        "uris": [
+          {
+            "uri": "https://studio.youtube.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Twitter/X - @ZKLabs (company handle)",
+      "notes": "Lydia manages this. DO NOT tweet without approval from Celeste.",
+      "login": {
+        "username": "social@zero-knowledge.example",
+        "password": "XZkL@bs2024#",
+        "uris": [
+          {
+            "uri": "https://x.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPXTWTR"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Unsplash (stock photos)",
+      "login": {
+        "username": "design@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://unsplash.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Google Search Console",
+      "login": {
+        "username": "seo@zero-knowledge.example",
+        "password": "GSC2024S3arch#",
+        "uris": [
+          {
+            "uri": "https://search.google.com/search-console",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Old Mailchimp account (migrated)",
+      "notes": "We moved to the new org account in Q2 2024. This one has the old templates and audience lists. Read-only basically.",
+      "login": {
+        "username": "bridget.flanagan@zero-knowledge.example",
+        "password": "OldMC2022",
+        "uris": [
+          {
+            "uri": "https://login.mailchimp.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Brand Guidelines & Asset Links",
+      "notes": "## Brand Assets\n- Logo files: https://drive.google.com/drive/folders/BRAND_LOGOS\n- Brand colors: Primary #1A1A2E, Secondary #16213E, Accent #0F3460\n- Fonts: Inter (headings), Source Sans Pro (body)\n- Figma brand kit: https://www.figma.com/file/BRAND_KIT\n\n## Usage Rules\n- Always use logo on dark backgrounds with #FFFFFF text\n- Minimum logo size: 32px height\n- Never stretch or rotate the logo\n- See full guidelines: https://brand.zero-knowledge.example"
+    },
+    {
+      "type": "secureNote",
+      "name": "Social Media Account List",
+      "notes": "Twitter/X: @ZKLabs - managed by Lydia\nLinkedIn: /company/zero-knowledge-labs - managed by Davi\nYouTube: /c/ZeroKnowledgeLabs - managed by Orlando\nGitHub: /zero-knowledge-labs - managed by Engineering\nDev.to: /zklabs - Bridget has access\n\nAll passwords in Bitwarden. MFA on all accounts."
+    },
+    {
+      "type": "login",
+      "name": "Lottie Files",
+      "login": {
+        "username": "design@zero-knowledge.example",
+        "password": "L0tt13F1les2024",
+        "uris": [
+          {
+            "uri": "https://lottiefiles.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Clearscope (SEO content)",
+      "login": {
+        "username": "content@zero-knowledge.example",
+        "password": "Cl3arsc0peSEO2024",
+        "uris": [
+          {
+            "uri": "https://www.clearscope.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Moz Pro",
+      "notes": "Not sure if we renewed this. Kwesi was evaluating whether to keep Moz or just use Ahrefs.",
+      "login": {
+        "username": "seo@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://moz.com/login",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Sketch Cloud (legacy files)",
+      "notes": "We moved to Figma but some old marketing assets are still in Sketch Cloud.",
+      "login": {
+        "username": "design@zero-knowledge.example",
+        "password": "Sk3tchL3gacy2022",
+        "uris": [
+          {
+            "uri": "https://www.sketch.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Workday HCM",
+      "login": {
+        "username": "hr-admin@zero-knowledge.example",
+        "password": "W0rkd@yHCM2024#",
+        "uris": [
+          {
+            "uri": "https://wd5.myworkday.com/zero-knowledge-labs",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://www.myworkday.com/zeroknowledgelabs",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPWDY"
+      },
+      "notes": "SSO via Okta. Admin access."
+    },
+    {
+      "type": "login",
+      "name": "BambooHR (People Ops)",
+      "login": {
+        "username": "people-ops@zero-knowledge.example",
+        "password": "B@mb00HR2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.bamboohr.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://www.bamboohr.com/login",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Greenhouse ATS (People Ops)",
+      "login": {
+        "username": "recruiting@zero-knowledge.example",
+        "password": "Gr33nh0use2024#",
+        "uris": [
+          {
+            "uri": "https://app.greenhouse.io",
+            "match": "domain"
+          },
+          {
+            "uri": "https://app2.greenhouse.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Lever ATS (legacy)",
+      "notes": "Migrated to Greenhouse Q1 2024. Old candidate data still accessible here for compliance retention.",
+      "login": {
+        "username": "recruiting@zero-knowledge.example",
+        "password": "L3v3rL3gacy2023",
+        "uris": [
+          {
+            "uri": "https://hire.lever.co",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Gusto Payroll",
+      "login": {
+        "username": "payroll@zero-knowledge.example",
+        "password": "Gust0Payr0ll2024#",
+        "uris": [
+          {
+            "uri": "https://app.gusto.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://app.gusto.com/login",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPGUSTO"
+      },
+      "notes": "Bi-weekly Friday payroll runs"
+    },
+    {
+      "type": "login",
+      "name": "Rippling HRIS",
+      "login": {
+        "username": "people-ops@zero-knowledge.example",
+        "password": "R1ppl1ngHR1S2024#",
+        "uris": [
+          {
+            "uri": "https://app.rippling.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LinkedIn Recruiter (People Ops)",
+      "login": {
+        "username": "talent@zero-knowledge.example",
+        "password": "L1nkR3cru1t2024#",
+        "uris": [
+          {
+            "uri": "https://www.linkedin.com/talent",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://www.linkedin.com/talent",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Checkr Background Checks",
+      "login": {
+        "username": "hr@zero-knowledge.example",
+        "password": "Ch3ckrBG2024#",
+        "uris": [
+          {
+            "uri": "https://dashboard.checkr.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPCHK"
+      },
+      "notes": "Auto-triggered on offer accept"
+    },
+    {
+      "type": "login",
+      "name": "Lattice (Performance & Engagement)",
+      "login": {
+        "username": "people-ops@zero-knowledge.example",
+        "password": "L@tt1ceP3rf2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.latticehq.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Q1 and Q3 review cycles"
+    },
+    {
+      "type": "login",
+      "name": "Culture Amp",
+      "login": {
+        "username": "engagement@zero-knowledge.example",
+        "password": "Cultur3@mp2024",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.cultureamp.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Coursera for Business",
+      "login": {
+        "username": "learning@zero-knowledge.example",
+        "password": "C0urs3r@Bus2024#",
+        "uris": [
+          {
+            "uri": "https://www.coursera.org/business",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Udemy Business",
+      "login": {
+        "username": "learning@zero-knowledge.example",
+        "password": "Ud3myBus2024",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.udemy.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LinkedIn Learning Admin",
+      "login": {
+        "username": "learning@zero-knowledge.example",
+        "password": "L1nkL3arn2024#",
+        "uris": [
+          {
+            "uri": "https://www.linkedin.com/learning-admin",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Aetna Benefits Portal",
+      "notes": "Open enrollment Nov 1 - Nov 30 each year. HR team manages group admin access.",
+      "login": {
+        "username": "benefits@zero-knowledge.example",
+        "password": "A3tnaBen3f1ts2024",
+        "uris": [
+          {
+            "uri": "https://www.aetna.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Fidelity 401(k) Plan Admin",
+      "login": {
+        "username": "benefits@zero-knowledge.example",
+        "password": "F1d3l1ty401k2024#",
+        "uris": [
+          {
+            "uri": "https://nb.fidelity.com/public/nb/zsps/home",
+            "match": "startsWith"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPFIDL"
+      }
+    },
+    {
+      "type": "login",
+      "name": "HealthEquity FSA/HSA Admin",
+      "login": {
+        "username": "benefits@zero-knowledge.example",
+        "password": "H3althEq2024#",
+        "uris": [
+          {
+            "uri": "https://www.healthequity.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Carta Equity Admin",
+      "login": {
+        "username": "equity@zero-knowledge.example",
+        "password": "C@rtaEqu1ty2024#",
+        "uris": [
+          {
+            "uri": "https://app.carta.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Deel (International Contractors)",
+      "login": {
+        "username": "payroll@zero-knowledge.example",
+        "password": "D3elGl0b@l2024",
+        "uris": [
+          {
+            "uri": "https://app.deel.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Donut (Slack onboarding bot)",
+      "login": {
+        "username": "people-ops@zero-knowledge.example",
+        "password": "D0nutB0t2024",
+        "uris": [
+          {
+            "uri": "https://www.donut.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "SurveyMonkey (exit surveys)",
+      "login": {
+        "username": "hr@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://www.surveymonkey.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Old benefits portal (2023 plan year)",
+      "notes": "This was the old Cigna portal before we switched to Aetna. Only needed for historical claims lookback.",
+      "login": {
+        "username": "benefits@zero-knowledge.example",
+        "password": "C1gnaOld2023"
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Annual Open Enrollment Checklist",
+      "notes": "## Open Enrollment Prep (Due October 15)\n- [ ] Confirm new plan rates with broker\n- [ ] Update benefits portal with new plan details\n- [ ] Draft all-hands announcement email\n- [ ] Schedule benefits info sessions (3 time zones)\n- [ ] Update BambooHR enrollment workflows\n- [ ] Test Gusto payroll deduction changes in sandbox\n\n## Enrollment Window: Nov 1 - Nov 30\n## Changes Effective: Jan 1"
+    },
+    {
+      "type": "secureNote",
+      "name": "Onboarding Accounts Checklist",
+      "notes": "## Day 1 Account Creation Order\n1. Okta SSO (IT creates, triggers downstream)\n2. Google Workspace (auto-provisioned via Okta)\n3. Slack (auto-provisioned via Okta)\n4. GitHub (manual - Engineering Ops adds to org)\n5. Jira/Confluence (auto-provisioned via Okta)\n6. AWS/GCP (IT ticket, manager approval required)\n7. Bitwarden (auto-provisioned via SCIM)\n\n## Department-Specific\n- Sales: Salesforce, Gong, Outreach\n- Engineering: GitHub, CI/CD, cloud consoles\n- Marketing: Google Ads, social accounts (read-only first)\n- Design: Figma, Adobe CC"
+    },
+    {
+      "type": "secureNote",
+      "name": "PTO Policy Quick Reference",
+      "notes": "## PTO Accrual (US Employees)\n- 0-2 years: 15 days/year\n- 3-5 years: 20 days/year\n- 5+ years: 25 days/year\n- Sick leave: 10 days/year (separate bank)\n- Company holidays: 11 days/year\n\n## International\n- Follow local statutory minimums + 5 additional days\n- Managed through Deel for contractors\n\n## Approval\n- Up to 5 consecutive days: Manager approval\n- 5+ consecutive days: Manager + VP approval\n- Tracked in BambooHR"
+    },
+    {
+      "type": "identity",
+      "name": "Company Registration - EIN",
+      "identity": {
+        "company": "Zero Knowledge Labs Inc",
+        "address1": "100 Cipher Street",
+        "city": "San Francisco",
+        "state": "CA",
+        "postalCode": "94105",
+        "country": "US"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Salesforce - Production",
+      "login": {
+        "username": "crm-admin@zero-knowledge.example",
+        "password": "SfPr0dAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.lightning.force.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://login.salesforce.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPSF"
+      },
+      "notes": "TOTP enrolled. SSO primary."
+    },
+    {
+      "type": "login",
+      "name": "Salesforce - Sandbox",
+      "login": {
+        "username": "crm-admin@zero-knowledge.example.sandbox",
+        "password": "SfS@ndbox2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs--sandbox.sandbox.lightning.force.com",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://test.salesforce.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "HubSpot CRM",
+      "login": {
+        "username": "sales-ops@zero-knowledge.example",
+        "password": "HubCRM2024#",
+        "uris": [
+          {
+            "uri": "https://app.hubspot.com",
+            "match": "domain"
+          },
+          {
+            "uri": "https://app.hubspot.com/contacts",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "LinkedIn Sales Navigator",
+      "login": {
+        "username": "harrison.blake@zero-knowledge.example",
+        "password": "L1nkSalesN@v2024",
+        "uris": [
+          {
+            "uri": "https://www.linkedin.com/sales",
+            "match": "startsWith"
+          },
+          {
+            "uri": "https://www.linkedin.com/login",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "ZoomInfo",
+      "login": {
+        "username": "sales@zero-knowledge.example",
+        "password": "Z00mInf0Pr0spect2024#",
+        "uris": [
+          {
+            "uri": "https://app.zoominfo.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Gong Revenue Intelligence",
+      "login": {
+        "username": "sales-ops@zero-knowledge.example",
+        "password": "G0ngR3v1nt3l2024",
+        "uris": [
+          {
+            "uri": "https://app.gong.io",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Auto-records external Zooms"
+    },
+    {
+      "type": "login",
+      "name": "Outreach",
+      "login": {
+        "username": "sales@zero-knowledge.example",
+        "password": "0utr3achS3q2024#",
+        "uris": [
+          {
+            "uri": "https://app.outreach.io",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "SDR outbound cadences"
+    },
+    {
+      "type": "login",
+      "name": "SalesLoft",
+      "login": {
+        "username": "sdr-team@zero-knowledge.example",
+        "password": "S@l3sL0ftSDR2024",
+        "uris": [
+          {
+            "uri": "https://app.salesloft.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Clari",
+      "login": {
+        "username": "harrison.blake@zero-knowledge.example",
+        "password": "Cl@r1F0r3c@st2024",
+        "uris": [
+          {
+            "uri": "https://app.clari.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "PandaDoc",
+      "login": {
+        "username": "proposals@zero-knowledge.example",
+        "password": "P@ndaD0cPr0p2024#",
+        "uris": [
+          {
+            "uri": "https://app.pandadoc.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Gainsight",
+      "login": {
+        "username": "cs-ops@zero-knowledge.example",
+        "password": "G@1ns1ghtCS2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.gainsight.com",
+            "match": "domain"
+          }
+        ]
+      },
+      "notes": "Bernard manages enterprise seg"
+    },
+    {
+      "type": "login",
+      "name": "ChurnZero",
+      "login": {
+        "username": "cs@zero-knowledge.example",
+        "password": "ChurnZ3r0CS2024",
+        "uris": [
+          {
+            "uri": "https://app.churnzero.net",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Zendesk - Support",
+      "login": {
+        "username": "support-admin@zero-knowledge.example",
+        "password": "Z3ndeskSupp0rt2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.zendesk.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Intercom",
+      "login": {
+        "username": "cs@zero-knowledge.example",
+        "password": "Int3rc0mChat2024#",
+        "uris": [
+          {
+            "uri": "https://app.intercom.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Chorus.ai (now ZoomInfo)",
+      "notes": "Chorus got acquired by ZoomInfo. Login still works separately for historical call recordings.",
+      "login": {
+        "username": "sales@zero-knowledge.example",
+        "password": "Ch0rusA12023",
+        "uris": [
+          {
+            "uri": "https://chorus.ai",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Clearbit",
+      "login": {
+        "username": "sales-ops@zero-knowledge.example",
+        "password": "Cl3arb1tEnr1ch2024",
+        "uris": [
+          {
+            "uri": "https://dashboard.clearbit.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "DealHub CPQ",
+      "login": {
+        "username": "sales-ops@zero-knowledge.example",
+        "password": "D3alHubCPQ2024#",
+        "uris": [
+          {
+            "uri": "https://app.dealhub.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Vitally",
+      "login": {
+        "username": "cs@zero-knowledge.example",
+        "password": "V1t@llyCS2024",
+        "uris": [
+          {
+            "uri": "https://app.vitally.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Demo Environment - Enterprise",
+      "login": {
+        "username": "demo-admin",
+        "password": "D3m0Ent3rpr1se2024",
+        "uris": [
+          {
+            "uri": "https://demo-enterprise.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Demo Environment - SMB",
+      "login": {
+        "username": "demo-admin",
+        "password": "D3m0SMB2024",
+        "uris": [
+          {
+            "uri": "https://demo-smb.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Calendly (Sales Scheduling)",
+      "login": {
+        "username": "sales-team@zero-knowledge.example",
+        "password": "C@l3ndlySales2024",
+        "uris": [
+          {
+            "uri": "https://calendly.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Apollo.io",
+      "login": {
+        "username": "sdr@zero-knowledge.example",
+        "password": "Ap0ll0SDR2024#",
+        "uris": [
+          {
+            "uri": "https://app.apollo.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Salesforce - Old Sandbox (EXPIRED)",
+      "notes": "This sandbox was refreshed in Q3 2024. Credentials no longer work. Keeping for reference on old config.",
+      "login": {
+        "username": "crm-admin@zero-knowledge.example.oldsandbox",
+        "password": "OldSbx2023",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs--oldsandbox.sandbox.lightning.force.com",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Drift Chatbot",
+      "notes": "Simone set this up for the website. Not sure if we still use it or switched to Intercom fully.",
+      "login": {
+        "username": "marketing@zero-knowledge.example",
+        "uris": [
+          {
+            "uri": "https://app.drift.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "G2 Vendor Profile",
+      "login": {
+        "username": "marketing@zero-knowledge.example",
+        "password": "G2V3nd0rPr0f2024",
+        "uris": [
+          {
+            "uri": "https://my.g2.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "TrustRadius Vendor Portal",
+      "login": {
+        "username": "marketing@zero-knowledge.example",
+        "password": "TrustR@d1us2024",
+        "uris": [
+          {
+            "uri": "https://vendors.trustradius.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Enterprise Pricing Matrix - CONFIDENTIAL",
+      "notes": "## Enterprise Pricing (Effective Jan 2025)\n\n### Per-Seat Pricing\n- Starter: $4/user/mo (billed annually)\n- Business: $8/user/mo (billed annually)\n- Enterprise: Custom (contact sales)\n\n### Volume Discounts\n- 100-499 seats: 10% discount\n- 500-999 seats: 15% discount\n- 1000+ seats: 20% discount + dedicated CSM\n\n### Add-Ons\n- SSO/SCIM: Included in Business+\n- Custom policies: Enterprise only\n- Dedicated hosting: $5000/mo\n\nDO NOT share outside of Sales and Finance teams."
+    },
+    {
+      "type": "secureNote",
+      "name": "Competitive Battle Cards",
+      "notes": "See Confluence: Sales > Battle Cards for full documents.\n\nQuick links:\n- vs Competitor A: /wiki/spaces/SALES/pages/12345\n- vs Competitor B: /wiki/spaces/SALES/pages/12346\n- vs Open Source: /wiki/spaces/SALES/pages/12347\n\nLast updated: November 2024 by Derek Chambers"
+    },
+    {
+      "type": "secureNote",
+      "name": "SDR Objection Handling Guide",
+      "notes": ""
+    },
+    {
+      "type": "login",
+      "name": "Customer Demo (prospect: Acme Corp)",
+      "notes": "Set up for the Acme Corp eval. Demo expires March 2025. Dorian is the AE on this deal.",
+      "login": {
+        "username": "acme-eval-admin",
+        "password": "AcmeD3m02024",
+        "uris": [
+          {
+            "uri": "https://acme-eval.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Highspot",
+      "login": {
+        "username": "sales@zero-knowledge.example",
+        "password": "H1ghsp0tS@les2024",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.highspot.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "something for the Globex deal",
+      "notes": "Barrett created this. Ask him what it's for.",
+      "login": {
+        "password": "Gl0bex2024T3mp"
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Q4 2024 Pipeline Review Notes",
+      "notes": "## Q4 Pipeline Summary\n- Total pipeline: $4.2M\n- Weighted: $1.8M\n- Closed-Won target: $1.2M\n\n## Key Deals\n1. Acme Corp (Enterprise) - $280K ARR - 60% probability - Dorian AE\n2. Initech (Mid-Market) - $45K ARR - 80% probability - Vladimir AE\n3. Globex (Enterprise) - $190K ARR - 40% probability - Barrett AE\n\n## Risks\n- Globex deal pushed from Q3, champion left the company\n- Initech legal review taking longer than expected"
+    },
+    {
+      "type": "card",
+      "name": "Sales Team Dinner Card",
+      "card": {
+        "cardholderName": "Harrison Blake",
+        "brand": "Visa",
+        "number": "4916012345678901",
+        "expMonth": "11",
+        "expYear": "2027",
+        "code": "442"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Seismic",
+      "login": {
+        "username": "enablement@zero-knowledge.example",
+        "password": "S31sm1cEn@ble2024",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.seismic.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "CrowdStrike Falcon Console",
+      "login": {
+        "username": "edr-admin@zero-knowledge.example",
+        "password": "Cr0wdStr1keEDR2024#",
+        "uris": [
+          {
+            "uri": "https://falcon.crowdstrike.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPCSFL"
+      }
+    },
+    {
+      "type": "login",
+      "name": "SentinelOne",
+      "login": {
+        "username": "edr@zero-knowledge.example",
+        "password": "S3nt1nel0ne2024#",
+        "uris": [
+          {
+            "uri": "https://usea1-console.sentinelone.net",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Qualys VMDR",
+      "login": {
+        "username": "vuln-mgmt@zero-knowledge.example",
+        "password": "Qu@lysVMDR2024#",
+        "uris": [
+          {
+            "uri": "https://qualysguard.qualys.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPQLY"
+      },
+      "notes": "Weekly scans. 72hr SLA."
+    },
+    {
+      "type": "login",
+      "name": "Tenable.io",
+      "login": {
+        "username": "vuln-scan@zero-knowledge.example",
+        "password": "T3n@bleI02024#",
+        "uris": [
+          {
+            "uri": "https://cloud.tenable.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Burp Suite Enterprise",
+      "login": {
+        "username": "pentest@zero-knowledge.example",
+        "password": "BurpSu1teEnt2024#",
+        "uris": [
+          {
+            "uri": "https://burp.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Splunk Cloud",
+      "login": {
+        "username": "siem-admin@zero-knowledge.example",
+        "password": "Splunk$IEM2024#",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.splunkcloud.com",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPSPL"
+      },
+      "notes": "90-day hot, 1-year warm"
+    },
+    {
+      "type": "login",
+      "name": "Elastic Security (SIEM)",
+      "login": {
+        "username": "elastic-admin@zero-knowledge.example",
+        "password": "El@st1cS3c2024#",
+        "uris": [
+          {
+            "uri": "https://siem.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "HackerOne Bug Bounty Program",
+      "login": {
+        "username": "bugbounty@zero-knowledge.example",
+        "password": "H@ck3r0neP0rtal2024#",
+        "uris": [
+          {
+            "uri": "https://hackerone.com/zero-knowledge-labs",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Bugcrowd",
+      "login": {
+        "username": "security@zero-knowledge.example",
+        "password": "BugCr0wd2024#",
+        "uris": [
+          {
+            "uri": "https://bugcrowd.com/zero-knowledge-labs",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Cobalt Pen Testing",
+      "login": {
+        "username": "pentest@zero-knowledge.example",
+        "password": "C0b@ltPenT3st2024",
+        "uris": [
+          {
+            "uri": "https://app.cobalt.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "VirusTotal Enterprise",
+      "login": {
+        "username": "threat-intel@zero-knowledge.example",
+        "password": "V1rusTot@lEnt2024#",
+        "uris": [
+          {
+            "uri": "https://www.virustotal.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Snyk - Security Dashboard",
+      "login": {
+        "username": "appsec@zero-knowledge.example",
+        "password": "SnykAppS3c2024#",
+        "uris": [
+          {
+            "uri": "https://app.snyk.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "SonarCloud (Security)",
+      "login": {
+        "username": "code-quality@zero-knowledge.example",
+        "password": "S0n@rCl0ud2024#",
+        "uris": [
+          {
+            "uri": "https://sonarcloud.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Checkmarx SAST",
+      "login": {
+        "username": "appsec@zero-knowledge.example",
+        "password": "Ch3ckm@rxSAST2024",
+        "uris": [
+          {
+            "uri": "https://zero-knowledge-labs.checkmarx.net",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "DigiCert Certificate Manager",
+      "login": {
+        "username": "certs@zero-knowledge.example",
+        "password": "D1g1CertMgr2024#",
+        "uris": [
+          {
+            "uri": "https://www.digicert.com/account",
+            "match": "startsWith"
+          }
+        ]
+      },
+      "notes": "Auto-renewal enabled"
+    },
+    {
+      "type": "login",
+      "name": "HashiCorp Vault (Secrets Manager)",
+      "login": {
+        "username": "vault-admin",
+        "password": "HCVaultAdm1n2024#",
+        "uris": [
+          {
+            "uri": "https://vault.zero-knowledge.example",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPHCV"
+      },
+      "notes": "Root token - break glass only"
+    },
+    {
+      "type": "login",
+      "name": "AWS Security Hub",
+      "login": {
+        "username": "security-aws@zero-knowledge.example",
+        "password": "AwsS3cHub2024#",
+        "uris": [
+          {
+            "uri": "https://us-east-1.console.aws.amazon.com/securityhub",
+            "match": "startsWith"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Wiz Cloud Security",
+      "login": {
+        "username": "cloud-sec@zero-knowledge.example",
+        "password": "W1zCl0udS3c2024#",
+        "uris": [
+          {
+            "uri": "https://app.wiz.io",
+            "match": "domain"
+          }
+        ],
+        "totp": "JBSWY3DPEHPK3PXPWIZ"
+      },
+      "notes": "CSPM for AWS and GCP"
+    },
+    {
+      "type": "login",
+      "name": "MITRE ATT&CK Navigator (internal)",
+      "login": {
+        "username": "threat-intel",
+        "password": "M1tr3N@v2024",
+        "uris": [
+          {
+            "uri": "https://attack-nav.zero-knowledge.example",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Old Nessus instance (replaced by Tenable.io)",
+      "notes": "On-prem Nessus scanner decommissioned Q2 2024. Migrated to Tenable.io cloud. Leaving creds for any leftover scan reports.",
+      "login": {
+        "username": "admin",
+        "password": "N3ssusL3gacy2023",
+        "uris": [
+          {
+            "uri": "https://nessus.internal.zero-knowledge.example:8834",
+            "match": "exact"
+          }
+        ]
+      }
+    },
+    {
+      "type": "secureNote",
+      "name": "Security Tool Stack Overview",
+      "notes": "## Current Stack (2025)\n- EDR: CrowdStrike Falcon (all endpoints)\n- SIEM: Splunk Cloud + Elastic (dual)\n- Vuln Management: Tenable.io (infra) + Snyk (code)\n- SAST: Checkmarx\n- DAST: Burp Suite Enterprise\n- Cloud Security: Wiz\n- Secrets Management: HashiCorp Vault\n- Bug Bounty: HackerOne (primary) + Bugcrowd (secondary)\n- Certificate Management: DigiCert\n- Threat Intel: VirusTotal Enterprise + MITRE ATT&CK\n\n## Deprecated\n- Nessus (replaced by Tenable.io)\n- OSSEC (replaced by CrowdStrike)"
+    },
+    {
+      "type": "secureNote",
+      "name": "Pen Test Schedule 2025",
+      "notes": "## Scheduled Engagements\n- Q1: External network pen test (Cobalt)\n- Q2: Web application pen test (internal team + Cobalt)\n- Q3: Red team exercise (Cobalt)\n- Q4: Cloud infrastructure review (Wiz + internal)\n\n## Annual Requirements\n- SOC 2 requires annual pen test\n- PCI-DSS requires quarterly vulnerability scan\n- Bug bounty program runs continuously"
+    },
+    {
+      "type": "login",
+      "name": "Shodan (recon)",
+      "login": {
+        "username": "recon@zero-knowledge.example",
+        "password": "Sh0d@nR3con2024",
+        "uris": [
+          {
+            "uri": "https://www.shodan.io",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "Security Scorecard",
+      "login": {
+        "username": "vendor-risk@zero-knowledge.example",
+        "password": "S3cSc0recard2024",
+        "uris": [
+          {
+            "uri": "https://app.securityscorecard.com",
+            "match": "domain"
+          }
+        ]
+      }
+    },
+    {
+      "type": "login",
+      "name": "test creds for staging pen test (Q4)",
+      "notes": "Samira created these for the Q4 staging test. May already be rotated.",
+      "login": {
+        "username": "pentest-q4",
+        "password": "Stag1ngT3st2024"
+      }
+    }
+  ]
+}
