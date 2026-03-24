@@ -15,6 +15,6 @@ CREATE TABLE [dbo].[Receive]
 );
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Receive_DeletionDate]
-    ON [dbo].[Receive] ([DeletionDate] ASC);
+CREATE NONCLUSTERED INDEX [IX_Receive_ExpirationDate]
+    ON [dbo].[Receive] ([ExpirationDate] ASC);
 
