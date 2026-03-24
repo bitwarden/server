@@ -69,7 +69,7 @@ struct CachedRsaMaterial {
 
 /// Pre-parsed DER keypairs from `rsa_keys.rs`, lazily initialized on first access.
 static RSA_POOL: LazyLock<Vec<CachedRsaMaterial>> = LazyLock::new(|| {
-    rsa_keys::RSA_KEYS
+    rsa_keys::TEST_FAKE_RSA_KEYS
         .iter()
         .map(|pem| {
             let pk = PrivateKey::from_pem(pem).expect("seeded RSA PEM must be valid");
@@ -165,13 +165,13 @@ mod tests {
     use crate::keypair;
 
     #[test]
-    fn test_rsa_pool_initializes_all_entries() {
+    fn rsa_pool_initializes_all_entries() {
         let pool = &*RSA_POOL;
         assert_eq!(pool.len(), 100, "pool should contain exactly 100 keypairs");
     }
 
     #[test]
-    fn test_rsa_pool_keys_are_unique() {
+    fn rsa_pool_keys_are_unique() {
         let pool = &*RSA_POOL;
         let distinct: HashSet<Vec<u8>> = pool
             .iter()
@@ -185,7 +185,7 @@ mod tests {
     }
 
     #[test]
-    fn test_keypair_different_indices_produce_different_public_keys() {
+    fn keypair_different_indices_produce_different_public_keys() {
         let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
         let kp0 = keypair(&key, 0);
         let kp1 = keypair(&key, 1);
@@ -197,7 +197,7 @@ mod tests {
     }
 
     #[test]
-    fn test_keypair_same_index_produces_same_public_key() {
+    fn keypair_same_index_produces_same_public_key() {
         let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
         let kp_a = keypair(&key, 42);
         let kp_b = keypair(&key, 42);
@@ -209,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn test_keypair_index_wraps_at_pool_boundary() {
+    fn keypair_index_wraps_at_pool_boundary() {
         let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
         let kp_zero = keypair(&key, 0);
         let kp_wrapped = keypair(&key, 100);
