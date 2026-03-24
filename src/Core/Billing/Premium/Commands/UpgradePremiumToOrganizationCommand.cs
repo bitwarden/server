@@ -276,9 +276,6 @@ public class UpgradePremiumToOrganizationCommand(
         List<SubscriptionItemOptions> subscriptionItemOptions)
     {
         var usingPayPal = customer.Metadata?.ContainsKey(BraintreeCustomerIdKey) ?? false;
-        var hasDefaultPaymentMethod = !string.IsNullOrEmpty(customer.InvoiceSettings?.DefaultPaymentMethodId)
-            || !string.IsNullOrEmpty(customer.DefaultSourceId);
-        var requiresIncomplete = usingPayPal || !hasDefaultPaymentMethod;
 
         // Build the subscription update options
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
@@ -292,7 +289,7 @@ public class UpgradePremiumToOrganizationCommand(
                 [MetadataKeys.OrganizationId] = organizationId.ToString(),
                 [MetadataKeys.UserId] = string.Empty // Remove userId to unlink the subscription from User
             },
-            PaymentBehavior = requiresIncomplete ? PaymentBehavior.DefaultIncomplete : null
+            PaymentBehavior = usingPayPal ? PaymentBehavior.DefaultIncomplete : null
         };
 
         // Update the subscription in Stripe
