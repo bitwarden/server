@@ -29,7 +29,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
 
     public class Result
     {
-        public required Guid CipherId { get; set; }
+        public required Guid CipherId { get; init; }
     }
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
@@ -40,7 +40,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, uri: request.Uri, notes: request.Notes, fields: request.Fields, reprompt: request.Reprompt, deleted: request.Deleted, favorite: request.Favorite);
+        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, uri: request.Uri, notes: request.Notes, fields: request.Fields, reprompt: request.Reprompt, deleted: request.Deleted);
         if (request.Favorite)
         {
             cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>

@@ -21,7 +21,7 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
 
     public class Result
     {
-        public required Guid CipherId { get; set; }
+        public required Guid CipherId { get; init; }
     }
 
     public async Task<SceneResult<Result>> SeedAsync(Request request)
