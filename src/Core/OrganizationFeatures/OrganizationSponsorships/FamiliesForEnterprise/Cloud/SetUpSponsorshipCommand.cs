@@ -86,7 +86,6 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
 
         // Release any active subscription schedule before updating the subscription.
         // A schedule may exist if a deferred price migration is pending for this subscription.
-        // This is best-effort — a failure here should not block the sponsorship setup.
         if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             && !string.IsNullOrEmpty(sponsoredOrganization.GatewaySubscriptionId)
             && !string.IsNullOrEmpty(sponsoredOrganization.GatewayCustomerId))
@@ -106,8 +105,9 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Failed to release subscription schedule for subscription {SubscriptionId}. Proceeding with sponsorship setup.",
+                    "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
                     sponsoredOrganization.GatewaySubscriptionId);
+                throw;
             }
         }
 

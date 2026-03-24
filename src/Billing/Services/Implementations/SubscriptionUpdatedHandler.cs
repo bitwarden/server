@@ -245,10 +245,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         });
     }
 
-    /// <summary>
-    /// Best-effort release of any active subscription schedule for the given subscription.
-    /// A failure here should not prevent the main subscription operation from completing.
-    /// </summary>
     private async Task ReleaseActiveScheduleAsync(Subscription subscription)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
@@ -271,8 +267,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Failed to release subscription schedule for subscription {SubscriptionId}. Proceeding with subscription update.",
+                "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
                 subscription.Id);
+            throw;
         }
     }
 

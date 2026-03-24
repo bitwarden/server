@@ -216,7 +216,6 @@ public class UpgradePremiumToOrganizationCommand(
 
         // Release any active subscription schedule before updating the subscription.
         // A schedule may exist if a deferred price migration is pending for this subscription.
-        // This is best-effort — a failure here should not block the upgrade.
         if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
             try
@@ -234,8 +233,9 @@ public class UpgradePremiumToOrganizationCommand(
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "Failed to release subscription schedule for subscription {SubscriptionId}. Proceeding with upgrade.",
+                    "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
                     currentSubscription.Id);
+                throw;
             }
         }
 
