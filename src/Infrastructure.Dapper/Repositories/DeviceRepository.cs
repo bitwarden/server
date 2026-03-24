@@ -108,6 +108,28 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
+    public async Task BumpLastActivityDateByIdAsync(Guid deviceId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_BumpLastActivityDateById]",
+                new { Id = deviceId },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task BumpLastActivityDateByIdentifierAsync(string identifier, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_BumpLastActivityDateByIdentifier]",
+                new { Identifier = identifier, UserId = userId },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices)
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>

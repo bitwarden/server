@@ -93,6 +93,41 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
+    public async Task BumpLastActivityDateByIdAsync(Guid deviceId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Only update if LastActivityDate has never been set or was last set on a prior calendar day.
+        // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateById stored procedure
+        // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
+        // Product only requires day-level granularity (today / this week / last week / etc.).
+        var today = DateTime.UtcNow.Date;
+        await dbContext.Devices
+            .Where(d => d.Id == deviceId &&
+                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < today))
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, DateTime.UtcNow));
+    }
+
+    public async Task BumpLastActivityDateByIdentifierAsync(string identifier, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Identifier is unique per user, not globally (unique constraint UX_Device_UserId_Identifier
+        // is on (UserId, Identifier)). Both are required for correctness and to hit the right index.
+        //
+        // Only update if LastActivityDate has never been set or was last set on a prior calendar day.
+        // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateByIdentifier stored procedure
+        // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
+        // Product only requires day-level granularity (today / this week / last week / etc.).
+        var today = DateTime.UtcNow.Date;
+        await dbContext.Devices
+            .Where(d => d.Identifier == identifier && d.UserId == userId &&
+                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < today))
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, DateTime.UtcNow));
+    }
+
     public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Core.Entities.Device> devices)
     {
         return async (_, _) =>
