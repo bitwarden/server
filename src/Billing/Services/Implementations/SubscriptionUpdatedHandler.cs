@@ -1,8 +1,11 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -19,7 +22,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationService _organizationService;
-    private readonly IStripeFacade _stripeFacade;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
@@ -30,12 +33,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
+    private readonly IFeatureService _featureService;
+    private readonly ILogger<SubscriptionUpdatedHandler> _logger;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
         IStripeEventUtilityService stripeEventUtilityService,
         IOrganizationService organizationService,
-        IStripeFacade stripeFacade,
+        IStripeAdapter stripeAdapter,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
         IUserRepository userRepository,
@@ -45,13 +50,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPricingClient pricingClient,
         IProviderRepository providerRepository,
         IProviderService providerService,
-        IPushNotificationAdapter pushNotificationAdapter)
+        IPushNotificationAdapter pushNotificationAdapter,
+        IFeatureService featureService,
+        ILogger<SubscriptionUpdatedHandler> logger)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationService = organizationService;
         _providerService = providerService;
-        _stripeFacade = stripeFacade;
+        _stripeAdapter = stripeAdapter;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
         _userRepository = userRepository;
@@ -63,6 +70,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _providerRepository = providerRepository;
         _providerService = providerService;
         _pushNotificationAdapter = pushNotificationAdapter;
+        _featureService = featureService;
+        _logger = logger;
     }
 
     public async Task HandleAsync(Event parsedEvent)
@@ -82,6 +91,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         {
             await EnableSubscriberAsync(subscriberId, currentPeriodEnd);
             await RemovePendingCancellationAsync(subscription);
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription);
         }
 
         await subscriberId.Match(
@@ -210,7 +224,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
-        await _stripeFacade.UpdateSubscription(subscription.Id, new SubscriptionUpdateOptions
+        await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAt = now.AddDays(7),
             ProrationBehavior = ProrationBehavior.None,
@@ -222,7 +236,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     }
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
-        => await _stripeFacade.UpdateSubscription(subscription.Id, new SubscriptionUpdateOptions
+        => await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
             ProrationBehavior = ProrationBehavior.None
@@ -297,12 +311,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         if (customerHasSecretsManagerTrial)
         {
-            await _stripeFacade.DeleteCustomerDiscount(subscription.CustomerId);
+            await _stripeAdapter.DeleteCustomerDiscountAsync(subscription.CustomerId);
         }
 
         if (subscriptionHasSecretsManagerTrial)
         {
-            await _stripeFacade.DeleteSubscriptionDiscount(subscription.Id);
+            await _stripeAdapter.DeleteSubscriptionDiscountAsync(subscription.Id);
         }
     }
 
@@ -311,11 +325,62 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         while (testClock.Status != "ready")
         {
             await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await _stripeFacade.GetTestClock(testClock.Id);
+            testClock = await _stripeAdapter.GetTestClockAsync(testClock.Id);
             if (testClock.Status == "internal_failure")
             {
                 throw new Exception("Stripe Test Clock encountered an internal failure");
             }
         }
+    }
+
+    private async Task HandleScheduleTriggeredFamiliesMigrationAsync(
+        Event parsedEvent,
+        Subscription subscription)
+    {
+        if (subscription.ScheduleId == null)
+        {
+            return;
+        }
+
+        if (parsedEvent.Data.PreviousAttributes?.items == null)
+        {
+            return;
+        }
+
+        if (!subscription.Metadata.TryGetValue(MetadataKeys.OrganizationId, out var organizationIdStr) ||
+            !Guid.TryParse(organizationIdStr, out var organizationId))
+        {
+            return;
+        }
+
+        var familiesPlan = await _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+
+        var hasFamiliesPrice = subscription.Items.Any(item =>
+            item.Price.Id == familiesPlan.PasswordManager.StripePlanId);
+
+        if (!hasFamiliesPrice)
+        {
+            return;
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            _logger.LogWarning(
+                "Organization ({OrganizationId}) not found for schedule-triggered Families migration",
+                organizationId);
+            return;
+        }
+
+        organization.PlanType = familiesPlan.Type;
+        organization.Plan = familiesPlan.Name;
+        organization.UsersGetPremium = familiesPlan.UsersGetPremium;
+        organization.Seats = familiesPlan.PasswordManager.BaseSeats;
+
+        await _organizationRepository.ReplaceAsync(organization);
+
+        _logger.LogInformation(
+            "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",
+            organizationId);
     }
 }
