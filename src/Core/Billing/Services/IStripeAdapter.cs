@@ -3,6 +3,7 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.BillingPortal;
 using Stripe.Tax;
 
 namespace Bit.Core.Billing.Services;
@@ -52,4 +53,10 @@ public interface IStripeAdapter
     Task<Coupon> GetCouponAsync(string couponId, CouponGetOptions options = null);
     Task<List<Product>> ListProductsAsync(ProductListOptions options = null);
     Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null);
+    Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options);
+    Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options);
+    Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null);
+    Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options);
+    Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options);
+    Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null);
 }
