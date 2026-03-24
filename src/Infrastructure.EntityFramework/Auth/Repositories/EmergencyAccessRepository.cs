@@ -69,7 +69,9 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
             var dbContext = GetDatabaseContext(scope);
             var view = new EmergencyAccessDetailsViewQuery();
             var query = view.Run(dbContext).Where(ea =>
-                ea.Status == EmergencyAccessStatusType.RecoveryInitiated
+                ea.Status == EmergencyAccessStatusType.RecoveryInitiated &&
+                ea.RecoveryInitiatedDate.HasValue &&
+                ea.RecoveryInitiatedDate.Value.AddDays(ea.WaitTimeDays) <= DateTime.UtcNow
             );
             return await query.ToListAsync();
         }
