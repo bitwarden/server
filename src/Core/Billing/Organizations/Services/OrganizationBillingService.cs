@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
@@ -8,6 +7,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -17,7 +17,9 @@ using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Utilities;
 using Customer = Stripe.Customer;
+using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
 using Subscription = Stripe.Subscription;
+
 
 namespace Bit.Core.Billing.Organizations.Services;
 
@@ -37,26 +39,31 @@ public class OrganizationBillingService(
     {
         var (organization, customerSetup, subscriptionSetup, owner) = sale;
 
-        // Validate coupon and only apply if valid. If invalid, proceed without the discount.
+        // Validate all provided coupons. Fail fast if any coupon is invalid.
         // Validation includes user-specific eligibility checks to ensure the owner has never had premium
         // and that this is for a Families subscription.
-        // Only validate discount if owner is provided (i.e., the user performing the upgrade is an owner).
-        string? validatedCoupon = null;
-        if (!string.IsNullOrWhiteSpace(customerSetup?.Coupon) && owner != null)
+        // Only validate discounts if owner is provided (i.e., the user performing the upgrade is an owner).
+        var validatedCoupons = new List<string>();
+        if (customerSetup?.Coupons is { Length: > 0 } && owner != null)
         {
             // Only Families plans support user-provided coupons
             if (subscriptionSetup.PlanType.GetProductTier() == ProductTierType.Families)
             {
-                var isValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
-                    owner,
-                    customerSetup.Coupon.Trim(),
-                    DiscountTierType.Families);
+                validatedCoupons = customerSetup.Coupons
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Select(c => c.Trim())
+                    .ToList();
 
-                if (!isValid)
+                if (validatedCoupons.Count > 0)
                 {
-                    throw new BadRequestException("Discount expired. Please review your cart total and try again");
+                    var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                        owner, validatedCoupons, DiscountTierType.Families);
+
+                    if (!allValid)
+                    {
+                        throw new BadRequestException("Discount expired. Please review your cart total and try again");
+                    }
                 }
-                validatedCoupon = customerSetup.Coupon.Trim();
             }
         }
 
@@ -64,7 +71,7 @@ public class OrganizationBillingService(
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
             : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
 
-        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, validatedCoupon);
+        var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, validatedCoupons);
 
         if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
@@ -238,7 +245,7 @@ public class OrganizationBillingService(
             };
 
             if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                customerSetup.TaxInformation.Country != Core.Constants.CountryAbbreviations.UnitedStates)
+                !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
             {
                 customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
             }
@@ -370,7 +377,7 @@ public class OrganizationBillingService(
         Organization organization,
         Customer customer,
         SubscriptionSetup subscriptionSetup,
-        string? coupon)
+        IReadOnlyList<string> coupons)
     {
         var plan = await pricingClient.GetPlanOrThrow(subscriptionSetup.PlanType);
 
@@ -433,7 +440,7 @@ public class OrganizationBillingService(
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = !string.IsNullOrWhiteSpace(coupon) ? [new SubscriptionDiscountOptions { Coupon = coupon.Trim() }] : null,
+            Discounts = coupons.Count > 0 ? coupons.Select(c => new SubscriptionDiscountOptions { Coupon = c }).ToList() : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
@@ -491,23 +498,13 @@ public class OrganizationBillingService(
         }
 
         List<string> expansions = ["tax", "tax_ids"];
-
+        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
         customer = customer switch
         {
-            { Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: not StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.UpdateCustomerAsync(customer.Id,
-                    new CustomerUpdateOptions
-                    {
-                        Expand = expansions,
-                        TaxExempt = StripeConstants.TaxExempt.Reverse
-                    }),
-            { Address.Country: Core.Constants.CountryAbbreviations.UnitedStates, TaxExempt: StripeConstants.TaxExempt.Reverse } => await
-                stripeAdapter.UpdateCustomerAsync(customer.Id,
-                    new CustomerUpdateOptions
-                    {
-                        Expand = expansions,
-                        TaxExempt = StripeConstants.TaxExempt.None
-                    }),
+            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                when determinedTaxExemptStatus != customerTaxExemptStatus =>
+                await stripeAdapter.UpdateCustomerAsync(customer.Id,
+                    new CustomerUpdateOptions { Expand = expansions, TaxExempt = determinedTaxExemptStatus }),
             _ => customer
         };
 

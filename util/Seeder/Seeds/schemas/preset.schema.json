@@ -34,7 +34,15 @@
         },
         "planType": {
           "type": "string",
-          "enum": ["free", "teams-monthly", "teams-annually", "enterprise-monthly", "enterprise-annually", "teams-starter", "families-annually"],
+          "enum": [
+            "free",
+            "teams-monthly",
+            "teams-annually",
+            "enterprise-monthly",
+            "enterprise-annually",
+            "teams-starter",
+            "families-annually"
+          ],
           "description": "Billing plan type. Defaults to enterprise-annually if omitted."
         }
       }
@@ -176,6 +184,53 @@
           "description": "Identity provider protocol."
         }
       }
+    },
+    "collectionAssignments": {
+      "type": "array",
+      "description": "Maps ciphers to specific collections. Each entry is a (cipher, collection) tuple. When present, replaces round-robin collection assignment.",
+      "items": {
+        "type": "object",
+        "required": ["cipher", "collection"],
+        "additionalProperties": false,
+        "properties": {
+          "cipher": { "type": "string", "description": "Cipher name from the cipher fixture." },
+          "collection": { "type": "string", "description": "Collection name from the roster." }
+        }
+      }
+    },
+    "folderAssignments": {
+      "type": "array",
+      "description": "Maps ciphers to specific folders for specific users. Each entry is a (cipher, user, folder) tuple.",
+      "items": {
+        "type": "object",
+        "required": ["cipher", "folder", "user"],
+        "additionalProperties": false,
+        "properties": {
+          "cipher": { "type": "string", "description": "Cipher name from the cipher fixture." },
+          "folder": { "type": "string", "description": "Folder name from the user's folders in the roster." },
+          "user": { "type": "string", "description": "User email prefix (e.g., 'john.doe') from the roster." }
+        }
+      }
+    },
+    "favoriteAssignments": {
+      "type": "array",
+      "description": "Marks specific ciphers as favorites for specific users. Each entry is a (cipher, user) tuple.",
+      "items": {
+        "type": "object",
+        "required": ["cipher", "user"],
+        "additionalProperties": false,
+        "properties": {
+          "cipher": { "type": "string", "description": "Cipher name from the cipher fixture." },
+          "user": { "type": "string", "description": "User email prefix (e.g., 'john.doe') from the roster." }
+        }
+      }
+    },
+    "kdfIterations": {
+      "type": "integer",
+      "minimum": 5000,
+      "maximum": 1000000,
+      "default": 5000,
+      "description": "KDF iteration count for all seeded users. Defaults to 5,000 for fast seeding. Use 600,000 for production-realistic e2e testing."
     },
     "density": {
       "type": "object",
@@ -330,7 +385,12 @@
           "properties": {
             "preset": {
               "type": "string",
-              "enum": ["realistic", "loginOnly", "documentationHeavy", "developerFocused"],
+              "enum": [
+                "realistic",
+                "loginOnly",
+                "documentationHeavy",
+                "developerFocused"
+              ],
               "description": "Named cipher type distribution. Mutually exclusive with custom weights."
             },
             "login": {
