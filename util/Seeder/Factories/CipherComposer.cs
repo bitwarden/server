@@ -133,4 +133,26 @@ internal static class CipherComposer
             cipher.Folders = $"{{\"{userId.ToString().ToUpperInvariant()}\":\"{folderIds[index % folderIds.Count].ToString().ToUpperInvariant()}\"}}";
         }
     }
+
+    /// <summary>
+    /// Builds the Folders JSON column value from a set of (userId, folderId) pairs.
+    /// Produces <c>{"USERID1":"FOLDERID1","USERID2":"FOLDERID2"}</c> with uppercase GUIDs.
+    /// </summary>
+    internal static string BuildFoldersJson(Dictionary<Guid, Guid> userFolderMap)
+    {
+        var entries = userFolderMap.Select(kvp =>
+            $"\"{kvp.Key.ToString().ToUpperInvariant()}\":\"{kvp.Value.ToString().ToUpperInvariant()}\"");
+        return $"{{{string.Join(",", entries)}}}";
+    }
+
+    /// <summary>
+    /// Builds the Favorites JSON column value from a set of user IDs.
+    /// Produces <c>{"USERID1":true,"USERID2":true}</c> with uppercase GUIDs.
+    /// </summary>
+    internal static string BuildFavoritesJson(List<Guid> userIds)
+    {
+        var entries = userIds.Select(id =>
+            $"\"{id.ToString().ToUpperInvariant()}\":true");
+        return $"{{{string.Join(",", entries)}}}";
+    }
 }

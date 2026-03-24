@@ -1,11 +1,9 @@
-﻿#nullable enable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Auth.Models.Request.Accounts;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
 {
@@ -45,22 +43,35 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
         }
     }
 
-    public MasterPasswordUnlockAndAuthenticationData ToUnlockData()
+    public MasterPasswordAuthenticationData ToAuthenticationData()
     {
-        var data = new MasterPasswordUnlockAndAuthenticationData
+        return new MasterPasswordAuthenticationData
         {
-            KdfType = KdfType,
-            KdfIterations = KdfIterations,
-            KdfMemory = KdfMemory,
-            KdfParallelism = KdfParallelism,
-
-            Email = Email,
-
-            MasterKeyAuthenticationHash = MasterKeyAuthenticationHash,
-            MasterKeyEncryptedUserKey = MasterKeyEncryptedUserKey,
-            MasterPasswordHint = MasterPasswordHint
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType,
+                Iterations = KdfIterations,
+                Memory = KdfMemory,
+                Parallelism = KdfParallelism,
+            },
+            Salt = Email,
+            MasterPasswordAuthenticationHash = MasterKeyAuthenticationHash,
         };
-        return data;
     }
 
+    public MasterPasswordUnlockData ToMasterPasswordUnlockData()
+    {
+        return new MasterPasswordUnlockData
+        {
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType,
+                Iterations = KdfIterations,
+                Memory = KdfMemory,
+                Parallelism = KdfParallelism,
+            },
+            Salt = Email,
+            MasterKeyWrappedUserKey = MasterKeyEncryptedUserKey,
+        };
+    }
 }

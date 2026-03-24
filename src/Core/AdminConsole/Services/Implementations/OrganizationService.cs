@@ -157,7 +157,8 @@ public class OrganizationService : IOrganizationService
             organization,
             storageAdjustmentGb,
             plan.PasswordManager.StripeStoragePlanId,
-            plan.PasswordManager.BaseStorageGb);
+            plan.PasswordManager.BaseStorageGb,
+            plan);
         await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
@@ -308,7 +309,9 @@ public class OrganizationService : IOrganizationService
 
         if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
         {
-            var changeSet = OrganizationSubscriptionChangeSet.UpdatePasswordManagerSeats(plan, additionalSeats);
+            var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+                .UpdatePasswordManagerSeats(additionalSeats)
+                .Build();
             var result = await _updateOrganizationSubscriptionCommand.Run(organization, changeSet);
             result.GetValueOrThrow();
         }

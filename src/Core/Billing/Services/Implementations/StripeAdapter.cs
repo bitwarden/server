@@ -4,6 +4,7 @@
 
 using Bit.Core.Models.BitStripe;
 using Stripe;
+using Stripe.BillingPortal;
 using Stripe.Tax;
 using Stripe.TestHelpers;
 using CustomerService = Stripe.CustomerService;
@@ -29,6 +30,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly RegistrationService _taxRegistrationService;
     private readonly CouponService _couponService;
     private readonly ProductService _productService;
+    private readonly SessionService _billingPortalSessionService;
 
     public StripeAdapter()
     {
@@ -48,6 +50,7 @@ public class StripeAdapter : IStripeAdapter
         _taxRegistrationService = new RegistrationService();
         _couponService = new CouponService();
         _productService = new ProductService();
+        _billingPortalSessionService = new SessionService();
     }
 
     /**************
@@ -234,4 +237,10 @@ public class StripeAdapter : IStripeAdapter
      ****************/
     public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
         _subscriptionService.ListAsync(options);
+
+    /**********************
+     ** BILLING PORTAL **
+     **********************/
+    public Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options) =>
+        _billingPortalSessionService.CreateAsync(options);
 }

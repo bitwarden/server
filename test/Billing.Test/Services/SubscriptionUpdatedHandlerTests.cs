@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -30,6 +31,7 @@ public class SubscriptionUpdatedHandlerTests
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
+    private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
@@ -47,6 +49,7 @@ public class SubscriptionUpdatedHandlerTests
         _stripeFacade = Substitute.For<IStripeFacade>();
         _organizationSponsorshipRenewCommand = Substitute.For<IOrganizationSponsorshipRenewCommand>();
         _userService = Substitute.For<IUserService>();
+        _userRepository = Substitute.For<IUserRepository>();
         _providerService = Substitute.For<IProviderService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationEnableCommand = Substitute.For<IOrganizationEnableCommand>();
@@ -63,6 +66,7 @@ public class SubscriptionUpdatedHandlerTests
             _stripeFacade,
             _organizationSponsorshipRenewCommand,
             _userService,
+            _userRepository,
             _organizationRepository,
             _organizationEnableCommand,
             _organizationDisableCommand,
@@ -599,11 +603,15 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
 
+        var user = new User { Id = userId, Premium = false, PremiumExpirationDate = currentPeriodEnd };
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
 
         _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(Tuple.Create<Guid?, Guid?, Guid?>(null, userId, null));
+
+        _userRepository.GetByIdAsync(userId).Returns(user);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -611,6 +619,8 @@ public class SubscriptionUpdatedHandlerTests
         // Assert
         await _userService.Received(1)
             .DisablePremiumAsync(userId, currentPeriodEnd);
+        await _userRepository.Received(1).GetByIdAsync(userId);
+        await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
         await _stripeFacade.Received(1).UpdateSubscription(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>
@@ -792,8 +802,11 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
 
+        var user = new User { Id = userId, Premium = true, PremiumExpirationDate = currentPeriodEnd };
+
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
+        _userRepository.GetByIdAsync(userId).Returns(user);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -803,6 +816,8 @@ public class SubscriptionUpdatedHandlerTests
             .EnablePremiumAsync(userId, currentPeriodEnd);
         await _userService.Received(1)
             .UpdatePremiumExpirationAsync(userId, currentPeriodEnd);
+        await _userRepository.Received(1).GetByIdAsync(userId);
+        await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
         await _stripeFacade.Received(1).UpdateSubscription(
             subscriptionId,
             Arg.Is<SubscriptionUpdateOptions>(options =>

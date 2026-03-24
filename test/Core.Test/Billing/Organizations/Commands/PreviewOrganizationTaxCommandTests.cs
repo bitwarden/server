@@ -438,7 +438,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = "TEST_COUPON_20"
+            Coupons = ["TEST_COUPON_20"]
         };
 
         var billingAddress = new BillingAddress
@@ -497,7 +497,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalServiceAccounts = 2,
                 Standalone = false
             },
-            Coupon = "ENTERPRISE_DISCOUNT_15"
+            Coupons = ["ENTERPRISE_DISCOUNT_15"]
         };
 
         var billingAddress = new BillingAddress
@@ -556,7 +556,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = true
             },
-            Coupon = "TEST_COUPON_IGNORED"
+            Coupons = ["TEST_COUPON_IGNORED"]
         };
 
         var billingAddress = new BillingAddress
@@ -615,7 +615,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalServiceAccounts = 0,
                 Standalone = true
             },
-            Coupon = "USER_COUPON_IGNORED"
+            Coupons = ["USER_COUPON_IGNORED"]
         };
 
         var billingAddress = new BillingAddress
@@ -672,7 +672,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = ""
+            Coupons = null
         };
 
         var billingAddress = new BillingAddress
@@ -777,7 +777,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = "   "
+            Coupons = ["   "]
         };
 
         var billingAddress = new BillingAddress
@@ -831,7 +831,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = "  TEST_COUPON_20  "
+            Coupons = ["  TEST_COUPON_20  "]
         };
 
         var billingAddress = new BillingAddress
@@ -887,7 +887,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = longCoupon
+            Coupons = [longCoupon]
         };
 
         var billingAddress = new BillingAddress
@@ -943,7 +943,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = specialCoupon
+            Coupons = [specialCoupon]
         };
 
         var billingAddress = new BillingAddress
@@ -999,7 +999,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = unicodeCoupon
+            Coupons = [unicodeCoupon]
         };
 
         var billingAddress = new BillingAddress
@@ -2094,7 +2094,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = "VALID_FAMILIES_DISCOUNT"
+            Coupons = ["VALID_FAMILIES_DISCOUNT"]
         };
 
         var billingAddress = new BillingAddress
@@ -2108,7 +2108,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
-            "VALID_FAMILIES_DISCOUNT",
+            Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "VALID_FAMILIES_DISCOUNT" })),
             DiscountTierType.Families).Returns(true);
 
         var invoice = new Invoice
@@ -2128,7 +2128,7 @@ public class PreviewOrganizationTaxCommandTests
 
         await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
-            "VALID_FAMILIES_DISCOUNT",
+            Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "VALID_FAMILIES_DISCOUNT" })),
             DiscountTierType.Families);
 
         await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
@@ -2150,7 +2150,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = "INVALID_COUPON"
+            Coupons = ["INVALID_COUPON"]
         };
 
         var billingAddress = new BillingAddress
@@ -2164,7 +2164,7 @@ public class PreviewOrganizationTaxCommandTests
 
         _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
             _user,
-            "INVALID_COUPON",
+            Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "INVALID_COUPON" })),
             DiscountTierType.Families).Returns(false);
 
         var invoice = new Invoice
@@ -2184,7 +2184,7 @@ public class PreviewOrganizationTaxCommandTests
 
         await _subscriptionDiscountService.Received(1).ValidateDiscountEligibilityForUserAsync(
             _user,
-            "INVALID_COUPON",
+            Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "INVALID_COUPON" })),
             DiscountTierType.Families);
 
         // Verify invalid coupon is silently ignored (no discount applied)
@@ -2213,7 +2213,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = "TEAMS_COUPON"
+            Coupons = ["TEAMS_COUPON"]
         };
 
         var billingAddress = new BillingAddress
@@ -2243,7 +2243,7 @@ public class PreviewOrganizationTaxCommandTests
         // Verify coupon validation was NOT called for Teams (only Families plans use coupons)
         await _subscriptionDiscountService.DidNotReceive().ValidateDiscountEligibilityForUserAsync(
             Arg.Any<User>(),
-            Arg.Any<string>(),
+            Arg.Any<IReadOnlyList<string>>(),
             Arg.Any<DiscountTierType>());
 
         // Verify coupon is ignored for Teams plans (no discounts applied)
@@ -2272,7 +2272,7 @@ public class PreviewOrganizationTaxCommandTests
                 AdditionalStorage = 0,
                 Sponsored = false
             },
-            Coupon = "ENTERPRISE_COUPON"
+            Coupons = ["ENTERPRISE_COUPON"]
         };
 
         var billingAddress = new BillingAddress
@@ -2302,7 +2302,7 @@ public class PreviewOrganizationTaxCommandTests
         // Verify coupon validation was NOT called for Enterprise (only Families plans use coupons)
         await _subscriptionDiscountService.DidNotReceive().ValidateDiscountEligibilityForUserAsync(
             Arg.Any<User>(),
-            Arg.Any<string>(),
+            Arg.Any<IReadOnlyList<string>>(),
             Arg.Any<DiscountTierType>());
 
         // Verify coupon is ignored for Enterprise plans (no discounts applied)
@@ -2316,6 +2316,143 @@ public class PreviewOrganizationTaxCommandTests
             options.SubscriptionDetails.Items[0].Price == "2023-enterprise-org-seat-annually" &&
             options.SubscriptionDetails.Items[0].Quantity == 10 &&
             options.Discounts == null));
+    }
+
+    #endregion
+
+    #region Multi-coupon support
+
+    [Fact]
+    public async Task Run_WithMultipleValidCoupons_AppliesBothToInvoicePreview()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Families,
+            Cadence = PlanCadenceType.Annually,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 6,
+                AdditionalStorage = 0,
+                Sponsored = false
+            },
+            Coupons = ["COUPON_ONE", "COUPON_TWO"]
+        };
+
+        var billingAddress = new BillingAddress { Country = "US", PostalCode = "12345" };
+        var plan = new FamiliesPlan();
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+            _user,
+            Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "COUPON_ONE", "COUPON_TWO" })),
+            DiscountTierType.Families).Returns(true);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 200 }],
+            Total = 2200
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(_user, purchase, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts != null &&
+            options.Discounts.Count == 2 &&
+            options.Discounts.Any(d => d.Coupon == "COUPON_ONE") &&
+            options.Discounts.Any(d => d.Coupon == "COUPON_TWO")));
+    }
+
+    [Fact]
+    public async Task Run_WithStandaloneSecretsManagerAndCoupons_IgnoresUserCoupons()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Teams,
+            Cadence = PlanCadenceType.Monthly,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 5,
+                AdditionalStorage = 0,
+                Sponsored = false
+            },
+            SecretsManager = new OrganizationSubscriptionPurchase.SecretsManagerSelections
+            {
+                Seats = 3,
+                AdditionalServiceAccounts = 0,
+                Standalone = true
+            },
+            Coupons = ["COUPON_ONE", "COUPON_TWO"]
+        };
+
+        var billingAddress = new BillingAddress { Country = "US", PostalCode = "12345" };
+        var plan = new TeamsPlan(false);
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 500 }],
+            Total = 5500
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(_user, purchase, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        // User coupons ignored; system coupon applied for standalone SM
+        await _subscriptionDiscountService.DidNotReceive().ValidateDiscountEligibilityForUserAsync(
+            Arg.Any<User>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<DiscountTierType>());
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts != null &&
+            options.Discounts.Count == 1 &&
+            options.Discounts[0].Coupon == CouponIDs.SecretsManagerStandalone));
+    }
+
+    [Fact]
+    public async Task Run_WithMixedValidAndInvalidCoupons_SkipsAllDiscounts()
+    {
+        var purchase = new OrganizationSubscriptionPurchase
+        {
+            Tier = ProductTierType.Families,
+            Cadence = PlanCadenceType.Annually,
+            PasswordManager = new OrganizationSubscriptionPurchase.PasswordManagerSelections
+            {
+                Seats = 6,
+                AdditionalStorage = 0,
+                Sponsored = false
+            },
+            Coupons = ["VALID_COUPON", "INVALID_COUPON"]
+        };
+
+        var billingAddress = new BillingAddress { Country = "US", PostalCode = "12345" };
+        var plan = new FamiliesPlan();
+        _pricingClient.GetPlanOrThrow(purchase.PlanType).Returns(plan);
+
+        _subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+            _user,
+            Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "VALID_COUPON", "INVALID_COUPON" })),
+            DiscountTierType.Families).Returns(false);
+
+        var invoice = new Invoice
+        {
+            TotalTaxes = [new InvoiceTotalTax { Amount = 300 }],
+            Total = 3300
+        };
+
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
+
+        var result = await _command.Run(_user, purchase, billingAddress);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).CreateInvoicePreviewAsync(Arg.Is<InvoiceCreatePreviewOptions>(options =>
+            options.Discounts == null || options.Discounts.Count == 0));
     }
 
     #endregion

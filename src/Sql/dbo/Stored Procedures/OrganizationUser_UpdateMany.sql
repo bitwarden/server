@@ -80,6 +80,7 @@ BEGIN
     INSERT INTO @UserIds
     SELECT [UserId]
     FROM @OrganizationUserInput
+    WHERE [UserId] IS NOT NULL
 
     EXEC [dbo].[User_BumpManyAccountRevisionDates] @UserIds
 END
