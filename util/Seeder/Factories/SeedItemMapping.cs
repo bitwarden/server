@@ -12,7 +12,8 @@ internal static class SeedItemMapping
         "hidden" => 1,
         "boolean" => 2,
         "linked" => 3,
-        _ => 0 // text
+        "text" => 0,
+        _ => throw new ArgumentException($"Unknown field type: '{type}'", nameof(type))
     };
 
     internal static List<FieldViewDto>? MapFields(List<SeedField>? fields) =>
@@ -30,6 +31,7 @@ internal static class SeedItemMapping
         "exact" => 3,
         "regex" => 4,
         "never" => 5,
-        _ => 0 // domain
+        "domain" => 0,
+        _ => throw new ArgumentException($"Unknown URI match type: '{match}'", nameof(match))
     };
 }
