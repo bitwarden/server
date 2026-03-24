@@ -2,9 +2,9 @@ CREATE TABLE [dbo].[Receive]
 (
     [Id]             UNIQUEIDENTIFIER NOT NULL,
     [UserId]         UNIQUEIDENTIFIER NULL,
-    [Data]           VARCHAR(MAX)     NOT NULL,  -- can contain multiple files
+    [Data]           VARCHAR(MAX)     NOT NULL,
     [Key]            VARCHAR(MAX)     NOT NULL,
-    [Secret]         NVARCHAR(300)    NOT NULL,      -- in lieu of password
+    [Secret]         NVARCHAR(300)    NOT NULL,
     [MaxUploadCount] INT              NULL,
     [UploadCount]    INT              NOT NULL,
     [CreationDate]   DATETIME2(7)     NOT NULL,
