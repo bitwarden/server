@@ -4,7 +4,7 @@ CREATE TABLE [dbo].[Receive]
     [UserId]         UNIQUEIDENTIFIER NULL,
     [Data]           VARCHAR(MAX)     NOT NULL,  -- can contain multiple files
     [Key]            VARCHAR(MAX)     NOT NULL,
-    [Secret]         NVARCHAR(300)    NULL,      -- in lieu of password
+    [Secret]         NVARCHAR(300)    NOT NULL,      -- in lieu of password
     [MaxUploadCount] INT              NULL,
     [UploadCount]    INT              NOT NULL,
     [CreationDate]   DATETIME2(7)     NOT NULL,
@@ -17,4 +17,8 @@ CREATE TABLE [dbo].[Receive]
 GO
 CREATE NONCLUSTERED INDEX [IX_Receive_ExpirationDate]
     ON [dbo].[Receive] ([ExpirationDate] ASC);
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Receive_UserId]
+    ON [dbo].[Receive] ([UserId] ASC);
 

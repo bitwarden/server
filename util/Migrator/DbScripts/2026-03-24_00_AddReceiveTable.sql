@@ -7,7 +7,7 @@ BEGIN
         [UserId]         UNIQUEIDENTIFIER NULL,
         [Data]           VARCHAR(MAX)     NOT NULL,
         [Key]            VARCHAR(MAX)     NOT NULL,
-        [Secret]         NVARCHAR(300)    NULL,
+        [Secret]         NVARCHAR(300)    NOT NULL,
         [MaxUploadCount] INT              NULL,
         [UploadCount]    INT              NOT NULL,
         [CreationDate]   DATETIME2(7)     NOT NULL,
@@ -19,5 +19,8 @@ BEGIN
 
     CREATE NONCLUSTERED INDEX [IX_Receive_ExpirationDate]
         ON [dbo].[Receive] ([ExpirationDate] ASC);
+
+    CREATE NONCLUSTERED INDEX [IX_Receive_UserId]
+        ON [dbo].[Receive] ([UserId] ASC);
 END
 GO
