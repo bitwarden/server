@@ -175,12 +175,13 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task Post_WithPassword_InfersAuthTypePassword(Guid userId)
+    public async Task Post_WithPasswordAuthType_SetsAuthTypePassword(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         _sendAuthorizationService.HashPassword(Arg.Any<string>()).Returns("hashed_password");
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             Type = SendType.Text,
             Key = "key",
             Text = new SendTextModel { Text = "text" },
@@ -202,12 +203,13 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task Post_WithEmails_InfersAuthTypeEmail(Guid userId)
+    public async Task Post_WithEmailAuthType_SetsAuthTypeEmail(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Email,
             Type = SendType.Text,
             Key = "key",
             Text = new SendTextModel { Text = "text" },
@@ -229,11 +231,12 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task Post_WithoutPasswordOrEmails_InfersAuthTypeNone(Guid userId)
+    public async Task Post_WithNoneAuthType_SetsAuthTypeNone(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         var request = new SendRequestModel
         {
+            AuthType = AuthType.None,
             Type = SendType.Text,
             Key = "key",
             Text = new SendTextModel { Text = "text" },
@@ -260,6 +263,7 @@ public class SendsControllerTests : IDisposable
         _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Email,
             Type = SendType.Text,
             Key = "key",
             Text = new SendTextModel { Text = "text" },
@@ -280,6 +284,7 @@ public class SendsControllerTests : IDisposable
         _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Email,
             Type = SendType.File,
             Key = "key",
             File = new SendFileModel { FileName = "test.txt" },
@@ -302,6 +307,7 @@ public class SendsControllerTests : IDisposable
         _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Email,
             Type = SendType.Text,
             Key = "key",
             Text = new SendTextModel { Text = "text" },
@@ -381,6 +387,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             Type = SendType.Text,
             Key = "updated-key",
             Text = new SendTextModel { Text = "updated text" },
@@ -533,7 +540,7 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task PostFile_WithPassword_InfersAuthTypePassword(Guid userId)
+    public async Task PostFile_WithPasswordAuthType_SetsAuthTypePassword(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         _sendAuthorizationService.HashPassword(Arg.Any<string>()).Returns("hashed_password");
@@ -548,6 +555,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             Type = SendType.File,
             Key = "key",
             File = new SendFileModel { FileName = "test.txt" },
@@ -572,7 +580,7 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task PostFile_WithEmails_InfersAuthTypeEmail(Guid userId)
+    public async Task PostFile_WithEmailAuthType_SetsAuthTypeEmail(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
@@ -587,6 +595,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Email,
             Type = SendType.File,
             Key = "key",
             File = new SendFileModel { FileName = "test.txt" },
@@ -611,7 +620,7 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task PostFile_WithoutPasswordOrEmails_InfersAuthTypeNone(Guid userId)
+    public async Task PostFile_WithNoneAuthType_SetsAuthTypeNone(Guid userId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         _nonAnonymousSendCommand.SaveFileSendAsync(Arg.Any<Send>(), Arg.Any<SendFileData>(), Arg.Any<long>())
@@ -625,6 +634,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.None,
             Type = SendType.File,
             Key = "key",
             File = new SendFileModel { FileName = "test.txt" },
@@ -665,6 +675,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Email,
             Type = SendType.Text,
             Key = "updated-key",
             Text = new SendTextModel { Text = "updated text" },
@@ -701,6 +712,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             Type = SendType.Text,
             Key = "updated-key",
             Text = new SendTextModel { Text = "updated text" },
@@ -737,6 +749,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.None,
             Type = SendType.Text,
             Key = "updated-key",
             Text = new SendTextModel { Text = "updated text" },
@@ -755,7 +768,7 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task Put_WithExistingPasswordAuth_WhenNoAuthInRequest_PreservesPasswordAuth(Guid userId, Guid sendId)
+    public async Task Put_WithExistingAndRequestPasswordAuth_PreservesExistingPasswordHash(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         var existingSend = new Send
@@ -772,6 +785,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.Password,
             Type = SendType.Text,
             Key = "updated-key",
             Text = new SendTextModel { Text = "updated text" },
@@ -790,7 +804,7 @@ public class SendsControllerTests : IDisposable
     }
 
     [Theory, AutoData]
-    public async Task Put_WithExistingEmailAuth_WhenNoAuthInRequest_ClearsEmailAuth(Guid userId, Guid sendId)
+    public async Task Put_ChangingFromEmailToNone_ClearsEmailAuth(Guid userId, Guid sendId)
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
@@ -808,6 +822,7 @@ public class SendsControllerTests : IDisposable
 
         var request = new SendRequestModel
         {
+            AuthType = AuthType.None,
             Type = SendType.Text,
             Key = "updated-key",
             Text = new SendTextModel { Text = "updated text" },
