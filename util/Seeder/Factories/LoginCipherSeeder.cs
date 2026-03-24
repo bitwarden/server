@@ -37,7 +37,7 @@ internal static class LoginCipherSeeder
                 Password = password,
                 Totp = totp,
                 Uris = string.IsNullOrEmpty(uri) ? null : [new LoginUriViewDto { Uri = uri }],
-                Fido2Credentials = passkeys == null ? null : passkeys.Select(r => PasskeyViewFactory.Create(r.rpName, r.userName)).ToList()
+                Fido2Credentials = passkeys == null ? null : passkeys.Select(r => CreateFido2Credential(r.rpName, r.userName)).ToList()
             },
             Reprompt = reprompt ? RepromptTypes.Password : RepromptTypes.None,
             DeletedDate = deleted ? DateTime.UtcNow.AddDays(-1) : null,
@@ -82,11 +82,8 @@ internal static class LoginCipherSeeder
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, organizationId, userId);
     }
-}
 
-public class PasskeyViewFactory
-{
-    public static Fido2CredentialViewDto Create(string rpName, string userName)
+    public static Fido2CredentialViewDto CreateFido2Credential(string rpName, string userName)
     {
         // Generate ECDSA P-256 private key in PKCS#8 format
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
