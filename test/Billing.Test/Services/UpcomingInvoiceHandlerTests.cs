@@ -2982,7 +2982,7 @@ public class UpcomingInvoiceHandlerTests
                     EndDate = phase1EndDate,
                     Items = new List<SubscriptionSchedulePhaseItem>
                     {
-                        new() { Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
+                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
                     },
                     Discounts = new List<SubscriptionSchedulePhaseDiscount>()
                 }
@@ -3155,7 +3155,7 @@ public class UpcomingInvoiceHandlerTests
                     EndDate = phase1EndDate,
                     Items = new List<SubscriptionSchedulePhaseItem>
                     {
-                        new() { Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }, Quantity = 1 }
+                        new() { PriceId = families2019Plan.PasswordManager.StripePlanId, Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }, Quantity = 1 }
                     },
                     Discounts = new List<SubscriptionSchedulePhaseDiscount>()
                 }
@@ -3259,7 +3259,7 @@ public class UpcomingInvoiceHandlerTests
                     EndDate = phase1EndDate,
                     Items = new List<SubscriptionSchedulePhaseItem>
                     {
-                        new() { Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }, Quantity = 1 }
+                        new() { PriceId = families2025Plan.PasswordManager.StripePlanId, Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }, Quantity = 1 }
                     },
                     Discounts = new List<SubscriptionSchedulePhaseDiscount>()
                 }
@@ -3432,7 +3432,7 @@ public class UpcomingInvoiceHandlerTests
                     EndDate = DateTime.UtcNow.AddDays(15),
                     Items = new List<SubscriptionSchedulePhaseItem>
                     {
-                        new() { Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
+                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
                     },
                     Discounts = new List<SubscriptionSchedulePhaseDiscount>()
                 }
@@ -3523,7 +3523,7 @@ public class UpcomingInvoiceHandlerTests
                     EndDate = DateTime.UtcNow.AddDays(15),
                     Items = new List<SubscriptionSchedulePhaseItem>
                     {
-                        new() { Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }, Quantity = 1 }
+                        new() { PriceId = families2025Plan.PasswordManager.StripePlanId, Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }, Quantity = 1 }
                     },
                     Discounts = new List<SubscriptionSchedulePhaseDiscount>()
                 }
@@ -3607,7 +3607,7 @@ public class UpcomingInvoiceHandlerTests
                     EndDate = DateTime.UtcNow.AddDays(15),
                     Items = new List<SubscriptionSchedulePhaseItem>
                     {
-                        new() { Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
+                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
                     },
                     Discounts = new List<SubscriptionSchedulePhaseDiscount>()
                 }
@@ -3696,7 +3696,7 @@ public class UpcomingInvoiceHandlerTests
                     EndDate = DateTime.UtcNow.AddDays(15),
                     Items = new List<SubscriptionSchedulePhaseItem>
                     {
-                        new() { Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
+                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
                     },
                     Discounts = new List<SubscriptionSchedulePhaseDiscount>()
                 }
