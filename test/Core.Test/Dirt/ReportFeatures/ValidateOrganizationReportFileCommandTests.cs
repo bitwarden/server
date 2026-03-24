@@ -86,7 +86,7 @@ public class ValidateOrganizationReportFileCommandTests
 
         sutProvider.GetDependency<IOrganizationReportStorageService>()
             .ValidateFileAsync(report, Arg.Any<ReportFile>(), 0, Core.Constants.FileSize501mb)
-            .Returns((false, -1L));
+            .Returns((false, 999999999L));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(report, fileId);
@@ -101,6 +101,40 @@ public class ValidateOrganizationReportFileCommandTests
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .Received(1)
             .DeleteAsync(report);
+
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .DidNotReceive()
+            .ReplaceAsync(Arg.Any<OrganizationReport>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_StorageError_DoesNotDelete(
+        SutProvider<ValidateOrganizationReportFileCommand> sutProvider)
+    {
+        // Arrange
+        var reportId = Guid.NewGuid();
+        var organizationId = Guid.NewGuid();
+        var fileId = "test-file-id-789";
+        var report = CreateReportWithFileData(reportId, organizationId, fileId);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .ValidateFileAsync(report, Arg.Any<ReportFile>(), 0, Core.Constants.FileSize501mb)
+            .Returns((false, -1L));
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(report, fileId);
+
+        // Assert
+        Assert.False(result);
+
+        await sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .DidNotReceive()
+            .DeleteReportFilesAsync(Arg.Any<OrganizationReport>(), Arg.Any<string>());
+
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .DidNotReceive()
+            .DeleteAsync(Arg.Any<OrganizationReport>());
 
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive()

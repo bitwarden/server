@@ -31,6 +31,13 @@ public class ValidateOrganizationReportFileCommand : IValidateOrganizationReport
         }
 
         var (valid, length) = await _storageService.ValidateFileAsync(report, fileData, 0, Constants.FileSize501mb);
+
+        if (length < 0)
+        {
+            _logger.LogWarning("Could not validate report {ReportId} due to storage error. Skipping.", report.Id);
+            return false;
+        }
+
         if (!valid)
         {
             _logger.LogWarning(

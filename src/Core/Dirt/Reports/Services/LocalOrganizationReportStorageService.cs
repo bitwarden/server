@@ -38,7 +38,7 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
         var token = timedProtector.Protect(
             $"{report.Id}|{fileData.Id}",
             _downloadLinkLifetime);
-        return Task.FromResult($"{_apiBaseUrl}/reports/download?token={Uri.EscapeDataString(token)}");
+        return Task.FromResult($"{_apiBaseUrl}/reports/organizations/download?token={Uri.EscapeDataString(token)}");
     }
 
     public (Guid reportId, string fileId) ParseReportDownloadToken(string token)
