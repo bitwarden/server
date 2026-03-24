@@ -10,6 +10,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
+using Stripe;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
@@ -21,6 +23,8 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
+    private readonly IStripeAdapter _stripeAdapter;
+    private readonly ILogger<SetUpSponsorshipCommand> _logger;
 
     public SetUpSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -28,7 +32,9 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         IStripePaymentService paymentService,
         IFeatureService featureService,
         IPricingClient pricingClient,
-        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
+        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
+        IStripeAdapter stripeAdapter,
+        ILogger<SetUpSponsorshipCommand> logger)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -36,6 +42,8 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         _featureService = featureService;
         _pricingClient = pricingClient;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
+        _stripeAdapter = stripeAdapter;
+        _logger = logger;
     }
 
     public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship,
@@ -73,6 +81,33 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         if (sponsoredOrganizationProductTier != requiredSponsoredProductType)
         {
             throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
+        }
+
+        // Release any active subscription schedule before updating the subscription.
+        // A schedule may exist if a deferred price migration is pending for this subscription.
+        // This is best-effort — a failure here should not block the sponsorship setup.
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            && !string.IsNullOrEmpty(sponsoredOrganization.GatewaySubscriptionId)
+            && !string.IsNullOrEmpty(sponsoredOrganization.GatewayCustomerId))
+        {
+            try
+            {
+                var schedules = await _stripeAdapter.ListSubscriptionSchedulesAsync(
+                    new SubscriptionScheduleListOptions { Customer = sponsoredOrganization.GatewayCustomerId });
+
+                var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                    s.Status == "active" && s.SubscriptionId == sponsoredOrganization.GatewaySubscriptionId);
+                if (activeSchedule != null)
+                {
+                    await _stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to release subscription schedule for subscription {SubscriptionId}. Proceeding with sponsorship setup.",
+                    sponsoredOrganization.GatewaySubscriptionId);
+            }
         }
 
         if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))

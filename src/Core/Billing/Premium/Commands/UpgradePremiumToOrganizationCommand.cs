@@ -51,6 +51,7 @@ public class UpgradePremiumToOrganizationCommand(
     ILogger<UpgradePremiumToOrganizationCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
+    IFeatureService featureService,
     IUserService userService,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
@@ -211,6 +212,31 @@ public class UpgradePremiumToOrganizationCommand(
         if (billingAddress.TaxId != null)
         {
             await AddTaxIdToCustomerAsync(user, billingAddress.TaxId);
+        }
+
+        // Release any active subscription schedule before updating the subscription.
+        // A schedule may exist if a deferred price migration is pending for this subscription.
+        // This is best-effort — a failure here should not block the upgrade.
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            try
+            {
+                var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                    new SubscriptionScheduleListOptions { Customer = user.GatewayCustomerId });
+
+                var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                    s.Status == "active" && s.SubscriptionId == currentSubscription.Id);
+                if (activeSchedule != null)
+                {
+                    await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to release subscription schedule for subscription {SubscriptionId}. Proceeding with upgrade.",
+                    currentSubscription.Id);
+            }
         }
 
         // Update the subscription in Stripe

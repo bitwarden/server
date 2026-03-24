@@ -1,12 +1,15 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 using Stripe;
 using Stripe.TestHelpers;
 using static Bit.Core.Billing.Constants.StripeConstants;
@@ -30,6 +33,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
+    private readonly IStripeAdapter _stripeAdapter;
+    private readonly IFeatureService _featureService;
+    private readonly ILogger<SubscriptionUpdatedHandler> _logger;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -45,7 +51,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPricingClient pricingClient,
         IProviderRepository providerRepository,
         IProviderService providerService,
-        IPushNotificationAdapter pushNotificationAdapter)
+        IPushNotificationAdapter pushNotificationAdapter,
+        IStripeAdapter stripeAdapter,
+        IFeatureService featureService,
+        ILogger<SubscriptionUpdatedHandler> logger)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -63,6 +72,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _providerRepository = providerRepository;
         _providerService = providerService;
         _pushNotificationAdapter = pushNotificationAdapter;
+        _stripeAdapter = stripeAdapter;
+        _featureService = featureService;
+        _logger = logger;
     }
 
     public async Task HandleAsync(Event parsedEvent)
@@ -203,6 +215,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task SetSubscriptionToCancelAsync(Subscription subscription)
     {
+        await ReleaseActiveScheduleAsync(subscription);
+
         if (subscription.TestClock != null)
         {
             await WaitForTestClockToAdvanceAsync(subscription.TestClock);
@@ -222,11 +236,46 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     }
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
-        => await _stripeFacade.UpdateSubscription(subscription.Id, new SubscriptionUpdateOptions
+    {
+        await ReleaseActiveScheduleAsync(subscription);
+
+        await _stripeFacade.UpdateSubscription(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
             ProrationBehavior = ProrationBehavior.None
         });
+    }
+
+    /// <summary>
+    /// Best-effort release of any active subscription schedule for the given subscription.
+    /// A failure here should not prevent the main subscription operation from completing.
+    /// </summary>
+    private async Task ReleaseActiveScheduleAsync(Subscription subscription)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            return;
+        }
+
+        try
+        {
+            var schedules = await _stripeAdapter.ListSubscriptionSchedulesAsync(
+                new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+            var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                s.Status == "active" && s.SubscriptionId == subscription.Id);
+            if (activeSchedule != null)
+            {
+                await _stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to release subscription schedule for subscription {SubscriptionId}. Proceeding with subscription update.",
+                subscription.Id);
+        }
+    }
 
     /// <summary>
     /// Removes the Password Manager coupon if the organization is removing the Secrets Manager trial.

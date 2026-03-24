@@ -171,6 +171,119 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             .UpsertAsync(default);
     }
 
+    [Theory]
+    [BitMemberAutoData(nameof(FamiliesPlanTypes))]
+    public async Task SetUpSponsorship_ScheduleFlagOn_ActiveScheduleExists_ReleasesSchedule(PlanType planType,
+        OrganizationSponsorship sponsorship, Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    {
+        org.PlanType = planType;
+        org.GatewaySubscriptionId = "sub_123";
+        org.GatewayCustomerId = "cus_123";
+        sponsorship.LastSyncDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data = [new SubscriptionSchedule { Id = "sub_sched_123", Status = "active", SubscriptionId = "sub_123" }]
+            });
+
+        await sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .Received(1)
+            .ReleaseSubscriptionScheduleAsync("sub_sched_123", Arg.Any<SubscriptionScheduleReleaseOptions>());
+        await AssertDidSetUpAsync(sutProvider, sponsorship, org);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(FamiliesPlanTypes))]
+    public async Task SetUpSponsorship_ScheduleFlagOn_NoActiveSchedule_DoesNotRelease(PlanType planType,
+        OrganizationSponsorship sponsorship, Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    {
+        org.PlanType = planType;
+        org.GatewaySubscriptionId = "sub_123";
+        org.GatewayCustomerId = "cus_123";
+        sponsorship.LastSyncDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        await sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive()
+            .ReleaseSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleReleaseOptions>());
+        await AssertDidSetUpAsync(sutProvider, sponsorship, org);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(FamiliesPlanTypes))]
+    public async Task SetUpSponsorship_ScheduleFlagOff_DoesNotCheckSchedules(PlanType planType,
+        OrganizationSponsorship sponsorship, Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    {
+        org.PlanType = planType;
+        sponsorship.LastSyncDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        await sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive()
+            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
+        await AssertDidSetUpAsync(sutProvider, sponsorship, org);
+    }
+
+    [Theory]
+    [BitMemberAutoData(nameof(FamiliesPlanTypes))]
+    public async Task SetUpSponsorship_ScheduleFlagOn_NullGatewayIds_DoesNotCheckSchedules(PlanType planType,
+        OrganizationSponsorship sponsorship, Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    {
+        org.PlanType = planType;
+        org.GatewaySubscriptionId = null;
+        org.GatewayCustomerId = null;
+        sponsorship.LastSyncDate = DateTime.UtcNow;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(false);
+
+        await sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org);
+
+        await sutProvider.GetDependency<IStripeAdapter>()
+            .DidNotReceive()
+            .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
+        await AssertDidSetUpAsync(sutProvider, sponsorship, org);
+    }
+
     private static async Task AssertDidSetUpAsync(SutProvider<SetUpSponsorshipCommand> sutProvider,
         OrganizationSponsorship sponsorship, Organization org)
     {
