@@ -231,6 +231,7 @@ public static class FeatureFlagKeys
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
+    public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
 
     /* Tools Team */
     /// <summary>
