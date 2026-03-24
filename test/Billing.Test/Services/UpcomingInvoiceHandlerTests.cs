@@ -3013,7 +3013,7 @@ public class UpcomingInvoiceHandlerTests
         await _stripeAdapter.Received(1).CreateSubscriptionScheduleAsync(
             Arg.Is<SubscriptionScheduleCreateOptions>(o =>
                 o.FromSubscription == subscriptionId &&
-                o.EndBehavior == "release"));
+                o.EndBehavior == SubscriptionScheduleEndBehavior.Release));
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             Arg.Is("sub_sched_123"),
@@ -3021,11 +3021,11 @@ public class UpcomingInvoiceHandlerTests
                 o.Phases.Count == 2 &&
                 o.Phases[0].StartDate == phase1StartDate &&
                 o.Phases[0].EndDate == phase1EndDate &&
-                o.Phases[0].ProrationBehavior == "none" &&
+                o.Phases[0].ProrationBehavior == ProrationBehavior.None &&
                 o.Phases[1].StartDate == phase1EndDate &&
                 o.Phases[1].Items[0].Price == newPriceId &&
                 o.Phases[1].Discounts[0].Coupon == CouponIDs.Milestone2SubscriptionDiscount &&
-                o.Phases[1].ProrationBehavior == "none"));
+                o.Phases[1].ProrationBehavior == ProrationBehavior.None));
 
         await _mailer.Received(1).SendEmail(Arg.Any<PremiumRenewalMail>());
     }
@@ -3081,7 +3081,7 @@ public class UpcomingInvoiceHandlerTests
             {
                 Data = new List<SubscriptionSchedule>
                 {
-                    new() { SubscriptionId = subscriptionId, Status = "active" }
+                    new() { SubscriptionId = subscriptionId, Status = SubscriptionScheduleStatus.Active }
                 }
             });
 
@@ -3189,7 +3189,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Phases[1].Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
                 o.Phases[1].Discounts != null &&
                 o.Phases[1].Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
-                o.Phases[1].ProrationBehavior == "none"));
+                o.Phases[1].ProrationBehavior == ProrationBehavior.None));
 
         // Assert — org DB NOT updated (deferred to renewal)
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
@@ -3291,7 +3291,7 @@ public class UpcomingInvoiceHandlerTests
                 o.Phases.Count == 2 &&
                 o.Phases[1].Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
                 o.Phases[1].Discounts == null &&
-                o.Phases[1].ProrationBehavior == "none"));
+                o.Phases[1].ProrationBehavior == ProrationBehavior.None));
 
         // Assert — org DB NOT updated
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
@@ -3362,7 +3362,7 @@ public class UpcomingInvoiceHandlerTests
             {
                 Data = new List<SubscriptionSchedule>
                 {
-                    new() { SubscriptionId = subscriptionId, Status = "active" }
+                    new() { SubscriptionId = subscriptionId, Status = SubscriptionScheduleStatus.Active }
                 }
             });
 
@@ -3630,7 +3630,7 @@ public class UpcomingInvoiceHandlerTests
             {
                 Data = new List<SubscriptionSchedule>
                 {
-                    new() { SubscriptionId = "sub_OTHER", Status = "active" }
+                    new() { SubscriptionId = "sub_OTHER", Status = SubscriptionScheduleStatus.Active }
                 }
             });
         _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
@@ -3719,7 +3719,7 @@ public class UpcomingInvoiceHandlerTests
             {
                 Data = new List<SubscriptionSchedule>
                 {
-                    new() { SubscriptionId = subscriptionId, Status = "completed" }
+                    new() { SubscriptionId = subscriptionId, Status = SubscriptionScheduleStatus.Completed }
                 }
             });
         _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())

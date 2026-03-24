@@ -618,7 +618,7 @@ public class UpcomingInvoiceHandler(
         var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
             new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
 
-        if (schedules.Data.Any(s => s.SubscriptionId == subscription.Id && s.Status == "active"))
+        if (schedules.Data.Any(s => s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active))
         {
             logger.LogInformation(
                 "Active subscription schedule already exists for subscription ({SubscriptionId}), skipping schedule creation",
@@ -630,7 +630,7 @@ public class UpcomingInvoiceHandler(
             new SubscriptionScheduleCreateOptions
             {
                 FromSubscription = subscription.Id,
-                EndBehavior = "release"
+                EndBehavior = SubscriptionScheduleEndBehavior.Release
             });
 
         try
@@ -655,20 +655,26 @@ public class UpcomingInvoiceHandler(
                             {
                                 Coupon = d.Coupon?.Id
                             }).ToList(),
-                            ProrationBehavior = "none"
+                            ProrationBehavior = ProrationBehavior.None
                         },
                         new SubscriptionSchedulePhaseOptions
                         {
                             StartDate = phase1.EndDate,
                             Items = phase2Items,
                             Discounts = phase2Discounts,
-                            ProrationBehavior = "none"
+                            ProrationBehavior = ProrationBehavior.None
                         }
                     ]
                 });
         }
-        catch
+        catch (Exception exception)
         {
+            logger.LogError(
+                exception,
+                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), attempting to release orphaned schedule",
+                schedule.Id,
+                subscription.Id);
+
             try
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
