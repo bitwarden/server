@@ -139,7 +139,7 @@ public class UpgradePremiumToOrganizationCommandTests
     private readonly ICollectionRepository _collectionRepository = Substitute.For<ICollectionRepository>();
     private readonly IApplicationCacheService _applicationCacheService = Substitute.For<IApplicationCacheService>();
     private readonly IBraintreeService _braintreeService = Substitute.For<IBraintreeService>();
-    private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
+    private readonly IGetPaymentMethodQuery _getPaymentMethodQuery = Substitute.For<IGetPaymentMethodQuery>();
     private readonly IPushNotificationService _pushNotificationService = Substitute.For<IPushNotificationService>();
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = Substitute.For<ILogger<UpgradePremiumToOrganizationCommand>>();
     private readonly UpgradePremiumToOrganizationCommand _command;
@@ -153,7 +153,12 @@ public class UpgradePremiumToOrganizationCommandTests
                 Metadata = new Dictionary<string, string>(),
                 InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = "pm_card_123" }
             }));
-        _hasPaymentMethodQuery.Run(Arg.Any<User>()).Returns(true);
+        _getPaymentMethodQuery.Run(Arg.Any<User>()).Returns(new MaskedPaymentMethod(new MaskedCard
+        {
+            Brand = "visa",
+            Last4 = "4242",
+            Expiration = "12/25"
+        }));
 
         _command = new UpgradePremiumToOrganizationCommand(
             _logger,
@@ -165,7 +170,7 @@ public class UpgradePremiumToOrganizationCommandTests
             _organizationApiKeyRepository,
             _collectionRepository,
             _braintreeService,
-            _hasPaymentMethodQuery,
+            _getPaymentMethodQuery,
             _applicationCacheService,
             _pushNotificationService);
     }
@@ -1511,7 +1516,7 @@ public class UpgradePremiumToOrganizationCommandTests
         _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
         _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
-        _hasPaymentMethodQuery.Run(user).Returns(false);
+        _getPaymentMethodQuery.Run(user).Returns((MaskedPaymentMethod?)null);
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());

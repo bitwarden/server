@@ -62,7 +62,7 @@ public class UpgradePremiumToOrganizationCommand(
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     ICollectionRepository collectionRepository,
     IBraintreeService braintreeService,
-    IHasPaymentMethodQuery hasPaymentMethodQuery,
+    IGetPaymentMethodQuery getPaymentMethodQuery,
     IApplicationCacheService applicationCacheService,
     IPushNotificationService pushNotificationService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
