@@ -36,7 +36,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly ISsoRequestValidator _ssoRequestValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly ILogger _logger;
+    protected readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IAuthRequestRepository _authRequestRepository;
@@ -447,7 +447,16 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
         {
-            await _bumpDeviceLastActivityDateCommand.BumpByIdAsync(device.Id, device.Identifier);
+            try
+            {
+                await _bumpDeviceLastActivityDateCommand.BumpByIdAsync(device.Id, device.Identifier);
+            }
+            catch (Exception e)
+            {
+                // Log and swallow exceptions from this non-critical update, as we don't want to fail logins 
+                // due to issues updating the device's last activity date.
+                _logger.LogWarning(e, "Failed to bump LastActivityDate for device {DeviceId}.", device.Id);
+            }
         }
 
         // Once we've built the claims and custom response, we can set the success result.

@@ -230,7 +230,16 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             return;
         }
 
-        await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAsync(identifier, userId);
+        try
+        {
+            await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAsync(identifier, userId);
+        }
+        catch (Exception e)
+        {
+            // Log and swallow exceptions from this non-critical update, as we don't want to fail logins 
+            // due to issues updating the device's last activity date.
+            _logger.LogWarning(e, "Failed to bump LastActivityDate for device with identifier {DeviceIdentifier}.", identifier);
+        }
     }
 
     private async Task RecordActivityForInstallation(string? installationIdString)
