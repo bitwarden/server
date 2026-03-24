@@ -3,8 +3,10 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -24,6 +26,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 {
     private readonly UserManager<User> _userManager;
     private readonly IUpdateInstallationCommand _updateInstallationCommand;
+    private readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
     private readonly Version _denyLegacyUserMinimumVersion = new(Constants.DenyLegacyUserMinimumVersion);
 
     public CustomTokenRequestValidator(
@@ -47,7 +50,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
-        IClientVersionValidator clientVersionValidator)
+        IClientVersionValidator clientVersionValidator,
+        IBumpDeviceLastActivityDateCommand bumpDeviceLastActivityDateCommand)
         : base(
             userManager,
             userService,
@@ -68,10 +72,12 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             authRequestRepository,
             mailService,
             userAccountKeysQuery,
-            clientVersionValidator)
+            clientVersionValidator,
+            bumpDeviceLastActivityDateCommand)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
+        _bumpDeviceLastActivityDateCommand = bumpDeviceLastActivityDateCommand;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -85,6 +91,11 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             {
                 await FailAuthForLegacyUserAsync(null, context);
                 return;
+            }
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+            {
+                await BumpDeviceLastActivityForRefreshAsync(context);
             }
         }
 
@@ -208,6 +219,20 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     /// If installations ever start refreshing tokens more frequently we may need to
     /// adjust this to avoid making a bunch of unnecessary database calls!
     /// </remarks>
+    private async Task BumpDeviceLastActivityForRefreshAsync(CustomTokenRequestValidationContext context)
+    {
+        Debug.Assert(context.Result is not null);
+        var subject = context.Result.ValidatedRequest.Subject;
+        var identifier = subject?.FindFirstValue(Claims.Device);
+        var userIdString = subject?.GetSubjectId();
+        if (string.IsNullOrEmpty(identifier) || !Guid.TryParse(userIdString, out var userId))
+        {
+            return;
+        }
+
+        await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAsync(identifier, userId);
+    }
+
     private async Task RecordActivityForInstallation(string? installationIdString)
     {
         if (!Guid.TryParse(installationIdString, out var installationId))

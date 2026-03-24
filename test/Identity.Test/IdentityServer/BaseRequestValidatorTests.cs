@@ -6,6 +6,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -83,6 +84,7 @@ public class BaseRequestValidatorTests
         _mailService = Substitute.For<IMailService>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _clientVersionValidator = Substitute.For<IClientVersionValidator>();
+        var bumpDeviceLastActivityDateCommand = Substitute.For<IBumpDeviceLastActivityDateCommand>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -104,7 +106,8 @@ public class BaseRequestValidatorTests
             _authRequestRepository,
             _mailService,
             _userAccountKeysQuery,
-            _clientVersionValidator);
+            _clientVersionValidator,
+            bumpDeviceLastActivityDateCommand);
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
