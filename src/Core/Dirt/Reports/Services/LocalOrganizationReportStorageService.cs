@@ -1,21 +1,30 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Dirt.Reports.Services;
 
 public class LocalOrganizationReportStorageService : IOrganizationReportStorageService
 {
     private readonly string _baseDirPath;
-    private readonly string _baseUrl;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly string _apiBaseUrl;
+
+    internal static readonly string ReportDownloadProtectorPurpose = "ReportDownload";
+    private static readonly TimeSpan _downloadLinkLifetime = TimeSpan.FromMinutes(1);
 
     public FileUploadType FileUploadType => FileUploadType.Direct;
 
-    public LocalOrganizationReportStorageService(GlobalSettings globalSettings)
+    public LocalOrganizationReportStorageService(
+        GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider)
     {
         _baseDirPath = globalSettings.OrganizationReport.BaseDirectory;
-        _baseUrl = globalSettings.OrganizationReport.BaseUrl;
+        _dataProtectionProvider = dataProtectionProvider;
+        _apiBaseUrl = globalSettings.BaseServiceUri.Api;
     }
 
     public Task<string> GetReportFileUploadUrlAsync(OrganizationReport report, ReportFile fileData)
@@ -24,7 +33,49 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
     public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, ReportFile fileData)
     {
         InitDir();
-        return Task.FromResult($"{_baseUrl}/{RelativePath(report, fileData.Id!, fileData.FileName)}");
+        var protector = _dataProtectionProvider.CreateProtector(ReportDownloadProtectorPurpose);
+        var timedProtector = protector.ToTimeLimitedDataProtector();
+        var token = timedProtector.Protect(
+            $"{report.Id}|{fileData.Id}",
+            _downloadLinkLifetime);
+        return Task.FromResult($"{_apiBaseUrl}/reports/download?token={Uri.EscapeDataString(token)}");
+    }
+
+    public (Guid reportId, string fileId) ParseReportDownloadToken(string token)
+    {
+        var protector = _dataProtectionProvider
+            .CreateProtector(ReportDownloadProtectorPurpose)
+            .ToTimeLimitedDataProtector();
+
+        string payload;
+        try
+        {
+            payload = protector.Unprotect(token);
+        }
+        catch
+        {
+            throw new NotFoundException();
+        }
+
+        var parts = payload.Split('|');
+        if (parts.Length != 2 || !Guid.TryParse(parts[0], out var reportId))
+        {
+            throw new NotFoundException();
+        }
+
+        return (reportId, parts[1]);
+    }
+
+    public Task<Stream?> GetReportReadStreamAsync(OrganizationReport report, ReportFile fileData)
+    {
+        var path = Path.Combine(_baseDirPath, RelativePath(report, fileData.Id!, fileData.FileName));
+        EnsurePathWithinBaseDir(path);
+        if (!File.Exists(path))
+        {
+            return Task.FromResult<Stream?>(null);
+        }
+
+        return Task.FromResult<Stream?>(File.OpenRead(path));
     }
 
     public async Task UploadReportDataAsync(OrganizationReport report, ReportFile fileData, Stream stream)

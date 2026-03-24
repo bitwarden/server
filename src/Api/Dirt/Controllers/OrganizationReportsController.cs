@@ -478,6 +478,44 @@ public class OrganizationReportsController : Controller
         }
     }
 
+    /// <summary>
+    /// Downloads an organization report file using a time-limited, signed token.
+    /// This endpoint replaces direct static file access for self-hosted environments
+    /// to ensure that only authorized users can download report files.
+    /// </summary>
+    [AllowAnonymous]
+    [SelfHosted(SelfHostedOnly = true)]
+    [HttpGet("download")]
+    public async Task<IActionResult> DownloadReportAsync([FromQuery] string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new NotFoundException();
+        }
+
+        (Guid reportId, string fileId) = _storageService.ParseReportDownloadToken(token);
+
+        var report = await _organizationReportRepo.GetByIdAsync(reportId);
+        if (report == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var fileData = report.GetReportFile();
+        if (fileData == null || fileData.Id != fileId)
+        {
+            throw new NotFoundException();
+        }
+
+        var stream = await _storageService.GetReportReadStreamAsync(report, fileData);
+        if (stream == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return File(stream, "application/octet-stream", fileData.FileName);
+    }
+
     // Removing post v2 launch
     [HttpPatch("{organizationId}/data/application/{reportId}")]
     public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(

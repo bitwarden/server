@@ -3,7 +3,9 @@ using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 using Xunit;
 
 namespace Bit.Core.Test.Dirt.Reports.Services;
@@ -16,7 +18,22 @@ public class LocalOrganizationReportStorageServiceTests
         var globalSettings = new Core.Settings.GlobalSettings();
         globalSettings.OrganizationReport.BaseDirectory = "/tmp/bitwarden-test/reports";
         globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+        globalSettings.BaseServiceUri.Api = "https://localhost/api";
         return globalSettings;
+    }
+
+    private static IDataProtectionProvider GetDataProtectionProvider()
+    {
+        return DataProtectionProvider.Create("Testing");
+    }
+
+    private static LocalOrganizationReportStorageService CreateSut(
+        Core.Settings.GlobalSettings? globalSettings = null,
+        IDataProtectionProvider? dataProtectionProvider = null)
+    {
+        return new LocalOrganizationReportStorageService(
+            globalSettings ?? GetGlobalSettings(),
+            dataProtectionProvider ?? GetDataProtectionProvider());
     }
 
     private static ReportFile CreateFileData(string fileId = "test-file-id")
@@ -33,8 +50,7 @@ public class LocalOrganizationReportStorageServiceTests
     public void FileUploadType_ReturnsDirect()
     {
         // Arrange
-        var globalSettings = GetGlobalSettings();
-        var sut = new LocalOrganizationReportStorageService(globalSettings);
+        var sut = CreateSut();
 
         // Act & Assert
         Assert.Equal(FileUploadType.Direct, sut.FileUploadType);
@@ -45,8 +61,7 @@ public class LocalOrganizationReportStorageServiceTests
     {
         // Arrange
         var fixture = new Fixture();
-        var globalSettings = GetGlobalSettings();
-        var sut = new LocalOrganizationReportStorageService(globalSettings);
+        var sut = CreateSut();
 
         var orgId = Guid.NewGuid();
         var reportId = Guid.NewGuid();
@@ -66,12 +81,11 @@ public class LocalOrganizationReportStorageServiceTests
     }
 
     [Fact]
-    public async Task GetReportDataDownloadUrlAsync_ReturnsBaseUrlWithPath()
+    public async Task GetReportDataDownloadUrlAsync_ReturnsTokenBasedUrl()
     {
         // Arrange
         var fixture = new Fixture();
-        var globalSettings = GetGlobalSettings();
-        var sut = new LocalOrganizationReportStorageService(globalSettings);
+        var sut = CreateSut();
 
         var orgId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var reportId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -89,12 +103,122 @@ public class LocalOrganizationReportStorageServiceTests
         var url = await sut.GetReportDataDownloadUrlAsync(report, fileData);
 
         // Assert
-        Assert.StartsWith("https://localhost/reports/", url);
-        Assert.Contains($"{orgId}", url);
-        Assert.Contains("02-17-2026", url); // Date format
-        Assert.Contains($"{reportId}", url);
-        Assert.Contains(fileData.Id, url);
-        Assert.EndsWith("report-data.json", url);
+        Assert.StartsWith("https://localhost/api/reports/download?token=", url);
+    }
+
+    [Fact]
+    public async Task ParseReportDownloadToken_RoundTrips()
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var dataProtectionProvider = GetDataProtectionProvider();
+        var sut = CreateSut(dataProtectionProvider: dataProtectionProvider);
+
+        var reportId = Guid.NewGuid();
+        var fileId = "test-file-id";
+        var fileData = CreateFileData(fileId);
+
+        var report = fixture.Build<OrganizationReport>()
+            .With(r => r.Id, reportId)
+            .With(r => r.ReportData, string.Empty)
+            .Create();
+
+        // Act - generate a token then parse it
+        var url = await sut.GetReportDataDownloadUrlAsync(report, fileData);
+        var token = Uri.UnescapeDataString(url.Split("token=")[1]);
+        var (parsedReportId, parsedFileId) = sut.ParseReportDownloadToken(token);
+
+        // Assert
+        Assert.Equal(reportId, parsedReportId);
+        Assert.Equal(fileId, parsedFileId);
+    }
+
+    [Fact]
+    public void ParseReportDownloadToken_InvalidToken_ThrowsNotFoundException()
+    {
+        // Arrange
+        var sut = CreateSut();
+
+        // Act & Assert
+        Assert.Throws<NotFoundException>(() => sut.ParseReportDownloadToken("invalid-token"));
+    }
+
+    [Fact]
+    public async Task GetReportReadStreamAsync_FileExists_ReturnsStream()
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var tempDir = Path.Combine(Path.GetTempPath(), "bitwarden-test-" + Guid.NewGuid());
+
+        var globalSettings = new Core.Settings.GlobalSettings();
+        globalSettings.OrganizationReport.BaseDirectory = tempDir;
+        globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+        globalSettings.BaseServiceUri.Api = "https://localhost/api";
+
+        var sut = CreateSut(globalSettings);
+
+        var report = fixture.Build<OrganizationReport>()
+            .With(r => r.OrganizationId, Guid.NewGuid())
+            .With(r => r.Id, Guid.NewGuid())
+            .With(r => r.CreationDate, DateTime.UtcNow)
+            .With(r => r.ReportData, string.Empty)
+            .Create();
+
+        var fileData = CreateFileData("stream-test-file");
+        var testData = "test report content";
+        var uploadStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(testData));
+
+        try
+        {
+            // Upload first
+            await sut.UploadReportDataAsync(report, fileData, uploadStream);
+
+            // Act
+            var readStream = await sut.GetReportReadStreamAsync(report, fileData);
+
+            // Assert
+            Assert.NotNull(readStream);
+            using var reader = new StreamReader(readStream);
+            var content = await reader.ReadToEndAsync();
+            Assert.Equal(testData, content);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GetReportReadStreamAsync_FileDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var tempDir = Path.Combine(Path.GetTempPath(), "bitwarden-test-" + Guid.NewGuid());
+
+        var globalSettings = new Core.Settings.GlobalSettings();
+        globalSettings.OrganizationReport.BaseDirectory = tempDir;
+        globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+        globalSettings.BaseServiceUri.Api = "https://localhost/api";
+
+        var sut = CreateSut(globalSettings);
+
+        var report = fixture.Build<OrganizationReport>()
+            .With(r => r.OrganizationId, Guid.NewGuid())
+            .With(r => r.Id, Guid.NewGuid())
+            .With(r => r.CreationDate, DateTime.UtcNow)
+            .With(r => r.ReportData, string.Empty)
+            .Create();
+
+        var fileData = CreateFileData("nonexistent-file");
+
+        // Act
+        var stream = await sut.GetReportReadStreamAsync(report, fileData);
+
+        // Assert
+        Assert.Null(stream);
     }
 
     [Theory]
@@ -109,8 +233,9 @@ public class LocalOrganizationReportStorageServiceTests
         var globalSettings = new Core.Settings.GlobalSettings();
         globalSettings.OrganizationReport.BaseDirectory = tempDir;
         globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+        globalSettings.BaseServiceUri.Api = "https://localhost/api";
 
-        var sut = new LocalOrganizationReportStorageService(globalSettings);
+        var sut = CreateSut(globalSettings);
 
         var report = fixture.Build<OrganizationReport>()
             .With(r => r.OrganizationId, Guid.NewGuid())
@@ -155,8 +280,9 @@ public class LocalOrganizationReportStorageServiceTests
         var globalSettings = new Core.Settings.GlobalSettings();
         globalSettings.OrganizationReport.BaseDirectory = tempDir;
         globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+        globalSettings.BaseServiceUri.Api = "https://localhost/api";
 
-        var sut = new LocalOrganizationReportStorageService(globalSettings);
+        var sut = CreateSut(globalSettings);
 
         var report = fixture.Build<OrganizationReport>()
             .With(r => r.OrganizationId, Guid.NewGuid())
@@ -205,8 +331,9 @@ public class LocalOrganizationReportStorageServiceTests
         var globalSettings = new Core.Settings.GlobalSettings();
         globalSettings.OrganizationReport.BaseDirectory = tempDir;
         globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+        globalSettings.BaseServiceUri.Api = "https://localhost/api";
 
-        var sut = new LocalOrganizationReportStorageService(globalSettings);
+        var sut = CreateSut(globalSettings);
 
         var report = fixture.Build<OrganizationReport>()
             .With(r => r.OrganizationId, Guid.NewGuid())
@@ -250,8 +377,9 @@ public class LocalOrganizationReportStorageServiceTests
         var globalSettings = new Core.Settings.GlobalSettings();
         globalSettings.OrganizationReport.BaseDirectory = tempDir;
         globalSettings.OrganizationReport.BaseUrl = "https://localhost/reports";
+        globalSettings.BaseServiceUri.Api = "https://localhost/api";
 
-        var sut = new LocalOrganizationReportStorageService(globalSettings);
+        var sut = CreateSut(globalSettings);
 
         var report = fixture.Build<OrganizationReport>()
             .With(r => r.OrganizationId, Guid.NewGuid())
