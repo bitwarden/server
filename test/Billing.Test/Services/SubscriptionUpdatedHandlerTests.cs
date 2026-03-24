@@ -1370,8 +1370,6 @@ public class SubscriptionUpdatedHandlerTests
         };
     }
 
-    #region Schedule-triggered Families migration tests
-
     [Fact]
     public async Task HandleAsync_ScheduleTriggeredFamiliesMigration_FlagOn_UpdatesOrganization()
     {
@@ -1738,5 +1736,148 @@ public class SubscriptionUpdatedHandlerTests
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
-    #endregion
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggered_OrganizationNotFound_DoesNotThrow()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var familiesPriceId = "2020-families-org-annually";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = familiesPriceId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                    }
+                })
+            }
+        };
+
+        var familiesPlan = new FamiliesPlan();
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
+            .Returns(familiesPlan);
+        _organizationRepository.GetByIdAsync(organizationId)
+            .ReturnsNull();
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — logs warning and does not attempt to update
+        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggered_MultipleItems_MatchesFamiliesPrice_UpdatesOrganization()
+    {
+        // Arrange — subscription has storage add-on alongside the Families price
+        var organizationId = Guid.NewGuid();
+        var subscriptionId = "sub_123";
+        var familiesPriceId = "2020-families-org-annually";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = SubscriptionStatus.Active,
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = familiesPriceId }
+                    },
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = "personal-storage-gb-annually" },
+                        Quantity = 2
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = subscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                    }
+                })
+            }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.FamiliesAnnually2019,
+            Plan = "Families 2019",
+            UsersGetPremium = false,
+            Seats = 5
+        };
+
+        var familiesPlan = new FamiliesPlan();
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(subscription);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
+            .Returns(familiesPlan);
+        _organizationRepository.GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.Equal(PlanType.FamiliesAnnually, organization.PlanType);
+        Assert.True(organization.UsersGetPremium);
+        Assert.Equal(6, organization.Seats);
+        await _organizationRepository.Received(1).ReplaceAsync(
+            Arg.Is<Organization>(o => o.Id == organizationId));
+    }
 }
