@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Auth.Sso;
-using Bit.Core.Auth.UserFeatures.DeviceTrust;
+using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Commands;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.Registration;
@@ -25,7 +25,7 @@ public static class UserServiceCollectionExtensions
     public static void AddUserServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IUserService, UserService>();
-        services.AddDeviceTrustCommands();
+        services.AddDeviceServices();
         services.AddEmergencyAccessCommands();
         services.AddUserPasswordCommands();
         services.AddUserRegistrationCommands();
@@ -33,11 +33,6 @@ public static class UserServiceCollectionExtensions
         services.AddTdeOffboardingPasswordCommands();
         services.AddTwoFactorCommandsQueries();
         services.AddSsoQueries();
-    }
-
-    public static void AddDeviceTrustCommands(this IServiceCollection services)
-    {
-        services.AddScoped<IUntrustDevicesCommand, UntrustDevicesCommand>();
     }
 
     private static void AddEmergencyAccessCommands(this IServiceCollection services)
