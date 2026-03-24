@@ -89,7 +89,7 @@ public class LoginViewDto
 public class Fido2CredentialViewDto
 {
     [JsonPropertyName("creationDate")]
-    public DateTime CreationDate { get; set; }
+    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     [JsonPropertyName("discoverable")]
     [EncryptProperty]
     public required string Discoverable { get; set; }
