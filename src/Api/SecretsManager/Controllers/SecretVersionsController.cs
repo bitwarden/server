@@ -21,19 +21,25 @@ public class SecretVersionsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IUserRepository _userRepository;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository,
+        IServiceAccountRepository serviceAccountRepository,
+        IUserRepository userRepository)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
+        _serviceAccountRepository = serviceAccountRepository;
+        _userRepository = userRepository;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -51,7 +57,7 @@ public class SecretVersionsController : Controller
         {
             // Already verified Secrets Manager access above
             var versionList = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
-            var responseList = versionList.Select(v => new SecretVersionResponseModel(v));
+            var responseList = await Task.WhenAll(versionList.Select(v => ResolveVersionWithEditorName(v, secret.OrganizationId)));
             return new ListResponseModel<SecretVersionResponseModel>(responseList);
         }
 
@@ -71,7 +77,7 @@ public class SecretVersionsController : Controller
         }
 
         var versions = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
-        var responses = versions.Select(v => new SecretVersionResponseModel(v));
+        var responses = await Task.WhenAll(versions.Select(v => ResolveVersionWithEditorName(v, secret.OrganizationId)));
 
         return new ListResponseModel<SecretVersionResponseModel>(responses);
     }
@@ -96,7 +102,7 @@ public class SecretVersionsController : Controller
             _currentContext.IdentityClientType == IdentityClientType.Organization)
         {
             // Already verified Secrets Manager access above
-            return new SecretVersionResponseModel(secretVersion);
+            return await ResolveVersionWithEditorName(secretVersion, secret.OrganizationId);
         }
 
         var userId = _userService.GetProperUserId(User);
@@ -114,7 +120,7 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        return new SecretVersionResponseModel(secretVersion);
+        return await ResolveVersionWithEditorName(secretVersion, secret.OrganizationId);
     }
 
     [HttpPost("secret-versions/get-by-ids")]
@@ -333,5 +339,33 @@ public class SecretVersionsController : Controller
         await _secretVersionRepository.DeleteManyByIdAsync(ids);
 
         return Ok();
+    }
+
+    private async Task<SecretVersionResponseModel> ResolveVersionWithEditorName(Bit.Core.SecretsManager.Entities.SecretVersion secretVersion, Guid organizationId)
+    {
+        var response = new SecretVersionResponseModel(secretVersion);
+
+        if (secretVersion.EditorServiceAccountId.HasValue)
+        {
+            var serviceAccount = await _serviceAccountRepository.GetByIdAsync(secretVersion.EditorServiceAccountId.Value);
+            if (serviceAccount != null)
+            {
+                response.EditorName = serviceAccount.Name;
+            }
+        }
+        else if (secretVersion.EditorOrganizationUserId.HasValue)
+        {
+            var orgUser = await _organizationUserRepository.GetByIdAsync(secretVersion.EditorOrganizationUserId.Value);
+            if (orgUser?.UserId.HasValue == true)
+            {
+                var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
+                if (user != null)
+                {
+                    response.EditorName = user.Name;
+                }
+            }
+        }
+
+        return response;
     }
 }
