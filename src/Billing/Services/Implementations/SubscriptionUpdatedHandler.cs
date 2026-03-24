@@ -9,7 +9,6 @@ using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.Extensions.Logging;
 using Stripe;
 using Stripe.TestHelpers;
 using static Bit.Core.Billing.Constants.StripeConstants;
