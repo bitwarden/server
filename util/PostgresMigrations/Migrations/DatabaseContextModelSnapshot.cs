@@ -2474,7 +2474,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("UploadCount")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -3354,7 +3354,9 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

@@ -1,10 +1,10 @@
 -- Add Receive table
-IF OBJECT_ID('[dbo].[Receive]', 'U') IS NULL
+IF OBJECT_ID('[dbo].[Receive]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[Receive]
     (
         [Id]             UNIQUEIDENTIFIER NOT NULL,
-        [UserId]         UNIQUEIDENTIFIER NULL,
+        [UserId]         UNIQUEIDENTIFIER NOT NULL,
         [Data]           VARCHAR(MAX)     NOT NULL,
         [Key]            VARCHAR(MAX)     NOT NULL,
         [Secret]         NVARCHAR(300)    NOT NULL,

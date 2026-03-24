@@ -15,7 +15,7 @@ public partial class AddReceiveTable : Migration
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
-                UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                UserId = table.Column<Guid>(type: "uuid", nullable: false),
                 Data = table.Column<string>(type: "text", nullable: false),
                 Key = table.Column<string>(type: "text", nullable: false),
                 Secret = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
@@ -31,7 +31,8 @@ public partial class AddReceiveTable : Migration
                     name: "FK_Receive_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
             });
 
         migrationBuilder.CreateIndex(

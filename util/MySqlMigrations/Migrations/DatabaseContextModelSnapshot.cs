@@ -2468,7 +2468,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("UploadCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
@@ -3348,7 +3348,9 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

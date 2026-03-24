@@ -15,7 +15,7 @@ public partial class AddReceiveTable : Migration
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                UserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                 Data = table.Column<string>(type: "longtext", nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 Key = table.Column<string>(type: "longtext", nullable: false)
@@ -34,7 +34,8 @@ public partial class AddReceiveTable : Migration
                     name: "FK_Receive_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
             })
             .Annotation("MySql:CharSet", "utf8mb4");
 
