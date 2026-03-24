@@ -412,11 +412,28 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             .Returns(true);
 
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var expectedPermissions = new PermissionsModel
+        {
+            AccessEventLogs = true,
+            AccessImportExport = true,
+            AccessReports = true,
+            CreateNewCollections = true,
+            EditAnyCollection = true,
+            DeleteAnyCollection = true,
+            ManageGroups = true,
+            ManagePolicies = true,
+            ManageSso = true,
+            ManageUsers = true,
+            ManageResetPassword = true,
+            ManageScim = true,
+        };
+
         var request = new MemberCreateRequestModel
         {
             Email = email,
             Type = OrganizationUserType.Custom,
             ExternalId = "myCustomUser",
+            Permissions = expectedPermissions,
             Collections = [],
             Groups = []
         };
@@ -431,6 +448,8 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserType.Custom, result.Type);
         Assert.Equal("myCustomUser", result.ExternalId);
         Assert.Empty(result.Collections);
+        Assert.NotNull(result.Permissions);
+        AssertHelper.AssertPropertyEqual(expectedPermissions, result.Permissions);
 
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var orgUser = await organizationUserRepository.GetByIdAsync(result.Id);
@@ -441,6 +460,26 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal("myCustomUser", orgUser.ExternalId);
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.Equal(_organization.Id, orgUser.OrganizationId);
+
+        var dbPermissions = orgUser.GetPermissions();
+        Assert.NotNull(dbPermissions);
+        AssertHelper.AssertPropertyEqual(
+            new Permissions
+            {
+                AccessEventLogs = true,
+                AccessImportExport = true,
+                AccessReports = true,
+                CreateNewCollections = true,
+                EditAnyCollection = true,
+                DeleteAnyCollection = true,
+                ManageGroups = true,
+                ManagePolicies = true,
+                ManageSso = true,
+                ManageUsers = true,
+                ManageResetPassword = true,
+                ManageScim = true,
+            },
+            dbPermissions);
     }
 
     [Fact]
