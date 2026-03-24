@@ -648,12 +648,12 @@ public class UpcomingInvoiceHandler(
                             EndDate = phase1.EndDate,
                             Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
                             {
-                                Price = i.Price.Id,
+                                Price = i.PriceId,
                                 Quantity = i.Quantity
                             }).ToList(),
                             Discounts = phase1.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
                             {
-                                Coupon = d.Coupon?.Id
+                                Coupon = d.CouponId
                             }).ToList(),
                             ProrationBehavior = ProrationBehavior.None
                         },
