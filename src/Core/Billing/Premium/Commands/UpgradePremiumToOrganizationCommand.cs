@@ -85,6 +85,17 @@ public class UpgradePremiumToOrganizationCommand(
             return new BadRequest("User does not have an active Premium subscription.");
         }
 
+        var paymentMethod = await getPaymentMethodQuery.Run(user);
+        if (paymentMethod is null)
+        {
+            return new BadRequest("No payment method found for the user. Please add a payment method to upgrade to Organization plan.");
+        }
+
+        if (paymentMethod.IsBankAccount)
+        {
+            return new BadRequest("Bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.");
+        }
+
         // Fetch the current Premium subscription from Stripe
         var currentSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
 
@@ -114,12 +125,6 @@ public class UpgradePremiumToOrganizationCommand(
         // Create the Organization entity
         var organization = BuildOrganization(
             organizationId, user, organizationName, publicKey, encryptedPrivateKey, targetPlan, currentSubscription.Id);
-
-        var hasPaymentMethod = await hasPaymentMethodQuery.Run(user);
-        if (!hasPaymentMethod)
-        {
-            return new BadRequest("No payment method found for the user. Please add a payment method to upgrade to Organization plan.");
-        }
 
         // Update customer billing address for tax calculation
         var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId,

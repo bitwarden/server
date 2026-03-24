@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Pricing;
@@ -1528,53 +1529,27 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithUnverifiedBankAccount_SetsDefaultIncompleteAndDoesNotPayViaBraintree(User user)
+    public async Task Run_WithBankAccount_ReturnsBadRequest(User user)
     {
         // Arrange
         user.Premium = true;
         user.GatewaySubscriptionId = "sub_123";
         user.GatewayCustomerId = "cus_123";
 
-        var mockSubscription = new Subscription
+        _getPaymentMethodQuery.Run(user).Returns(new MaskedPaymentMethod(new MaskedBankAccount
         {
-            Id = "sub_123",
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
-                ]
-            },
-            Metadata = new Dictionary<string, string>()
-        };
-
-        // Customer with no default payment method and no PayPal — unverified bank account
-        var bankAccountCustomer = new Customer
-        {
-            Metadata = new Dictionary<string, string>(),
-            InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = null }
-        };
-
-        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
-        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
-        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
-        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(bankAccountCustomer);
-        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
-        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
-        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
-        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
-        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
-        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+            BankName = "Chase",
+            Last4 = "6789"
+        }));
 
         // Act
         var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
 
         // Assert
-        Assert.True(result.Success);
-        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
-            "sub_123",
-            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == "default_incomplete"));
-        await _braintreeService.DidNotReceive().PayInvoice(Arg.Any<SubscriberId>(), Arg.Any<Invoice>());
+        Assert.True(result.IsT1);
+        Assert.Equal("Bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.", result.AsT1.Response);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>());
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
 }
