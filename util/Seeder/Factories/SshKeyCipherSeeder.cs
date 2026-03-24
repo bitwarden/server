@@ -12,7 +12,8 @@ internal static class SshKeyCipherSeeder
         SshKeyViewDto sshKey,
         Guid? organizationId = null,
         Guid? userId = null,
-        string? notes = null)
+        string? notes = null,
+        bool reprompt = false)
     {
         var cipherView = new CipherViewDto
         {
@@ -20,7 +21,8 @@ internal static class SshKeyCipherSeeder
             Name = name,
             Notes = notes,
             Type = CipherTypes.SshKey,
-            SshKey = sshKey
+            SshKey = sshKey,
+            Reprompt = reprompt ? RepromptTypes.Password : RepromptTypes.None,
         };
 
         var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
