@@ -2463,9 +2463,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("MaxUploadCount")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 

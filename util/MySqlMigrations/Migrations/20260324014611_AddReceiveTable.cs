@@ -22,7 +22,6 @@ public partial class AddReceiveTable : Migration
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 Secret = table.Column<string>(type: "varchar(300)", maxLength: 300, nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
-                MaxUploadCount = table.Column<int>(type: "int", nullable: true),
                 UploadCount = table.Column<int>(type: "int", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),

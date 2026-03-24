@@ -2457,9 +2457,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<int?>("MaxUploadCount")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 

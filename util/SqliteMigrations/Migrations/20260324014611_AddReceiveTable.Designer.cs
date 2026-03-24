@@ -2449,9 +2449,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("MaxUploadCount")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 

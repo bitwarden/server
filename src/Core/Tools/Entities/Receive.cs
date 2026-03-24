@@ -39,12 +39,6 @@ public class Receive : ITableObject<Guid>
     public required string Secret { get; set; }
 
     /// <summary>
-    /// The Receive becomes unavailable for subsequent uploads once UploadCount increments to this value.
-    /// <see cref="UploadCount"/>  &gt;= <see cref="MaxUploadCount"/>.
-    /// </summary>
-    public int? MaxUploadCount { get; set; }
-
-    /// <summary>
     /// Number of times the Receive has been used to upload a file.
     /// </summary>
     /// <remarks>

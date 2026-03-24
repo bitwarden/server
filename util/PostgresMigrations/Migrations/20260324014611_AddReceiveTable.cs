@@ -19,7 +19,6 @@ public partial class AddReceiveTable : Migration
                 Data = table.Column<string>(type: "text", nullable: false),
                 Key = table.Column<string>(type: "text", nullable: false),
                 Secret = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
-                MaxUploadCount = table.Column<int>(type: "integer", nullable: true),
                 UploadCount = table.Column<int>(type: "integer", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),

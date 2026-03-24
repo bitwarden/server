@@ -8,7 +8,6 @@ BEGIN
         [Data]           VARCHAR(MAX)     NOT NULL,
         [Key]            VARCHAR(MAX)     NOT NULL,
         [Secret]         NVARCHAR(300)    NOT NULL,
-        [MaxUploadCount] INT              NULL,
         [UploadCount]    INT              NOT NULL,
         [CreationDate]   DATETIME2(7)     NOT NULL,
         [RevisionDate]   DATETIME2(7)     NOT NULL,
