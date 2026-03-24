@@ -78,6 +78,94 @@ public class CustomTokenRequestValidatorTests
             _bumpDeviceLastActivityDateCommand);
     }
 
+    private CustomTokenRequestValidationContext CreateRefreshTokenContext(ClaimsPrincipal subject)
+    {
+        var validatedRequest = new ValidatedTokenRequest
+        {
+            GrantType = "refresh_token",
+            Subject = subject,
+            ClientId = "web",
+            Client = new Client
+            {
+                AllowedScopes = new HashSet<string>(),
+                Properties = new Dictionary<string, string>()
+            },
+            ClientClaims = []
+        };
+        return new CustomTokenRequestValidationContext
+        {
+            Result = new TokenRequestValidationResult(validatedRequest)
+        };
+    }
+
+    [Fact]
+    public async Task BumpDeviceLastActivityForRefreshAsync_NullSubject_SkipsBump()
+    {
+        // Arrange
+        var context = CreateRefreshTokenContext(subject: null);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: bump is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task BumpDeviceLastActivityForRefreshAsync_NoDeviceClaim_SkipsBump()
+    {
+        // Arrange — subject has a valid user ID but no device claim
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, Guid.NewGuid().ToString()),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: bump is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task BumpDeviceLastActivityForRefreshAsync_InvalidUserIdGuid_SkipsBump()
+    {
+        // Arrange — subject has a device claim but the sub claim is not a valid GUID
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, "not-a-guid"),
+            new Claim(Claims.Device, "test-device-identifier"),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: bump is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+    }
+
     [Fact]
     public async Task ValidateAsync_BumpByIdentifierThrows_RefreshTokenSucceeds()
     {
@@ -91,23 +179,7 @@ public class CustomTokenRequestValidatorTests
             new Claim(Claims.Device, deviceIdentifier),
         ], "test"));
 
-        var validatedRequest = new ValidatedTokenRequest
-        {
-            GrantType = "refresh_token",
-            Subject = subject,
-            ClientId = "web",
-            Client = new Client
-            {
-                AllowedScopes = new HashSet<string>(),
-                Properties = new Dictionary<string, string>()
-            },
-            ClientClaims = []
-        };
-
-        var context = new CustomTokenRequestValidationContext
-        {
-            Result = new TokenRequestValidationResult(validatedRequest)
-        };
+        var context = CreateRefreshTokenContext(subject);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
