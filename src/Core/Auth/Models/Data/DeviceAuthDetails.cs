@@ -9,6 +9,7 @@ public class DeviceAuthDetails : Device
     public bool IsTrusted { get; set; }
     public Guid? AuthRequestId { get; set; }
     public DateTime? AuthRequestCreatedAt { get; set; }
+    public new DateTime? LastActivityDate { get; set; }
 
     /**
      * Constructor for EF response.
@@ -33,6 +34,7 @@ public class DeviceAuthDetails : Device
         EncryptedUserKey = device.EncryptedUserKey;
         AuthRequestId = authRequestId;
         AuthRequestCreatedAt = authRequestCreationDate;
+        LastActivityDate = device.LastActivityDate;
     }
 
     /**
@@ -55,7 +57,8 @@ public class DeviceAuthDetails : Device
         string encryptedPrivateKey,
         bool active,
         Guid authRequestId,
-        DateTime authRequestCreationDate)
+        DateTime authRequestCreationDate,
+        DateTime? lastActivityDate)
     {
         Id = id;
         Name = name;
@@ -81,5 +84,6 @@ public class DeviceAuthDetails : Device
         AuthRequestId = authRequestId != Guid.Empty ? authRequestId : null;
         AuthRequestCreatedAt =
             authRequestCreationDate != DateTime.MinValue ? authRequestCreationDate : null;
+        LastActivityDate = lastActivityDate;
     }
 }

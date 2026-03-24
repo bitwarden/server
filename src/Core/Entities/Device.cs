@@ -42,6 +42,7 @@ public class Device : ITableObject<Guid>
     /// Whether the device is active for the user.
     /// </summary>
     public bool Active { get; set; } = true;
+    public DateTime? LastActivityDate { get; internal set; } = DateTime.UtcNow;
 
     public void SetNewId()
     {

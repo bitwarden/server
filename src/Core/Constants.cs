@@ -167,6 +167,7 @@ public static class FeatureFlagKeys
     public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
     public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
+    public const string DevicesLastActivityDate = "pm-4516-devices-add-last-activity-date";
 
     /* Autofill Team */
     public const string SSHAgentV2 = "ssh-agent-v2";

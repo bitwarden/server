@@ -18,4 +18,6 @@ public interface IDeviceRepository : IRepository<Device, Guid>
     Task<ICollection<DeviceAuthDetails>> GetManyByUserIdWithDeviceAuth(Guid userId);
     Task ClearPushTokenAsync(Guid id);
     UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices);
+    Task BumpLastActivityDateByIdAsync(Guid deviceId);
+    Task BumpLastActivityDateByIdentifierAsync(string identifier, Guid userId);
 }
