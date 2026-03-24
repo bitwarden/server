@@ -262,7 +262,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
 
             var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                s.Status == "active" && s.SubscriptionId == subscription.Id);
+                s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscription.Id);
             if (activeSchedule != null)
             {
                 await _stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);

@@ -225,7 +225,7 @@ public class UpgradePremiumToOrganizationCommand(
                     new SubscriptionScheduleListOptions { Customer = user.GatewayCustomerId });
 
                 var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                    s.Status == "active" && s.SubscriptionId == currentSubscription.Id);
+                    s.Status == StripeConstants.SubscriptionScheduleStatus.Active && s.SubscriptionId == currentSubscription.Id);
                 if (activeSchedule != null)
                 {
                     await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Commands;
@@ -96,7 +97,7 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
                     new SubscriptionScheduleListOptions { Customer = sponsoredOrganization.GatewayCustomerId });
 
                 var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                    s.Status == "active" && s.SubscriptionId == sponsoredOrganization.GatewaySubscriptionId);
+                    s.Status == StripeConstants.SubscriptionScheduleStatus.Active && s.SubscriptionId == sponsoredOrganization.GatewaySubscriptionId);
                 if (activeSchedule != null)
                 {
                     await _stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
