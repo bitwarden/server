@@ -54,4 +54,9 @@ public interface IStripeAdapter
     Task<List<Product>> ListProductsAsync(ProductListOptions options = null);
     Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null);
     Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options);
+    Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options);
+    Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null);
+    Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options);
+    Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options);
+    Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null);
 }
