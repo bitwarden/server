@@ -10,7 +10,8 @@
     @EncryptedUserKey VARCHAR(MAX) = NULL,
     @EncryptedPublicKey VARCHAR(MAX) = NULL,
     @EncryptedPrivateKey VARCHAR(MAX) = NULL,
-    @Active BIT = 1
+    @Active BIT = 1,
+    @LastActivityDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -28,7 +29,8 @@ BEGIN
         [EncryptedUserKey] = @EncryptedUserKey,
         [EncryptedPublicKey] = @EncryptedPublicKey,
         [EncryptedPrivateKey] = @EncryptedPrivateKey,
-        [Active] = @Active
+        [Active] = @Active,
+        [LastActivityDate] = @LastActivityDate
     WHERE
         [Id] = @Id
 END
