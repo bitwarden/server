@@ -629,8 +629,7 @@ public class UpcomingInvoiceHandler(
         var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
             new SubscriptionScheduleCreateOptions
             {
-                FromSubscription = subscription.Id,
-                EndBehavior = SubscriptionScheduleEndBehavior.Release
+                FromSubscription = subscription.Id
             });
 
         try
@@ -640,6 +639,7 @@ public class UpcomingInvoiceHandler(
             await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
                 new SubscriptionScheduleUpdateOptions
                 {
+                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
                     Phases =
                     [
                         new SubscriptionSchedulePhaseOptions

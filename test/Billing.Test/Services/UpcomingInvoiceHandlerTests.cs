@@ -3012,12 +3012,12 @@ public class UpcomingInvoiceHandlerTests
 
         await _stripeAdapter.Received(1).CreateSubscriptionScheduleAsync(
             Arg.Is<SubscriptionScheduleCreateOptions>(o =>
-                o.FromSubscription == subscriptionId &&
-                o.EndBehavior == SubscriptionScheduleEndBehavior.Release));
+                o.FromSubscription == subscriptionId));
 
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             Arg.Is("sub_sched_123"),
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
                 o.Phases.Count == 2 &&
                 o.Phases[0].StartDate == phase1StartDate &&
                 o.Phases[0].EndDate == phase1EndDate &&
