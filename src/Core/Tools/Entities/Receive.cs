@@ -18,7 +18,7 @@ public class Receive : ITableObject<Guid>
     /// <summary>
     /// Identifies the user that created this Receive.
     /// </summary>
-    public Guid? UserId { get; set; }
+    public Guid UserId { get; set; }
 
     /// <summary>
     /// Stores data containing or pointing to the transmitted file(s). JSON.
@@ -26,9 +26,19 @@ public class Receive : ITableObject<Guid>
     public required string Data { get; set; }
 
     /// <summary>
-    /// Stores the data's encryption key. Encrypted.
+    /// The shared content encryption key (SCEK) wrapped by the owners userKey.
     /// </summary>
-    public required string Key { get; set; }
+    public required string UserKeyWrappedSharedContentEncryptionKey { get; set; }
+
+    /// <summary>
+    /// The private key wrapped by the owners userKey.
+    /// </summary>
+    public required string UserKeyWrappedPrivateKey { get; set; }
+
+    /// <summary>
+    /// The public key wrapped by the shared content encryption key (SCEK).
+    /// </summary>
+    public required string ScekWrappedPublicKey { get; set; }
 
     /// <summary>
     /// A randomly generated value embedded in the Receive link.
@@ -37,12 +47,6 @@ public class Receive : ITableObject<Guid>
     /// </summary>
     [MaxLength(300)]
     public required string Secret { get; set; }
-
-    /// <summary>
-    /// The Receive becomes unavailable for subsequent uploads once UploadCount increments to this value.
-    /// <see cref="UploadCount"/>  &gt;= <see cref="MaxUploadCount"/>.
-    /// </summary>
-    public int? MaxUploadCount { get; set; }
 
     /// <summary>
     /// Number of times the Receive has been used to upload a file.

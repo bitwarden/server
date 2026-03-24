@@ -5,7 +5,7 @@ namespace Bit.Infrastructure.EntityFramework.Tools.Models;
 
 public class Receive : Core.Tools.Entities.Receive
 {
-    public virtual User? User { get; set; }
+    public virtual User User { get; set; } = null!;
 }
 
 public class ReceiveMapperProfile : Profile

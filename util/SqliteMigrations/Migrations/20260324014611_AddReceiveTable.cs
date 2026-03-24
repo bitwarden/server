@@ -15,11 +15,10 @@ public partial class AddReceiveTable : Migration
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
+                UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Data = table.Column<string>(type: "TEXT", nullable: false),
                 Key = table.Column<string>(type: "TEXT", nullable: false),
                 Secret = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                MaxUploadCount = table.Column<int>(type: "INTEGER", nullable: true),
                 UploadCount = table.Column<int>(type: "INTEGER", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -32,7 +31,8 @@ public partial class AddReceiveTable : Migration
                     name: "FK_Receive_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
             });
 
         migrationBuilder.CreateIndex(

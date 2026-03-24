@@ -2446,9 +2446,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("MaxUploadCount")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
@@ -2460,7 +2457,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("UploadCount")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -3340,7 +3337,9 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
