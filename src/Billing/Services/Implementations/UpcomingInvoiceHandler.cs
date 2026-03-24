@@ -246,8 +246,16 @@ public class UpcomingInvoiceHandler(
             {
                 var phase2Items = new List<SubscriptionSchedulePhaseItemOptions>
                 {
-                    new() { Price = familiesPlan.PasswordManager.StripePlanId }
+                    new() { Price = familiesPlan.PasswordManager.StripePlanId, Quantity = 1 }
                 };
+
+                var storageItem = subscription.Items.FirstOrDefault(i =>
+                    i.Price.Id == plan.PasswordManager.StripeStoragePlanId);
+
+                if (storageItem is { Quantity: > 0 })
+                {
+                    phase2Items.Add(new SubscriptionSchedulePhaseItemOptions { Price = familiesPlan.PasswordManager.StripeStoragePlanId, Quantity = storageItem.Quantity });
+                }
 
                 var phase2Discounts = plan.Type == PlanType.FamiliesAnnually2019
                     ? new List<SubscriptionSchedulePhaseDiscountOptions>
@@ -407,7 +415,18 @@ public class UpcomingInvoiceHandler(
         Event @event,
         Subscription subscription)
     {
-        var premiumItem = subscription.Items.FirstOrDefault(i => i.Price.Id == Prices.PremiumAnnually);
+        var premiumPlans = await pricingClient.ListPremiumPlans();
+        var oldPlan = premiumPlans.FirstOrDefault(p => !p.Available);
+        var newPlan = premiumPlans.FirstOrDefault(p => p.Available);
+
+        if (oldPlan == null || newPlan == null)
+        {
+            logger.LogWarning("Could not resolve old and new premium plans while processing '{EventType}' event ({EventID})",
+                @event.Type, @event.Id);
+            return false;
+        }
+
+        var premiumItem = subscription.Items.FirstOrDefault(i => i.Price.Id == oldPlan.Seat.StripePriceId);
 
         if (premiumItem == null)
         {
@@ -418,14 +437,20 @@ public class UpcomingInvoiceHandler(
 
         try
         {
-            var plan = await pricingClient.GetAvailablePremiumPlan();
-
             if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
             {
                 var phase2Items = new List<SubscriptionSchedulePhaseItemOptions>
                 {
-                    new() { Price = plan.Seat.StripePriceId }
+                    new() { Price = newPlan.Seat.StripePriceId, Quantity = 1 }
                 };
+
+                var storageItem = subscription.Items.FirstOrDefault(i =>
+                    i.Price.Id == oldPlan.Storage.StripePriceId);
+
+                if (storageItem is { Quantity: > 0 })
+                {
+                    phase2Items.Add(new SubscriptionSchedulePhaseItemOptions { Price = newPlan.Storage.StripePriceId, Quantity = storageItem.Quantity });
+                }
 
                 var phase2Discounts = new List<SubscriptionSchedulePhaseDiscountOptions>
                 {
@@ -445,7 +470,7 @@ public class UpcomingInvoiceHandler(
                     {
                         Items =
                         [
-                            new SubscriptionItemOptions { Id = premiumItem.Id, Price = plan.Seat.StripePriceId }
+                            new SubscriptionItemOptions { Id = premiumItem.Id, Price = newPlan.Seat.StripePriceId }
                         ],
                         Discounts =
                         [
@@ -455,7 +480,7 @@ public class UpcomingInvoiceHandler(
                     });
             }
 
-            await SendPremiumRenewalEmailAsync(user, plan);
+            await SendPremiumRenewalEmailAsync(user, newPlan);
             return true;
         }
         catch (Exception exception)

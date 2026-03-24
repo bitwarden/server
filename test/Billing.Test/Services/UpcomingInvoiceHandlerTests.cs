@@ -145,6 +145,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -162,7 +170,7 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
 
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
         // If milestone 2 is disabled, the default email is sent
         _featureService
@@ -228,6 +236,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = priceId },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -244,7 +260,7 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
 
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _stripeAdapter.UpdateSubscriptionAsync(
                 subscription.Id,
                 Arg.Any<SubscriptionUpdateOptions>())
@@ -264,7 +280,7 @@ public class UpcomingInvoiceHandlerTests
 
         // Assert
         await _userRepository.Received(1).GetByIdAsync(_userId);
-        await _pricingClient.Received(1).GetAvailablePremiumPlan();
+        await _pricingClient.Received(1).ListPremiumPlans();
         await _stripeAdapter.Received(1).GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             Arg.Is("sub_123"),
@@ -1049,6 +1065,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = priceId },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -1068,7 +1092,7 @@ public class UpcomingInvoiceHandlerTests
             .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
             .Returns(true);
 
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
         // Setup exception when updating subscription
         _stripeAdapter
@@ -2637,6 +2661,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2649,7 +2681,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns((Coupon)null);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -2716,6 +2748,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2733,7 +2773,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -2800,6 +2840,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2817,7 +2865,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -2882,6 +2930,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2894,7 +2950,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
             .ThrowsAsync(new StripeException("Stripe API error"));
@@ -2962,6 +3018,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = newPriceId },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -2994,7 +3058,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -3062,6 +3126,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -3073,7 +3145,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -3415,6 +3487,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -3444,7 +3524,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
@@ -3589,6 +3669,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -3619,7 +3707,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
@@ -3678,6 +3766,14 @@ public class UpcomingInvoiceHandlerTests
             Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
             Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
         };
+        var oldPlan = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            LegacyYear = 2023,
+            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
+            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+        };
         var customer = new Customer
         {
             Id = customerId,
@@ -3708,7 +3804,7 @@ public class UpcomingInvoiceHandlerTests
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.GetAvailablePremiumPlan().Returns(plan);
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
         _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
