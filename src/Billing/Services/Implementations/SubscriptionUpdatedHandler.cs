@@ -347,11 +347,13 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             return;
         }
 
-        if (!subscription.Metadata.TryGetValue(MetadataKeys.OrganizationId, out var organizationIdStr) ||
-            !Guid.TryParse(organizationIdStr, out var organizationId))
+        var (orgId, _, _) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
+        if (!orgId.HasValue)
         {
             return;
         }
+
+        var organizationId = orgId.Value;
 
         var familiesPlan = await _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
 

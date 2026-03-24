@@ -1437,6 +1437,8 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
             .Returns(familiesPlan);
         _organizationRepository.GetByIdAsync(organizationId)
@@ -1617,6 +1619,8 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, userId, null));
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1675,6 +1679,8 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
             .Returns(familiesPlan);
 
@@ -1787,6 +1793,8 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
             .Returns(familiesPlan);
         _organizationRepository.GetByIdAsync(organizationId)
@@ -1865,6 +1873,8 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
             .Returns(familiesPlan);
         _organizationRepository.GetByIdAsync(organizationId)
