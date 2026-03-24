@@ -56,9 +56,9 @@ public class DeviceAuthDetails : Device
         string encryptedPublicKey,
         string encryptedPrivateKey,
         bool active,
+        DateTime? lastActivityDate,
         Guid authRequestId,
-        DateTime authRequestCreationDate,
-        DateTime? lastActivityDate)
+        DateTime authRequestCreationDate)
     {
         Id = id;
         Name = name;
