@@ -91,9 +91,9 @@ public class UpgradePremiumToOrganizationCommand(
             return new BadRequest("No payment method found for the user. Please add a payment method to upgrade to Organization plan.");
         }
 
-        if (paymentMethod.IsBankAccount)
+        if (paymentMethod.IsBankAccount && paymentMethod.AsT0.HostedVerificationUrl is not null)
         {
-            return new BadRequest("Bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.");
+            return new BadRequest("Unverified bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.");
         }
 
         // Fetch the current Premium subscription from Stripe
