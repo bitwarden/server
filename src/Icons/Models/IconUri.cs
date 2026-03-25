@@ -39,7 +39,7 @@ public class IconUri
     }
 
     /// <summary>
-    /// Represents an ip-validated Uri for use in grabbing an icon.
+    /// Represents a URI validated against SSRF: resolved to a public IP and bound to it.
     /// </summary>
     /// <param name="uriString"></param>
     /// <param name="ip"></param>
