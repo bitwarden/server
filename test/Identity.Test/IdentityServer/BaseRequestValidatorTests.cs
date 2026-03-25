@@ -1364,6 +1364,132 @@ public class BaseRequestValidatorTests
             l.Message.Contains("Failed to bump LastActivityDate for device"));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BumpLastActivityDate_FeatureFlagDisabled_BumpNotCalled(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        // Feature flag is disabled (NSubstitute default: false) — no bump expected
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: login succeeds and bump is never attempted
+        Assert.False(context.GrantResult.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BumpLastActivityDate_NullDevice_BumpNotCalled(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        requestContext.Device = null;
+
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: login succeeds and bump is never attempted
+        Assert.False(context.GrantResult.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_BumpLastActivityDate_Succeeds_BumpCalledAndLoginSucceeds(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator
+            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: login succeeds and bump was called with the correct device
+        Assert.False(context.GrantResult.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .Received(1)
+            .BumpByIdAsync(requestContext.Device.Id, requestContext.Device.Identifier);
+    }
+
     private BaseRequestValidationContextFake CreateContext(
         ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
