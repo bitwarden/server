@@ -83,49 +83,6 @@ public class OrganizationReportsController : Controller
         _logger = logger;
     }
 
-
-    /// <summary>
-    /// Gets the most recent organization report for the specified organization.
-    /// When the Access Intelligence V2 feature flag is enabled, includes a presigned download URL
-    /// for the report file if one has been validated. Otherwise, returns the report metadata only.
-    /// </summary>
-    /// <param name="organizationId">The unique identifier of the organization.</param>
-    /// <returns>An <see cref="OrganizationReportResponseModel"/>, or null if no reports exist.</returns>
-    [HttpGet("{organizationId}/latest")]
-    public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
-    {
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
-        {
-            await AuthorizeAsync(organizationId);
-
-            var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
-            if (latestReport == null)
-            {
-                return Ok(null);
-            }
-
-            var response = new OrganizationReportResponseModel(latestReport);
-
-            var fileData = latestReport.GetReportFile();
-            if (fileData is { Validated: true })
-            {
-                response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
-            }
-
-            return Ok(response);
-        }
-
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var v1LatestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
-        var v1Response = v1LatestReport == null ? null : new OrganizationReportResponseModel(v1LatestReport);
-
-        return Ok(v1Response);
-    }
-
     /// <summary>
     /// Creates a new organization report for the specified organization.
     /// When the Access Intelligence V2 feature flag is enabled, validates the file size and returns
@@ -183,11 +140,47 @@ public class OrganizationReportsController : Controller
         return Ok(response);
     }
 
+
+    /// <summary>
+    /// Gets the most recent organization report for the specified organization.
+    /// Includes a presigned download URL for the report file if one has been validated.
+    /// If no file is associated, the response contains inline ReportData.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <returns>An <see cref="OrganizationReportResponseModel"/>, or null if no reports exist.</returns>
+    [HttpGet("{organizationId}/latest")]
+    public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
+    {
+        if (organizationId == Guid.Empty)
+        {
+            throw new BadRequestException("OrganizationId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
+
+        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
+
+        var response = new OrganizationReportResponseModel(latestReport);
+
+        var fileData = latestReport.GetReportFile();
+        if (fileData == null)
+        {
+            return Ok(response);
+        }
+
+        if (fileData.Validated)
+        {
+            response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
+        }
+
+        return Ok(response);
+    }
+
     /// <summary>
     /// Gets a specific organization report by its report ID.
     /// Validates that the report belongs to the specified organization.
-    /// When the Access Intelligence V2 feature flag is enabled, includes a presigned download URL
-    /// for the report file if one has been validated.
+    /// Includes a presigned download URL for the report file if one has been validated.
+    /// If no file is associated, the response contains inline ReportData.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report to retrieve.</param>
@@ -195,51 +188,39 @@ public class OrganizationReportsController : Controller
     [HttpGet("{organizationId}/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        if (organizationId == Guid.Empty)
         {
-            await AuthorizeAsync(organizationId);
-
-            var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
-
-            if (report == null)
-            {
-                throw new NotFoundException("Report not found for the specified organization.");
-            }
-
-            if (report.OrganizationId != organizationId)
-            {
-                throw new BadRequestException("Invalid report ID");
-            }
-
-            var response = new OrganizationReportResponseModel(report);
-
-            var fileData = report.GetReportFile();
-            if (fileData is { Validated: true })
-            {
-                response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(report, fileData);
-            }
-
-            return Ok(response);
+            throw new BadRequestException("OrganizationId is required.");
         }
 
-        if (!await _currentContext.AccessReports(organizationId))
+        if (reportId == Guid.Empty)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("ReportId is required.");
         }
 
-        var v1Report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+        await AuthorizeAsync(organizationId);
 
-        if (v1Report == null)
-        {
-            throw new NotFoundException("Report not found for the specified organization.");
-        }
+        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
 
-        if (v1Report.OrganizationId != organizationId)
+        if (report.OrganizationId != organizationId)
         {
             throw new BadRequestException("Invalid report ID");
         }
 
-        return Ok(new OrganizationReportResponseModel(v1Report));
+        var response = new OrganizationReportResponseModel(report);
+
+        var fileData = report.GetReportFile();
+        if (fileData == null)
+        {
+            return Ok(response);
+        }
+
+        if (fileData.Validated)
+        {
+            response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(report, fileData);
+        }
+
+        return Ok(response);
     }
 
     /// <summary>
@@ -464,20 +445,6 @@ public class OrganizationReportsController : Controller
         });
     }
 
-    private async Task AuthorizeAsync(Guid organizationId)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (orgAbility is null || !orgAbility.UseRiskInsights)
-        {
-            throw new BadRequestException("Your organization's plan does not support this feature.");
-        }
-    }
-
     /// <summary>
     /// Downloads an organization report file using a time-limited, signed token.
     /// This endpoint replaces direct static file access for self-hosted environments
@@ -516,7 +483,41 @@ public class OrganizationReportsController : Controller
         return File(stream, "application/octet-stream", fileData.FileName);
     }
 
-    // Removing post v2 launch
+    private async Task AuthorizeAsync(Guid organizationId)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (orgAbility is null || !orgAbility.UseRiskInsights)
+        {
+            throw new BadRequestException("Your organization's plan does not support this feature.");
+        }
+    }
+
+
+    // Is being used by client on V2
+
+    [HttpPatch("{organizationId}/data/summary/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(
+        Guid organizationId,
+        Guid reportId,
+        [FromBody] UpdateOrganizationReportSummaryRequestModel request)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var updatedReport = await _updateOrganizationReportSummaryCommand
+            .UpdateOrganizationReportSummaryAsync(request.ToData(organizationId, reportId));
+        var response = new OrganizationReportResponseModel(updatedReport);
+
+        return Ok(response);
+    }
+
     [HttpPatch("{organizationId}/data/application/{reportId}")]
     public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(
         Guid organizationId,
@@ -535,43 +536,8 @@ public class OrganizationReportsController : Controller
         return Ok(response);
     }
 
-    [HttpGet("{organizationId}/data/application/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
 
-        var applicationData = await _getOrganizationReportApplicationDataQuery
-            .GetOrganizationReportApplicationDataAsync(organizationId, reportId);
-
-        if (applicationData == null)
-        {
-            throw new NotFoundException("Organization report application data not found.");
-        }
-
-        return Ok(new OrganizationReportApplicationDataResponseModel(applicationData));
-    }
-
-    [HttpPatch("{organizationId}/data/report/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportDataAsync(
-        Guid organizationId,
-        Guid reportId,
-        [FromBody] UpdateOrganizationReportDataRequestModel request)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var updatedReport = await _updateOrganizationReportDataCommand
-            .UpdateOrganizationReportDataAsync(request.ToData(organizationId, reportId));
-        var response = new OrganizationReportResponseModel(updatedReport);
-
-        return Ok(response);
-    }
-
+    // Not being used by client on V2
     [HttpGet("{organizationId}/data/report/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportDataAsync(Guid organizationId, Guid reportId)
     {
@@ -590,19 +556,19 @@ public class OrganizationReportsController : Controller
         return Ok(new OrganizationReportDataResponseModel(reportData));
     }
 
-    [HttpPatch("{organizationId}/data/summary/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(
+    [HttpPatch("{organizationId}/data/report/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportDataAsync(
         Guid organizationId,
         Guid reportId,
-        [FromBody] UpdateOrganizationReportSummaryRequestModel request)
+        [FromBody] UpdateOrganizationReportDataRequestModel request)
     {
         if (!await _currentContext.AccessReports(organizationId))
         {
             throw new NotFoundException();
         }
 
-        var updatedReport = await _updateOrganizationReportSummaryCommand
-            .UpdateOrganizationReportSummaryAsync(request.ToData(organizationId, reportId));
+        var updatedReport = await _updateOrganizationReportDataCommand
+            .UpdateOrganizationReportDataAsync(request.ToData(organizationId, reportId));
         var response = new OrganizationReportResponseModel(updatedReport);
 
         return Ok(response);
@@ -626,4 +592,27 @@ public class OrganizationReportsController : Controller
 
         return Ok(new OrganizationReportSummaryDataResponseModel(summaryData));
     }
+
+    [HttpGet("{organizationId}/data/application/{reportId}")]
+    public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var applicationData = await _getOrganizationReportApplicationDataQuery
+            .GetOrganizationReportApplicationDataAsync(organizationId, reportId);
+
+        if (applicationData == null)
+        {
+            throw new NotFoundException("Organization report application data not found.");
+        }
+
+        return Ok(new OrganizationReportApplicationDataResponseModel(applicationData));
+    }
+
+
+
+
 }
