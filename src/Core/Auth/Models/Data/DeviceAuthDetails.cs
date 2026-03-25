@@ -36,6 +36,9 @@ public class DeviceAuthDetails : Device
         LastActivityDate = device.LastActivityDate;
     }
 
+    // TODO: Replace positional Dapper constructor with name-based mapping
+    // see https://bitwarden.atlassian.net/browse/PM-34130 
+
     /**
      * Constructor for dapper response.
      * Note: if the authRequestId or authRequestCreationDate is null it comes back as
