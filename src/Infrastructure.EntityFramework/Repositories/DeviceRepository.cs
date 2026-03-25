@@ -102,11 +102,11 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateById stored procedure
         // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
         // Product only requires day-level granularity (today / this week / last week / etc.).
-        var today = DateTime.UtcNow.Date;
+        var now = DateTime.UtcNow;
         await dbContext.Devices
             .Where(d => d.Id == deviceId &&
-                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < today))
-            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, DateTime.UtcNow));
+                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < now.Date))
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, now));
     }
 
     public async Task BumpLastActivityDateByIdentifierAsync(string identifier, Guid userId)
@@ -121,11 +121,11 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateByIdentifier stored procedure
         // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
         // Product only requires day-level granularity (today / this week / last week / etc.).
-        var today = DateTime.UtcNow.Date;
+        var now = DateTime.UtcNow;
         await dbContext.Devices
             .Where(d => d.Identifier == identifier && d.UserId == userId &&
-                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < today))
-            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, DateTime.UtcNow));
+                        (d.LastActivityDate == null || d.LastActivityDate.Value.Date < now.Date))
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, now));
     }
 
     public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Core.Entities.Device> devices)
