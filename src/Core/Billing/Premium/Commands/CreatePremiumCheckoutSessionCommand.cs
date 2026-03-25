@@ -55,7 +55,9 @@ public class CreatePremiumCheckoutSessionCommand(
 
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
-        var sessionOptions = CreateSessionOptions(customer,
+        var sessionOptions = CreateSessionOptions(
+            user,
+            customer,
             premiumPlan,
             originatingAppVersion,
             originatingPlatform);
@@ -74,6 +76,7 @@ public class CreatePremiumCheckoutSessionCommand(
     /// <param name="originatingPlatform"> The platform (e.g., ios, android) from which the Checkout Session is initiated. </param>
     /// <returns> The created SessionCreateOptions for Stripe Checkout Session creation. </returns>
     private SessionCreateOptions CreateSessionOptions(
+        User user,
         Customer customer,
         PremiumPlan premiumPlan,
         string originatingAppVersion,
@@ -95,6 +98,7 @@ public class CreatePremiumCheckoutSessionCommand(
             {
                 Metadata = new Dictionary<string, string>
                 {
+                    [StripeConstants.MetadataKeys.UserId] = user.Id.ToString(),
                     [StripeConstants.MetadataKeys.OriginatingPlatform] = originatingPlatform,
                     [StripeConstants.MetadataKeys.OriginatingAppVersion] = originatingAppVersion,
                 }
