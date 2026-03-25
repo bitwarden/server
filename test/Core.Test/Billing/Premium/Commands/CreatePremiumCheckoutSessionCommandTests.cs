@@ -91,6 +91,7 @@ public class CreatePremiumCheckoutSessionCommandTests
             && options.SuccessUrl == _successUrl
             && options.CancelUrl == _cancelUrl
             && options.PaymentMethodTypes.Contains(StripeConstants.PaymentMethodTypes.Card)
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.UserId] == user.Id.ToString()
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingAppVersion] == appVersion
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingPlatform] == platform));
     }
@@ -126,6 +127,7 @@ public class CreatePremiumCheckoutSessionCommandTests
             && options.SuccessUrl == _successUrl
             && options.CancelUrl == _cancelUrl
             && options.PaymentMethodTypes.Contains(StripeConstants.PaymentMethodTypes.Card)
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.UserId] == user.Id.ToString()
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingAppVersion] == appVersion
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingPlatform] == platform));
     }
@@ -145,6 +147,25 @@ public class CreatePremiumCheckoutSessionCommandTests
         var badRequest = result.AsT1;
         Assert.Equal("User is already a premium user.", badRequest.Response);
         await _subscriberService.DidNotReceive().CreateStripeCustomer(Arg.Any<User>());
+        await _stripeAdapter.DidNotReceive().CreateCheckoutSessionAsync(Arg.Any<SessionCreateOptions>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Run_CreateStripeCustomerThrows_ReturnsUnhandled(User user)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+
+        _subscriberService.CreateStripeCustomer(user).ThrowsAsync(new BillingException());
+
+        // Act
+        var result = await _command.Run(user, "1.0.0", "iOS");
+
+        // Assert
+        Assert.True(result.IsT3);
+        Assert.IsType<BillingException>(result.AsT3.Exception);
         await _stripeAdapter.DidNotReceive().CreateCheckoutSessionAsync(Arg.Any<SessionCreateOptions>());
     }
 
