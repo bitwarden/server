@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Stripe;
+using Stripe.Checkout;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -20,15 +21,14 @@ public class CheckoutSessionCompletedHandler(
 {
     public async Task HandleAsync(Event parsedEvent)
     {
-        var session = await stripeEventService.GetCheckoutSession(parsedEvent, true, ["setup_intent"]);
+        var session = await stripeEventService.GetCheckoutSession(parsedEvent, true, ["subscription"]);
+        var subscription = session.Subscription;
 
-        if (string.IsNullOrWhiteSpace(session.SubscriptionId))
+        if (subscription is null)
         {
             logger.LogError("Checkout Session {SessionId} has no subscription ID", session.Id);
             return;
         }
-
-        var subscription = await stripeAdapter.GetSubscriptionAsync(session.SubscriptionId);
 
         var (_, userId, _) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
         if (!userId.HasValue)
