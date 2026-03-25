@@ -55,7 +55,7 @@ public class CheckoutSessionCompletedHandler(
         // if the subscription does not contain the premium seat, this is not a premium subscription upgrade
         if (subscription.Items.All(i => i.Price.Id != premiumPlan.Seat.StripePriceId))
         {
-            logger.LogWarning("Subscription {SubscriptionId} does not contain premium seat", subscription.Id);
+            logger.LogError("Subscription {SubscriptionId} does not contain premium seat", subscription.Id);
             return;
         }
 
