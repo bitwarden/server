@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,12 +35,12 @@ public class DeviceLastActivityCacheService : IDeviceLastActivityCacheService
         var bytes = await _cache.GetAsync(CacheKey(identifier));
         if (bytes == null) return false;
         var cached = Encoding.UTF8.GetString(bytes);
-        return cached == _timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd");
+        return cached == _timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
     public async Task RecordBumpAsync(string identifier)
     {
-        var value = Encoding.UTF8.GetBytes(_timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd"));
+        var value = Encoding.UTF8.GetBytes(_timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         await _cache.SetAsync(CacheKey(identifier), value, _cacheOptions);
     }
 

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Bit.Core.Auth.UserFeatures.Devices;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -19,7 +20,7 @@ public class DeviceLastActivityCacheServiceTests
             .WithFakeTimeProvider()
             .Create();
 
-        var today = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd");
+        var today = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Encoding.UTF8.GetBytes(today));
@@ -36,7 +37,7 @@ public class DeviceLastActivityCacheServiceTests
             .WithFakeTimeProvider()
             .Create();
 
-        var yesterday = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.AddDays(-1).ToString("yyyy-MM-dd");
+        var yesterday = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Encoding.UTF8.GetBytes(yesterday));
@@ -67,7 +68,7 @@ public class DeviceLastActivityCacheServiceTests
             .WithFakeTimeProvider()
             .Create();
 
-        var today = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd");
+        var today = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
         await sutProvider.Sut.RecordBumpAsync(identifier);
 
