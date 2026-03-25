@@ -55,7 +55,7 @@ public static class PolicyTypeExtensions
             PolicyType.AutotypeDefaultSetting => "Autotype default setting",
             PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
             PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
-            PolicyType.OrganizationUserNotification => "Customized banner",
+            PolicyType.OrganizationUserNotification => "Vault banner message",
         };
     }
 }
