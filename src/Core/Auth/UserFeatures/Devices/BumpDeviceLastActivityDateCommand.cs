@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Auth.UserFeatures.Devices;
@@ -16,15 +17,15 @@ public class BumpDeviceLastActivityDateCommand : IBumpDeviceLastActivityDateComm
         _lastActivityCache = lastActivityCache;
     }
 
-    public async Task BumpByIdAsync(Guid deviceId, string identifier, Guid userId)
+    public async Task BumpAsync(Device device)
     {
-        if (await _lastActivityCache.HasBeenBumpedTodayAsync(userId, identifier))
+        if (await _lastActivityCache.HasBeenBumpedTodayAsync(device.UserId, device.Identifier))
         {
             return;
         }
 
-        await _deviceRepository.BumpLastActivityDateByIdAsync(deviceId);
-        await _lastActivityCache.RecordBumpAsync(userId, identifier);
+        await _deviceRepository.BumpLastActivityDateByIdAsync(device.Id);
+        await _lastActivityCache.RecordBumpAsync(device.UserId, device.Identifier);
     }
 
     public async Task BumpByIdentifierAsync(string identifier, Guid userId)

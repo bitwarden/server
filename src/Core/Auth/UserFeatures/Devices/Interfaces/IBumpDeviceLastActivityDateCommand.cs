@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+﻿using Bit.Core.Entities;
+
+namespace Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 
 /// <summary>
 /// Updates a device's <c>LastActivityDate</c> to the current UTC time, at most once per calendar day.
@@ -6,7 +8,9 @@
 /// </summary>
 public interface IBumpDeviceLastActivityDateCommand
 {
-    Task BumpByIdAsync(Guid deviceId, string identifier, Guid userId);
+    /// <summary>Bumps the device's <c>LastActivityDate</c> by its <c>Id</c>, using the resolved <see cref="Device"/> object.</summary>
+    Task BumpAsync(Device device);
 
+    /// <summary>Bumps the device's <c>LastActivityDate</c> by <c>identifier</c> when the device <c>Id</c> is not available.</summary>
     Task BumpByIdentifierAsync(string identifier, Guid userId);
 }
