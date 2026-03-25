@@ -26,7 +26,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 {
     private readonly UserManager<User> _userManager;
     private readonly IUpdateInstallationCommand _updateInstallationCommand;
-    private readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
     private readonly Version _denyLegacyUserMinimumVersion = new(Constants.DenyLegacyUserMinimumVersion);
 
     public CustomTokenRequestValidator(
@@ -77,7 +76,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
-        _bumpDeviceLastActivityDateCommand = bumpDeviceLastActivityDateCommand;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)

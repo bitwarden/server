@@ -42,7 +42,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
-    private readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
+    protected readonly IBumpDeviceLastActivityDateCommand _bumpDeviceLastActivityDateCommand;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
