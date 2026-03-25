@@ -98,6 +98,7 @@ public class CustomTokenRequestValidatorTests
         };
     }
 
+    // TODO: PM-34091 - remove test when cleaning up feature flag
     [Fact]
     public async Task BumpDeviceLastActivityForRefreshAsync_NullSubject_SkipsBump()
     {
@@ -117,6 +118,7 @@ public class CustomTokenRequestValidatorTests
             .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
+    // TODO: PM-34091 - remove test when cleaning up feature flag
     [Fact]
     public async Task BumpDeviceLastActivityForRefreshAsync_NoDeviceClaim_SkipsBump()
     {
@@ -141,6 +143,7 @@ public class CustomTokenRequestValidatorTests
             .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
+    // TODO: PM-34091 - remove test when cleaning up feature flag
     [Fact]
     public async Task BumpDeviceLastActivityForRefreshAsync_InvalidUserIdGuid_SkipsBump()
     {
@@ -166,6 +169,7 @@ public class CustomTokenRequestValidatorTests
             .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
+    // TODO: PM-34091 - remove test when cleaning up feature flag
     [Fact]
     public async Task ValidateAsync_BumpByIdentifierThrows_RefreshTokenSucceeds()
     {
