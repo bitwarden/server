@@ -34,6 +34,22 @@ public static class Constants
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
+    /// Domain suffixes for Bitwarden cloud-hosted environments.
+    /// </summary>
+    public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
+
+    /// <summary>
+    /// Server permitted SSO callback redirect URIs for mobile clients.
+    /// </summary>
+    public static readonly string[] BitwardenMobileSsoCallbackUris =
+    [
+        "bitwarden://sso-callback",
+        "https://bitwarden.com/sso-callback",
+        "https://bitwarden.eu/sso-callback",
+        "https://bitwarden.pw/sso-callback",
+    ];
+
+    /// <summary>
     /// Used by IdentityServer to identify our own provider.
     /// </summary>
     public const string IdentityProvider = "bitwarden";
@@ -142,7 +158,6 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
     public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
@@ -157,7 +172,6 @@ public static class FeatureFlagKeys
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
