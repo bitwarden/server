@@ -18,30 +18,34 @@ pub mod config;
 mod bitwarden_v1_configuration;
 
 pub use bitwarden_v1_configuration::BitwardenV1Configuration;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
-pub enum BitwardenAkdPair {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum BitwardenAkdPairMaterial {
     UserRealWorldId {
         real_world_id: String,
         user_id: Uuid,
     },
 }
 
-impl BitwardenAkdPair {
+impl BitwardenAkdPairMaterial {
     fn akd_label(&self) -> AkdLabel {
-        let bytes = match self {
-            BitwardenAkdPair::UserRealWorldId {
+        match self {
+            BitwardenAkdPairMaterial::UserRealWorldId {
                 real_world_id,
                 user_id: _,
-            } => format!("User:RwId:{real_world_id}").as_bytes().to_vec(),
-        };
-        AkdLabel(bytes)
+            } => (&BitwardenAkdLabelMaterial::UserRealWorldId {
+                real_world_id: real_world_id.clone(),
+            })
+                .into(),
+        }
     }
 
     fn akd_value(&self) -> AkdValue {
         let bytes = match self {
-            BitwardenAkdPair::UserRealWorldId {
+            BitwardenAkdPairMaterial::UserRealWorldId {
                 real_world_id: _,
                 user_id,
             } => user_id.as_bytes().to_vec(),
@@ -50,20 +54,31 @@ impl BitwardenAkdPair {
     }
 }
 
-impl From<BitwardenAkdPair> for AkdPair {
-    fn from(pair: BitwardenAkdPair) -> Self {
-        AkdPair {
-            label: pair.akd_label(),
-            value: pair.akd_value(),
-        }
+impl From<&BitwardenAkdPairMaterial> for AkdLabel {
+    fn from(pair: &BitwardenAkdPairMaterial) -> Self {
+        pair.akd_label()
     }
 }
 
-pub struct AkdPair {
-    label: AkdLabel,
-    value: AkdValue,
+impl From<&BitwardenAkdPairMaterial> for AkdValue {
+    fn from(pair: &BitwardenAkdPairMaterial) -> Self {
+        pair.akd_value()
+    }
 }
 
-pub fn akd_label_value_for(pair: BitwardenAkdPair) -> AkdPair {
-    pair.into()
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum BitwardenAkdLabelMaterial {
+    UserRealWorldId { real_world_id: String },
+}
+
+impl From<&BitwardenAkdLabelMaterial> for AkdLabel {
+    fn from(key: &BitwardenAkdLabelMaterial) -> Self {
+        let bytes = match key {
+            BitwardenAkdLabelMaterial::UserRealWorldId { real_world_id } => {
+                format!("User:RwId:{real_world_id}").as_bytes().to_vec()
+            }
+        };
+        AkdLabel(bytes)
+    }
 }

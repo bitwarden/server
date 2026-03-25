@@ -1,5 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
-use common::AkdLabelB64;
+use bitwarden_akd_configuration::BitwardenAkdLabelMaterial;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LookupRequest {
     /// the label to look up encoded as base64
-    pub label_b64: AkdLabelB64,
+    pub bitwarden_akd_label_material: BitwardenAkdLabelMaterial,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,10 +24,14 @@ pub struct LookupData {
 #[instrument(skip_all)]
 pub async fn lookup_handler(
     State(AppState { directory, .. }): State<AppState>,
-    Json(LookupRequest { label_b64 }): Json<LookupRequest>,
+    Json(LookupRequest {
+        bitwarden_akd_label_material,
+    }): Json<LookupRequest>,
 ) -> (StatusCode, Json<Response<LookupData>>) {
     info!("Handling lookup request");
-    let lookup_proof = directory.lookup(label_b64.into()).await;
+    let lookup_proof = directory
+        .lookup((&bitwarden_akd_label_material).into())
+        .await;
 
     match lookup_proof {
         Ok((lookup_proof, epoch_hash)) => (

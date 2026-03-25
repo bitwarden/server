@@ -1,5 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
-use common::AkdLabelB64;
+use bitwarden_akd_configuration::BitwardenAkdLabelMaterial;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchLookupRequest {
     /// An array of labels to look up. Each label is encoded as base64.
-    pub labels_b64: Vec<AkdLabelB64>,
+    pub bitwarden_akd_labels: Vec<BitwardenAkdLabelMaterial>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,12 +28,14 @@ pub async fn batch_lookup_handler(
         max_batch_lookup_size,
         ..
     }): State<AppState>,
-    Json(BatchLookupRequest { labels_b64 }): Json<BatchLookupRequest>,
+    Json(BatchLookupRequest {
+        bitwarden_akd_labels,
+    }): Json<BatchLookupRequest>,
 ) -> (StatusCode, Json<Response<BatchLookupData>>) {
     info!("Handling batch lookup request");
 
     // Validate batch not empty
-    if labels_b64.is_empty() {
+    if bitwarden_akd_labels.is_empty() {
         error!("Empty batch request received");
         return (
             StatusCode::BAD_REQUEST,
@@ -42,9 +44,9 @@ pub async fn batch_lookup_handler(
     }
 
     // Validate batch size
-    if labels_b64.len() > max_batch_lookup_size {
+    if bitwarden_akd_labels.len() > max_batch_lookup_size {
         error!(
-            batch_size = labels_b64.len(),
+            batch_size = bitwarden_akd_labels.len(),
             max_size = max_batch_lookup_size,
             "Batch size exceeds limit"
         );
@@ -56,9 +58,9 @@ pub async fn batch_lookup_handler(
         );
     }
 
-    let labels = labels_b64
+    let labels = bitwarden_akd_labels
         .into_iter()
-        .map(|label_b64| label_b64.into())
+        .map(|label_b64| (&label_b64).into())
         .collect::<Vec<akd::AkdLabel>>();
     let lookup_proofs = directory.batch_lookup(&labels).await;
 
@@ -90,7 +92,7 @@ mod tests {
     fn test_empty_batch_rejected() {
         // Threat model: DoS via empty batch requests
         // Tests handler logic at lines 36-42
-        let labels_b64: Vec<AkdLabelB64> = vec![];
+        let labels_b64: Vec<BitwardenAkdLabelMaterial> = vec![];
         assert!(labels_b64.is_empty(), "Empty batch should be detected");
     }
 
@@ -109,7 +111,8 @@ mod tests {
         for (batch_size, max_size, should_be_rejected) in test_cases {
             let exceeds_limit = batch_size > max_size;
             assert_eq!(
-                exceeds_limit, should_be_rejected,
+                exceeds_limit,
+                should_be_rejected,
                 "Batch size {} with max {} should {}be rejected",
                 batch_size,
                 max_size,
