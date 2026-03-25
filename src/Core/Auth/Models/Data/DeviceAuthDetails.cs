@@ -9,7 +9,6 @@ public class DeviceAuthDetails : Device
     public bool IsTrusted { get; set; }
     public Guid? AuthRequestId { get; set; }
     public DateTime? AuthRequestCreatedAt { get; set; }
-    public new DateTime? LastActivityDate { get; set; }
 
     /**
      * Constructor for EF response.
