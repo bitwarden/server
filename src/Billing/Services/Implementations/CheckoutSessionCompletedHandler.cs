@@ -5,7 +5,6 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Stripe;
-using Stripe.Checkout;
 
 namespace Bit.Billing.Services.Implementations;
 
@@ -69,7 +68,7 @@ public class CheckoutSessionCompletedHandler(
 
     private async Task UpdateDefaultPaymentMethodAsync(string? defaultPaymentMethodId, string customerId)
     {
-        if( string.IsNullOrWhiteSpace(defaultPaymentMethodId))
+        if (string.IsNullOrWhiteSpace(defaultPaymentMethodId))
         {
             logger.LogWarning("No default payment method found for customer {CustomerId}", customerId);
             return;
