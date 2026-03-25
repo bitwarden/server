@@ -72,20 +72,21 @@ public class CheckoutSessionCompletedHandlerTests
 
         await _sut.HandleAsync(_mockEvent);
 
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(null!);
         await _userRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(null!);
     }
 
     [Fact]
     public async Task HandleAsync_NoUserIdInMetadata_LogsErrorAndReturns()
     {
-        var subscription = new Subscription { Id = _subscriptionId, Metadata = [] };
-
         _stripeEventService
             .GetCheckoutSession(_mockEvent, true, Arg.Any<List<string>?>())
-            .Returns(new Session { Id = _sessionId, SubscriptionId = _subscriptionId });
-        _stripeAdapter.GetSubscriptionAsync(_subscriptionId).Returns(subscription);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Session
+            {
+                Id = _sessionId,
+                SubscriptionId = _subscriptionId,
+                Subscription = new Subscription { Id = _subscriptionId, Metadata = [] }
+            });
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, null, null));
 
         await _sut.HandleAsync(_mockEvent);
@@ -97,13 +98,15 @@ public class CheckoutSessionCompletedHandlerTests
     [Fact]
     public async Task HandleAsync_UserNotFound_LogsErrorAndReturns()
     {
-        var subscription = new Subscription { Id = _subscriptionId, Metadata = [] };
-
         _stripeEventService
             .GetCheckoutSession(_mockEvent, true, Arg.Any<List<string>?>())
-            .Returns(new Session { Id = _sessionId, SubscriptionId = _subscriptionId });
-        _stripeAdapter.GetSubscriptionAsync(_subscriptionId).Returns(subscription);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Session
+            {
+                Id = _sessionId,
+                SubscriptionId = _subscriptionId,
+                Subscription = new Subscription { Id = _subscriptionId, Metadata = [] }
+            });
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns((User)null!);
 
@@ -128,9 +131,8 @@ public class CheckoutSessionCompletedHandlerTests
 
         _stripeEventService
             .GetCheckoutSession(_mockEvent, true, Arg.Any<List<string>?>())
-            .Returns(new Session { Id = _sessionId, SubscriptionId = _subscriptionId });
-        _stripeAdapter.GetSubscriptionAsync(_subscriptionId).Returns(subscription);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Session { Id = _sessionId, SubscriptionId = _subscriptionId, Subscription = subscription });
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(new User { Id = _userId });
         _pricingClient.GetAvailablePremiumPlan().Returns(_premiumPlan);
@@ -170,10 +172,9 @@ public class CheckoutSessionCompletedHandlerTests
                 Id = _sessionId,
                 CustomerId = _customerId,
                 SubscriptionId = _subscriptionId,
-                SetupIntent = new SetupIntent { PaymentMethodId = _paymentMethodId }
+                Subscription = subscription
             });
-        _stripeAdapter.GetSubscriptionAsync(_subscriptionId).Returns(subscription);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.GetAvailablePremiumPlan().Returns(_premiumPlan);
@@ -225,10 +226,9 @@ public class CheckoutSessionCompletedHandlerTests
                 Id = _sessionId,
                 CustomerId = _customerId,
                 SubscriptionId = _subscriptionId,
-                SetupIntent = null
+                Subscription = subscription
             });
-        _stripeAdapter.GetSubscriptionAsync(_subscriptionId).Returns(subscription);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(new User { Id = _userId });
         _pricingClient.GetAvailablePremiumPlan().Returns(_premiumPlan);
@@ -262,9 +262,14 @@ public class CheckoutSessionCompletedHandlerTests
 
         _stripeEventService
             .GetCheckoutSession(_mockEvent, true, Arg.Any<List<string>?>())
-            .Returns(new Session { Id = _sessionId, CustomerId = _customerId, SubscriptionId = _subscriptionId });
-        _stripeAdapter.GetSubscriptionAsync(_subscriptionId).Returns(subscription);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Session
+            {
+                Id = _sessionId,
+                CustomerId = _customerId,
+                SubscriptionId = _subscriptionId,
+                Subscription = subscription
+            });
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.GetAvailablePremiumPlan().Returns(_premiumPlan);
