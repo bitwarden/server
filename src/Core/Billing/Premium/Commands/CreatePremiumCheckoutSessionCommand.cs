@@ -135,7 +135,7 @@ public class CreatePremiumCheckoutSessionCommand(
             SuccessUrl = globalSettings.Stripe.PremiumCheckoutSuccessUrl,
             CancelUrl = globalSettings.Stripe.PremiumCheckoutCancelUrl,
             AutomaticTax = new SessionAutomaticTaxOptions { Enabled = true },
-            PaymentMethodTypes = [StripeConstants.PaymentMethodTypes.Card],
+            PaymentMethodTypes = [StripeConstants.PaymentMethodTypes.Card]
         };
     }
 }
