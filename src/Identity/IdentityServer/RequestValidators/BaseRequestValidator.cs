@@ -450,7 +450,7 @@ public abstract class BaseRequestValidator<T> where T : class
         {
             try
             {
-                await _bumpDeviceLastActivityDateCommand.BumpByIdAsync(device.Id, device.Identifier);
+                await _bumpDeviceLastActivityDateCommand.BumpByIdAsync(device.Id, device.Identifier, device.UserId);
             }
             catch (Exception e)
             {

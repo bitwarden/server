@@ -6,35 +6,35 @@ namespace Bit.Core.Auth.UserFeatures.Devices;
 public class BumpDeviceLastActivityDateCommand : IBumpDeviceLastActivityDateCommand
 {
     private readonly IDeviceRepository _deviceRepository;
-    private readonly IDeviceLastActivityCacheService _activityCache;
+    private readonly IDeviceLastActivityCacheService _lastActivityCache;
 
     public BumpDeviceLastActivityDateCommand(
         IDeviceRepository deviceRepository,
-        IDeviceLastActivityCacheService activityCache)
+        IDeviceLastActivityCacheService lastActivityCache)
     {
         _deviceRepository = deviceRepository;
-        _activityCache = activityCache;
+        _lastActivityCache = lastActivityCache;
     }
 
-    public async Task BumpByIdAsync(Guid deviceId, string identifier)
+    public async Task BumpByIdAsync(Guid deviceId, string identifier, Guid userId)
     {
-        if (await _activityCache.HasBeenBumpedTodayAsync(identifier))
+        if (await _lastActivityCache.HasBeenBumpedTodayAsync(userId, identifier))
         {
             return;
         }
 
         await _deviceRepository.BumpLastActivityDateByIdAsync(deviceId);
-        await _activityCache.RecordBumpAsync(identifier);
+        await _lastActivityCache.RecordBumpAsync(userId, identifier);
     }
 
     public async Task BumpByIdentifierAsync(string identifier, Guid userId)
     {
-        if (await _activityCache.HasBeenBumpedTodayAsync(identifier))
+        if (await _lastActivityCache.HasBeenBumpedTodayAsync(userId, identifier))
         {
             return;
         }
 
         await _deviceRepository.BumpLastActivityDateByIdentifierAsync(identifier, userId);
-        await _activityCache.RecordBumpAsync(identifier);
+        await _lastActivityCache.RecordBumpAsync(userId, identifier);
     }
 }

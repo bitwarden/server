@@ -30,19 +30,19 @@ public class DeviceLastActivityCacheService : IDeviceLastActivityCacheService
         _timeProvider = timeProvider;
     }
 
-    public async Task<bool> HasBeenBumpedTodayAsync(string identifier)
+    public async Task<bool> HasBeenBumpedTodayAsync(Guid userId, string identifier)
     {
-        var bytes = await _cache.GetAsync(CacheKey(identifier));
+        var bytes = await _cache.GetAsync(CacheKey(userId, identifier));
         if (bytes == null) return false;
         var cached = Encoding.UTF8.GetString(bytes);
         return cached == _timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
-    public async Task RecordBumpAsync(string identifier)
+    public async Task RecordBumpAsync(Guid userId, string identifier)
     {
         var value = Encoding.UTF8.GetBytes(_timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        await _cache.SetAsync(CacheKey(identifier), value, _cacheOptions);
+        await _cache.SetAsync(CacheKey(userId, identifier), value, _cacheOptions);
     }
 
-    private static string CacheKey(string identifier) => $"device:last-activity:{identifier}";
+    private static string CacheKey(Guid userId, string identifier) => $"device:last-activity:{userId}:{identifier}";
 }

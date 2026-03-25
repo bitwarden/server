@@ -2,6 +2,6 @@
 
 public interface IDeviceLastActivityCacheService
 {
-    Task<bool> HasBeenBumpedTodayAsync(string identifier);
-    Task RecordBumpAsync(string identifier);
+    Task<bool> HasBeenBumpedTodayAsync(Guid userId, string identifier);
+    Task RecordBumpAsync(Guid userId, string identifier);
 }

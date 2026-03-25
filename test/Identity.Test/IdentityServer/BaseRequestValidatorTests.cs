@@ -1349,7 +1349,7 @@ public class BaseRequestValidatorTests
 
         // The bump command throws a transient exception
         _bumpDeviceLastActivityDateCommand
-            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>())
+            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid>())
             .Returns<Task>(_ => throw new Exception("Transient failure"));
 
         // Act
@@ -1405,7 +1405,7 @@ public class BaseRequestValidatorTests
         Assert.False(context.GrantResult.IsError);
         await _bumpDeviceLastActivityDateCommand
             .DidNotReceive()
-            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
+            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
@@ -1449,7 +1449,7 @@ public class BaseRequestValidatorTests
         Assert.False(context.GrantResult.IsError);
         await _bumpDeviceLastActivityDateCommand
             .DidNotReceive()
-            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
+            .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
@@ -1491,7 +1491,7 @@ public class BaseRequestValidatorTests
         Assert.False(context.GrantResult.IsError);
         await _bumpDeviceLastActivityDateCommand
             .Received(1)
-            .BumpByIdAsync(requestContext.Device.Id, requestContext.Device.Identifier);
+            .BumpByIdAsync(requestContext.Device.Id, requestContext.Device.Identifier, requestContext.Device.UserId);
     }
 
     private BaseRequestValidationContextFake CreateContext(

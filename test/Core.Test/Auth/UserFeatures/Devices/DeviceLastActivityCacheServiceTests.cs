@@ -14,7 +14,7 @@ namespace Bit.Core.Test.Auth.UserFeatures.Devices;
 public class DeviceLastActivityCacheServiceTests
 {
     [Theory, BitAutoData]
-    public async Task HasBeenBumpedTodayAsync_GivenCachedDateIsToday_ReturnsTrue(string identifier)
+    public async Task HasBeenBumpedTodayAsync_GivenCachedDateIsToday_ReturnsTrue(Guid userId, string identifier)
     {
         var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
@@ -25,13 +25,13 @@ public class DeviceLastActivityCacheServiceTests
             .GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Encoding.UTF8.GetBytes(today));
 
-        var result = await sutProvider.Sut.HasBeenBumpedTodayAsync(identifier);
+        var result = await sutProvider.Sut.HasBeenBumpedTodayAsync(userId, identifier);
 
         Assert.True(result);
     }
 
     [Theory, BitAutoData]
-    public async Task HasBeenBumpedTodayAsync_GivenCachedDateIsYesterday_ReturnsFalse(string identifier)
+    public async Task HasBeenBumpedTodayAsync_GivenCachedDateIsYesterday_ReturnsFalse(Guid userId, string identifier)
     {
         var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
@@ -42,7 +42,7 @@ public class DeviceLastActivityCacheServiceTests
             .GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Encoding.UTF8.GetBytes(yesterday));
 
-        var result = await sutProvider.Sut.HasBeenBumpedTodayAsync(identifier);
+        var result = await sutProvider.Sut.HasBeenBumpedTodayAsync(userId, identifier);
 
         Assert.False(result);
     }
@@ -50,19 +50,20 @@ public class DeviceLastActivityCacheServiceTests
     [Theory, BitAutoData]
     public async Task HasBeenBumpedTodayAsync_GivenCacheMiss_ReturnsFalse(
         SutProvider<DeviceLastActivityCacheService> sutProvider,
+        Guid userId,
         string identifier)
     {
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns((byte[])null);
 
-        var result = await sutProvider.Sut.HasBeenBumpedTodayAsync(identifier);
+        var result = await sutProvider.Sut.HasBeenBumpedTodayAsync(userId, identifier);
 
         Assert.False(result);
     }
 
     [Theory, BitAutoData]
-    public async Task RecordBumpAsync_StoresCorrectDateAndTtl(string identifier)
+    public async Task RecordBumpAsync_StoresCorrectDateAndTtl(Guid userId, string identifier)
     {
         var sutProvider = new SutProvider<DeviceLastActivityCacheService>()
             .WithFakeTimeProvider()
@@ -70,7 +71,7 @@ public class DeviceLastActivityCacheServiceTests
 
         var today = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-        await sutProvider.Sut.RecordBumpAsync(identifier);
+        await sutProvider.Sut.RecordBumpAsync(userId, identifier);
 
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
@@ -85,14 +86,15 @@ public class DeviceLastActivityCacheServiceTests
     public async Task RecordBumpAsync_UsesCacheKeyFormat(
         SutProvider<DeviceLastActivityCacheService> sutProvider)
     {
+        var userId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var identifier = "my-device-id";
 
-        await sutProvider.Sut.RecordBumpAsync(identifier);
+        await sutProvider.Sut.RecordBumpAsync(userId, identifier);
 
         await sutProvider.GetDependency<IDistributedCache>()
             .Received(1)
             .SetAsync(
-                "device:last-activity:my-device-id",
+                "device:last-activity:00000000-0000-0000-0000-000000000001:my-device-id",
                 Arg.Any<byte[]>(),
                 Arg.Any<DistributedCacheEntryOptions>(),
                 Arg.Any<CancellationToken>());
