@@ -94,7 +94,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             // TODO: PM-34091 - remove feature flag check when cleaning up
             if (_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
             {
-                await BumpDeviceLastActivityForRefreshAsync(context);
+                await TryBumpDeviceLastActivityForRefreshAsync(context);
             }
         }
 
@@ -206,6 +206,30 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.CustomResponse = requestContext.CustomResponse;
     }
 
+    private async Task TryBumpDeviceLastActivityForRefreshAsync(CustomTokenRequestValidationContext context)
+    {
+        Debug.Assert(context.Result is not null);
+        try
+        {
+            var subject = context.Result.ValidatedRequest.Subject;
+            var identifier = subject?.FindFirstValue(Claims.Device);
+            var userIdString = subject?.GetSubjectId();
+            if (string.IsNullOrEmpty(identifier) || !Guid.TryParse(userIdString, out var userId))
+            {
+                return;
+            }
+
+            await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAsync(identifier, userId);
+        }
+        catch (Exception e)
+        {
+            // Log and swallow exceptions from this non-critical update, as we don't want to fail logins
+            // due to issues updating the device's last activity date.
+            _logger.LogWarning(e, "Failed to bump LastActivityDate for device with identifier {DeviceIdentifier}.",
+                context.Result.ValidatedRequest.Subject?.FindFirstValue(Claims.Device));
+        }
+    }
+
     /// <summary>
     /// To help mentally separate organizations that self host from abandoned
     /// organizations we hook in to the token refresh event for installations
@@ -218,29 +242,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     /// If installations ever start refreshing tokens more frequently we may need to
     /// adjust this to avoid making a bunch of unnecessary database calls!
     /// </remarks>
-    private async Task BumpDeviceLastActivityForRefreshAsync(CustomTokenRequestValidationContext context)
-    {
-        Debug.Assert(context.Result is not null);
-        var subject = context.Result.ValidatedRequest.Subject;
-        var identifier = subject?.FindFirstValue(Claims.Device);
-        var userIdString = subject?.GetSubjectId();
-        if (string.IsNullOrEmpty(identifier) || !Guid.TryParse(userIdString, out var userId))
-        {
-            return;
-        }
-
-        try
-        {
-            await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAsync(identifier, userId);
-        }
-        catch (Exception e)
-        {
-            // Log and swallow exceptions from this non-critical update, as we don't want to fail logins 
-            // due to issues updating the device's last activity date.
-            _logger.LogWarning(e, "Failed to bump LastActivityDate for device with identifier {DeviceIdentifier}.", identifier);
-        }
-    }
-
     private async Task RecordActivityForInstallation(string? installationIdString)
     {
         if (!Guid.TryParse(installationIdString, out var installationId))

@@ -100,7 +100,7 @@ public class CustomTokenRequestValidatorTests
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
-    public async Task BumpDeviceLastActivityForRefreshAsync_NullSubject_SkipsBump()
+    public async Task TryBumpDeviceLastActivityForRefreshAsync_NullSubject_SkipsBump()
     {
         // Arrange
         var context = CreateRefreshTokenContext(subject: null);
@@ -120,7 +120,7 @@ public class CustomTokenRequestValidatorTests
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
-    public async Task BumpDeviceLastActivityForRefreshAsync_NoDeviceClaim_SkipsBump()
+    public async Task TryBumpDeviceLastActivityForRefreshAsync_NoDeviceClaim_SkipsBump()
     {
         // Arrange — subject has a valid user ID but no device claim
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
@@ -145,7 +145,7 @@ public class CustomTokenRequestValidatorTests
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
-    public async Task BumpDeviceLastActivityForRefreshAsync_InvalidUserIdGuid_SkipsBump()
+    public async Task TryBumpDeviceLastActivityForRefreshAsync_InvalidUserIdGuid_SkipsBump()
     {
         // Arrange — subject has a device claim but the sub claim is not a valid GUID
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
@@ -204,9 +204,38 @@ public class CustomTokenRequestValidatorTests
             l.Message.Contains("Failed to bump LastActivityDate for device with identifier"));
     }
 
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
+    [Fact]
+    public async Task TryBumpDeviceLastActivityForRefreshAsync_Succeeds_BumpCalledWithCorrectArgsAsync()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var deviceIdentifier = "test-device-identifier";
+
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+            new Claim(Claims.Device, deviceIdentifier),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: refresh succeeds and bump was called with the correct identifier and userId
+        Assert.False(context.Result.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .Received(1)
+            .BumpByIdentifierAsync(deviceIdentifier, userId);
+    }
+
     // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
     [Fact]
-    public async Task BumpDeviceLastActivityForRefreshAsync_FeatureFlagDisabled_BumpNotCalledAsync()
+    public async Task TryBumpDeviceLastActivityForRefreshAsync_FeatureFlagDisabled_BumpNotCalledAsync()
     {
         // Arrange
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
