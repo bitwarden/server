@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
@@ -492,6 +493,51 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.True(content.Enabled);
         Assert.Equal(PolicyType.MasterPassword, content.Type);
         Assert.Equal(_organization.Id, content.OrganizationId);
+    }
+
+    /// <summary>
+    /// An OrganizationUser with Invited status can still have a UserId linked due to the SSO JIT provisioning bug
+    /// (PM-34092). This requirement exists to support that case, so Invited + UserId must succeed.
+    /// </summary>
+    [Fact]
+    public async Task GetMasterPasswordPolicy_InvitedMemberWithLinkedUserId_ReturnsPolicy()
+    {
+        // Arrange
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = _organization.Id,
+            Type = PolicyType.MasterPassword,
+            Enabled = true
+        });
+
+        // Create a user account and add them to the org in Invited status (but with UserId populated)
+        var invitedEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(invitedEmail);
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(invitedEmail);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = _organization.Id,
+            UserId = user!.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Invited
+        });
+
+        await _loginHelper.LoginAsync(invitedEmail);
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadFromJsonAsync<PolicyResponseModel>();
+        Assert.NotNull(content);
+        Assert.True(content.Enabled);
+        Assert.Equal(PolicyType.MasterPassword, content.Type);
     }
 
     [Fact]
