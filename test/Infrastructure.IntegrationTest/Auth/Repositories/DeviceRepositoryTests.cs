@@ -48,6 +48,93 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
+    public async Task BumpLastActivityDateByIdentifierAsync_SetsLastActivityDate(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var device = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        // Act
+        await sutRepository.BumpLastActivityDateByIdentifierAsync(device.Identifier, user.Id);
+
+        // Assert
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.NotNull(after!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpLastActivityDateByIdentifierAsync_DoesNotBumpOtherUsersDevice(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange — two users share the same device identifier
+        var userA = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User A",
+            Email = $"test_user_A+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var userB = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User B",
+            Email = $"test_user_B+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var sharedIdentifier = Guid.NewGuid().ToString();
+
+        var deviceA = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = userA.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = sharedIdentifier,
+        });
+
+        var deviceB = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = userB.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = sharedIdentifier,
+        });
+
+        var beforeB = (await sutRepository.GetByIdAsync(deviceB.Id))!.LastActivityDate;
+
+        // Act — bump only userA's device
+        await sutRepository.BumpLastActivityDateByIdentifierAsync(sharedIdentifier, userA.Id);
+
+        // Assert — userA's device is bumped, userB's is unchanged
+        var afterA = await sutRepository.GetByIdAsync(deviceA.Id);
+        var afterB = await sutRepository.GetByIdAsync(deviceB.Id);
+        Assert.NotNull(afterA!.LastActivityDate);
+        Assert.Equal(beforeB, afterB!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_Works_ReturnsExpectedResults(
         IDeviceRepository sutRepository,
         IUserRepository userRepository,
