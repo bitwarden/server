@@ -9,7 +9,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -39,7 +38,7 @@ public class TdeSetPasswordCommandTests
             .GetByOrganizationAsync(org.Id, user.Id)
             .Returns(orgUser);
 
-        sutProvider.GetDependency<IPasswordHasher<User>>()
+        sutProvider.GetDependency<IMasterPasswordHasher>()
             .HashPassword(user, model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash)
             .Returns(serverSideHash);
 

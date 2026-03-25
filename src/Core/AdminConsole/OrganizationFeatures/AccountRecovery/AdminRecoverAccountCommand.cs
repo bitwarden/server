@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -17,6 +18,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     IEventService eventService,
     IPushNotificationService pushNotificationService,
     IUserService userService,
+    IMasterPasswordHasher masterPasswordHasher,
     TimeProvider timeProvider) : IAdminRecoverAccountCommand
 {
     public async Task<IdentityResult> RecoverAccountAsync(Guid orgId,
@@ -57,17 +59,20 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
             throw new BadRequestException("Cannot reset password of a user with Key Connector.");
         }
 
-        var result = await userService.UpdatePasswordHash(user, newMasterPassword);
+        var (result, serverSideHash) = await masterPasswordHasher.ValidateAndHashPasswordAsync(user, newMasterPassword);
         if (!result.Succeeded)
         {
             return result;
         }
 
+        // TODO: Once this endpoint receives salt from the client, pass the client-supplied salt
+        // instead of user.GetMasterPasswordSalt() to enable real salt verification.
+        // user.UpdateMasterPasswordCrypto(serverSideHash!, key, requestModel.MasterPasswordUnlockData.Salt);
+        user.UpdateMasterPasswordCrypto(serverSideHash!, key, user.GetMasterPasswordSalt());
+
         user.RevisionDate = user.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
         user.LastPasswordChangeDate = user.RevisionDate;
         user.ForcePasswordReset = true;
-        user.Key = key;
-
         await userRepository.ReplaceAsync(user);
         await mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminResetPassword);

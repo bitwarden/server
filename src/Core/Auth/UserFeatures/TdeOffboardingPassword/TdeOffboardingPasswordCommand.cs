@@ -12,31 +12,31 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
 public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
 {
-    private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IPushNotificationService _pushService;
+    private readonly IMasterPasswordHasher _masterPasswordHasher;
 
 
     public TdeOffboardingPasswordCommand(
-        IUserService userService,
         IUserRepository userRepository,
         IEventService eventService,
         IOrganizationUserRepository organizationUserRepository,
         ISsoUserRepository ssoUserRepository,
         ISsoConfigRepository ssoConfigRepository,
-        IPushNotificationService pushService)
+        IPushNotificationService pushService,
+        IMasterPasswordHasher masterPasswordHasher)
     {
-        _userService = userService;
         _userRepository = userRepository;
         _eventService = eventService;
         _organizationUserRepository = organizationUserRepository;
         _ssoUserRepository = ssoUserRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _pushService = pushService;
+        _masterPasswordHasher = masterPasswordHasher;
     }
 
     public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string hint)
@@ -79,15 +79,19 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
             throw new BadRequestException("Organization SSO Member Decryption Type is not Master Password.");
         }
 
-        var result = await _userService.UpdatePasswordHash(user, newMasterPassword);
+        var (result, serverSideHash) = await _masterPasswordHasher.ValidateAndHashPasswordAsync(user, newMasterPassword);
         if (!result.Succeeded)
         {
             return result;
         }
 
+        // TODO: Once this endpoint receives salt/KDF from the client, pass client-supplied values.
+        user.SetInitialMasterPasswordCrypto(serverSideHash!, key,
+            user.GetMasterPasswordSalt(), user.Kdf, user.KdfIterations, user.KdfMemory, user.KdfParallelism);
+
+        user.SecurityStamp = Guid.NewGuid().ToString();
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
         user.ForcePasswordReset = false;
-        user.Key = key;
         user.MasterPasswordHint = hint;
 
         await _userRepository.ReplaceAsync(user);

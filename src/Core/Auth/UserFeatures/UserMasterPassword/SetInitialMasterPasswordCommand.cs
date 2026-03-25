@@ -6,7 +6,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
@@ -17,12 +16,12 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IMasterPasswordHasher _masterPasswordHasher;
     private readonly IEventService _eventService;
 
     public SetInitialMasterPasswordCommand(IUserService userService, IUserRepository userRepository,
         IAcceptOrgUserCommand acceptOrgUserCommand, IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository, IPasswordHasher<User> passwordHasher,
+        IOrganizationRepository organizationRepository, IMasterPasswordHasher masterPasswordHasher,
         IEventService eventService)
     {
         _userService = userService;
@@ -30,7 +29,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _passwordHasher = passwordHasher;
+        _masterPasswordHasher = masterPasswordHasher;
         _eventService = eventService;
     }
 
@@ -64,7 +63,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         }
 
         // Hash the provided user master password authentication hash on the server side
-        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
+        var serverSideHashedMasterPasswordAuthenticationHash = _masterPasswordHasher.HashPassword(user,
             masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
 
         var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,

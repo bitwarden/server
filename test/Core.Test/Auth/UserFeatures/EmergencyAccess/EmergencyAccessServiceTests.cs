@@ -8,6 +8,7 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -1557,11 +1558,15 @@ public class EmergencyAccessServiceTests
             .GetByIdAsync(emergencyAccess.GrantorId)
             .Returns(grantorUser);
 
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .HashPassword(grantorUser, passwordHash)
+            .Returns("server-side-hash");
+
         await sutProvider.Sut.PasswordAsync(emergencyAccess.Id, granteeUser, passwordHash, key);
 
-        await sutProvider.GetDependency<IUserService>()
+        sutProvider.GetDependency<IMasterPasswordHasher>()
             .Received(1)
-            .UpdatePasswordHash(grantorUser, passwordHash);
+            .HashPassword(grantorUser, passwordHash);
         await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<User>(u => u.VerifyDevices == false && u.Key == key));
@@ -1593,6 +1598,10 @@ public class EmergencyAccessServiceTests
             .GetByIdAsync(emergencyAccess.GrantorId)
             .Returns(grantorUser);
 
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .HashPassword(grantorUser, passwordHash)
+            .Returns("server-side-hash");
+
         organizationUser.UserId = grantorUser.Id;
         organizationUser.Type = userType;
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -1601,9 +1610,9 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.Sut.PasswordAsync(emergencyAccess.Id, granteeUser, passwordHash, key);
 
-        await sutProvider.GetDependency<IUserService>()
+        sutProvider.GetDependency<IMasterPasswordHasher>()
             .Received(1)
-            .UpdatePasswordHash(grantorUser, passwordHash);
+            .HashPassword(grantorUser, passwordHash);
         await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<User>(u => u.VerifyDevices == false && u.Key == key));
@@ -1634,6 +1643,10 @@ public class EmergencyAccessServiceTests
             .GetByIdAsync(emergencyAccess.GrantorId)
             .Returns(grantorUser);
 
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .HashPassword(grantorUser, passwordHash)
+            .Returns("server-side-hash");
+
         organizationUser.UserId = grantorUser.Id;
         organizationUser.Type = OrganizationUserType.Owner;
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -1642,9 +1655,9 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.Sut.PasswordAsync(emergencyAccess.Id, granteeUser, passwordHash, key);
 
-        await sutProvider.GetDependency<IUserService>()
+        sutProvider.GetDependency<IMasterPasswordHasher>()
             .Received(1)
-            .UpdatePasswordHash(grantorUser, passwordHash);
+            .HashPassword(grantorUser, passwordHash);
         await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<User>(u => u.VerifyDevices == false && u.Key == key));
@@ -1680,12 +1693,50 @@ public class EmergencyAccessServiceTests
         sutProvider.GetDependency<IUserRepository>()
             .GetByIdAsync(grantor.Id)
             .Returns(grantor);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .HashPassword(grantor, "blablahash")
+            .Returns("server-side-hash");
 
         await sutProvider.Sut.PasswordAsync(Guid.NewGuid(), requestingUser, "blablahash", "blablakey");
 
         Assert.Empty(grantor.GetTwoFactorProviders());
         Assert.False(grantor.VerifyDevices);
         await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(grantor);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PasswordAsync_TdeGrantor_NoMasterPassword_SetsInitialMasterPasswordCrypto(
+        SutProvider<EmergencyAccessService> sutProvider,
+        Core.Auth.Entities.EmergencyAccess emergencyAccess,
+        User granteeUser,
+        User grantorUser,
+        string key,
+        string passwordHash)
+    {
+        grantorUser.MasterPassword = null;
+        emergencyAccess.GranteeId = granteeUser.Id;
+        emergencyAccess.GrantorId = grantorUser.Id;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        sutProvider.GetDependency<IEmergencyAccessRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(emergencyAccess);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(emergencyAccess.GrantorId)
+            .Returns(grantorUser);
+
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .HashPassword(grantorUser, passwordHash)
+            .Returns("server-side-hash");
+
+        await sutProvider.Sut.PasswordAsync(emergencyAccess.Id, granteeUser, passwordHash, key);
+
+        Assert.Equal("server-side-hash", grantorUser.MasterPassword);
+        Assert.Equal(key, grantorUser.Key);
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<User>(u => u.VerifyDevices == false && u.MasterPassword == "server-side-hash"));
     }
 
     [Theory, BitAutoData]
