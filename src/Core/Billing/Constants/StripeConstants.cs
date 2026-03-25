@@ -119,6 +119,23 @@ public static class StripeConstants
         public const string None = "none";
     }
 
+    public static class SubscriptionScheduleEndBehavior
+    {
+        public const string Cancel = "cancel";
+        public const string None = "none";
+        public const string Release = "release";
+        public const string Renew = "renew";
+    }
+
+    public static class SubscriptionScheduleStatus
+    {
+        public const string Active = "active";
+        public const string Canceled = "canceled";
+        public const string Completed = "completed";
+        public const string NotStarted = "not_started";
+        public const string Released = "released";
+    }
+
     public static class SubscriptionStatus
     {
         public const string Trialing = "trialing";

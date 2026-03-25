@@ -1,10 +1,9 @@
-﻿using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Api.Response.Premium;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -32,7 +31,6 @@ public class CreatePremiumCheckoutSessionCommand(
     IStripeAdapter stripeAdapter,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
-    IUserService userService,
     IGlobalSettings globalSettings,
     ILogger<CreatePremiumCheckoutSessionCommand> logger
 ) : BaseBillingCommand<CreatePremiumCheckoutSessionCommand>(logger), ICreatePremiumCheckoutSessionCommand
@@ -40,7 +38,6 @@ public class CreatePremiumCheckoutSessionCommand(
     private readonly IStripeAdapter stripeAdapter = stripeAdapter;
     private readonly IPricingClient pricingClient = pricingClient;
     private readonly ISubscriberService subscriberService = subscriberService;
-    private readonly IUserService userService = userService;
     private readonly IGlobalSettings globalSettings = globalSettings;
 
     public Task<BillingCommandResult<PremiumCheckoutSessionResponseModel>>
@@ -53,14 +50,12 @@ public class CreatePremiumCheckoutSessionCommand(
 
         // If the user doesn't have a Stripe customer ID, create one.
         var customer = string.IsNullOrWhiteSpace(user.GatewayCustomerId)
-            ? await CreateCustomerAsync(user)
+            ? await subscriberService.CreateStripeCustomer(user)
             : await subscriberService.GetCustomerOrThrow(user);
 
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
-        var sessionOptions = CreateSessionOptions(
-            user,
-            customer,
+        var sessionOptions = CreateSessionOptions(customer,
             premiumPlan,
             originatingAppVersion,
             originatingPlatform);
@@ -71,41 +66,14 @@ public class CreatePremiumCheckoutSessionCommand(
     });
 
     /// <summary>
-    /// Creates a Stripe customer for the user.
-    /// </summary>
-    /// <param name="user"> The user for whom the Stripe customer is being created. </param>
-    /// <returns> The created Stripe customer for the user. </returns>
-    private async Task<Customer> CreateCustomerAsync(User user)
-    {
-        var customerCreateOptions = new CustomerCreateOptions
-        {
-            Description = user.Name,
-            Email = user.Email,
-            Metadata = new Dictionary<string, string>()
-            {
-                [StripeConstants.MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion,
-            }
-        };
-
-        var customer = await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
-
-        user.GatewayCustomerId = customer.Id;
-        await userService.SaveUserAsync(user);
-
-        return customer;
-    }
-
-    /// <summary>
     /// Creates the options for creating a Stripe Checkout Session.
     /// </summary>
-    /// <param name="user"> The user for whom the Checkout Session is being created. </param>
     /// <param name="customer"> The Stripe customer associated with the user. </param>
     /// <param name="premiumPlan"> The premium plan for which the Checkout Session is being created. </param>
     /// <param name="originatingAppVersion"> The version of the application initiating the Checkout Session. </param>
     /// <param name="originatingPlatform"> The platform (e.g., ios, android) from which the Checkout Session is initiated. </param>
     /// <returns> The created SessionCreateOptions for Stripe Checkout Session creation. </returns>
     private SessionCreateOptions CreateSessionOptions(
-        User user,
         Customer customer,
         PremiumPlan premiumPlan,
         string originatingAppVersion,
@@ -127,7 +95,6 @@ public class CreatePremiumCheckoutSessionCommand(
             {
                 Metadata = new Dictionary<string, string>
                 {
-                    [StripeConstants.MetadataKeys.UserId] = user.Id.ToString(),
                     [StripeConstants.MetadataKeys.OriginatingPlatform] = originatingPlatform,
                     [StripeConstants.MetadataKeys.OriginatingAppVersion] = originatingAppVersion,
                 }
@@ -135,7 +102,7 @@ public class CreatePremiumCheckoutSessionCommand(
             SuccessUrl = globalSettings.Stripe.PremiumCheckoutSuccessUrl,
             CancelUrl = globalSettings.Stripe.PremiumCheckoutCancelUrl,
             AutomaticTax = new SessionAutomaticTaxOptions { Enabled = true },
-            PaymentMethodTypes = [StripeConstants.PaymentMethodTypes.Card],
+            PaymentMethodTypes = [StripeConstants.PaymentMethodTypes.Card]
         };
     }
 }

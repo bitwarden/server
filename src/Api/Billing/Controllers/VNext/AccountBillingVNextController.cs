@@ -53,12 +53,12 @@ public class AccountBillingVNextController(
     [InjectUser]
     public async Task<IResult> CreatePremiumCheckoutSessionAsync(
         [BindNever] User user,
-        [FromBody] CreatePremiumCheckoutSessionRequest request,
-        [FromHeader(Name = "Bitwarden-Client-Version")] string? appVersion)
+        [FromBody] CreatePremiumCheckoutSessionRequest request)
     {
+        var appVersion = currentContext.ClientVersion?.ToString();
         if (string.IsNullOrWhiteSpace(appVersion))
         {
-            return Error.BadRequest("Bitwarden-Client-Version header is required.");
+            return Error.BadRequest("Client version is required.");
         }
 
         var result = await createPremiumCheckoutSessionCommand.Run(user, appVersion, request.Platform);
