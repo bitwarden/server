@@ -1,4 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 
 #nullable disable
 
@@ -32,6 +32,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly CouponService _couponService;
     private readonly ProductService _productService;
     private readonly BillingPortalSessionService _billingPortalSessionService;
+    private readonly SubscriptionScheduleService _subscriptionScheduleService;
     private readonly CheckoutSessionService _checkoutSessionsService;
 
     public StripeAdapter()
@@ -53,6 +54,7 @@ public class StripeAdapter : IStripeAdapter
         _couponService = new CouponService();
         _productService = new ProductService();
         _billingPortalSessionService = new BillingPortalSessionService();
+        _subscriptionScheduleService = new SubscriptionScheduleService();
         _checkoutSessionsService = new CheckoutSessionService();
     }
 
@@ -249,4 +251,22 @@ public class StripeAdapter : IStripeAdapter
      ***********************/
     public Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options) =>
         _checkoutSessionsService.CreateAsync(options);
+
+    /***************************
+     ** SUBSCRIPTION SCHEDULE **
+     ***************************/
+    public Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options) =>
+        _subscriptionScheduleService.CreateAsync(options);
+
+    public Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null) =>
+        _subscriptionScheduleService.GetAsync(id, options);
+
+    public Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options) =>
+        _subscriptionScheduleService.ListAsync(options);
+
+    public Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options) =>
+        _subscriptionScheduleService.UpdateAsync(id, options);
+
+    public Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null) =>
+        _subscriptionScheduleService.ReleaseAsync(id, options);
 }
