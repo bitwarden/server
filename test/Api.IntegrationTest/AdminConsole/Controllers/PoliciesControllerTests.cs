@@ -443,6 +443,58 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     [Fact]
+    public async Task GetMasterPasswordPolicy_Unauthenticated_ReturnsUnauthorized()
+    {
+        // Arrange
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMasterPasswordPolicy_AuthenticatedNonMember_ReturnsForbidden()
+    {
+        // Arrange
+        var nonMemberEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(nonMemberEmail);
+        await _loginHelper.LoginAsync(nonMemberEmail);
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMasterPasswordPolicy_AuthenticatedMember_ReturnsPolicy()
+    {
+        // Arrange - owner is already logged in from InitializeAsync
+        var policyRepository = _factory.GetService<IPolicyRepository>();
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = _organization.Id,
+            Type = PolicyType.MasterPassword,
+            Enabled = true
+        });
+
+        // Act
+        var response = await _client.GetAsync($"/organizations/{_organization.Id}/policies/master-password");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadFromJsonAsync<PolicyResponseModel>();
+        Assert.NotNull(content);
+        Assert.True(content.Enabled);
+        Assert.Equal(PolicyType.MasterPassword, content.Type);
+        Assert.Equal(_organization.Id, content.OrganizationId);
+    }
+
+    [Fact]
     public async Task Put_SingleOrgPolicy_RevokesNonCompliantUser()
     {
         // Arrange
