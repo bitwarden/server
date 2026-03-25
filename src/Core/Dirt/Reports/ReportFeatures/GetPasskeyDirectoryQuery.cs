@@ -16,8 +16,8 @@ public class GetPasskeyDirectoryQuery(
 {
     public const string HttpClientName = "PasskeyDirectoryHttpClient";
     public const string CacheName = "PasskeyDirectory";
-    public static readonly TimeSpan CacheDuration = TimeSpan.FromDays(1);
 
+    private static readonly TimeSpan _cacheDuration = TimeSpan.FromDays(1);
     private const string _cacheKey = "passkey-directory";
     private const string _passkeyDirectoryUrl = "https://passkeys-api.2fa.directory/v1/all.json";
 
@@ -28,7 +28,7 @@ public class GetPasskeyDirectoryQuery(
         var entries = await cache.GetOrSetAsync(
             key: _cacheKey,
             factory: async _ => await FetchPasskeyDirectoryAsync(),
-            options: new FusionCacheEntryOptions(duration: CacheDuration)
+            options: new FusionCacheEntryOptions(duration: _cacheDuration)
         );
 
         return entries;
