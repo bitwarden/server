@@ -152,6 +152,25 @@ public class CreatePremiumCheckoutSessionCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task Run_CreateStripeCustomerThrows_ReturnsUnhandled(User user)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+
+        _subscriberService.CreateStripeCustomer(user).ThrowsAsync(new BillingException());
+
+        // Act
+        var result = await _command.Run(user, "1.0.0", "iOS");
+
+        // Assert
+        Assert.True(result.IsT3);
+        Assert.IsType<BillingException>(result.AsT3.Exception);
+        await _stripeAdapter.DidNotReceive().CreateCheckoutSessionAsync(Arg.Any<SessionCreateOptions>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Run_GetCustomerOrThrowThrows_ReturnsUnhandled(User user)
     {
         // Arrange
