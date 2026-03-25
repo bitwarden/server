@@ -93,7 +93,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 return;
             }
 
-            // TODO: PM-34091 - remove code when cleaning up feature flag
+            // TODO: PM-34091 - remove feature flag check when cleaning up
             if (_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
             {
                 await BumpDeviceLastActivityForRefreshAsync(context);

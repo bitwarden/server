@@ -98,7 +98,7 @@ public class CustomTokenRequestValidatorTests
         };
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task BumpDeviceLastActivityForRefreshAsync_NullSubject_SkipsBump()
     {
@@ -118,7 +118,7 @@ public class CustomTokenRequestValidatorTests
             .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task BumpDeviceLastActivityForRefreshAsync_NoDeviceClaim_SkipsBump()
     {
@@ -143,7 +143,7 @@ public class CustomTokenRequestValidatorTests
             .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task BumpDeviceLastActivityForRefreshAsync_InvalidUserIdGuid_SkipsBump()
     {
@@ -169,7 +169,7 @@ public class CustomTokenRequestValidatorTests
             .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task ValidateAsync_BumpByIdentifierThrows_RefreshTokenSucceeds()
     {
@@ -202,5 +202,31 @@ public class CustomTokenRequestValidatorTests
         Assert.Contains(logs, l =>
             l.Level == LogLevel.Warning &&
             l.Message.Contains("Failed to bump LastActivityDate for device with identifier"));
+    }
+
+    // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
+    [Fact]
+    public async Task BumpDeviceLastActivityForRefreshAsync_FeatureFlagDisabled_BumpNotCalledAsync()
+    {
+        // Arrange
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, Guid.NewGuid().ToString()),
+            new Claim(Claims.Device, "test-device-identifier"),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: bump is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _bumpDeviceLastActivityDateCommand
+            .DidNotReceive()
+            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 }

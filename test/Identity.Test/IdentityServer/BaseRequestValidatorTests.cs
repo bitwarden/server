@@ -1313,7 +1313,7 @@ public class BaseRequestValidatorTests
         Assert.Equal(SsoConstants.RequestErrors.SsoTwoFactorRecoveryDescription, errorResponse.Message);
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_BumpLastActivityDateThrows_LoginStillSucceeds(
@@ -1365,7 +1365,7 @@ public class BaseRequestValidatorTests
             l.Message.Contains("Failed to bump LastActivityDate for device"));
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_BumpLastActivityDate_FeatureFlagDisabled_BumpNotCalled(
@@ -1408,7 +1408,7 @@ public class BaseRequestValidatorTests
             .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_BumpLastActivityDate_NullDevice_BumpNotCalled(
@@ -1452,7 +1452,7 @@ public class BaseRequestValidatorTests
             .BumpByIdAsync(Arg.Any<Guid>(), Arg.Any<string>());
     }
 
-    // TODO: PM-34091 - remove test when cleaning up feature flag
+    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_BumpLastActivityDate_Succeeds_BumpCalledAndLoginSucceeds(

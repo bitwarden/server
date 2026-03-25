@@ -445,7 +445,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         await ResetFailedAuthDetailsAsync(user);
 
-        // TODO: PM-34091 - remove code when cleaning up feature flag
+        // TODO: PM-34091 - remove feature flag check when cleaning up
         if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
         {
             try
