@@ -35,6 +35,7 @@ public class UpcomingInvoiceHandler(
     IPricingClient pricingClient,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IStripeEventService stripeEventService,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
@@ -244,28 +245,8 @@ public class UpcomingInvoiceHandler(
         {
             if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
             {
-                var phase2Items = new List<SubscriptionSchedulePhaseItemOptions>
-                {
-                    new() { Price = familiesPlan.PasswordManager.StripePlanId, Quantity = 1 }
-                };
-
-                var storageItem = subscription.Items.FirstOrDefault(i =>
-                    i.Price.Id == plan.PasswordManager.StripeStoragePlanId);
-
-                if (storageItem is { Quantity: > 0 })
-                {
-                    phase2Items.Add(new SubscriptionSchedulePhaseItemOptions { Price = familiesPlan.PasswordManager.StripeStoragePlanId, Quantity = storageItem.Quantity });
-                }
-
-                var phase2Discounts = plan.Type == PlanType.FamiliesAnnually2019
-                    ? new List<SubscriptionSchedulePhaseDiscountOptions>
-                    {
-                        new() { Coupon = CouponIDs.Milestone3SubscriptionDiscount }
-                    }
-                    : null;
-
-                var alreadyScheduled = await SchedulePriceMigrationAsync(subscription, phase2Items, phase2Discounts);
-                if (alreadyScheduled)
+                var scheduled = await priceIncreaseScheduler.Schedule(subscription);
+                if (!scheduled)
                 {
                     return true;
                 }
@@ -439,26 +420,8 @@ public class UpcomingInvoiceHandler(
         {
             if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
             {
-                var phase2Items = new List<SubscriptionSchedulePhaseItemOptions>
-                {
-                    new() { Price = newPlan.Seat.StripePriceId, Quantity = 1 }
-                };
-
-                var storageItem = subscription.Items.FirstOrDefault(i =>
-                    i.Price.Id == oldPlan.Storage.StripePriceId);
-
-                if (storageItem is { Quantity: > 0 })
-                {
-                    phase2Items.Add(new SubscriptionSchedulePhaseItemOptions { Price = newPlan.Storage.StripePriceId, Quantity = storageItem.Quantity });
-                }
-
-                var phase2Discounts = new List<SubscriptionSchedulePhaseDiscountOptions>
-                {
-                    new() { Coupon = CouponIDs.Milestone2SubscriptionDiscount }
-                };
-
-                var alreadyScheduled = await SchedulePriceMigrationAsync(subscription, phase2Items, phase2Discounts);
-                if (alreadyScheduled)
+                var scheduled = await priceIncreaseScheduler.Schedule(subscription);
+                if (!scheduled)
                 {
                     return true;
                 }
@@ -626,97 +589,6 @@ public class UpcomingInvoiceHandler(
                 items,
                 true);
         }
-    }
-
-    /// <summary>
-    /// Creates a subscription schedule that echoes the current phase and appends a new phase
-    /// with the specified items and discounts. Returns true if an active schedule already exists
-    /// for the subscription (indicating the caller should skip further processing), or false
-    /// after successfully creating a new schedule (indicating the caller should continue with
-    /// email notifications).
-    /// </summary>
-    private async Task<bool> SchedulePriceMigrationAsync(
-        Subscription subscription,
-        List<SubscriptionSchedulePhaseItemOptions> phase2Items,
-        List<SubscriptionSchedulePhaseDiscountOptions>? phase2Discounts)
-    {
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-
-        if (schedules.Data.Any(s => s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active))
-        {
-            logger.LogInformation(
-                "Active subscription schedule already exists for subscription ({SubscriptionId}), skipping schedule creation",
-                subscription.Id);
-            return true;
-        }
-
-        var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
-            new SubscriptionScheduleCreateOptions
-            {
-                FromSubscription = subscription.Id
-            });
-
-        try
-        {
-            var phase1 = schedule.Phases[0];
-
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
-                new SubscriptionScheduleUpdateOptions
-                {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases =
-                    [
-                        new SubscriptionSchedulePhaseOptions
-                        {
-                            StartDate = phase1.StartDate,
-                            EndDate = phase1.EndDate,
-                            Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                            {
-                                Price = i.PriceId,
-                                Quantity = i.Quantity
-                            }).ToList(),
-                            Discounts = phase1.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                            {
-                                Coupon = d.CouponId
-                            }).ToList(),
-                            ProrationBehavior = ProrationBehavior.None
-                        },
-                        new SubscriptionSchedulePhaseOptions
-                        {
-                            StartDate = phase1.EndDate,
-                            Items = phase2Items,
-                            Discounts = phase2Discounts,
-                            ProrationBehavior = ProrationBehavior.None
-                        }
-                    ]
-                });
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), attempting to release orphaned schedule",
-                schedule.Id,
-                subscription.Id);
-
-            try
-            {
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
-            }
-            catch (Exception releaseException)
-            {
-                logger.LogError(
-                    releaseException,
-                    "Failed to release orphaned subscription schedule ({ScheduleId}) for subscription ({SubscriptionId})",
-                    schedule.Id,
-                    subscription.Id);
-            }
-
-            throw;
-        }
-
-        return false;
     }
 
     private async Task SendFamiliesRenewalEmailAsync(
