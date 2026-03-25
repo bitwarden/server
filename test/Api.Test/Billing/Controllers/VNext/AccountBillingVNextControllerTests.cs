@@ -279,8 +279,11 @@ public class AccountBillingVNextControllerTests
         User user,
         CreatePremiumCheckoutSessionRequest request)
     {
+        // Arrange
+        _currentContext.ClientVersion.Returns((Version?)null);
+
         // Act
-        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request, null);
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
 
         // Assert
         Assert.IsType<BadRequest<Core.Models.Api.ErrorResponseModel>>(result);
@@ -294,14 +297,15 @@ public class AccountBillingVNextControllerTests
     {
         // Arrange
         var appVersion = "2024.1.0";
-        var response = new PremiumCheckoutSessionResponseModel("https://checkout.stripe.com/c/pay/cs_123");
+        _currentContext.ClientVersion.Returns(new Version(appVersion));
 
+        var response = new PremiumCheckoutSessionResponseModel("https://checkout.stripe.com/c/pay/cs_123");
         _createPremiumCheckoutSessionCommand
             .Run(user, appVersion, request.Platform)
             .Returns(new BillingCommandResult<PremiumCheckoutSessionResponseModel>(response));
 
         // Act
-        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request, appVersion);
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
 
         // Assert
         var okResult = Assert.IsType<Ok<PremiumCheckoutSessionResponseModel>>(result);
@@ -316,14 +320,14 @@ public class AccountBillingVNextControllerTests
     {
         // Arrange
         var appVersion = "2024.1.0";
-        var errorMessage = "User is already a premium user.";
+        _currentContext.ClientVersion.Returns(new Version(appVersion));
 
         _createPremiumCheckoutSessionCommand
             .Run(user, appVersion, request.Platform)
-            .Returns(new BadRequest(errorMessage));
+            .Returns(new BadRequest("User is already a premium user."));
 
         // Act
-        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request, appVersion);
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
 
         // Assert
         Assert.IsType<BadRequest<Core.Models.Api.ErrorResponseModel>>(result);
@@ -337,13 +341,14 @@ public class AccountBillingVNextControllerTests
     {
         // Arrange
         var appVersion = "2024.1.0";
+        _currentContext.ClientVersion.Returns(new Version(appVersion));
 
         _createPremiumCheckoutSessionCommand
             .Run(user, appVersion, request.Platform)
             .Returns(new Unhandled());
 
         // Act
-        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request, appVersion);
+        var result = await _sut.CreatePremiumCheckoutSessionAsync(user, request);
 
         // Assert
         Assert.IsType<JsonHttpResult<Core.Models.Api.ErrorResponseModel>>(result);
