@@ -20,26 +20,20 @@ public class CheckoutSessionCompletedHandler(
 {
     public async Task HandleAsync(Event parsedEvent)
     {
-        var session = await stripeEventService.GetCheckoutSession(parsedEvent, true);
+        var session = await stripeEventService.GetCheckoutSession(parsedEvent, true, ["setup_intent"]);
 
         if (string.IsNullOrWhiteSpace(session.SubscriptionId))
         {
-            logger.LogWarning("Checkout Session {SessionId} has no subscription ID", session.Id);
+            logger.LogError("Checkout Session {SessionId} has no subscription ID", session.Id);
             return;
         }
 
         var subscription = await stripeAdapter.GetSubscriptionAsync(session.SubscriptionId);
-        if (subscription is null)
-        {
-            logger.LogError("Subscription {SubscriptionId} not found for Checkout Session {SessionId}",
-                session.SubscriptionId, session.Id);
-            return;
-        }
 
         var (_, userId, _) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
         if (!userId.HasValue)
         {
-            logger.LogWarning("No userId found in metadata for subscription {SubscriptionId}", subscription.Id);
+            logger.LogError("No userId found in metadata for subscription {SubscriptionId}", subscription.Id);
             return;
         }
 
@@ -67,7 +61,28 @@ public class CheckoutSessionCompletedHandler(
         user.LicenseKey = string.IsNullOrWhiteSpace(user.LicenseKey) ? CoreHelpers.SecureRandomString(20) : user.LicenseKey;
         user.RevisionDate = DateTime.UtcNow;
 
+        await UpdateDefaultPaymentMethodAsync(session);
+
         await userRepository.ReplaceAsync(user);
         await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+    }
+
+    private async Task UpdateDefaultPaymentMethodAsync(Stripe.Checkout.Session session)
+    {
+        var paymentMethodId = session.SetupIntent?.PaymentMethodId;
+
+        if (string.IsNullOrWhiteSpace(paymentMethodId))
+        {
+            logger.LogWarning("Checkout Session {SessionId} has no payment method to set as default", session.Id);
+            return;
+        }
+
+        await stripeAdapter.UpdateCustomerAsync(session.CustomerId, new CustomerUpdateOptions
+        {
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                DefaultPaymentMethod = paymentMethodId
+            }
+        });
     }
 }
