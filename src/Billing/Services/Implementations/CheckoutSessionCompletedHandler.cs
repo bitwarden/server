@@ -60,10 +60,9 @@ public class CheckoutSessionCompletedHandler(
         user.LicenseKey = string.IsNullOrWhiteSpace(user.LicenseKey) ? CoreHelpers.SecureRandomString(20) : user.LicenseKey;
         user.RevisionDate = DateTime.UtcNow;
 
-        await UpdateDefaultPaymentMethodAsync(subscription.DefaultPaymentMethodId, session.CustomerId);
-
         await userRepository.ReplaceAsync(user);
         await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+        await UpdateDefaultPaymentMethodAsync(subscription.DefaultPaymentMethodId, session.CustomerId);
     }
 
     private async Task UpdateDefaultPaymentMethodAsync(string? defaultPaymentMethodId, string customerId)
