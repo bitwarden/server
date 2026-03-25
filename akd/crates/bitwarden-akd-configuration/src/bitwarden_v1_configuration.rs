@@ -36,7 +36,7 @@ use std::sync::OnceLock;
 use uuid::Uuid;
 
 /// Bitwarden installation ID for instance separation
-static INSTALLATION_CONTEXT: OnceLock<Vec<u8>> = OnceLock::new();
+pub(crate) static INSTALLATION_CONTEXT: OnceLock<Vec<u8>> = OnceLock::new();
 const BITWARDEN_V1: &[u8] = b"BWv1";
 
 #[derive(Clone)]

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::INSTALLATION_CONTEXT;
+use crate::bitwarden_v1_configuration::INSTALLATION_CONTEXT;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BitwardenAkdConfiguration {
