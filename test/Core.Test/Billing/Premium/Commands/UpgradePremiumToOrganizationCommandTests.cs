@@ -1529,7 +1529,7 @@ public class UpgradePremiumToOrganizationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_WithBankAccount_ReturnsBadRequest(User user)
+    public async Task Run_WithUnverifiedBankAccount_ReturnsBadRequest(User user)
     {
         // Arrange
         user.Premium = true;
@@ -1539,7 +1539,8 @@ public class UpgradePremiumToOrganizationCommandTests
         _getPaymentMethodQuery.Run(user).Returns(new MaskedPaymentMethod(new MaskedBankAccount
         {
             BankName = "Chase",
-            Last4 = "6789"
+            Last4 = "6789",
+            HostedVerificationUrl = "https://verify.stripe.com/abc"
         }));
 
         // Act
