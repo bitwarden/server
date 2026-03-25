@@ -42,12 +42,15 @@ internal sealed class RecipeExecutor
 
         // Capture counts BEFORE committing (commit clears the lists)
         var result = new ExecutionResult(
-            context.RequireOrgId(),
+            context.Organization?.Id,
+            context.Owner?.Id,
             context.Owner?.Email,
+            context.Owner?.Premium ?? false,
             context.Users.Count,
             context.Groups.Count,
             context.Collections.Count,
-            context.Ciphers.Count);
+            context.Ciphers.Count,
+            context.Folders.Count);
 
         _committer.Commit(context);
         return result;

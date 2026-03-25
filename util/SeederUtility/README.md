@@ -11,7 +11,7 @@ dotnet build
 dotnet run -- <command> [options]
 ```
 
-**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). The owner email is `owner@<domain>`.
+**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). For org presets the owner email is `owner@<domain>`; for individual presets the email comes from the preset's `user.email` field.
 
 ## Commands
 
@@ -80,4 +80,10 @@ dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --password "MyTest
 
 # Override KDF iterations for a preset (overrides preset's kdfIterations value)
 dotnet run -- seed --preset qa.enterprise-basic --kdf-iterations 600000 --mangle
+
+# Seed a free individual user (no vault data)
+dotnet run -- seed --preset individual.free-empty --mangle
+
+# Seed a premium individual user with vault data
+dotnet run -- seed --preset individual.premium-basic --mangle
 ```

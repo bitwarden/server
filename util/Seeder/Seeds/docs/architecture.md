@@ -42,7 +42,7 @@ The preset owns all relationships that cross fixture boundaries. Three assignmen
 
 ### Folder Assignments (user-scoped)
 
-Folder **declarations** go in the roster — each user can optionally declare a `folders` array of named folders. Folder **assignments** go in the preset — `folderAssignments` maps `(cipher, user, folder)` tuples, mirroring the `Cipher.Folders` JSON column: `{"USERID":"FOLDERID"}`.
+Folder **declarations** go in the roster — each user can optionally declare a `folders` array of named folders. For individual user presets (no roster), folder declarations use the preset-level `folderNames` array instead. Folder **assignments** go in the preset — `folderAssignments` maps `(cipher, user, folder)` tuples, mirroring the `Cipher.Folders` JSON column: `{"USERID":"FOLDERID"}`.
 
 ### Favorite Assignments (user-scoped)
 

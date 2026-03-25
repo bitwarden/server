@@ -68,6 +68,27 @@ dotnet run -- seed --preset scale.{name} --mangle
 
 For per-preset expected values and verification queries, see [verification.md](verification.md).
 
+## Individual
+
+Individual user accounts with no organization. Useful for testing personal vault features.
+
+```bash
+dotnet run -- seed --preset individual.{name} --mangle
+```
+
+| Preset        | Account Type | Folders                              | Ciphers                      | Assignments              |
+| ------------- | ------------ | ------------------------------------ | ---------------------------- | ------------------------ |
+| free-empty    | Free         | —                                    | —                            | —                        |
+| premium-empty | Premium (1GB)| —                                    | —                            | —                        |
+| free-basic    | Free         | 3 named (Development, Finance, Social Media) | `individual-free` fixture    | folderAssignments + favoriteAssignments |
+| premium-basic | Premium (1GB)| 3 named (Development, Finance, Work) | `individual-premium` fixture | folderAssignments + favoriteAssignments |
+
+`free-empty` and `premium-empty` create accounts with no vault data — useful for testing account setup flows.
+
+`free-basic` and `premium-basic` load a cipher fixture with named folders, `folderAssignments` (ciphers into categorized folders), and `favoriteAssignments` (frequently used ciphers marked as favorites).
+
+**Login emails:** `free-empty` and `free-basic` use `freeuser@individual.example`; `premium-empty` and `premium-basic` use `premuser@individual.example`.
+
 ## Validation
 
 Algorithm verification for seeder development. Not for general use.

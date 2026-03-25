@@ -14,13 +14,14 @@ Fixtures (organizations, rosters, ciphers) are independent building blocks that 
 
 ## Presets
 
-Presets wire everything together: org + roster + ciphers. Organized by purpose:
+Presets wire everything together. Org presets compose org + roster + ciphers; individual presets compose a single user + vault data. Organized by purpose:
 
 | Folder        | Purpose                                                                     | CLI prefix    | Example                                               |
 | ------------- | --------------------------------------------------------------------------- | ------------- | ----------------------------------------------------- |
 | `features/`   | Test specific Bitwarden features (SSO, TDE, policies)                       | `features.`   | `--preset features.sso-enterprise`                    |
 | `qa/`         | Known users, groups, collections, and permissions you can point a client to | `qa.`         | `--preset qa.enterprise-basic`                        |
 | `scale/`      | Production-calibrated density presets for performance testing               | `scale.`      | `--preset scale.md-balanced-sterling-cooper`          |
+| `individual/` | Individual user accounts (no organization)                                   | `individual.` | `--preset individual.premium-basic`                   |
 | `validation/` | Algorithm verification for seeder development                               | `validation.` | `--preset validation.density-modeling-power-law-test` |
 
 For the full preset catalog with per-preset details, see [docs/presets.md](docs/presets.md).

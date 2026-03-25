@@ -35,7 +35,7 @@ public class OrganizationRecipe(
         var result = _orchestrator.Execute(presetName, passwordHasher, manglerService, password, kdfIterations);
 
         return new SeedResult(
-            result.OrganizationId,
+            result.OrganizationId!.Value,
             result.OwnerEmail,
             result.UsersCount,
             result.GroupsCount,
@@ -53,7 +53,7 @@ public class OrganizationRecipe(
         var result = _orchestrator.Execute(options, passwordHasher, manglerService);
 
         return new SeedResult(
-            result.OrganizationId,
+            result.OrganizationId!.Value,
             result.OwnerEmail,
             result.UsersCount,
             result.GroupsCount,

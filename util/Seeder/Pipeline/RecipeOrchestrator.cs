@@ -132,12 +132,15 @@ internal sealed class RecipeOrchestrator(DatabaseContext db, IMapper mapper)
 /// Result of pipeline execution with organization ID and entity counts.
 /// </summary>
 internal record ExecutionResult(
-    Guid OrganizationId,
+    Guid? OrganizationId,
+    Guid? UserId,
     string? OwnerEmail,
+    bool Premium,
     int UsersCount,
     int GroupsCount,
     int CollectionsCount,
-    int CiphersCount);
+    int CiphersCount,
+    int FoldersCount);
 
 /// <summary>
 /// Available presets and fixtures grouped by category.

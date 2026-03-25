@@ -47,6 +47,10 @@ public class RecipeBuilder
 
     internal bool HasPersonalCiphers { get; set; }
 
+    internal bool HasIndividualUser { get; set; }
+
+    internal bool HasNamedFolders { get; set; }
+
     /// <summary>
     /// Registers a step as a keyed singleton service with preserved ordering.
     /// </summary>

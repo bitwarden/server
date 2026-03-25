@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "user": { "email": "freeuser@individual.example", "premium": false, "maxStorageGb": 0 },
+  "folderNames": ["Development", "Finance", "Social Media"],
+  "ciphers": { "fixture": "individual-free" },
+  "folderAssignments": [
+    { "cipher": "GitHub Login", "folder": "Development", "user": "freeuser" },
+    { "cipher": "AWS Console", "folder": "Development", "user": "freeuser" },
+    { "cipher": "Docker Hub", "folder": "Development", "user": "freeuser" },
+    {
+      "cipher": "American Express Gold",
+      "folder": "Finance",
+      "user": "freeuser"
+    },
+    { "cipher": "Chase Sapphire", "folder": "Finance", "user": "freeuser" },
+    {
+      "cipher": "Netflix Account",
+      "folder": "Social Media",
+      "user": "freeuser"
+    },
+    {
+      "cipher": "LinkedIn Profile",
+      "folder": "Social Media",
+      "user": "freeuser"
+    }
+  ],
+  "favoriteAssignments": [
+    { "cipher": "GitHub Login", "user": "freeuser" },
+    { "cipher": "Netflix Account", "user": "freeuser" },
+    { "cipher": "Gmail Personal", "user": "freeuser" },
+    { "cipher": "American Express Gold", "user": "freeuser" },
+    { "cipher": "Slack Workspace", "user": "freeuser" },
+    { "cipher": "LinkedIn Profile", "user": "freeuser" }
+  ]
+}
