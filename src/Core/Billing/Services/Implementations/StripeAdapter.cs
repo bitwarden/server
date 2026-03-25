@@ -106,6 +106,9 @@ public class StripeAdapter : IStripeAdapter
     public Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null) =>
         _subscriptionService.ListAsync(options);
 
+    public Task DeleteSubscriptionDiscountAsync(string subscriptionId) =>
+        _subscriptionService.DeleteDiscountAsync(subscriptionId);
+
     /*************
      ** INVOICE **
      *************/
@@ -269,4 +272,10 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null) =>
         _subscriptionScheduleService.ReleaseAsync(id, options);
+
+    /******************
+     ** TEST CLOCK **
+     ******************/
+    public Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null) =>
+        _testClockService.GetAsync(testClockId, options);
 }
