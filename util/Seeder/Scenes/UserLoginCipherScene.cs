@@ -19,12 +19,27 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
         public required string Name { get; set; }
         public string? Username { get; set; }
         public string? Password { get; set; }
+        public string? Totp { get; set; }
         public string? Uri { get; set; }
         public string? Notes { get; set; }
         public bool Reprompt { get; set; }
         public bool Deleted { get; set; }
         public bool Favorite { get; set; }
-        public IEnumerable<(string name, string value, int type)>? Fields { get; set; }
+        public IEnumerable<FieldRequest>? Fields { get; set; }
+        public IEnumerable<PasskeyRequest>? Passkeys { get; set; }
+    }
+
+    public class FieldRequest
+    {
+        public required string Name { get; set; }
+        public required string Value { get; set; }
+        public required int Type { get; set; }
+    }
+
+    public class PasskeyRequest
+    {
+        public required string RpName { get; set; }
+        public required string UserName { get; set; }
     }
 
     public class Result
@@ -40,7 +55,7 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, uri: request.Uri, notes: request.Notes, fields: request.Fields, reprompt: request.Reprompt, deleted: request.Deleted);
+        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, totp: request.Totp, uri: request.Uri, notes: request.Notes, fields: request.Fields?.Select(f => (f.Name, f.Value, f.Type)), reprompt: request.Reprompt, deleted: request.Deleted, passkeys: request.Passkeys?.Select(p => (p.RpName, p.UserName)));
         if (request.Favorite)
         {
             cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
