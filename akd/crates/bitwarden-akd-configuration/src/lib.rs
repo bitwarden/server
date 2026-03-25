@@ -82,3 +82,48 @@ impl From<&BitwardenAkdLabelMaterial> for AkdLabel {
         AkdLabel(bytes)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bitwarden_akd_pair_material_from_json() {
+        let json = r#"{
+            "type": "UserRealWorldId",
+            "real_world_id": "user@example.com",
+            "user_id": "550e8400-e29b-41d4-a716-446655440000"
+        }"#;
+
+        let pair: BitwardenAkdPairMaterial = serde_json::from_str(json).unwrap();
+
+        match pair {
+            BitwardenAkdPairMaterial::UserRealWorldId {
+                real_world_id,
+                user_id,
+            } => {
+                assert_eq!(real_world_id, "user@example.com");
+                assert_eq!(
+                    user_id,
+                    Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_bitwarden_akd_label_material_from_json() {
+        let json = r#"{
+            "type": "UserRealWorldId",
+            "real_world_id": "user@example.com"
+        }"#;
+
+        let label: BitwardenAkdLabelMaterial = serde_json::from_str(json).unwrap();
+
+        match label {
+            BitwardenAkdLabelMaterial::UserRealWorldId { real_world_id } => {
+                assert_eq!(real_world_id, "user@example.com");
+            }
+        }
+    }
+}
