@@ -349,7 +349,7 @@ public static class RecipeBuilderExtensions
         if (!builder.HasRosterUsers && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
-                "Folder assignments require roster users. Call UseRoster() first.");
+                "Folder assignments require users. Call UseRoster() or CreateIndividualUser() first.");
         }
 
         // HasFixtureCiphers is mutually exclusive with HasGeneratedCiphers (enforced by UseCiphers/AddCiphers)
@@ -375,7 +375,7 @@ public static class RecipeBuilderExtensions
         if (!builder.HasRosterUsers && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
-                "Favorite assignments require roster users. Call UseRoster() first.");
+                "Favorite assignments require users. Call UseRoster() or CreateIndividualUser() first.");
         }
 
         // HasFixtureCiphers is mutually exclusive with HasGeneratedCiphers (enforced by UseCiphers/AddCiphers)
