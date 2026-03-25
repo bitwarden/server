@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
@@ -93,15 +94,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             await RemovePendingCancellationAsync(subscription);
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription);
-        }
-
         await subscriberId.Match(
             userId => _userService.UpdatePremiumExpirationAsync(userId.Value, currentPeriodEnd),
             async organizationId =>
             {
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organizationId.Value);
+                }
+
                 await _organizationService.UpdateExpirationDateAsync(organizationId.Value, currentPeriodEnd);
 
                 if (_stripeEventUtilityService.IsSponsoredSubscription(subscription) && currentPeriodEnd.HasValue)
@@ -335,54 +336,83 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task HandleScheduleTriggeredFamiliesMigrationAsync(
         Event parsedEvent,
-        Subscription subscription)
+        Subscription subscription,
+        Guid organizationId)
     {
-        if (subscription.ScheduleId == null)
+        try
         {
-            return;
-        }
+            // Only act on schedule-managed subscriptions (schedule transitions set ScheduleId)
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
 
-        if (parsedEvent.Data.PreviousAttributes?.items == null)
-        {
-            return;
-        }
+            // Deserialize previous state to inspect which prices changed
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                return;
+            }
 
-        var (orgId, _, _) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
-        if (!orgId.HasValue)
-        {
-            return;
-        }
+            // Verify the subscription now carries the current Families price
+            var familiesPlan = await _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
 
-        var organizationId = orgId.Value;
+            if (!subscription.Items.Any(item => item.Price.Id == familiesPlan.PasswordManager.StripePlanId))
+            {
+                return;
+            }
 
-        var familiesPlan = await _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+            // Verify the previous subscription had an old Families price — this distinguishes
+            // a price migration from other schedule-triggered item changes (e.g., storage updates)
+            var families2019Plan = await _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019);
+            var families2025Plan = await _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025);
+            var migratingPriceIds = new HashSet<string>
+            {
+                families2019Plan.PasswordManager.StripePlanId,
+                families2025Plan.PasswordManager.StripePlanId
+            };
 
-        var hasFamiliesPrice = subscription.Items.Any(item =>
-            item.Price.Id == familiesPlan.PasswordManager.StripePlanId);
+            if (!previousSubscription.Items.Data.Any(item =>
+                    item.Price?.Id != null && migratingPriceIds.Contains(item.Price.Id)))
+            {
+                return;
+            }
 
-        if (!hasFamiliesPrice)
-        {
-            return;
-        }
+            // Sync org DB to match the plan Stripe already transitioned to
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                _logger.LogWarning(
+                    "Organization ({OrganizationId}) not found for schedule-triggered Families migration",
+                    organizationId);
+                return;
+            }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null)
-        {
-            _logger.LogWarning(
-                "Organization ({OrganizationId}) not found for schedule-triggered Families migration",
+            organization.PlanType = familiesPlan.Type;
+            organization.Plan = familiesPlan.Name;
+            organization.UsersGetPremium = familiesPlan.UsersGetPremium;
+            organization.Seats = familiesPlan.PasswordManager.BaseSeats;
+
+            await _organizationRepository.ReplaceAsync(organization);
+
+            _logger.LogInformation(
+                "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",
                 organizationId);
-            return;
         }
-
-        organization.PlanType = familiesPlan.Type;
-        organization.Plan = familiesPlan.Name;
-        organization.UsersGetPremium = familiesPlan.UsersGetPremium;
-        organization.Seats = familiesPlan.PasswordManager.BaseSeats;
-
-        await _organizationRepository.ReplaceAsync(organization);
-
-        _logger.LogInformation(
-            "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",
-            organizationId);
+        catch (BillingException)
+        {
+            // GetPlanOrThrow calls throw BillingException when the pricing service returns
+            // a non-success/non-404 status (e.g., 500/503 during an outage) or when the
+            // response body fails to deserialize. Rethrowing lets the webhook return 500
+            // so Stripe retries the event once the pricing service recovers.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to handle schedule-triggered Families migration for organization ({OrganizationId})",
+                organizationId);
+        }
     }
 }

@@ -1373,17 +1373,12 @@ public class SubscriptionUpdatedHandlerTests
     [Fact]
     public async Task HandleAsync_ScheduleTriggeredFamiliesMigration_FlagOn_UpdatesOrganization()
     {
-        // Arrange
+        // Arrange — Families 2019 → FamiliesAnnually migration via schedule
         var organizationId = Guid.NewGuid();
         var subscriptionId = "sub_123";
-        var currentPeriodEnd = DateTime.UtcNow.AddDays(365);
-        var familiesPriceId = "2020-families-org-annually";
-
-        var previousSubscription = new Subscription
-        {
-            Id = subscriptionId,
-            Status = SubscriptionStatus.Active
-        };
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
 
         var subscription = new Subscription
         {
@@ -1396,8 +1391,8 @@ public class SubscriptionUpdatedHandlerTests
                 [
                     new SubscriptionItem
                     {
-                        CurrentPeriodEnd = currentPeriodEnd,
-                        Price = new Price { Id = familiesPriceId }
+                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
                     }
                 ]
             },
@@ -1416,7 +1411,7 @@ public class SubscriptionUpdatedHandlerTests
                 {
                     items = new
                     {
-                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
                     }
                 })
             }
@@ -1431,18 +1426,14 @@ public class SubscriptionUpdatedHandlerTests
             Seats = 5
         };
 
-        var familiesPlan = new FamiliesPlan();
-
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
-            .Returns(familiesPlan);
-        _organizationRepository.GetByIdAsync(organizationId)
-            .Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1464,23 +1455,15 @@ public class SubscriptionUpdatedHandlerTests
     {
         // Arrange
         var organizationId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
 
         var subscription = new Subscription
         {
-            Id = subscriptionId,
+            Id = "sub_123",
             Status = SubscriptionStatus.Active,
             ScheduleId = "sub_sched_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
-                        Price = new Price { Id = "2020-families-org-annually" }
-                    }
-                ]
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(365) }]
             },
             Metadata = new Dictionary<string, string>
             {
@@ -1518,25 +1501,17 @@ public class SubscriptionUpdatedHandlerTests
     [Fact]
     public async Task HandleAsync_NoSchedule_FlagOn_DoesNotUpdateOrganization()
     {
-        // Arrange
+        // Arrange — no ScheduleId means this isn't a schedule transition
         var organizationId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
 
         var subscription = new Subscription
         {
-            Id = subscriptionId,
+            Id = "sub_123",
             Status = SubscriptionStatus.Active,
             ScheduleId = null,
             Items = new StripeList<SubscriptionItem>
             {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
-                        Price = new Price { Id = "2020-families-org-annually" }
-                    }
-                ]
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(365) }]
             },
             Metadata = new Dictionary<string, string>
             {
@@ -1572,15 +1547,18 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ScheduleTriggered_NoOrganizationId_DoesNotUpdateOrganization()
+    public async Task HandleAsync_ScheduleTriggered_PreviousPriceNotOldFamilies_DoesNotUpdateOrganization()
     {
-        // Arrange — user subscription with schedule, not an org
-        var userId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
+        // Arrange — schedule-triggered item change, but previous price is not an old Families price
+        // (e.g., a storage update on a Families org that happens to have a schedule)
+        var organizationId = Guid.NewGuid();
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
 
         var subscription = new Subscription
         {
-            Id = subscriptionId,
+            Id = "sub_123",
             Status = SubscriptionStatus.Active,
             ScheduleId = "sub_sched_123",
             Items = new StripeList<SubscriptionItem>
@@ -1590,13 +1568,13 @@ public class SubscriptionUpdatedHandlerTests
                     new SubscriptionItem
                     {
                         CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
-                        Price = new Price { Id = "premium-annually-2026" }
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
                     }
                 ]
             },
             Metadata = new Dictionary<string, string>
             {
-                { "userId", userId.ToString() }
+                { "organizationId", organizationId.ToString() }
             }
         };
 
@@ -1609,7 +1587,7 @@ public class SubscriptionUpdatedHandlerTests
                 {
                     items = new
                     {
-                        data = new[] { new { price = new { id = "premium-annually" } } }
+                        data = new[] { new { price = new { id = "personal-storage-gb-annually" } } }
                     }
                 })
             }
@@ -1619,8 +1597,9 @@ public class SubscriptionUpdatedHandlerTests
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, userId, null));
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1630,15 +1609,15 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ScheduleTriggered_PriceDoesNotMatchFamilies_DoesNotUpdateOrganization()
+    public async Task HandleAsync_ScheduleTriggered_CurrentPriceNotNewFamilies_DoesNotUpdateOrganization()
     {
-        // Arrange — schedule-triggered but new price is not FamiliesAnnually
+        // Arrange — previous had old Families price but current doesn't have new Families price
         var organizationId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
+        var familiesPlan = new FamiliesPlan();
 
         var subscription = new Subscription
         {
-            Id = subscriptionId,
+            Id = "sub_123",
             Status = SubscriptionStatus.Active,
             ScheduleId = "sub_sched_123",
             Items = new StripeList<SubscriptionItem>
@@ -1667,22 +1646,17 @@ public class SubscriptionUpdatedHandlerTests
                 {
                     items = new
                     {
-                        data = new[] { new { price = new { id = "old-price" } } }
+                        data = new[] { new { price = new { id = "personal-org-annually" } } }
                     }
                 })
             }
         };
 
-        var familiesPlan = new FamiliesPlan();
-
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
-            .Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
@@ -1694,25 +1668,17 @@ public class SubscriptionUpdatedHandlerTests
     [Fact]
     public async Task HandleAsync_ScheduleTriggered_NoItemChanges_DoesNotUpdateOrganization()
     {
-        // Arrange — schedule present but no item changes in PreviousAttributes
+        // Arrange — schedule present but PreviousAttributes has no items (e.g., status-only change)
         var organizationId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
 
         var subscription = new Subscription
         {
-            Id = subscriptionId,
+            Id = "sub_123",
             Status = SubscriptionStatus.Active,
             ScheduleId = "sub_sched_123",
             Items = new StripeList<SubscriptionItem>
             {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
-                        Price = new Price { Id = "2020-families-org-annually" }
-                    }
-                ]
+                Data = [new SubscriptionItem { CurrentPeriodEnd = DateTime.UtcNow.AddDays(365) }]
             },
             Metadata = new Dictionary<string, string>
             {
@@ -1720,7 +1686,6 @@ public class SubscriptionUpdatedHandlerTests
             }
         };
 
-        // PreviousAttributes has status change but NO items change
         var parsedEvent = new Event
         {
             Data = new EventData
@@ -1747,12 +1712,13 @@ public class SubscriptionUpdatedHandlerTests
     {
         // Arrange
         var organizationId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
-        var familiesPriceId = "2020-families-org-annually";
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
 
         var subscription = new Subscription
         {
-            Id = subscriptionId,
+            Id = "sub_123",
             Status = SubscriptionStatus.Active,
             ScheduleId = "sub_sched_123",
             Items = new StripeList<SubscriptionItem>
@@ -1762,7 +1728,7 @@ public class SubscriptionUpdatedHandlerTests
                     new SubscriptionItem
                     {
                         CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
-                        Price = new Price { Id = familiesPriceId }
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
                     }
                 ]
             },
@@ -1781,29 +1747,25 @@ public class SubscriptionUpdatedHandlerTests
                 {
                     items = new
                     {
-                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
                     }
                 })
             }
         };
 
-        var familiesPlan = new FamiliesPlan();
-
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
-            .Returns(familiesPlan);
-        _organizationRepository.GetByIdAsync(organizationId)
-            .ReturnsNull();
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — logs warning and does not attempt to update
+        // Assert — logs warning, does not throw, does not update
         await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
@@ -1812,12 +1774,13 @@ public class SubscriptionUpdatedHandlerTests
     {
         // Arrange — subscription has storage add-on alongside the Families price
         var organizationId = Guid.NewGuid();
-        var subscriptionId = "sub_123";
-        var familiesPriceId = "2020-families-org-annually";
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
 
         var subscription = new Subscription
         {
-            Id = subscriptionId,
+            Id = "sub_123",
             Status = SubscriptionStatus.Active,
             ScheduleId = "sub_sched_123",
             Items = new StripeList<SubscriptionItem>
@@ -1827,7 +1790,7 @@ public class SubscriptionUpdatedHandlerTests
                     new SubscriptionItem
                     {
                         CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
-                        Price = new Price { Id = familiesPriceId }
+                        Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
                     },
                     new SubscriptionItem
                     {
@@ -1852,7 +1815,7 @@ public class SubscriptionUpdatedHandlerTests
                 {
                     items = new
                     {
-                        data = new[] { new { price = new { id = "personal-org-annually" } } }
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
                     }
                 })
             }
@@ -1867,18 +1830,14 @@ public class SubscriptionUpdatedHandlerTests
             Seats = 5
         };
 
-        var familiesPlan = new FamiliesPlan();
-
         _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
             .Returns(subscription);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
             .Returns(true);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(organizationId, null, null));
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)
-            .Returns(familiesPlan);
-        _organizationRepository.GetByIdAsync(organizationId)
-            .Returns(organization);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
