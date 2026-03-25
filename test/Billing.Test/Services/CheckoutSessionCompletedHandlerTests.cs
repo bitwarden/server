@@ -64,7 +64,7 @@ public class CheckoutSessionCompletedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_SessionHasNoSubscriptionId_LogsErrorAndReturns()
+    public async Task HandleAsync_SessionHasNoSubscription_LogsErrorAndReturns()
     {
         _stripeEventService
             .GetCheckoutSession(_mockEvent, true, Arg.Any<List<string>?>())
@@ -151,6 +151,7 @@ public class CheckoutSessionCompletedHandlerTests
         {
             Id = _subscriptionId,
             Metadata = [],
+            DefaultPaymentMethodId = _paymentMethodId,
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
@@ -190,7 +191,7 @@ public class CheckoutSessionCompletedHandlerTests
         await _stripeEventService.Received(1).GetCheckoutSession(
             _mockEvent,
             true,
-            Arg.Is<List<string>?>(l => l != null && l.Contains("setup_intent")));
+            Arg.Is<List<string>?>(l => l != null && l.Contains("subscription")));
         await _stripeAdapter.Received(1).UpdateCustomerAsync(
             _customerId,
             Arg.Is<CustomerUpdateOptions>(opts =>
@@ -200,12 +201,13 @@ public class CheckoutSessionCompletedHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ValidSession_WithoutSetupIntentPaymentMethod_SkipsPaymentMethodUpdate()
+    public async Task HandleAsync_ValidSession_WithoutSubscriptionDefaultPaymentMethod_SkipsPaymentMethodUpdate()
     {
         var subscription = new Subscription
         {
             Id = _subscriptionId,
             Metadata = [],
+            DefaultPaymentMethodId = null,
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
