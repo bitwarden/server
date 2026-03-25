@@ -178,7 +178,6 @@ public class CipherService : ICipherService
             ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
             await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
-            await ValidateViewPasswordUserAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -1044,42 +1043,6 @@ public class CipherService : ICipherService
         var requirement = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(userId);
 
         return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
-    }
-
-    private async Task ValidateViewPasswordUserAsync(Cipher cipher)
-    {
-        if (cipher.Data == null || !cipher.OrganizationId.HasValue)
-        {
-            return;
-        }
-        var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
-        if (existingCipher == null) return;
-
-        var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
-        // Check if user is a "hidden password" user
-        if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
-        {
-            var existingCipherData = DeserializeCipherData(existingCipher);
-            var newCipherData = DeserializeCipherData(cipher);
-
-            // For hidden-password users, never allow Key to change at all.
-            cipher.Key = existingCipher.Key;
-            // Keep only non-hidden fileds from the new cipher
-            var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
-            // Get hidden fields from the existing cipher
-            var hiddenFields = existingCipherData.Fields?.Where(f => f.Type == FieldType.Hidden) ?? [];
-            // Replace the hidden fields in new cipher data with the existing ones
-            newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
-            cipher.Data = SerializeCipherData(newCipherData);
-            if (existingCipherData is CipherLoginData existingLoginData && newCipherData is CipherLoginData newLoginCipherData)
-            {
-                // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
-                newLoginCipherData.Fido2Credentials = existingLoginData.Fido2Credentials;
-                newLoginCipherData.Totp = existingLoginData.Totp;
-                newLoginCipherData.Password = existingLoginData.Password;
-                cipher.Data = SerializeCipherData(newLoginCipherData);
-            }
-        }
     }
 
     // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections

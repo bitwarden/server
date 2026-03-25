@@ -103,30 +103,22 @@ public class UpgradeOrganizationPlanVNextCommand(
             return new None();
         }
 
-        var builder = OrganizationSubscriptionChangeSet.Builder();
+        var builder = OrganizationSubscriptionChangeSet.Builder(currentPlan);
 
-        builder.ChangeItemPrice(
-            GetPasswordManagerPriceId(currentPlan),
-            GetPasswordManagerPriceId(plan));
+        builder.ChangePasswordManagerPrice(plan);
 
         if (organization.MaxStorageGb > currentPlan.PasswordManager.BaseStorageGb)
         {
-            builder.ChangeItemPrice(
-                currentPlan.PasswordManager.StripeStoragePlanId,
-                plan.PasswordManager.StripeStoragePlanId);
+            builder.ChangeStoragePrice(plan);
         }
 
         if (organization.UseSecretsManager)
         {
-            builder.ChangeItemPrice(
-                currentPlan.SecretsManager.StripeSeatPlanId,
-                plan.SecretsManager.StripeSeatPlanId);
+            builder.ChangeSecretsManagerSeatPrice(plan);
 
             if (organization.SmServiceAccounts > currentPlan.SecretsManager.BaseServiceAccount)
             {
-                builder.ChangeItemPrice(
-                    currentPlan.SecretsManager.StripeServiceAccountPlanId,
-                    plan.SecretsManager.StripeServiceAccountPlanId);
+                builder.ChangeServiceAccountPrice(plan);
             }
         }
 
@@ -142,11 +134,6 @@ public class UpgradeOrganizationPlanVNextCommand(
 
         return result.Map(_ => new None());
     });
-
-    private static string GetPasswordManagerPriceId(Plan plan) =>
-        plan.HasNonSeatBasedPasswordManagerPlan()
-            ? plan.PasswordManager.StripePlanId
-            : plan.PasswordManager.StripeSeatPlanId;
 
     private async Task UpdateOrganizationFeaturesAsync(
         Organization organization,
