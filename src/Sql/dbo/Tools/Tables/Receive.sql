@@ -3,14 +3,16 @@ CREATE TABLE [dbo].[Receive]
     [Id]             UNIQUEIDENTIFIER NOT NULL,
     [UserId]         UNIQUEIDENTIFIER NOT NULL,
     [Data]           VARCHAR(MAX)     NOT NULL,
-    [Key]            VARCHAR(MAX)     NOT NULL,
+    [UserKeyWrappedSharedContentEncryptionKey] VARCHAR(MAX) NOT NULL,
+    [UserKeyWrappedPrivateKey]                 VARCHAR(MAX) NOT NULL,
+    [ScekWrappedPublicKey]                     VARCHAR(MAX) NOT NULL,
     [Secret]         NVARCHAR(300)    NOT NULL,
     [UploadCount]    INT              NOT NULL,
     [CreationDate]   DATETIME2(7)     NOT NULL,
     [RevisionDate]   DATETIME2(7)     NOT NULL,
     [ExpirationDate] DATETIME2(7)     NULL,
     CONSTRAINT [PK_Receive] PRIMARY KEY CLUSTERED ([Id] ASC),
-    CONSTRAINT [FK_Receive_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
+    CONSTRAINT [FK_Receive_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 
 GO

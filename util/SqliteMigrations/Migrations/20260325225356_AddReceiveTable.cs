@@ -17,7 +17,9 @@ public partial class AddReceiveTable : Migration
                 Id = table.Column<Guid>(type: "TEXT", nullable: false),
                 UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Data = table.Column<string>(type: "TEXT", nullable: false),
-                Key = table.Column<string>(type: "TEXT", nullable: false),
+                UserKeyWrappedSharedContentEncryptionKey = table.Column<string>(type: "TEXT", nullable: false),
+                UserKeyWrappedPrivateKey = table.Column<string>(type: "TEXT", nullable: false),
+                ScekWrappedPublicKey = table.Column<string>(type: "TEXT", nullable: false),
                 Secret = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
                 UploadCount = table.Column<int>(type: "INTEGER", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -31,8 +33,7 @@ public partial class AddReceiveTable : Migration
                     name: "FK_Receive_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    principalColumn: "Id");
             });
 
         migrationBuilder.CreateIndex(

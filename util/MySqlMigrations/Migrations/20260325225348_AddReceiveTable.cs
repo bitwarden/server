@@ -18,7 +18,11 @@ public partial class AddReceiveTable : Migration
                 UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                 Data = table.Column<string>(type: "longtext", nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
-                Key = table.Column<string>(type: "longtext", nullable: false)
+                UserKeyWrappedSharedContentEncryptionKey = table.Column<string>(type: "longtext", nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                UserKeyWrappedPrivateKey = table.Column<string>(type: "longtext", nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                ScekWrappedPublicKey = table.Column<string>(type: "longtext", nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 Secret = table.Column<string>(type: "varchar(300)", maxLength: 300, nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
@@ -34,8 +38,7 @@ public partial class AddReceiveTable : Migration
                     name: "FK_Receive_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    principalColumn: "Id");
             })
             .Annotation("MySql:CharSet", "utf8mb4");
 

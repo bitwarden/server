@@ -25,6 +25,7 @@ public class AzureReceiveFileStorageService : IReceiveFileStorageService
         GlobalSettings globalSettings,
         ILogger<AzureReceiveFileStorageService> logger)
     {
+        // TODO: coordinate with appropriate team to ensure Receives have dedicated storage and update the line below
         _blobServiceClient = new BlobServiceClient(globalSettings.Send.ConnectionString);
         _logger = logger;
     }
@@ -95,7 +96,7 @@ public class AzureReceiveFileStorageService : IReceiveFileStorageService
             await blobClient.SetHttpHeadersAsync(headers);
 
             var length = blobProperties.Value.ContentLength;
-            var valid = minimum <= length || length <= maximum;
+            var valid = minimum <= length && length <= maximum;
 
             return (valid, length);
         }

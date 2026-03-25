@@ -2459,12 +2459,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ScekWrappedPublicKey")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Secret")
                         .IsRequired()
@@ -2476,6 +2476,14 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("UserKeyWrappedPrivateKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserKeyWrappedSharedContentEncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -3355,7 +3363,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");

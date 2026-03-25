@@ -2442,11 +2442,11 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Key")
-                        .IsRequired()
+                    b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("RevisionDate")
+                    b.Property<string>("ScekWrappedPublicKey")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Secret")
@@ -2458,6 +2458,14 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserKeyWrappedPrivateKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserKeyWrappedSharedContentEncryptionKey")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -3338,7 +3346,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");

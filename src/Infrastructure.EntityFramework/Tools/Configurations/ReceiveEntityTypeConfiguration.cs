@@ -16,6 +16,12 @@ public class ReceiveEntityTypeConfiguration : IEntityTypeConfiguration<Receive>
             .HasIndex(r => r.ExpirationDate)
             .IsClustered(false);
 
+        builder
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
         builder.ToTable(nameof(Receive));
     }
 }

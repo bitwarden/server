@@ -2453,12 +2453,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ScekWrappedPublicKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Secret")
                         .IsRequired()
@@ -2470,6 +2470,14 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("UserKeyWrappedPrivateKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("UserKeyWrappedSharedContentEncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.HasKey("Id");
 
@@ -3349,7 +3357,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");
