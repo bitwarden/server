@@ -5,7 +5,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Logging;
@@ -25,7 +24,6 @@ public class CreatePremiumCheckoutSessionCommandTests
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
-    private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
     private readonly ILogger<CreatePremiumCheckoutSessionCommand> _logger = Substitute.For<ILogger<CreatePremiumCheckoutSessionCommand>>();
     private readonly ICreatePremiumCheckoutSessionCommand _command;
@@ -57,7 +55,6 @@ public class CreatePremiumCheckoutSessionCommandTests
             _stripeAdapter,
             _pricingClient,
             _subscriberService,
-            _userService,
             _globalSettings,
             _logger);
     }

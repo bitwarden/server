@@ -1,10 +1,9 @@
-﻿using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Api.Response.Premium;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -32,7 +31,6 @@ public class CreatePremiumCheckoutSessionCommand(
     IStripeAdapter stripeAdapter,
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
-    IUserService userService,
     IGlobalSettings globalSettings,
     ILogger<CreatePremiumCheckoutSessionCommand> logger
 ) : BaseBillingCommand<CreatePremiumCheckoutSessionCommand>(logger), ICreatePremiumCheckoutSessionCommand
@@ -40,7 +38,6 @@ public class CreatePremiumCheckoutSessionCommand(
     private readonly IStripeAdapter stripeAdapter = stripeAdapter;
     private readonly IPricingClient pricingClient = pricingClient;
     private readonly ISubscriberService subscriberService = subscriberService;
-    private readonly IUserService userService = userService;
     private readonly IGlobalSettings globalSettings = globalSettings;
 
     public Task<BillingCommandResult<PremiumCheckoutSessionResponseModel>>
