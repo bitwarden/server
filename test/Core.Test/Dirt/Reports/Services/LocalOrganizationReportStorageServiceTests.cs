@@ -103,7 +103,7 @@ public class LocalOrganizationReportStorageServiceTests
         var url = await sut.GetReportDataDownloadUrlAsync(report, fileData);
 
         // Assert
-        Assert.StartsWith("https://localhost/api/reports/download?token=", url);
+        Assert.StartsWith("https://localhost/api/reports/organizations/download?token=", url);
     }
 
     [Fact]
