@@ -1548,9 +1548,65 @@ public class UpgradePremiumToOrganizationCommandTests
 
         // Assert
         Assert.True(result.IsT1);
-        Assert.Equal("Bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.", result.AsT1.Response);
+        Assert.Equal("Unverified bank accounts are not supported for upgrading to an Organization plan. Please use a card or PayPal.", result.AsT1.Response);
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>());
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithVerifiedBankAccount_Succeeds(User user)
+    {
+        // Arrange
+        user.Premium = true;
+        user.GatewaySubscriptionId = "sub_123";
+        user.GatewayCustomerId = "cus_123";
+
+        _getPaymentMethodQuery.Run(user).Returns(new MaskedPaymentMethod(new MaskedBankAccount
+        {
+            BankName = "Chase",
+            Last4 = "6789"
+            // No HostedVerificationUrl = verified bank account
+        }));
+
+        var mockSubscription = new Subscription
+        {
+            Id = "sub_123",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Id = "si_premium", Price = new Price { Id = "premium-annually" } }
+                ]
+            },
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var mockCustomer = new Customer
+        {
+            Metadata = new Dictionary<string, string>(),
+            InvoiceSettings = new CustomerInvoiceSettings { DefaultPaymentMethodId = "pm_bank" }
+        };
+
+        _stripeAdapter.GetSubscriptionAsync("sub_123").Returns(mockSubscription);
+        _pricingClient.ListPremiumPlans().Returns(CreateTestPremiumPlansList());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(CreateTestPlan(PlanType.TeamsAnnually, stripeSeatPlanId: "teams-seat-annually"));
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>()).Returns(mockSubscription);
+        _organizationRepository.CreateAsync(Arg.Any<Organization>()).Returns(callInfo => Task.FromResult(callInfo.Arg<Organization>()));
+        _organizationApiKeyRepository.CreateAsync(Arg.Any<OrganizationApiKey>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationApiKey>()));
+        _organizationUserRepository.CreateAsync(Arg.Any<OrganizationUser>()).Returns(callInfo => Task.FromResult(callInfo.Arg<OrganizationUser>()));
+        _applicationCacheService.UpsertOrganizationAbilityAsync(Arg.Any<Organization>()).Returns(Task.CompletedTask);
+        _userService.SaveUserAsync(user).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _command.Run(user, "My Organization", "encrypted-key", "public-key", "encrypted-private-key", null, PlanType.TeamsAnnually, CreateTestBillingAddress());
+
+        // Assert
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.PaymentBehavior == null));
+        await _braintreeService.DidNotReceive().PayInvoice(Arg.Any<SubscriberId>(), Arg.Any<Invoice>());
     }
 
 }
