@@ -80,7 +80,7 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(string orgId)
+    public async Task<ListResponseModel<PolicyStatusResponseModel>> GetAll(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -88,10 +88,8 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        // Once migration from legacy Send policies > SendControls has run, replace _policyQuery.GetAllAsync
-        // with a direct _policyRepository.GetManyByOrganizationIdAsync call
         var policies = await _policyQuery.GetAllAsync(orgIdGuid);
-        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
+        return new ListResponseModel<PolicyStatusResponseModel>(policies.Select(p => new PolicyStatusResponseModel(p)));
     }
 
     [AllowAnonymous]

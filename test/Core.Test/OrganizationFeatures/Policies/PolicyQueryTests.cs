@@ -141,7 +141,7 @@ public class PolicyQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetAllAsync_WithoutSendControls_NoLegacyEnabled_NoExtraEntry(
+    public async Task GetAllAsync_WithoutSendControls_NoLegacyEnabled_SynthesizesDisabledEntry(
         SutProvider<PolicyQuery> sutProvider,
         Guid organizationId)
     {
@@ -167,8 +167,115 @@ public class PolicyQueryTests
         // Act
         var results = (await sutProvider.Sut.GetAllAsync(organizationId)).ToList();
 
-        // Assert — only the original policy, no synthesized entry
-        Assert.Single(results);
-        Assert.Equal(PolicyType.SingleOrg, results[0].Type);
+        // Assert — original policy + disabled synthesized SendControls entry
+        Assert.Equal(2, results.Count);
+        Assert.Contains(results, p => p.Type == PolicyType.SingleOrg);
+        var synthesized = results.Single(p => p.Type == PolicyType.SendControls);
+        Assert.False(synthesized.Enabled);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllAsync_WithoutSendControls_DisabledSendOptionsWithConfig_PreservesDisableHideEmail(
+        SutProvider<PolicyQuery> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange — SendOptions is disabled but has DisableHideEmail = true configured
+        var sendOptionsPolicy = new Policy
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.SendOptions,
+            Enabled = false,
+        };
+        sendOptionsPolicy.SetDataModel(new SendOptionsPolicyData { DisableHideEmail = true });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Policy> { sendOptionsPolicy });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.DisableSend)
+            .ReturnsNull();
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.SendOptions)
+            .Returns(sendOptionsPolicy);
+
+        // Act
+        var results = (await sutProvider.Sut.GetAllAsync(organizationId)).ToList();
+
+        // Assert — synthesized SendControls preserves DisableHideEmail but is not enabled
+        var synthesized = results.Single(p => p.Type == PolicyType.SendControls);
+        Assert.False(synthesized.Enabled);
+        var data = synthesized.GetDataModel<SendControlsPolicyData>();
+        Assert.True(data.DisableHideEmail);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllAsync_WithoutSendControls_EnabledSendOptionsWithDisableHideEmail_SynthesizesEnabledEntry(
+        SutProvider<PolicyQuery> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange — SendOptions is enabled AND DisableHideEmail is true
+        var sendOptionsPolicy = new Policy
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.SendOptions,
+            Enabled = true,
+        };
+        sendOptionsPolicy.SetDataModel(new SendOptionsPolicyData { DisableHideEmail = true });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Policy> { sendOptionsPolicy });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.DisableSend)
+            .ReturnsNull();
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.SendOptions)
+            .Returns(sendOptionsPolicy);
+
+        // Act
+        var results = (await sutProvider.Sut.GetAllAsync(organizationId)).ToList();
+
+        // Assert — Enabled derives from SendOptions.Enabled, DisableHideEmail from SendOptions data
+        var synthesized = results.Single(p => p.Type == PolicyType.SendControls);
+        Assert.True(synthesized.Enabled);
+        var data = synthesized.GetDataModel<SendControlsPolicyData>();
+        Assert.True(data.DisableHideEmail);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllAsync_WithoutSendControls_EnabledSendOptionsWithoutDisableHideEmail_StillEnabled(
+        SutProvider<PolicyQuery> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange — SendOptions is enabled but DisableHideEmail is false
+        var sendOptionsPolicy = new Policy
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.SendOptions,
+            Enabled = true,
+        };
+        sendOptionsPolicy.SetDataModel(new SendOptionsPolicyData { DisableHideEmail = false });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Policy> { sendOptionsPolicy });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.DisableSend)
+            .ReturnsNull();
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(organizationId, PolicyType.SendOptions)
+            .Returns(sendOptionsPolicy);
+
+        // Act
+        var results = (await sutProvider.Sut.GetAllAsync(organizationId)).ToList();
+
+        // Assert — Enabled is true because SendOptions is enabled, regardless of DisableHideEmail
+        var synthesized = results.Single(p => p.Type == PolicyType.SendControls);
+        Assert.True(synthesized.Enabled);
+        var data = synthesized.GetDataModel<SendControlsPolicyData>();
+        Assert.False(data.DisableHideEmail);
     }
 }

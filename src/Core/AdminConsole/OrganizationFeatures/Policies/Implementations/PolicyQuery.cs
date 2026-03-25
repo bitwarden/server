@@ -16,10 +16,7 @@ public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
         if (policies.All(p => p.Type != PolicyType.SendControls))
         {
             var synthesized = await SynthesizeSendControlsStatusAsync(organizationId);
-            if (synthesized.Enabled)
-            {
-                results.Add(synthesized);
-            }
+            results.Add(synthesized);
         }
 
         return results;
@@ -52,9 +49,8 @@ public class PolicyQuery(IPolicyRepository policyRepository) : IPolicyQuery
             organizationId, PolicyType.SendOptions);
 
         var disableSend = disableSendPolicy?.Enabled ?? false;
-        var disableHideEmail = sendOptionsPolicy?.Enabled == true
-            && sendOptionsPolicy.GetDataModel<SendOptionsPolicyData>().DisableHideEmail;
-        var enabled = disableSend || disableHideEmail;
+        var disableHideEmail = sendOptionsPolicy?.GetDataModel<SendOptionsPolicyData>().DisableHideEmail ?? false;
+        var enabled = (disableSendPolicy?.Enabled ?? false) || (sendOptionsPolicy?.Enabled ?? false);
 
         var data = new SendControlsPolicyData
         {

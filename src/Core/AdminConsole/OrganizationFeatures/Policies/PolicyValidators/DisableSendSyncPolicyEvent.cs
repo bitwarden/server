@@ -13,7 +13,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 /// Runs regardless of the pm-31885-send-controls feature flag to ensure SendControls
 /// always stays current for when the flag is eventually enabled.
 /// </summary>
-public class DisableSendSyncPolicyEvent(IPolicyRepository policyRepository) : IOnPolicyPostUpdateEvent
+public class DisableSendSyncPolicyEvent(
+    IPolicyRepository policyRepository,
+    TimeProvider timeProvider) : IOnPolicyPostUpdateEvent
 {
     public PolicyType Type => PolicyType.DisableSend;
 
@@ -38,7 +40,7 @@ public class DisableSendSyncPolicyEvent(IPolicyRepository policyRepository) : IO
 
         var sendControlsPolicyData = sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
         sendControlsPolicyData.DisableSend = postUpsertedPolicyState.Enabled;
-        if (sendOptionsPolicy?.Enabled == true)
+        if (sendOptionsPolicy != null)
         {
             sendControlsPolicyData.DisableHideEmail =
                 sendOptionsPolicy.GetDataModel<SendOptionsPolicyData>().DisableHideEmail;
@@ -48,6 +50,8 @@ public class DisableSendSyncPolicyEvent(IPolicyRepository policyRepository) : IO
 
         // Step 2: sync Enabled status. SendControlsPolicy is enabled if either legacy policy is enabled
         sendControlsPolicy.Enabled = postUpsertedPolicyState.Enabled || (sendOptionsPolicy?.Enabled ?? false);
+
+        sendControlsPolicy.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
         await policyRepository.UpsertAsync(sendControlsPolicy);
     }

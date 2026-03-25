@@ -1,13 +1,10 @@
-﻿#nullable enable
-
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Test.AdminConsole.AutoFixture;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -41,7 +38,7 @@ public class SendOptionsSyncPolicyEventTests
             .Received(1)
             .UpsertAsync(Arg.Is<Policy>(p =>
                 p.Enabled == false &&
-                (CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.Data)!.DisableHideEmail == false)));
+                (p.GetDataModel<SendControlsPolicyData>().DisableHideEmail == false)));
     }
 
     [Theory, BitAutoData]
@@ -68,7 +65,7 @@ public class SendOptionsSyncPolicyEventTests
             .UpsertAsync(Arg.Is<Policy>(p =>
                 p.Id == existingSendControlsPolicy.Id &&
                 p.Enabled == true &&
-                (CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.Data)!.DisableHideEmail == true)));
+                (p.GetDataModel<SendControlsPolicyData>().DisableHideEmail == true)));
     }
 
     [Theory, BitAutoData]
@@ -93,6 +90,6 @@ public class SendOptionsSyncPolicyEventTests
                 p.OrganizationId == policyUpdate.OrganizationId &&
                 p.Type == PolicyType.SendControls &&
                 p.Enabled == true &&
-                CoreHelpers.LoadClassFromJsonData<SendControlsPolicyData>(p.Data)!.DisableHideEmail == true));
+                p.GetDataModel<SendControlsPolicyData>().DisableHideEmail == true));
     }
 }

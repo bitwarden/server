@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
@@ -23,38 +22,28 @@ public class SendControlsSyncPolicyEvent(
         Policy postUpsertedPolicyState,
         Policy? previousPolicyState)
     {
-        var policyUpdate = policyRequest.PolicyUpdate;
-
-        var sendControlsPolicy = await policyRepository.GetByOrganizationIdTypeAsync(
-            policyUpdate.OrganizationId, PolicyType.SendControls) ?? new Policy
-            {
-                Id = CoreHelpers.GenerateComb(),
-                OrganizationId = policyUpdate.OrganizationId,
-                Type = PolicyType.SendControls,
-            };
-
         var sendControlsPolicyData =
-            sendControlsPolicy.GetDataModel<SendControlsPolicyData>();
+            postUpsertedPolicyState.GetDataModel<SendControlsPolicyData>();
 
-        await UpsertLegacyPolicyAsync(
-            policyRequest.PolicyUpdate.OrganizationId,
+        await UpsertLegacyPolicyAsync<SendControlsPolicyData>(
+            postUpsertedPolicyState.OrganizationId,
             PolicyType.DisableSend,
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableSend,
             policyData: null);
 
         var sendOptionsData = new SendOptionsPolicyData { DisableHideEmail = sendControlsPolicyData.DisableHideEmail };
         await UpsertLegacyPolicyAsync(
-            policyRequest.PolicyUpdate.OrganizationId,
+            postUpsertedPolicyState.OrganizationId,
             PolicyType.SendOptions,
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
-            policyData: CoreHelpers.ClassToJsonData(sendOptionsData));
+            policyData: sendOptionsData);
     }
 
-    private async Task UpsertLegacyPolicyAsync(
+    private async Task UpsertLegacyPolicyAsync<T>(
         Guid organizationId,
         PolicyType type,
         bool enabled,
-        string? policyData)
+        T? policyData) where T : IPolicyDataModel, new()
     {
         var existing = await policyRepository.GetByOrganizationIdTypeAsync(organizationId, type);
 
@@ -66,7 +55,10 @@ public class SendControlsSyncPolicyEvent(
         }
 
         policy.Enabled = enabled;
-        policy.Data = policyData;
+        if (policyData != null)
+        {
+            policy.SetDataModel(policyData);
+        }
         policy.RevisionDate = timeProvider.GetUtcNow().UtcDateTime;
 
         await policyRepository.UpsertAsync(policy);
