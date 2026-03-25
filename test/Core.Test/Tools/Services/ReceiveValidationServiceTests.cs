@@ -17,35 +17,13 @@ namespace Bit.Core.Test.Tools.Services;
 public class ReceiveValidationServiceTests
 {
     [Theory, BitAutoData]
-    public void ValidateUpload_UserIdIsNull_ThrowsBadRequest(
-        SutProvider<ReceiveValidationService> sutProvider,
-        Receive receive)
-    {
-        receive.UserId = null;
-
-        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateUpload(receive));
-        Assert.Contains("Invalid Receive owner", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public void ValidateUpload_UserIdHasValue_DoesNotThrow(
-        SutProvider<ReceiveValidationService> sutProvider,
-        Receive receive)
-    {
-        receive.UserId = Guid.NewGuid();
-
-        // No exception implies success
-        sutProvider.Sut.ValidateUpload(receive);
-    }
-
-    [Theory, BitAutoData]
     public async Task StorageRemainingForReceiveAsync_UserNotFound_ThrowsBadRequest(
         SutProvider<ReceiveValidationService> sutProvider,
         Receive receive)
     {
         receive.UserId = Guid.NewGuid();
 
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(receive.UserId.Value)
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(receive.UserId)
             .Returns((User)null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(

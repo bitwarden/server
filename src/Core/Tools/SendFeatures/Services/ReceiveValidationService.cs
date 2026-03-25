@@ -22,22 +22,11 @@ public class ReceiveValidationService : IReceiveValidationService
         _pricingClient = pricingClient;
     }
 
-
-    public void ValidateUpload(Receive receive)
-    {
-        // future policy validations can be added here, make async and see SendValidationService
-
-        if (!receive.UserId.HasValue)
-        {
-            throw new BadRequestException("Invalid Receive owner");
-        }
-    }
-
     public async Task<long> StorageRemainingForReceiveAsync(Receive receive)
     {
         var storageBytesRemaining = 0L;
 
-        var user = await _userRepository.GetByIdAsync(receive.UserId!.Value) ??
+        var user = await _userRepository.GetByIdAsync(receive.UserId) ??
                    throw new BadRequestException("Invalid Receive Owner");
 
         if (!await _userService.CanAccessPremium(user))
