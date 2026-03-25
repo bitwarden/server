@@ -5,6 +5,8 @@
 /// bumped today, preventing redundant database writes within the same calendar day.
 /// Cache keys are scoped to <c>(userId, identifier)</c> because device identifiers are only
 /// unique per user, not globally.
+/// Note: on self-hosted without Cosmos, this cache is backed by the database. The SQL guard in the
+/// stored procedures ensures correctness regardless.
 /// </summary>
 public interface IDeviceLastActivityCacheService
 {
