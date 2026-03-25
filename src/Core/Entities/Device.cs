@@ -42,6 +42,10 @@ public class Device : ITableObject<Guid>
     /// Whether the device is active for the user.
     /// </summary>
     public bool Active { get; set; } = true;
+
+    /// <summary>
+    /// The last time this device was logged in on or had a token refresh. Null if activity has never been recorded.
+    /// </summary>
     public DateTime? LastActivityDate { get; internal set; } = DateTime.UtcNow;
 
     public void SetNewId()
