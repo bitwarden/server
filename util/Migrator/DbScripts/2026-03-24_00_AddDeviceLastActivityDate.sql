@@ -100,7 +100,9 @@ BEGIN
         [EncryptedPublicKey] = @EncryptedPublicKey,
         [EncryptedPrivateKey] = @EncryptedPrivateKey,
         [Active] = @Active,
-        [LastActivityDate] = @LastActivityDate
+        -- NULL preserves the existing value, preventing general updates from overwriting a recently-bumped
+        -- LastActivityDate. Pass a non-NULL value to update it in the same write.
+        [LastActivityDate] = COALESCE(@LastActivityDate, [LastActivityDate])
     WHERE
         [Id] = @Id
 END

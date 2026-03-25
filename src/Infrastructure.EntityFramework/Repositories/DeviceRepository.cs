@@ -26,6 +26,27 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         _globalSettings = globalSettings;
     }
 
+    public override async Task ReplaceAsync(Core.Entities.Device obj)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
+        if (entity != null)
+        {
+            var mappedEntity = Mapper.Map<Device>(obj);
+            dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+
+            // Null preserves the existing value, preventing general updates from overwriting a recently-bumped
+            // LastActivityDate. Set a non-null value to update it in the same write.
+            if (obj.LastActivityDate == null)
+            {
+                dbContext.Entry(entity).Property(d => d.LastActivityDate).IsModified = false;
+            }
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
     public async Task ClearPushTokenAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

@@ -11,6 +11,43 @@ public class DeviceRepositoryTests
 {
     [DatabaseTheory]
     [DatabaseData]
+    public async Task ReplaceAsync_WithNullLastActivityDate_PreservesExistingValue(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var device = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+        var afterBump = await sutRepository.GetByIdAsync(device.Id);
+        Assert.NotNull(afterBump!.LastActivityDate);
+
+        // Act — ReplaceAsync with LastActivityDate = null should not overwrite the bumped value
+        afterBump.LastActivityDate = null;
+        await sutRepository.ReplaceAsync(afterBump);
+
+        // Assert
+        var afterReplace = await sutRepository.GetByIdAsync(device.Id);
+        Assert.NotNull(afterReplace!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_Works_ReturnsExpectedResults(
         IDeviceRepository sutRepository,
         IUserRepository userRepository,
