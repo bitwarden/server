@@ -67,6 +67,50 @@ public class TdeSetPasswordCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task OnboardMasterPassword_NullSalt_UsesEmailFallback(
+        SutProvider<TdeSetPasswordCommand> sutProvider,
+        User user, KdfSettings kdfSettings,
+        Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
+    {
+        // Arrange
+        user.Key = null;
+        user.PublicKey = "public-key";
+        user.PrivateKey = "private-key";
+        user.MasterPasswordSalt = null;
+        var expectedSalt = user.Email.ToLowerInvariant().Trim();
+        var model = CreateValidModel(user, kdfSettings, org.Identifier, masterPasswordHint);
+
+        // Verify the model uses the email-derived salt
+        Assert.Equal(expectedSalt, model.MasterPasswordUnlock.Salt);
+        Assert.Equal(expectedSalt, model.MasterPasswordAuthentication.Salt);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(org.Identifier)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .HashPassword(user, model.MasterPasswordAuthentication.MasterPasswordAuthenticationHash)
+            .Returns(serverSideHash);
+
+        UpdateUserData mockUpdateUserData = (connection, transaction) => Task.CompletedTask;
+        sutProvider.GetDependency<IUserRepository>()
+            .SetMasterPassword(user.Id, model.MasterPasswordUnlock, serverSideHash, model.MasterPasswordHint)
+            .Returns(mockUpdateUserData);
+
+        // Act — should not throw since email fallback provides a valid salt
+        await sutProvider.Sut.SetMasterPasswordAsync(user, model);
+
+        // Assert
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task OnboardMasterPassword_UserAlreadyHasPassword_ThrowsBadRequestException(
         SutProvider<TdeSetPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)

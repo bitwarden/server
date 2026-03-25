@@ -20,6 +20,8 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
     [EncryptedString] public required string MasterKeyEncryptedUserKey { get; set; }
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
+    [MaxLength(256)]
+    public string? MasterPasswordSalt { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -27,19 +29,19 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
         {
             if (KdfMemory.HasValue || KdfParallelism.HasValue)
             {
-                yield return new ValidationResult("KdfMemory and KdfParallelism must be null for PBKDF2_SHA256", new[] { nameof(KdfMemory), nameof(KdfParallelism) });
+                yield return new ValidationResult("KdfMemory and KdfParallelism must be null for PBKDF2_SHA256", [nameof(KdfMemory), nameof(KdfParallelism)]);
             }
         }
         else if (KdfType == KdfType.Argon2id)
         {
             if (!KdfMemory.HasValue || !KdfParallelism.HasValue)
             {
-                yield return new ValidationResult("KdfMemory and KdfParallelism must have values for Argon2id", new[] { nameof(KdfMemory), nameof(KdfParallelism) });
+                yield return new ValidationResult("KdfMemory and KdfParallelism must have values for Argon2id", [nameof(KdfMemory), nameof(KdfParallelism)]);
             }
         }
         else
         {
-            yield return new ValidationResult("Invalid KdfType", new[] { nameof(KdfType) });
+            yield return new ValidationResult("Invalid KdfType", [nameof(KdfType)]);
         }
     }
 
@@ -54,7 +56,7 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
                 Memory = KdfMemory,
                 Parallelism = KdfParallelism,
             },
-            Salt = Email,
+            Salt = MasterPasswordSalt ?? Email,
             MasterPasswordAuthenticationHash = MasterKeyAuthenticationHash,
         };
     }
@@ -70,7 +72,7 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
                 Memory = KdfMemory,
                 Parallelism = KdfParallelism,
             },
-            Salt = Email,
+            Salt = MasterPasswordSalt ?? Email,
             MasterKeyWrappedUserKey = MasterKeyEncryptedUserKey,
         };
     }

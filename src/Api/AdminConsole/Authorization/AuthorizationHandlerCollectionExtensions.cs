@@ -15,6 +15,7 @@ public static class AuthorizationHandlerCollectionExtensions
             ServiceDescriptor.Scoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, CollectionAuthorizationHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, GroupAuthorizationHandler>(),
+            ServiceDescriptor.Scoped<IAuthorizationHandler, OrgUserLinkedToUserIdHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, OrganizationRequirementHandler>(),
             ServiceDescriptor.Scoped<IAuthorizationHandler, RecoverAccountAuthorizationHandler>(),
         ]);

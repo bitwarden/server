@@ -108,7 +108,7 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("master-password")]
-    [Authorize<MemberRequirement>]
+    [Authorize<OrgUserLinkedToUserIdRequirement>]
     public async Task<PolicyResponseModel> GetMasterPasswordPolicy(Guid orgId)
     {
         var organization = await _organizationRepository.GetByIdAsync(orgId);

@@ -14,11 +14,12 @@ public sealed class EncryptPropertyAttributeTests
         // 2 top-level (name, notes)
         // 3 login (username, password, totp)
         // 2 loginUri[*] (uri, uriChecksum)
+        // 12 Fido2Credential (everything but discoverable)
         // 6 card
         // 18 identity
         // 3 sshKey
         // 2 fields[*] (name, value)
-        Assert.Equal(36, paths.Length);
+        Assert.Equal(48, paths.Length);
     }
 
     [Fact]

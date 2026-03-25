@@ -135,14 +135,14 @@ public class AccountsKeyManagementControllerTests
                 && d.MasterPasswordUnlockData.Kdf.Iterations == data.AccountUnlockData.MasterPasswordUnlockData.KdfIterations
                 && d.MasterPasswordUnlockData.Kdf.Memory == data.AccountUnlockData.MasterPasswordUnlockData.KdfMemory
                 && d.MasterPasswordUnlockData.Kdf.Parallelism == data.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism
-                && d.MasterPasswordUnlockData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.Email
+                && d.MasterPasswordUnlockData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordSalt
                 && d.MasterPasswordUnlockData.MasterKeyWrappedUserKey == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey
 
                 && d.MasterPasswordAuthenticationData.Kdf.KdfType == data.AccountUnlockData.MasterPasswordUnlockData.KdfType
                 && d.MasterPasswordAuthenticationData.Kdf.Iterations == data.AccountUnlockData.MasterPasswordUnlockData.KdfIterations
                 && d.MasterPasswordAuthenticationData.Kdf.Memory == data.AccountUnlockData.MasterPasswordUnlockData.KdfMemory
                 && d.MasterPasswordAuthenticationData.Kdf.Parallelism == data.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism
-                && d.MasterPasswordAuthenticationData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.Email
+                && d.MasterPasswordAuthenticationData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordSalt
                 && d.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash
 
                 && d.BaseData.AccountKeys!.PublicKeyEncryptionKeyPairData.WrappedPrivateKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.WrappedPrivateKey
@@ -188,14 +188,14 @@ public class AccountsKeyManagementControllerTests
                 && d.MasterPasswordUnlockData.Kdf.Iterations == data.AccountUnlockData.MasterPasswordUnlockData.KdfIterations
                 && d.MasterPasswordUnlockData.Kdf.Memory == data.AccountUnlockData.MasterPasswordUnlockData.KdfMemory
                 && d.MasterPasswordUnlockData.Kdf.Parallelism == data.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism
-                && d.MasterPasswordUnlockData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.Email
+                && d.MasterPasswordUnlockData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordSalt
                 && d.MasterPasswordUnlockData.MasterKeyWrappedUserKey == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey
 
                 && d.MasterPasswordAuthenticationData.Kdf.KdfType == data.AccountUnlockData.MasterPasswordUnlockData.KdfType
                 && d.MasterPasswordAuthenticationData.Kdf.Iterations == data.AccountUnlockData.MasterPasswordUnlockData.KdfIterations
                 && d.MasterPasswordAuthenticationData.Kdf.Memory == data.AccountUnlockData.MasterPasswordUnlockData.KdfMemory
                 && d.MasterPasswordAuthenticationData.Kdf.Parallelism == data.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism
-                && d.MasterPasswordAuthenticationData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.Email
+                && d.MasterPasswordAuthenticationData.Salt == data.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordSalt
                 && d.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash
 
                 && d.BaseData.AccountKeys!.PublicKeyEncryptionKeyPairData.WrappedPrivateKey == data.AccountKeys.PublicKeyEncryptionKeyPair!.WrappedPrivateKey
