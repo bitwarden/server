@@ -91,6 +91,7 @@ public class CreatePremiumCheckoutSessionCommandTests
             && options.SuccessUrl == _successUrl
             && options.CancelUrl == _cancelUrl
             && options.PaymentMethodTypes.Contains(StripeConstants.PaymentMethodTypes.Card)
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.UserId] == user.Id.ToString()
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingAppVersion] == appVersion
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingPlatform] == platform));
     }
@@ -126,6 +127,7 @@ public class CreatePremiumCheckoutSessionCommandTests
             && options.SuccessUrl == _successUrl
             && options.CancelUrl == _cancelUrl
             && options.PaymentMethodTypes.Contains(StripeConstants.PaymentMethodTypes.Card)
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.UserId] == user.Id.ToString()
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingAppVersion] == appVersion
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingPlatform] == platform));
     }
