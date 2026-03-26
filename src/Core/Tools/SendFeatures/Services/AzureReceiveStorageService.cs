@@ -2,8 +2,10 @@
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Push;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tools.Services;
@@ -15,6 +17,8 @@ public class AzureReceiveFileStorageService : IReceiveFileStorageService
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<AzureReceiveFileStorageService> _logger;
     private BlobContainerClient? _receiveFilesContainerClient;
+    private readonly IReceiveRepository _receiveRepository;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public FileUploadType FileUploadType => FileUploadType.Azure;
 
@@ -23,11 +27,15 @@ public class AzureReceiveFileStorageService : IReceiveFileStorageService
 
     public AzureReceiveFileStorageService(
         GlobalSettings globalSettings,
-        ILogger<AzureReceiveFileStorageService> logger)
+        ILogger<AzureReceiveFileStorageService> logger,
+        IReceiveRepository receiveRepository,
+        IPushNotificationService pushNotificationService)
     {
         // TODO: coordinate with appropriate team to ensure Receives have dedicated storage and update the line below
         _blobServiceClient = new BlobServiceClient(globalSettings.Send.ConnectionString);
         _logger = logger;
+        _receiveRepository = receiveRepository;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task UploadNewFileAsync(Stream stream, Receive receive, string fileId)
@@ -45,6 +53,12 @@ public class AzureReceiveFileStorageService : IReceiveFileStorageService
         };
 
         await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });
+
+        receive.UploadCount++;
+        await _receiveRepository.ReplaceAsync(receive);
+
+        // TODO: investigate if this belongs here, if it does adapt the existing Send method to support Receive type
+        // await _pushNotificationService.PushSyncSendUpdateAsync(receive);
     }
 
     public async Task DeleteFileAsync(Receive receive, string fileId) => await DeleteBlobAsync(BlobName(receive, fileId));
