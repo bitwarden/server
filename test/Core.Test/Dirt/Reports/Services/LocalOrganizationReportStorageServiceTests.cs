@@ -3,9 +3,7 @@ using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.DataProtection;
 using Xunit;
 
 namespace Bit.Core.Test.Dirt.Reports.Services;
@@ -22,18 +20,11 @@ public class LocalOrganizationReportStorageServiceTests
         return globalSettings;
     }
 
-    private static IDataProtectionProvider GetDataProtectionProvider()
-    {
-        return DataProtectionProvider.Create("Testing");
-    }
-
     private static LocalOrganizationReportStorageService CreateSut(
-        Core.Settings.GlobalSettings? globalSettings = null,
-        IDataProtectionProvider? dataProtectionProvider = null)
+        Core.Settings.GlobalSettings? globalSettings = null)
     {
         return new LocalOrganizationReportStorageService(
-            globalSettings ?? GetGlobalSettings(),
-            dataProtectionProvider ?? GetDataProtectionProvider());
+            globalSettings ?? GetGlobalSettings());
     }
 
     private static ReportFile CreateFileData(string fileId = "test-file-id")
@@ -81,7 +72,7 @@ public class LocalOrganizationReportStorageServiceTests
     }
 
     [Fact]
-    public async Task GetReportDataDownloadUrlAsync_ReturnsTokenBasedUrl()
+    public async Task GetReportDataDownloadUrlAsync_ReturnsAuthenticatedEndpointUrl()
     {
         // Arrange
         var fixture = new Fixture();
@@ -103,44 +94,7 @@ public class LocalOrganizationReportStorageServiceTests
         var url = await sut.GetReportDataDownloadUrlAsync(report, fileData);
 
         // Assert
-        Assert.StartsWith("https://localhost/api/reports/organizations/download?token=", url);
-    }
-
-    [Fact]
-    public async Task ParseReportDownloadToken_RoundTrips()
-    {
-        // Arrange
-        var fixture = new Fixture();
-        var dataProtectionProvider = GetDataProtectionProvider();
-        var sut = CreateSut(dataProtectionProvider: dataProtectionProvider);
-
-        var reportId = Guid.NewGuid();
-        var fileId = "test-file-id";
-        var fileData = CreateFileData(fileId);
-
-        var report = fixture.Build<OrganizationReport>()
-            .With(r => r.Id, reportId)
-            .With(r => r.ReportData, string.Empty)
-            .Create();
-
-        // Act - generate a token then parse it
-        var url = await sut.GetReportDataDownloadUrlAsync(report, fileData);
-        var token = Uri.UnescapeDataString(url.Split("token=")[1]);
-        var (parsedReportId, parsedFileId) = sut.ParseReportDownloadToken(token);
-
-        // Assert
-        Assert.Equal(reportId, parsedReportId);
-        Assert.Equal(fileId, parsedFileId);
-    }
-
-    [Fact]
-    public void ParseReportDownloadToken_InvalidToken_ThrowsNotFoundException()
-    {
-        // Arrange
-        var sut = CreateSut();
-
-        // Act & Assert
-        Assert.Throws<NotFoundException>(() => sut.ParseReportDownloadToken("invalid-token"));
+        Assert.Equal($"https://localhost/api/reports/organizations/{orgId}/{reportId}/file/download", url);
     }
 
     [Fact]

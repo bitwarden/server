@@ -15,10 +15,6 @@ public interface IOrganizationReportRepository : IRepository<OrganizationReport,
     Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid reportId);
     Task<OrganizationReport> UpdateSummaryDataAsync(Guid orgId, Guid reportId, string summaryData);
 
-    // ReportData methods
-    Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId);
-    Task<OrganizationReport> UpdateReportDataAsync(Guid orgId, Guid reportId, string reportData);
-
     // ApplicationData methods
     Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid reportId);
     Task<OrganizationReport> UpdateApplicationDataAsync(Guid orgId, Guid reportId, string applicationData);

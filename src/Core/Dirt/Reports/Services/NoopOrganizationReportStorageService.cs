@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 
 namespace Bit.Core.Dirt.Reports.Services;
 
@@ -18,8 +17,6 @@ public class NoopOrganizationReportStorageService : IOrganizationReportStorageSe
     public Task<(bool valid, long length)> ValidateFileAsync(OrganizationReport report, ReportFile fileData, long minimum, long maximum) => Task.FromResult((true, fileData.Size));
 
     public Task DeleteReportFilesAsync(OrganizationReport report, string reportFileId) => Task.CompletedTask;
-
-    public (Guid reportId, string fileId) ParseReportDownloadToken(string token) => throw new NotFoundException();
 
     public Task<Stream?> GetReportReadStreamAsync(OrganizationReport report, ReportFile fileData) => Task.FromResult<Stream?>(null);
 }

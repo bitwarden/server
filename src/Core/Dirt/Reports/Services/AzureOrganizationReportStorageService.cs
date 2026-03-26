@@ -117,9 +117,6 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
         }
     }
 
-    public (Guid reportId, string fileId) ParseReportDownloadToken(string token) =>
-        throw new NotImplementedException();
-
     public Task<Stream?> GetReportReadStreamAsync(OrganizationReport report, ReportFile fileData) =>
         throw new NotImplementedException();
 

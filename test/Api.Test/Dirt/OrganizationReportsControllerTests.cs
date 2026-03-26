@@ -513,9 +513,7 @@ public class OrganizationReportControllerTests
         List<OrganizationReportSummaryDataResponse> expectedSummaryData)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportSummaryDataByDateRangeQuery>()
             .GetOrganizationReportSummaryDataByDateRangeAsync(orgId, startDate, endDate)
@@ -561,9 +559,7 @@ public class OrganizationReportControllerTests
         List<OrganizationReportSummaryDataResponse> expectedSummaryData)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportSummaryDataByDateRangeQuery>()
             .GetOrganizationReportSummaryDataByDateRangeAsync(orgId, startDate, endDate)
@@ -590,9 +586,7 @@ public class OrganizationReportControllerTests
         OrganizationReportSummaryDataResponse expectedSummaryData)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportSummaryDataQuery>()
             .GetOrganizationReportSummaryDataAsync(orgId, reportId)
@@ -641,9 +635,7 @@ public class OrganizationReportControllerTests
         // Arrange
         expectedReport.ReportFile = null;
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IUpdateOrganizationReportSummaryCommand>()
             .UpdateOrganizationReportSummaryAsync(Arg.Any<UpdateOrganizationReportSummaryRequest>())
@@ -691,9 +683,7 @@ public class OrganizationReportControllerTests
         // Arrange
         expectedReport.ReportFile = null;
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IUpdateOrganizationReportSummaryCommand>()
             .UpdateOrganizationReportSummaryAsync(Arg.Any<UpdateOrganizationReportSummaryRequest>())
@@ -712,165 +702,6 @@ public class OrganizationReportControllerTests
             .UpdateOrganizationReportSummaryAsync(Arg.Any<UpdateOrganizationReportSummaryRequest>());
     }
 
-    // ReportData Field Endpoints
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationReportDataAsync_WithValidIds_ReturnsOkResult(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        OrganizationReportDataResponse expectedReportData)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IGetOrganizationReportDataQuery>()
-            .GetOrganizationReportDataAsync(orgId, reportId)
-            .Returns(expectedReportData);
-
-        // Act
-        var result = await sutProvider.Sut.GetOrganizationReportDataAsync(orgId, reportId);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<OrganizationReportDataResponseModel>(okResult.Value);
-        Assert.Equal(expectedReportData.ReportData, response.ReportData);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationReportDataAsync_WithoutAccess_ThrowsNotFoundException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(false);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetOrganizationReportDataAsync(orgId, reportId));
-
-        // Verify that the query was not called
-        await sutProvider.GetDependency<IGetOrganizationReportDataQuery>()
-            .DidNotReceive()
-            .GetOrganizationReportDataAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationReportDataAsync_CallsCorrectMethods(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        OrganizationReportDataResponse expectedReportData)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IGetOrganizationReportDataQuery>()
-            .GetOrganizationReportDataAsync(orgId, reportId)
-            .Returns(expectedReportData);
-
-        // Act
-        await sutProvider.Sut.GetOrganizationReportDataAsync(orgId, reportId);
-
-        // Assert
-        await sutProvider.GetDependency<ICurrentContext>()
-            .Received(1)
-            .AccessReports(orgId);
-
-        await sutProvider.GetDependency<IGetOrganizationReportDataQuery>()
-            .Received(1)
-            .GetOrganizationReportDataAsync(orgId, reportId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportDataAsync_WithValidRequest_ReturnsOkResult(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        UpdateOrganizationReportDataRequestModel request,
-        OrganizationReport expectedReport)
-    {
-        // Arrange
-        expectedReport.ReportFile = null;
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IUpdateOrganizationReportDataCommand>()
-            .UpdateOrganizationReportDataAsync(Arg.Any<UpdateOrganizationReportDataRequest>())
-            .Returns(expectedReport);
-
-        // Act
-        var result = await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var expectedResponse = new OrganizationReportResponseModel(expectedReport);
-        Assert.Equivalent(expectedResponse, okResult.Value);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportDataAsync_WithoutAccess_ThrowsNotFoundException(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        UpdateOrganizationReportDataRequestModel request)
-    {
-        // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(false);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request));
-
-        // Verify that the command was not called
-        await sutProvider.GetDependency<IUpdateOrganizationReportDataCommand>()
-            .DidNotReceive()
-            .UpdateOrganizationReportDataAsync(Arg.Any<UpdateOrganizationReportDataRequest>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportDataAsync_CallsCorrectMethods(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        UpdateOrganizationReportDataRequestModel request,
-        OrganizationReport expectedReport)
-    {
-        // Arrange
-        expectedReport.ReportFile = null;
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<IUpdateOrganizationReportDataCommand>()
-            .UpdateOrganizationReportDataAsync(Arg.Any<UpdateOrganizationReportDataRequest>())
-            .Returns(expectedReport);
-
-        // Act
-        await sutProvider.Sut.UpdateOrganizationReportDataAsync(orgId, reportId, request);
-
-        // Assert
-        await sutProvider.GetDependency<ICurrentContext>()
-            .Received(1)
-            .AccessReports(orgId);
-
-        await sutProvider.GetDependency<IUpdateOrganizationReportDataCommand>()
-            .Received(1)
-            .UpdateOrganizationReportDataAsync(Arg.Any<UpdateOrganizationReportDataRequest>());
-    }
-
     // ApplicationData Field Endpoints
 
     [Theory, BitAutoData]
@@ -881,9 +712,7 @@ public class OrganizationReportControllerTests
         OrganizationReportApplicationDataResponse expectedApplicationData)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportApplicationDataQuery>()
             .GetOrganizationReportApplicationDataAsync(orgId, reportId)
@@ -926,9 +755,7 @@ public class OrganizationReportControllerTests
         Guid reportId)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportApplicationDataQuery>()
             .GetOrganizationReportApplicationDataAsync(orgId, reportId)
@@ -949,9 +776,7 @@ public class OrganizationReportControllerTests
         OrganizationReportApplicationDataResponse expectedApplicationData)
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IGetOrganizationReportApplicationDataQuery>()
             .GetOrganizationReportApplicationDataAsync(orgId, reportId)
@@ -981,9 +806,7 @@ public class OrganizationReportControllerTests
         // Arrange
         expectedReport.ReportFile = null;
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IUpdateOrganizationReportApplicationDataCommand>()
             .UpdateOrganizationReportApplicationDataAsync(Arg.Any<UpdateOrganizationReportApplicationDataRequest>())
@@ -1031,9 +854,7 @@ public class OrganizationReportControllerTests
         // Arrange
         expectedReport.ReportFile = null;
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
+        SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IUpdateOrganizationReportApplicationDataCommand>()
             .UpdateOrganizationReportApplicationDataAsync(Arg.Any<UpdateOrganizationReportApplicationDataRequest>())

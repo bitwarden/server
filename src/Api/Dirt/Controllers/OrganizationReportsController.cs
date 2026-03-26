@@ -28,8 +28,6 @@ public class OrganizationReportsController : Controller
     private readonly IUpdateOrganizationReportSummaryCommand _updateOrganizationReportSummaryCommand;
     private readonly IGetOrganizationReportSummaryDataQuery _getOrganizationReportSummaryDataQuery;
     private readonly IGetOrganizationReportSummaryDataByDateRangeQuery _getOrganizationReportSummaryDataByDateRangeQuery;
-    private readonly IGetOrganizationReportDataQuery _getOrganizationReportDataQuery;
-    private readonly IUpdateOrganizationReportDataCommand _updateOrganizationReportDataCommand;
     private readonly IGetOrganizationReportApplicationDataQuery _getOrganizationReportApplicationDataQuery;
     private readonly IUpdateOrganizationReportApplicationDataCommand _updateOrganizationReportApplicationDataCommand;
     private readonly IFeatureService _featureService;
@@ -49,8 +47,6 @@ public class OrganizationReportsController : Controller
         IUpdateOrganizationReportSummaryCommand updateOrganizationReportSummaryCommand,
         IGetOrganizationReportSummaryDataQuery getOrganizationReportSummaryDataQuery,
         IGetOrganizationReportSummaryDataByDateRangeQuery getOrganizationReportSummaryDataByDateRangeQuery,
-        IGetOrganizationReportDataQuery getOrganizationReportDataQuery,
-        IUpdateOrganizationReportDataCommand updateOrganizationReportDataCommand,
         IGetOrganizationReportApplicationDataQuery getOrganizationReportApplicationDataQuery,
         IUpdateOrganizationReportApplicationDataCommand updateOrganizationReportApplicationDataCommand,
         IFeatureService featureService,
@@ -69,8 +65,6 @@ public class OrganizationReportsController : Controller
         _updateOrganizationReportSummaryCommand = updateOrganizationReportSummaryCommand;
         _getOrganizationReportSummaryDataQuery = getOrganizationReportSummaryDataQuery;
         _getOrganizationReportSummaryDataByDateRangeQuery = getOrganizationReportSummaryDataByDateRangeQuery;
-        _getOrganizationReportDataQuery = getOrganizationReportDataQuery;
-        _updateOrganizationReportDataCommand = updateOrganizationReportDataCommand;
         _getOrganizationReportApplicationDataQuery = getOrganizationReportApplicationDataQuery;
         _updateOrganizationReportApplicationDataCommand = updateOrganizationReportApplicationDataCommand;
         _featureService = featureService;
@@ -142,7 +136,7 @@ public class OrganizationReportsController : Controller
     /// If no file is associated, the response contains inline ReportData.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
-    /// <returns>An <see cref="OrganizationReportResponseModel"/>, or null if no reports exist.</returns>
+    /// <returns>An <see cref="OrganizationReportResponseModel"/> for the most recent report.</returns>
     [HttpGet("{organizationId}/latest")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
     {
@@ -154,6 +148,11 @@ public class OrganizationReportsController : Controller
         await AuthorizeAsync(organizationId);
 
         var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
+
+        if (latestReport == null)
+        {
+            throw new NotFoundException();
+        }
 
         var response = new OrganizationReportResponseModel(latestReport);
 
@@ -285,20 +284,69 @@ public class OrganizationReportsController : Controller
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
         if (organizationId == Guid.Empty)
         {
             throw new BadRequestException("Organization ID is required.");
         }
 
+        await AuthorizeAsync(organizationId);
+
         var summaryDataList = await _getOrganizationReportSummaryDataByDateRangeQuery
             .GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
 
         return Ok(summaryDataList.Select(s => new OrganizationReportSummaryDataResponseModel(s)));
+    }
+
+    /// <summary>
+    /// Handles Azure Event Grid webhook notifications for blob storage events.
+    /// When a <c>Microsoft.Storage.BlobCreated</c> event is received, validates the uploaded
+    /// report file against the corresponding organization report. Orphaned blobs (with no
+    /// matching report) are deleted. Requires the Access Intelligence V2 feature flag.
+    /// This endpoint is anonymous to allow Azure Event Grid to call it directly.
+    /// </summary>
+    /// <returns>An <see cref="ObjectResult"/> acknowledging the Event Grid event.</returns>
+    [AllowAnonymous]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [HttpPost("file/validate/azure")]
+    public async Task<ObjectResult> AzureValidateFileAsync()
+    {
+        return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<Azure.Messaging.EventGrid.EventGridEvent, Task>>
+        {
+            {
+                "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
+                {
+                    try
+                    {
+                        var blobName =
+                            eventGridEvent.Subject.Split($"{AzureOrganizationReportStorageService.ContainerName}/blobs/")[1];
+                        var reportId = AzureOrganizationReportStorageService.ReportIdFromBlobName(blobName);
+                        var report = await _organizationReportRepo.GetByIdAsync(new Guid(reportId));
+                        if (report == null)
+                        {
+                            if (_storageService is AzureOrganizationReportStorageService azureStorageService)
+                            {
+                                await azureStorageService.DeleteBlobAsync(blobName);
+                            }
+
+                            return;
+                        }
+
+                        var fileData = report.GetReportFile();
+                        if (fileData == null)
+                        {
+                            return;
+                        }
+
+                        await _validateCommand.ValidateAsync(report, fileData.Id!);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}",
+                            JsonSerializer.Serialize(eventGridEvent));
+                    }
+                }
+            }
+        });
     }
 
     /// <summary>
@@ -367,73 +415,32 @@ public class OrganizationReportsController : Controller
     }
 
     /// <summary>
-    /// Handles Azure Event Grid webhook notifications for blob storage events.
-    /// When a <c>Microsoft.Storage.BlobCreated</c> event is received, validates the uploaded
-    /// report file against the corresponding organization report. Orphaned blobs (with no
-    /// matching report) are deleted. Requires the Access Intelligence V2 feature flag.
-    /// This endpoint is anonymous to allow Azure Event Grid to call it directly.
+    /// Downloads an organization report file for a self-hosted instance.
+    /// Validates that the organization ID and report ID are non-empty,
+    /// then authorizes the caller via <see cref="AuthorizeAsync"/>.
+    /// Verifies the report exists and belongs to the specified organization.
+    /// Retrieves the file metadata and streams the file from local storage.
+    /// Cloud-hosted instances download files directly from Azure Blob Storage
+    /// using presigned SAS URLs and never call this endpoint.
     /// </summary>
-    /// <returns>An <see cref="ObjectResult"/> acknowledging the Event Grid event.</returns>
-    [AllowAnonymous]
-    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
-    [HttpPost("file/validate/azure")]
-    public async Task<ObjectResult> AzureValidateFile()
-    {
-        return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<Azure.Messaging.EventGrid.EventGridEvent, Task>>
-        {
-            {
-                "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
-                {
-                    try
-                    {
-                        var blobName =
-                            eventGridEvent.Subject.Split($"{AzureOrganizationReportStorageService.ContainerName}/blobs/")[1];
-                        var reportId = AzureOrganizationReportStorageService.ReportIdFromBlobName(blobName);
-                        var report = await _organizationReportRepo.GetByIdAsync(new Guid(reportId));
-                        if (report == null)
-                        {
-                            if (_storageService is AzureOrganizationReportStorageService azureStorageService)
-                            {
-                                await azureStorageService.DeleteBlobAsync(blobName);
-                            }
-
-                            return;
-                        }
-
-                        var fileData = report.GetReportFile();
-                        if (fileData == null)
-                        {
-                            return;
-                        }
-
-                        await _validateCommand.ValidateAsync(report, fileData.Id!);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Uncaught exception occurred while handling event grid event: {Event}",
-                            JsonSerializer.Serialize(eventGridEvent));
-                    }
-                }
-            }
-        });
-    }
-
-    /// <summary>
-    /// Downloads an organization report file using a time-limited, signed token.
-    /// This endpoint replaces direct static file access for self-hosted environments
-    /// to ensure that only authorized users can download report files.
-    /// </summary>
-    [AllowAnonymous]
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="reportId">The unique identifier of the report whose file to download.</param>
+    /// <returns>A <see cref="FileStreamResult"/> containing the report file with content type application/octet-stream.</returns>
     [SelfHosted(SelfHostedOnly = true)]
-    [HttpGet("download")]
-    public async Task<IActionResult> DownloadReportAsync([FromQuery] string token)
+    [HttpGet("{organizationId}/{reportId}/file/download")]
+    public async Task<IActionResult> DownloadReportFileAsync(Guid organizationId, Guid reportId)
     {
-        if (string.IsNullOrEmpty(token))
+        if (organizationId == Guid.Empty)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("OrganizationId is required.");
         }
 
-        (Guid reportId, string fileId) = _storageService.ParseReportDownloadToken(token);
+        if (reportId == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
 
         var report = await _organizationReportRepo.GetByIdAsync(reportId);
         if (report == null)
@@ -441,8 +448,13 @@ public class OrganizationReportsController : Controller
             throw new NotFoundException();
         }
 
+        if (report.OrganizationId != organizationId)
+        {
+            throw new BadRequestException("Invalid report ID");
+        }
+
         var fileData = report.GetReportFile();
-        if (fileData == null || fileData.Id != fileId)
+        if (fileData == null)
         {
             throw new NotFoundException();
         }
@@ -473,87 +485,20 @@ public class OrganizationReportsController : Controller
 
     // Is being used by client on V2
 
-    [HttpPatch("{organizationId}/data/summary/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(
-        Guid organizationId,
-        Guid reportId,
-        [FromBody] UpdateOrganizationReportSummaryRequestModel request)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var updatedReport = await _updateOrganizationReportSummaryCommand
-            .UpdateOrganizationReportSummaryAsync(request.ToData(organizationId, reportId));
-        var response = new OrganizationReportResponseModel(updatedReport);
-
-        return Ok(response);
-    }
-
-    [HttpPatch("{organizationId}/data/application/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(
-        Guid organizationId,
-        Guid reportId,
-        [FromBody] UpdateOrganizationReportApplicationDataRequestModel request)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var updatedReport = await _updateOrganizationReportApplicationDataCommand
-            .UpdateOrganizationReportApplicationDataAsync(request.ToData(organizationId, reportId));
-        var response = new OrganizationReportResponseModel(updatedReport);
-
-        return Ok(response);
-    }
-
-
-    // Not being used by client on V2
-    [HttpGet("{organizationId}/data/report/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportDataAsync(Guid organizationId, Guid reportId)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var reportData = await _getOrganizationReportDataQuery.GetOrganizationReportDataAsync(organizationId, reportId);
-
-        if (reportData == null)
-        {
-            throw new NotFoundException("Organization report data not found.");
-        }
-
-        return Ok(new OrganizationReportDataResponseModel(reportData));
-    }
-
-    [HttpPatch("{organizationId}/data/report/{reportId}")]
-    public async Task<IActionResult> UpdateOrganizationReportDataAsync(
-        Guid organizationId,
-        Guid reportId,
-        [FromBody] UpdateOrganizationReportDataRequestModel request)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var updatedReport = await _updateOrganizationReportDataCommand
-            .UpdateOrganizationReportDataAsync(request.ToData(organizationId, reportId));
-        var response = new OrganizationReportResponseModel(updatedReport);
-
-        return Ok(response);
-    }
-
     [HttpGet("{organizationId}/data/summary/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportSummaryAsync(Guid organizationId, Guid reportId)
     {
-        if (!await _currentContext.AccessReports(organizationId))
+        if (organizationId == Guid.Empty)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("OrganizationId is required.");
         }
+
+        if (reportId == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
 
         var summaryData =
             await _getOrganizationReportSummaryDataQuery.GetOrganizationReportSummaryDataAsync(organizationId, reportId);
@@ -566,13 +511,45 @@ public class OrganizationReportsController : Controller
         return Ok(new OrganizationReportSummaryDataResponseModel(summaryData));
     }
 
+    [HttpPatch("{organizationId}/data/summary/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportSummaryAsync(
+        Guid organizationId,
+        Guid reportId,
+        [FromBody] UpdateOrganizationReportSummaryRequestModel request)
+    {
+        if (organizationId == Guid.Empty)
+        {
+            throw new BadRequestException("OrganizationId is required.");
+        }
+
+        if (reportId == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
+
+        var updatedReport = await _updateOrganizationReportSummaryCommand
+            .UpdateOrganizationReportSummaryAsync(request.ToData(organizationId, reportId));
+        var response = new OrganizationReportResponseModel(updatedReport);
+
+        return Ok(response);
+    }
+
     [HttpGet("{organizationId}/data/application/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
     {
-        if (!await _currentContext.AccessReports(organizationId))
+        if (organizationId == Guid.Empty)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("OrganizationId is required.");
         }
+
+        if (reportId == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
 
         var applicationData = await _getOrganizationReportApplicationDataQuery
             .GetOrganizationReportApplicationDataAsync(organizationId, reportId);
@@ -586,6 +563,28 @@ public class OrganizationReportsController : Controller
     }
 
 
+    [HttpPatch("{organizationId}/data/application/{reportId}")]
+    public async Task<IActionResult> UpdateOrganizationReportApplicationDataAsync(
+        Guid organizationId,
+        Guid reportId,
+        [FromBody] UpdateOrganizationReportApplicationDataRequestModel request)
+    {
+        if (organizationId == Guid.Empty)
+        {
+            throw new BadRequestException("OrganizationId is required.");
+        }
 
+        if (reportId == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
 
+        await AuthorizeAsync(organizationId);
+
+        var updatedReport = await _updateOrganizationReportApplicationDataCommand
+            .UpdateOrganizationReportApplicationDataAsync(request.ToData(organizationId, reportId));
+        var response = new OrganizationReportResponseModel(updatedReport);
+
+        return Ok(response);
+    }
 }

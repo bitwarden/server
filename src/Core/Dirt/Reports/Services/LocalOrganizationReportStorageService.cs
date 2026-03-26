@@ -1,29 +1,21 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Settings;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Dirt.Reports.Services;
 
 public class LocalOrganizationReportStorageService : IOrganizationReportStorageService
 {
     private readonly string _baseDirPath;
-    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly string _apiBaseUrl;
-
-    internal static readonly string ReportDownloadProtectorPurpose = "ReportDownload";
-    private static readonly TimeSpan _downloadLinkLifetime = TimeSpan.FromMinutes(1);
 
     public FileUploadType FileUploadType => FileUploadType.Direct;
 
     public LocalOrganizationReportStorageService(
-        GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider)
+        GlobalSettings globalSettings)
     {
         _baseDirPath = globalSettings.OrganizationReport.BaseDirectory;
-        _dataProtectionProvider = dataProtectionProvider;
         _apiBaseUrl = globalSettings.BaseServiceUri.Api;
     }
 
@@ -32,38 +24,8 @@ public class LocalOrganizationReportStorageService : IOrganizationReportStorageS
 
     public Task<string> GetReportDataDownloadUrlAsync(OrganizationReport report, ReportFile fileData)
     {
-        InitDir();
-        var protector = _dataProtectionProvider.CreateProtector(ReportDownloadProtectorPurpose);
-        var timedProtector = protector.ToTimeLimitedDataProtector();
-        var token = timedProtector.Protect(
-            $"{report.Id}|{fileData.Id}",
-            _downloadLinkLifetime);
-        return Task.FromResult($"{_apiBaseUrl}/reports/organizations/download?token={Uri.EscapeDataString(token)}");
-    }
-
-    public (Guid reportId, string fileId) ParseReportDownloadToken(string token)
-    {
-        var protector = _dataProtectionProvider
-            .CreateProtector(ReportDownloadProtectorPurpose)
-            .ToTimeLimitedDataProtector();
-
-        string payload;
-        try
-        {
-            payload = protector.Unprotect(token);
-        }
-        catch
-        {
-            throw new NotFoundException();
-        }
-
-        var parts = payload.Split('|');
-        if (parts.Length != 2 || !Guid.TryParse(parts[0], out var reportId))
-        {
-            throw new NotFoundException();
-        }
-
-        return (reportId, parts[1]);
+        return Task.FromResult(
+            $"{_apiBaseUrl}/reports/organizations/{report.OrganizationId}/{report.Id}/file/download");
     }
 
     public Task<Stream?> GetReportReadStreamAsync(OrganizationReport report, ReportFile fileData)
