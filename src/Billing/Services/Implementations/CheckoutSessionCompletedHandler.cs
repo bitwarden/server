@@ -86,5 +86,10 @@ public class CheckoutSessionCompletedHandler(
                 DefaultPaymentMethod = defaultPaymentMethodId
             }
         });
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscriptionId, new SubscriptionUpdateOptions
+        {
+            DefaultPaymentMethod = string.Empty
+        });
     }
 }

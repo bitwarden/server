@@ -197,6 +197,9 @@ public class CheckoutSessionCompletedHandlerTests
             _customerId,
             Arg.Is<CustomerUpdateOptions>(opts =>
                 opts.InvoiceSettings.DefaultPaymentMethod == _paymentMethodId));
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            _subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(opts => opts.DefaultPaymentMethod == string.Empty));
         await _userRepository.Received(1).ReplaceAsync(user);
         await _pushNotificationAdapter.Received(1).NotifyPremiumStatusChangedAsync(user);
     }
@@ -239,6 +242,7 @@ public class CheckoutSessionCompletedHandlerTests
         await _sut.HandleAsync(_mockEvent);
 
         await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateCustomerAsync(null!, null!);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(null!, null!);
     }
 
     [Fact]
