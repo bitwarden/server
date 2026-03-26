@@ -5,6 +5,7 @@ using Bit.Core.Models.BitStripe;
 using Stripe;
 using Stripe.BillingPortal;
 using Stripe.Tax;
+using Stripe.TestHelpers;
 
 namespace Bit.Core.Billing.Services;
 
@@ -21,6 +22,7 @@ public interface IStripeAdapter
     Task<Subscription> GetSubscriptionAsync(string id, SubscriptionGetOptions options = null);
     Task<StripeList<Registration>> ListTaxRegistrationsAsync(RegistrationListOptions options = null);
     Task DeleteCustomerDiscountAsync(string customerId, CustomerDeleteDiscountOptions options = null);
+    Task DeleteSubscriptionDiscountAsync(string subscriptionId);
     Task<Subscription> UpdateSubscriptionAsync(string id, SubscriptionUpdateOptions options = null);
     Task<Subscription> CancelSubscriptionAsync(string id, SubscriptionCancelOptions options = null);
     Task<Invoice> GetInvoiceAsync(string id, InvoiceGetOptions options = null);
@@ -54,4 +56,10 @@ public interface IStripeAdapter
     Task<List<Product>> ListProductsAsync(ProductListOptions options = null);
     Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null);
     Task<Session> CreateBillingPortalSessionAsync(SessionCreateOptions options);
+    Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options);
+    Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null);
+    Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options);
+    Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options);
+    Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null);
+    Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null);
 }
