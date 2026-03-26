@@ -84,6 +84,6 @@ dotnet run -- seed --preset qa.enterprise-basic --kdf-iterations 600000 --mangle
 # Seed a free individual user (no vault data)
 dotnet run -- seed --preset individual.free-empty --mangle
 
-# Seed a premium individual user with vault data
-dotnet run -- seed --preset individual.premium-basic --mangle
+# Seed a premium individual user (no vault data)
+dotnet run -- seed --preset individual.premium-empty --mangle
 ```

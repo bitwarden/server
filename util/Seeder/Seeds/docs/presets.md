@@ -80,14 +80,10 @@ dotnet run -- seed --preset individual.{name} --mangle
 | ------------- | ------------ | ------------------------------------ | ---------------------------- | ------------------------ |
 | free-empty    | Free         | —                                    | —                            | —                        |
 | premium-empty | Premium (1GB)| —                                    | —                            | —                        |
-| free-basic    | Free         | 3 named (Development, Finance, Social Media) | `individual-free` fixture    | folderAssignments + favoriteAssignments |
-| premium-basic | Premium (1GB)| 3 named (Development, Finance, Work) | `individual-premium` fixture | folderAssignments + favoriteAssignments |
 
 `free-empty` and `premium-empty` create accounts with no vault data — useful for testing account setup flows.
 
-`free-basic` and `premium-basic` load a cipher fixture with named folders, `folderAssignments` (ciphers into categorized folders), and `favoriteAssignments` (frequently used ciphers marked as favorites).
-
-**Login emails:** `free-empty` and `free-basic` use `freeuser@individual.example`; `premium-empty` and `premium-basic` use `premuser@individual.example`.
+**Login emails:** `free-empty` uses `freeuser@individual.example`; `premium-empty` uses `premuser@individual.example`.
 
 ## Validation
 
