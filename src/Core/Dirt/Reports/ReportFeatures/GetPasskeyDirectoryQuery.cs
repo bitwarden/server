@@ -42,7 +42,7 @@ public class GetPasskeyDirectoryQuery(
         var response = await _httpClient.GetAsync(_passkeyDirectoryUrl);
         response.EnsureSuccessStatusCode();
 
-        using var stream = await response.Content.ReadAsStreamAsync();
+        await using var stream = await response.Content.ReadAsStreamAsync();
         var directory = await JsonSerializer.DeserializeAsync<Dictionary<string, JsonElement>>(stream);
 
         if (directory is null)
