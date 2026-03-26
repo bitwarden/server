@@ -43,6 +43,7 @@ using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
@@ -546,7 +547,26 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
+        IdentityResult result;
+
+        if (model.UnlockAndAuthenticationDataExist())
+        {
+            if (model.NewMasterPasswordHash == null || model.Key == null) throw new BadRequestException("Payload is malformed, not enough data to perform reset password.");
+            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+                orgId,
+                targetOrganizationUser,
+                model.NewMasterPasswordHash,
+                model.Key);
+        }
+        else
+        {
+            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+                orgId,
+                targetOrganizationUser,
+                model.MasterPasswordUnlock!.ToData(),
+                model.MasterPasswordAuthentication!.ToData());
+        }
+
         if (result.Succeeded)
         {
             return TypedResults.Ok();

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 
@@ -14,12 +15,14 @@ public interface IMasterPasswordService
     /// If <paramref name="salt"/> is provided it is assigned to <see cref="User.MasterPasswordSalt"/>;
     /// otherwise the field is left unchanged.
     /// </remarks>
-    void SetInitialMasterPassword(User user, string masterPasswordHash, string key, KdfSettings kdf, string? salt = null);
+    Task<IdentityResult> SetInitialMasterPassword(User user, string masterPasswordHash, string key, KdfSettings kdf,
+        string? salt = null, bool validatePassword = true, bool refreshStamp = true);
 
     /// <summary>
     /// Mutates the user entity and persists the result via <see cref="ISetInitialMasterPasswordStateCommand"/>.
     /// </summary>
-    Task SetInitialMasterPasswordAsync(User user, string masterPasswordHash, string key, KdfSettings kdf, string? salt = null);
+    Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPasswordHash, string key, KdfSettings kdf,
+        string? salt = null, bool validatePassword = true, bool refreshStamp = true);
 
     /// <summary>
     /// Mutates the user entity in-memory to update an existing master password.
@@ -32,10 +35,12 @@ public interface IMasterPasswordService
     /// If <paramref name="salt"/> is provided it is assigned to <see cref="User.MasterPasswordSalt"/>;
     /// otherwise the field is left unchanged.
     /// </remarks>
-    void UpdateMasterPassword(User user, string masterPasswordHash, string key, KdfSettings kdf, string? salt = null);
+    Task<IdentityResult> UpdateMasterPassword(User user, string masterPasswordHash, string key, KdfSettings kdf,
+        string? salt = null, bool validatePassword = true, bool refreshStamp = true);
 
     /// <summary>
     /// Mutates the user entity and persists the result via <see cref="IUpdateMasterPasswordStateCommand"/>.
     /// </summary>
-    Task UpdateMasterPasswordAsync(User user, string masterPasswordHash, string key, KdfSettings kdf, string? salt = null);
+    Task<IdentityResult> UpdateMasterPasswordAsync(User user, string masterPasswordHash, string key, KdfSettings kdf,
+        string? salt = null, bool validatePassword = true, bool refreshStamp = true);
 }

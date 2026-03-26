@@ -4,9 +4,11 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -14,7 +16,6 @@ using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
@@ -25,7 +26,7 @@ public class AdminRecoverAccountCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccountAsync_Success(
+    public async Task RecoverAccountAsync_UserHasMasterPassword_CallsUpdate(
         string newMasterPassword,
         string key,
         Organization organization,
@@ -38,15 +39,63 @@ public class AdminRecoverAccountCommandTests
         SetupValidOrganization(sutProvider, organization);
         SetupValidPolicy(sutProvider, organization, policy);
         SetupValidOrganizationUser(organizationUser, organization.Id);
-        SetupValidUser(sutProvider, user, organizationUser);
-        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+        SetupValidUser(sutProvider, user, organizationUser, hasMasterPassword: true);
 
         // Act
         var result = await sutProvider.Sut.RecoverAccountAsync(organization.Id, organizationUser, newMasterPassword, key);
 
         // Assert
         Assert.True(result.Succeeded);
-        await AssertSuccessAsync(sutProvider, user, key, organization, organizationUser);
+        sutProvider.GetDependency<IMasterPasswordService>().Received(1)
+            .UpdateMasterPassword(
+                Arg.Is<User>(u => u.ForcePasswordReset),
+                newMasterPassword,
+                key,
+                Arg.Is<KdfSettings>(k =>
+                    k.KdfType == user.Kdf &&
+                    k.Iterations == user.KdfIterations &&
+                    k.Memory == user.KdfMemory &&
+                    k.Parallelism == user.KdfParallelism));
+        sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
+            .SetInitialMasterPassword(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<KdfSettings>(), Arg.Any<string>());
+        await AssertCommonSuccessSideEffectsAsync(sutProvider, user, organization, organizationUser);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_UserHasNoMasterPassword_CallsSetInitial(
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        OrganizationUser organizationUser,
+        User user,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupValidOrganization(sutProvider, organization);
+        SetupValidPolicy(sutProvider, organization, policy);
+        SetupValidOrganizationUser(organizationUser, organization.Id);
+        SetupValidUser(sutProvider, user, organizationUser, hasMasterPassword: false);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(organization.Id, organizationUser, newMasterPassword, key);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        sutProvider.GetDependency<IMasterPasswordService>().Received(1)
+            .SetInitialMasterPassword(
+                Arg.Is<User>(u => u.ForcePasswordReset),
+                newMasterPassword,
+                key,
+                Arg.Is<KdfSettings>(k =>
+                    k.KdfType == user.Kdf &&
+                    k.Iterations == user.KdfIterations &&
+                    k.Memory == user.KdfMemory &&
+                    k.Parallelism == user.KdfParallelism));
+        sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
+            .UpdateMasterPassword(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<KdfSettings>(), Arg.Any<string>());
+        await AssertCommonSuccessSideEffectsAsync(sutProvider, user, organization, organizationUser);
     }
 
     [Theory]
@@ -261,32 +310,23 @@ public class AdminRecoverAccountCommandTests
         organizationUser.Type = OrganizationUserType.User;
     }
 
-    private static void SetupValidUser(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, OrganizationUser organizationUser)
+    private static void SetupValidUser(SutProvider<AdminRecoverAccountCommand> sutProvider, User user,
+        OrganizationUser organizationUser, bool hasMasterPassword)
     {
         user.Id = organizationUser.UserId!.Value;
         user.UsesKeyConnector = false;
+        user.MasterPassword = hasMasterPassword ? "existing-hash" : null;
+        user.Key = hasMasterPassword ? user.Key : null;
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(user.Id)
             .Returns(user);
     }
 
-    private static void SetupSuccessfulPasswordUpdate(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string newMasterPassword)
-    {
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(user, newMasterPassword)
-            .Returns(IdentityResult.Success);
-    }
-
-    private static async Task AssertSuccessAsync(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string key,
-        Organization organization, OrganizationUser organizationUser)
+    private static async Task AssertCommonSuccessSideEffectsAsync(SutProvider<AdminRecoverAccountCommand> sutProvider,
+        User user, Organization organization, OrganizationUser organizationUser)
     {
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<User>(u =>
-                u.Id == user.Id &&
-                u.Key == key &&
-                u.ForcePasswordReset == true &&
-                u.RevisionDate == u.AccountRevisionDate &&
-                u.LastPasswordChangeDate == u.RevisionDate));
+            Arg.Is<User>(u => u.Id == user.Id && u.ForcePasswordReset));
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendAdminResetPasswordEmailAsync(
             Arg.Is(user.Email),

@@ -1,15 +1,19 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Models.Request.Organizations;
 
 public class OrganizationUserResetPasswordRequestModel
 {
-    [Required]
     [StringLength(300)]
-    public string NewMasterPasswordHash { get; set; }
-    [Required]
-    public string Key { get; set; }
+    public string? NewMasterPasswordHash { get; set; }
+    public string? Key { get; set; }
+
+    public MasterPasswordAuthenticationDataRequestModel? MasterPasswordAuthentication { get; set; }
+    public MasterPasswordUnlockDataRequestModel? MasterPasswordUnlock { get; set; }
+
+    public bool UnlockAndAuthenticationDataExist()
+    {
+        return MasterPasswordAuthentication is not null && MasterPasswordUnlock is not null;
+    }
 }
