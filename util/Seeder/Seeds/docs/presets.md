@@ -78,12 +78,12 @@ dotnet run -- seed --preset individual.{name} --mangle
 
 | Preset        | Account Type | Folders                              | Ciphers                      | Assignments              |
 | ------------- | ------------ | ------------------------------------ | ---------------------------- | ------------------------ |
-| free-empty    | Free         | —                                    | —                            | —                        |
-| premium-empty | Premium (1GB)| —                                    | —                            | —                        |
+| free          | Free         | —                                    | 0                            | —                        |
+| premium       | Premium (1GB)| —                                    | 0                            | —                        |
 
-`free-empty` and `premium-empty` create accounts with no vault data — useful for testing account setup flows.
+`free` and `premium` create accounts with no vault data — useful for testing account setup flows. Cipher count is set to 0 (TBD).
 
-**Login emails:** `free-empty` uses `freeuser@individual.example`; `premium-empty` uses `premuser@individual.example`.
+**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`.
 
 ## Validation
 

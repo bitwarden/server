@@ -129,7 +129,7 @@
         },
         "count": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 0,
           "description": "Number of random ciphers to generate."
         },
         "assignFolders": {

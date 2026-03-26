@@ -226,10 +226,10 @@ public static class RecipeBuilderExtensions
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
     public static RecipeBuilder AddNamedFolders(this RecipeBuilder builder, List<string> folderNames)
     {
-        if (!builder.HasIndividualUser && !builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        if (!builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
-                "Named folders require users. Call CreateIndividualUser() or UseRoster() first.");
+                "Named folders require an individual user. Call CreateIndividualUser() first.");
         }
 
         builder.HasNamedFolders = true;
@@ -427,7 +427,7 @@ public static class RecipeBuilderExtensions
         if (!builder.HasOrg && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
-                "Organization is required. Call UseOrganization() or CreateOrganization().");
+                "Organization or individual user is required. Call UseOrganization(), CreateOrganization(), or CreateIndividualUser().");
         }
 
         if (!builder.HasOwner && !builder.HasRosterOwner)

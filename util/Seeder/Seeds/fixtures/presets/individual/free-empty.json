@@ -1,4 +1,0 @@
-{
-  "$schema": "../../../schemas/preset.schema.json",
-  "user": { "email": "freeuser@individual.example", "premium": false, "maxStorageGb": 0 }
-}

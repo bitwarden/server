@@ -44,6 +44,7 @@ Need to create test data?
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
 - **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
 
 **Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
 
@@ -100,13 +101,14 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 Recipes follow strict rules:
 
-1. A Recipe SHALL have exactly one public method named `Seed()`
-2. A Recipe MUST produce one cohesive result
-3. A Recipe MAY have overloaded `Seed()` methods with different parameters
-4. A Recipe SHALL use private helper methods for internal steps
-5. A Recipe SHALL use BulkCopy for performance when creating multiple entities
-6. A Recipe SHALL compose Factories for individual entity creation
-7. A Recipe SHALL NOT expose implementation details as public methods
+1. A Recipe SHALL accept `SeederDependencies` as its single constructor parameter
+2. A Recipe SHALL have exactly one public method named `Seed()`
+3. A Recipe MUST produce one cohesive result
+4. A Recipe MAY have overloaded `Seed()` methods with different parameters
+5. A Recipe SHALL use private helper methods for internal steps
+6. A Recipe SHALL use BulkCopy for performance when creating multiple entities
+7. A Recipe SHALL compose Factories for individual entity creation
+8. A Recipe SHALL NOT expose implementation details as public methods
 
 ## Zero-Knowledge Architecture
 

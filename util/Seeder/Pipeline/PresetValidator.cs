@@ -26,7 +26,19 @@ internal static class PresetValidator
 
         if (hasUser)
         {
+            ValidateIndividualFields(preset, presetName);
             ValidateNoOrganizationFields(preset, presetName);
+        }
+    }
+
+    private static void ValidateIndividualFields(Models.SeedPreset preset, string presetName)
+    {
+        var email = preset.User!.Email;
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has an invalid user email: '{email}'. " +
+                "Expected format: 'name@domain'.");
         }
     }
 

@@ -1,12 +1,8 @@
-﻿using AutoMapper;
-using Bit.Core.Entities;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Seeder.Recipes;
+﻿using Bit.Seeder.Recipes;
 using Bit.Seeder.Services;
 using Bit.SeederUtility.Configuration;
+using Bit.SeederUtility.Helpers;
 using CommandDotNet;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SeederUtility.Commands;
 
@@ -44,19 +40,8 @@ public class SeedCommand
 
     private static void SeedOrganization(SeedArgs args)
     {
-        var services = new ServiceCollection();
-        ServiceCollectionExtension.ConfigureServices(services, enableMangling: args.Mangle);
-        var serviceProvider = services.BuildServiceProvider();
-
-        using var scope = serviceProvider.CreateScope();
-        var scopedServices = scope.ServiceProvider;
-
-        var db = scopedServices.GetRequiredService<DatabaseContext>();
-        var mapper = scopedServices.GetRequiredService<IMapper>();
-        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
-        var manglerService = scopedServices.GetRequiredService<IManglerService>();
-
-        var recipe = new OrganizationRecipe(db, mapper, passwordHasher, manglerService);
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        var recipe = new OrganizationRecipe(deps.ToDependencies());
 
         Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
         var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
@@ -87,22 +72,14 @@ public class SeedCommand
         {
             Console.WriteLine($"Created {result.CiphersCount} ciphers");
         }
+
+        ConsoleOutput.PrintMangleMap(deps);
     }
 
     private static void SeedIndividual(SeedArgs args)
     {
-        var services = new ServiceCollection();
-        ServiceCollectionExtension.ConfigureServices(services, enableMangling: args.Mangle);
-        var serviceProvider = services.BuildServiceProvider();
-
-        using var scope = serviceProvider.CreateScope();
-        var scopedServices = scope.ServiceProvider;
-
-        var recipe = new IndividualUserRecipe(
-            scopedServices.GetRequiredService<DatabaseContext>(),
-            scopedServices.GetRequiredService<IMapper>(),
-            scopedServices.GetRequiredService<IPasswordHasher<User>>(),
-            scopedServices.GetRequiredService<IManglerService>());
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        var recipe = new IndividualUserRecipe(deps.ToDependencies());
 
         Console.WriteLine($"Seeding individual user from preset '{args.Preset}'...");
         var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
@@ -125,11 +102,13 @@ public class SeedCommand
         {
             Console.WriteLine($"Created {result.CiphersCount} ciphers");
         }
+
+        ConsoleOutput.PrintMangleMap(deps);
     }
 
     private static void PrintAvailableSeeds()
     {
-        var available = OrganizationRecipe.ListAvailable();
+        var available = PresetCatalogService.ListAvailable();
 
         var orgPresets = new List<string>();
         var individualPresets = new List<string>();
@@ -182,5 +161,5 @@ public class SeedCommand
     }
 
     private static bool IsIndividualPreset(string presetName) =>
-        presetName.StartsWith("individual.", StringComparison.OrdinalIgnoreCase);
+        PresetCatalogService.IsIndividualPreset(presetName);
 }
