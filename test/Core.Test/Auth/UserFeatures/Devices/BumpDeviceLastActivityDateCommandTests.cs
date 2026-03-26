@@ -51,7 +51,7 @@ public class BumpDeviceLastActivityDateCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task BumpByIdentifierAsync_GivenCacheHit_DoesNotCallRepository(
+    public async Task BumpByIdentifierAndUserIdAsync_GivenCacheHit_DoesNotCallRepository(
         SutProvider<BumpDeviceLastActivityDateCommand> sutProvider,
         string identifier,
         Guid userId)
@@ -60,18 +60,18 @@ public class BumpDeviceLastActivityDateCommandTests
             .HasBeenBumpedTodayAsync(userId, identifier)
             .Returns(true);
 
-        await sutProvider.Sut.BumpByIdentifierAsync(identifier, userId);
+        await sutProvider.Sut.BumpByIdentifierAndUserIdAsync(identifier, userId);
 
         await sutProvider.GetDependency<IDeviceRepository>()
             .DidNotReceive()
-            .BumpLastActivityDateByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpLastActivityDateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
         await sutProvider.GetDependency<IDeviceLastActivityCacheService>()
             .DidNotReceive()
             .RecordBumpAsync(Arg.Any<Guid>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
-    public async Task BumpByIdentifierAsync_GivenCacheMiss_CallsRepositoryAndRecordsCache(
+    public async Task BumpByIdentifierAndUserIdAsync_GivenCacheMiss_CallsRepositoryAndRecordsCache(
         SutProvider<BumpDeviceLastActivityDateCommand> sutProvider,
         string identifier,
         Guid userId)
@@ -80,11 +80,11 @@ public class BumpDeviceLastActivityDateCommandTests
             .HasBeenBumpedTodayAsync(userId, identifier)
             .Returns(false);
 
-        await sutProvider.Sut.BumpByIdentifierAsync(identifier, userId);
+        await sutProvider.Sut.BumpByIdentifierAndUserIdAsync(identifier, userId);
 
         await sutProvider.GetDependency<IDeviceRepository>()
             .Received(1)
-            .BumpLastActivityDateByIdentifierAsync(identifier, userId);
+            .BumpLastActivityDateByIdentifierAndUserIdAsync(identifier, userId);
         await sutProvider.GetDependency<IDeviceLastActivityCacheService>()
             .Received(1)
             .RecordBumpAsync(userId, identifier);

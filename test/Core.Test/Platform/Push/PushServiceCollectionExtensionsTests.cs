@@ -195,6 +195,6 @@ public class PushServiceCollectionExtensionsTests
         public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices) => throw new NotImplementedException();
         public Task UpsertAsync(Device obj) => throw new NotImplementedException();
         public Task BumpLastActivityDateByIdAsync(Guid deviceId) => throw new NotImplementedException();
-        public Task BumpLastActivityDateByIdentifierAsync(string identifier, Guid userId) => throw new NotImplementedException();
+        public Task BumpLastActivityDateByIdentifierAndUserIdAsync(string identifier, Guid userId) => throw new NotImplementedException();
     }
 }

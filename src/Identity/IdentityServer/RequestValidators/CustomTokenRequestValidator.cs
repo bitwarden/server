@@ -219,7 +219,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 return;
             }
 
-            await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAsync(identifier, userId);
+            await _bumpDeviceLastActivityDateCommand.BumpByIdentifierAndUserIdAsync(identifier, userId);
         }
         catch (Exception e)
         {

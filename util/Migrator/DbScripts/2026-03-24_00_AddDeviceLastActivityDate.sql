@@ -132,7 +132,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[Device_BumpLastActivityDateByIdentifier]
+CREATE OR ALTER PROCEDURE [dbo].[Device_BumpLastActivityDateByIdentifierAndUserId]
     @Identifier NVARCHAR(50),
     @UserId UNIQUEIDENTIFIER
 AS

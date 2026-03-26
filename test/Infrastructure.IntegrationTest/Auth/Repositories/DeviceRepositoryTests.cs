@@ -48,7 +48,7 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpLastActivityDateByIdentifierAsync_SetsLastActivityDate(
+    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync_SetsLastActivityDate(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -71,7 +71,7 @@ public class DeviceRepositoryTests
         });
 
         // Act
-        await sutRepository.BumpLastActivityDateByIdentifierAsync(device.Identifier, user.Id);
+        await sutRepository.BumpLastActivityDateByIdentifierAndUserIdAsync(device.Identifier, user.Id);
 
         // Assert
         var after = await sutRepository.GetByIdAsync(device.Id);
@@ -80,7 +80,7 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task BumpLastActivityDateByIdentifierAsync_DoesNotBumpOtherUsersDevice(
+    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync_DoesNotBumpOtherUsersDevice(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
@@ -124,7 +124,7 @@ public class DeviceRepositoryTests
         var beforeB = (await sutRepository.GetByIdAsync(deviceB.Id))!.LastActivityDate;
 
         // Act — bump only userA's device
-        await sutRepository.BumpLastActivityDateByIdentifierAsync(sharedIdentifier, userA.Id);
+        await sutRepository.BumpLastActivityDateByIdentifierAndUserIdAsync(sharedIdentifier, userA.Id);
 
         // Assert — userA's device is bumped, userB's is unchanged
         var afterA = await sutRepository.GetByIdAsync(deviceA.Id);

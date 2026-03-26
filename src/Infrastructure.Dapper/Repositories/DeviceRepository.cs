@@ -119,12 +119,12 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
-    public async Task BumpLastActivityDateByIdentifierAsync(string identifier, Guid userId)
+    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync(string identifier, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_BumpLastActivityDateByIdentifier]",
+                $"[{Schema}].[{Table}_BumpLastActivityDateByIdentifierAndUserId]",
                 new { Identifier = identifier, UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }

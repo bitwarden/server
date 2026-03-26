@@ -115,7 +115,7 @@ public class CustomTokenRequestValidatorTests
         Assert.False(context.Result.IsError);
         await _bumpDeviceLastActivityDateCommand
             .DidNotReceive()
-            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
@@ -140,7 +140,7 @@ public class CustomTokenRequestValidatorTests
         Assert.False(context.Result.IsError);
         await _bumpDeviceLastActivityDateCommand
             .DidNotReceive()
-            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
@@ -166,7 +166,7 @@ public class CustomTokenRequestValidatorTests
         Assert.False(context.Result.IsError);
         await _bumpDeviceLastActivityDateCommand
             .DidNotReceive()
-            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 
     // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
@@ -188,7 +188,7 @@ public class CustomTokenRequestValidatorTests
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
         _bumpDeviceLastActivityDateCommand
-            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>())
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>())
             .Returns<Task>(_ => throw new Exception("Transient failure"));
 
         // Act
@@ -230,7 +230,7 @@ public class CustomTokenRequestValidatorTests
         Assert.False(context.Result.IsError);
         await _bumpDeviceLastActivityDateCommand
             .Received(1)
-            .BumpByIdentifierAsync(deviceIdentifier, userId);
+            .BumpByIdentifierAndUserIdAsync(deviceIdentifier, userId);
     }
 
     // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
@@ -256,6 +256,6 @@ public class CustomTokenRequestValidatorTests
         Assert.False(context.Result.IsError);
         await _bumpDeviceLastActivityDateCommand
             .DidNotReceive()
-            .BumpByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>());
+            .BumpByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>());
     }
 }

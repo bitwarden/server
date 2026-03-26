@@ -11,6 +11,6 @@ public interface IBumpDeviceLastActivityDateCommand
     /// <summary>Bumps the device's <c>LastActivityDate</c> by its <c>Id</c>, using the resolved <see cref="Device"/> object.</summary>
     Task BumpAsync(Device device);
 
-    /// <summary>Bumps the device's <c>LastActivityDate</c> by <c>identifier</c> when the device <c>Id</c> is not available.</summary>
-    Task BumpByIdentifierAsync(string identifier, Guid userId);
+    /// <summary>Bumps the device's <c>LastActivityDate</c> by <c>identifier</c> and <c>userId</c> when the device <c>Id</c> is not available.</summary>
+    Task BumpByIdentifierAndUserIdAsync(string identifier, Guid userId);
 }

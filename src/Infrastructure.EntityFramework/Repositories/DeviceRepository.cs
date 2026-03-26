@@ -130,7 +130,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             .ExecuteUpdateAsync(s => s.SetProperty(d => d.LastActivityDate, now));
     }
 
-    public async Task BumpLastActivityDateByIdentifierAsync(string identifier, Guid userId)
+    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync(string identifier, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -139,7 +139,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         // is on (UserId, Identifier)). Both are required for correctness and to hit the right index.
         //
         // Only update if LastActivityDate has never been set or was last set on a prior calendar day.
-        // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateByIdentifier stored procedure
+        // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateByIdentifierAndUserId stored procedure
         // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
         // Product only requires day-level granularity (today / this week / last week / etc.).
         var now = DateTime.UtcNow;

@@ -28,14 +28,14 @@ public class BumpDeviceLastActivityDateCommand : IBumpDeviceLastActivityDateComm
         await _lastActivityCache.RecordBumpAsync(device.UserId, device.Identifier);
     }
 
-    public async Task BumpByIdentifierAsync(string identifier, Guid userId)
+    public async Task BumpByIdentifierAndUserIdAsync(string identifier, Guid userId)
     {
         if (await _lastActivityCache.HasBeenBumpedTodayAsync(userId, identifier))
         {
             return;
         }
 
-        await _deviceRepository.BumpLastActivityDateByIdentifierAsync(identifier, userId);
+        await _deviceRepository.BumpLastActivityDateByIdentifierAndUserIdAsync(identifier, userId);
         await _lastActivityCache.RecordBumpAsync(userId, identifier);
     }
 }
