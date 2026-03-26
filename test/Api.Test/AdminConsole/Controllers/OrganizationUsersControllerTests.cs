@@ -337,7 +337,8 @@ public class OrganizationUsersControllerTests
                 ou.KdfMemory == r.KdfMemory &&
                 ou.KdfParallelism == r.KdfParallelism &&
                 ou.ResetPasswordKey == r.ResetPasswordKey &&
-                ou.EncryptedPrivateKey == r.EncryptedPrivateKey)));
+                ou.EncryptedPrivateKey == r.EncryptedPrivateKey &&
+                ou.MasterPasswordSalt == r.MasterPasswordSalt)));
     }
 
     [Theory]
@@ -404,6 +405,7 @@ public class OrganizationUsersControllerTests
         Assert.Equal(user.Kdf, response.Kdf);
         Assert.Equal(user.KdfIterations, response.KdfIterations);
         Assert.Equal(org.PrivateKey, response.EncryptedPrivateKey);
+        Assert.Equal(user.MasterPasswordSalt, response.MasterPasswordSalt);
     }
 
     [Theory]
