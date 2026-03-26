@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -241,6 +242,38 @@ public class PolicyServiceTests
 
         // Assert
         Assert.Null(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_OnlyFetchesAbilitiesForFilteredOrgs(
+        Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        var includedOrgId = Guid.NewGuid();
+        var excludedOrgId = Guid.NewGuid(); // filtered out because IsProvider = true
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.DisableSend)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = includedOrgId, PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
+                new() { OrganizationId = excludedOrgId, PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
+            });
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { includedOrgId, new OrganizationAbility { Id = includedOrgId, UsePolicies = true } }
+            });
+
+        await sutProvider.Sut.GetPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserStatusType.Invited);
+
+        // Assert - only the non-provider org ID should be requested
+        await sutProvider.GetDependency<IApplicationCacheService>()
+            .Received(1)
+            .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(includedOrgId) &&
+                !ids.Contains(excludedOrgId)));
     }
 
     private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
