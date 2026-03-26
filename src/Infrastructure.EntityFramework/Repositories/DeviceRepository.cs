@@ -120,7 +120,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         var dbContext = GetDatabaseContext(scope);
 
         // Only update if LastActivityDate has never been set or was last set on a prior calendar day.
-        // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateById stored procedure
+        // This mirrors the CAST AS DATE guard in the MSSQL Device_UpdateLastActivityDateById stored procedure
         // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
         // Product only requires day-level granularity (today / this week / last week / etc.).
         var now = DateTime.UtcNow;
@@ -139,7 +139,7 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         // is on (UserId, Identifier)). Both are required for correctness and to hit the right index.
         //
         // Only update if LastActivityDate has never been set or was last set on a prior calendar day.
-        // This mirrors the CAST AS DATE guard in the MSSQL Device_BumpLastActivityDateByIdentifierAndUserId stored procedure
+        // This mirrors the CAST AS DATE guard in the MSSQL Device_UpdateLastActivityDateByIdentifierUserId stored procedure
         // and acts as a fallback against redundant writes if the application-layer cache is unavailable.
         // Product only requires day-level granularity (today / this week / last week / etc.).
         var now = DateTime.UtcNow;

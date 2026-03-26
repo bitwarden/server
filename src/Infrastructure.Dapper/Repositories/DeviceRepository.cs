@@ -113,7 +113,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_BumpLastActivityDateById]",
+                $"[{Schema}].[{Table}_UpdateLastActivityDateById]",
                 new { Id = deviceId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -124,7 +124,7 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_BumpLastActivityDateByIdentifierAndUserId]",
+                $"[{Schema}].[{Table}_UpdateLastActivityDateByIdentifierUserId]",
                 new { Identifier = identifier, UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }

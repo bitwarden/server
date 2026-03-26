@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Device_BumpLastActivityDateByIdentifierAndUserId]
+CREATE PROCEDURE [dbo].[Device_UpdateLastActivityDateByIdentifierUserId]
     @Identifier NVARCHAR(50),
     @UserId UNIQUEIDENTIFIER
 AS
