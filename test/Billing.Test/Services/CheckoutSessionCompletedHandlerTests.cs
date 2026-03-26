@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Stripe.Checkout;
 using Xunit;
@@ -280,5 +281,80 @@ public class CheckoutSessionCompletedHandlerTests
 
         Assert.Equal(existingLicenseKey, user.LicenseKey);
         await _userRepository.Received(1).ReplaceAsync(user);
+    }
+
+    [Fact]
+    public async Task HandleAsync_UserAlreadyPremium_LogsErrorAndReturns()
+    {
+        var subscription = new Subscription
+        {
+            Id = _subscriptionId,
+            Metadata = []
+        };
+
+        _stripeEventService
+            .GetCheckoutSession(_mockEvent, true, Arg.Any<List<string>?>())
+            .Returns(new Session
+            {
+                Id = _sessionId,
+                CustomerId = _customerId,
+                SubscriptionId = _subscriptionId,
+                Subscription = subscription
+            });
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(new User { Id = _userId, Premium = true });
+
+        await _sut.HandleAsync(_mockEvent);
+
+        await _userRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(null!);
+        await _pushNotificationAdapter.DidNotReceiveWithAnyArgs().NotifyPremiumStatusChangedAsync(null!);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateCustomerAsync(null!, null!);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(null!, null!);
+    }
+
+    [Fact]
+    public async Task HandleAsync_UpdateCustomerAsyncThrows_PropagatesException()
+    {
+        var subscription = new Subscription
+        {
+            Id = _subscriptionId,
+            Metadata = [],
+            DefaultPaymentMethodId = _paymentMethodId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = _premiumSeatPriceId },
+                        CurrentPeriodEnd = DateTime.UtcNow.AddYears(1)
+                    }
+                ]
+            }
+        };
+
+        _stripeEventService
+            .GetCheckoutSession(_mockEvent, true, Arg.Any<List<string>?>())
+            .Returns(new Session
+            {
+                Id = _sessionId,
+                CustomerId = _customerId,
+                SubscriptionId = _subscriptionId,
+                Subscription = subscription
+            });
+        _stripeEventUtilityService.GetIdsFromMetadata(Arg.Any<Dictionary<string, string>>())
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(new User { Id = _userId });
+        _pricingClient.GetAvailablePremiumPlan().Returns(_premiumPlan);
+        _stripeAdapter
+            .UpdateCustomerAsync(_customerId, Arg.Any<CustomerUpdateOptions>())
+            .ThrowsAsync(new StripeException("Stripe API unavailable"));
+
+        await Assert.ThrowsAsync<StripeException>(() => _sut.HandleAsync(_mockEvent));
+
+        // User is saved before UpdateDefaultPaymentMethodAsync is called
+        await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(null!, null!);
     }
 }

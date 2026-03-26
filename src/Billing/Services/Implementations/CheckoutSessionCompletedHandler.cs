@@ -43,6 +43,12 @@ public class CheckoutSessionCompletedHandler(
             return;
         }
 
+        if (user.Premium)
+        {
+            logger.LogError("User {UserId} is already premium for subscription {SubscriptionId}", user.Id, subscription.Id);
+            return;
+        }
+
         var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
         // if the subscription does not contain the premium seat, this is not a premium subscription upgrade
