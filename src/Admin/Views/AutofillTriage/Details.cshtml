@@ -1,0 +1,123 @@
+@using System.Text.Json
+@using Bit.Admin.Models
+@model Bit.Core.Entities.AutofillTriageReport
+@{
+    ViewData["Title"] = "Autofill Triage Report";
+    var fields = new List<AutofillTriageFieldResultModel>();
+    try
+    {
+        fields = JsonSerializer.Deserialize<List<AutofillTriageFieldResultModel>>(Model.ReportData,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+    }
+    catch { }
+}
+
+<h1>Autofill Triage Report</h1>
+<a asp-action="Index" class="btn btn-secondary mb-3">&larr; Back to list</a>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Created At</dt>
+            <dd class="col-sm-9">@Model.CreationDate.ToString("f")</dd>
+
+            <dt class="col-sm-3">Page URL</dt>
+            <dd class="col-sm-9">
+                <a href="@Model.PageUrl" target="_blank" rel="noreferrer noopener">@Model.PageUrl</a>
+            </dd>
+
+            @if (Model.TargetElementRef != null)
+            {
+                <dt class="col-sm-3">Targeted Field</dt>
+                <dd class="col-sm-9">
+                    <strong class="text-primary">@Model.TargetElementRef</strong>
+                    <small class="text-muted">(field the user right-clicked)</small>
+                </dd>
+            }
+
+            <dt class="col-sm-3">User Message</dt>
+            <dd class="col-sm-9">@(Model.UserMessage ?? "(none)")</dd>
+        </dl>
+    </div>
+</div>
+
+<h2>Field Analysis (@fields.Count fields)</h2>
+
+@foreach (var field in fields)
+{
+    var fieldLabel = field.HtmlId ?? field.HtmlName ?? "(unnamed)";
+    <div class="card mb-3 @(field.HtmlId == Model.TargetElementRef || field.HtmlName == Model.TargetElementRef ? "border-primary" : "")">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>@fieldLabel</strong>
+            @if (field.Eligible)
+            {
+                <span class="badge bg-success">@field.QualifiedAs</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">@field.QualifiedAs</span>
+            }
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                @if (field.HtmlId != null)
+                {
+                    <dt class="col-sm-3">ID</dt>
+                    <dd class="col-sm-9"><code>@field.HtmlId</code></dd>
+                }
+                @if (field.HtmlName != null)
+                {
+                    <dt class="col-sm-3">Name</dt>
+                    <dd class="col-sm-9"><code>@field.HtmlName</code></dd>
+                }
+                @if (field.HtmlType != null)
+                {
+                    <dt class="col-sm-3">Type</dt>
+                    <dd class="col-sm-9"><code>@field.HtmlType</code></dd>
+                }
+                @if (field.Placeholder != null)
+                {
+                    <dt class="col-sm-3">Placeholder</dt>
+                    <dd class="col-sm-9">@field.Placeholder</dd>
+                }
+                @if (field.AriaLabel != null)
+                {
+                    <dt class="col-sm-3">ARIA Label</dt>
+                    <dd class="col-sm-9">@field.AriaLabel</dd>
+                }
+                @if (field.Autocomplete != null)
+                {
+                    <dt class="col-sm-3">Autocomplete</dt>
+                    <dd class="col-sm-9"><code>@field.Autocomplete</code></dd>
+                }
+                @if (field.FormIndex != null)
+                {
+                    <dt class="col-sm-3">Form Index</dt>
+                    <dd class="col-sm-9">@field.FormIndex</dd>
+                }
+            </dl>
+
+            @if (field.Conditions.Any())
+            {
+                <hr />
+                <h6>Conditions</h6>
+                <ul class="list-unstyled mb-0">
+                    @foreach (var condition in field.Conditions)
+                    {
+                        <li>
+                            @if (condition.Passed)
+                            {
+                                <i class="fa fa-check text-success" aria-hidden="true"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-times text-secondary" aria-hidden="true"></i>
+                            }
+                            @condition.Description
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+}

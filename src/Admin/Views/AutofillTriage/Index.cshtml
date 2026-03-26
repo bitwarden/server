@@ -1,0 +1,102 @@
+@using System.Text.Json
+@model AutofillTriageModel
+@{
+    ViewData["Title"] = "Autofill Triage";
+}
+
+<h1>Autofill Triage Reports</h1>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Created At</th>
+                <th>Page URL</th>
+                <th>Target Field</th>
+                <th>User Message</th>
+                <th>Field Count</th>
+                <th>Archive</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Items.Any())
+            {
+                <tr>
+                    <td colspan="6">No reports to show.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model.Items)
+                {
+                    var fieldCount = 0;
+                    try { fieldCount = JsonDocument.Parse(item.ReportData).RootElement.GetArrayLength(); } catch { }
+                    var truncatedUrl = item.PageUrl.Length > 80 ? item.PageUrl.Substring(0, 80) + "..." : item.PageUrl;
+                    var truncatedMessage = item.UserMessage != null && item.UserMessage.Length > 60
+                        ? item.UserMessage.Substring(0, 60) + "..."
+                        : item.UserMessage;
+                    <tr>
+                        <td>
+                            <span title="@item.CreationDate.ToString()">
+                                @item.CreationDate.ToString("g")
+                            </span>
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.Id" title="@item.PageUrl">
+                                @truncatedUrl
+                            </a>
+                        </td>
+                        <td>@(item.TargetElementRef ?? "—")</td>
+                        <td title="@item.UserMessage">@(truncatedMessage ?? "—")</td>
+                        <td>@fieldCount</td>
+                        <td>
+                            <form method="post" asp-action="Archive" asp-route-id="@item.Id" style="display:inline">
+                                <button type="submit"
+                                        class="btn btn-sm btn-warning"
+                                        onclick="return confirm('Archive this report?')">
+                                    Archive
+                                </button>
+                                @Html.AntiForgeryToken()
+                            </form>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<nav>
+    <ul class="pagination">
+        @if (Model.PreviousPage.HasValue)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-page="@Model.PreviousPage.Value"
+                   asp-route-count="@Model.Count">
+                    Previous
+                </a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Previous</a>
+            </li>
+        }
+        @if (Model.NextPage.HasValue)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-page="@Model.NextPage.Value"
+                   asp-route-count="@Model.Count">
+                    Next
+                </a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Next</a>
+            </li>
+        }
+    </ul>
+</nav>
