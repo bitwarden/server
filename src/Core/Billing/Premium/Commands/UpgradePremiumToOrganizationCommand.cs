@@ -139,13 +139,16 @@ public class UpgradePremiumToOrganizationCommand(
                 TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country),
             });
 
-        await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions);
-
         // Add tax ID to the customer for accurate tax calculation if provided
         if (billingAddress.TaxId != null)
         {
             await AddTaxIdToCustomerAsync(user.GatewayCustomerId!, billingAddress.TaxId);
         }
+
+        // Release any scheduled price increase before updating subscription
+        await priceIncreaseScheduler.Release(user.GatewayCustomerId, currentSubscription.Id);
+
+        await UpdateSubscriptionAsync(currentSubscription.Id, organizationId, customer, subscriptionItemOptions);
 
         var organizationUser = await SaveOrganizationAsync(organization, user, key);
 
@@ -308,11 +311,7 @@ public class UpgradePremiumToOrganizationCommand(
         User user,
         string key)
     {
-        await priceIncreaseScheduler.Release(user.GatewayCustomerId, currentSubscription.Id);
 
-        // Update the subscription in Stripe
-        await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
-    }
         // Save the organization
         await organizationRepository.CreateAsync(organization);
 
