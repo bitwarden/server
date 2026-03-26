@@ -10,6 +10,7 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -67,6 +68,7 @@ public class DatabaseContext : DbContext
     public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
     public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
+    public DbSet<Receive> Receives { get; set; }
     public DbSet<Send> Sends { get; set; }
     public DbSet<SsoConfig> SsoConfigs { get; set; }
     public DbSet<SsoUser> SsoUsers { get; set; }
