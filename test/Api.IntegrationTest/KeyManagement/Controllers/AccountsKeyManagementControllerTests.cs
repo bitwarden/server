@@ -840,6 +840,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory = user.KdfMemory;
         request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism = user.KdfParallelism;
         request.AccountUnlockData.MasterPasswordUnlockData.Email = user.Email;
+        request.AccountUnlockData.MasterPasswordUnlockData.MasterPasswordSalt = user.GetMasterPasswordSalt();
         request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
 
         // Unlock data arrays

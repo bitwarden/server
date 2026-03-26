@@ -312,29 +312,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit))
+        var request = new InitPendingOrganizationRequest
         {
-            var request = new InitPendingOrganizationRequest
-            {
-                User = user,
-                OrganizationId = orgId,
-                OrganizationUserId = organizationUserId,
-                OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
-                CollectionName = model.CollectionName,
-                EmailToken = model.Token,
-                EncryptedOrganizationSymmetricKey = model.Key
-            };
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = organizationUserId,
+            OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
+            CollectionName = model.CollectionName,
+            EmailToken = model.Token,
+            EncryptedOrganizationSymmetricKey = model.Key
+        };
 
-            var result = await _initPendingOrganizationCommand.InitPendingOrganizationVNextAsync(request);
+        var result = await _initPendingOrganizationCommand.InitPendingOrganizationAsync(request);
 
-            return Handle(result);
-        }
-
-        await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
-        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
-        await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
-
-        return TypedResults.Ok();
+        return Handle(result);
     }
 
     [HttpPost("{organizationUserId}/accept")]
