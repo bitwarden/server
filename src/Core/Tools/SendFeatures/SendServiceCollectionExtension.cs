@@ -19,4 +19,11 @@ public static class SendServiceCollectionExtension
         services.AddScoped<ISendAuthenticationQuery, SendAuthenticationQuery>();
         services.AddScoped<ISendOwnerQuery, SendOwnerQuery>();
     }
+
+    // TODO: Before transitioning out of POC, this should be extracted into an AddReceiveService class
+    public static void AddReceiveServices(this IServiceCollection services)
+    {
+        services.AddScoped<IReceiveAuthorizationService, ReceiveAuthorizationService>();
+        services.AddScoped<IReceiveValidationService, ReceiveValidationService>();
+    }
 }

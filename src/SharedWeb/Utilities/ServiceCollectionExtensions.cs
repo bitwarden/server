@@ -178,6 +178,7 @@ public static class ServiceCollectionExtensions
         services.AddPlatformServices();
         services.AddImportServices();
         services.AddSendServices();
+        services.AddReceiveServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -354,6 +355,7 @@ public static class ServiceCollectionExtensions
         if (CoreHelpers.SettingHasValue(globalSettings.Send.ConnectionString))
         {
             services.AddSingleton<ISendFileStorageService, AzureSendFileStorageService>();
+            services.AddSingleton<IReceiveFileStorageService, AzureReceiveFileStorageService>();
         }
         else if (CoreHelpers.SettingHasValue(globalSettings.Send.BaseDirectory))
         {
