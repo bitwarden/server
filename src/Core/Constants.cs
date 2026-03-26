@@ -158,10 +158,8 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
-    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
 
@@ -173,7 +171,6 @@ public static class FeatureFlagKeys
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
