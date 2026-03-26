@@ -11,6 +11,7 @@ public class AutofillTriageReportRequestModel
 {
     [Required]
     [MaxLength(1024)]
+    [Url]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public required string PageUrl { get; set; }
 

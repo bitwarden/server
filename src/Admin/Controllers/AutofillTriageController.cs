@@ -31,6 +31,7 @@ public class AutofillTriageController : Controller
         return View(model);
     }
 
+    [RequirePermission(Permission.User_List_View)]
     public async Task<IActionResult> Details(Guid id)
     {
         var report = await _repo.GetByIdAsync(id);
@@ -44,6 +45,7 @@ public class AutofillTriageController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.User_List_View)]
     public async Task<IActionResult> Archive(Guid id)
     {
         await _repo.ArchiveAsync(id);
