@@ -34,6 +34,22 @@ public static class Constants
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
     /// <summary>
+    /// Domain suffixes for Bitwarden cloud-hosted environments.
+    /// </summary>
+    public static readonly string[] BitwardenCloudDomains = ["bitwarden.com", "bitwarden.eu", "bitwarden.pw"];
+
+    /// <summary>
+    /// Server permitted SSO callback redirect URIs for mobile clients.
+    /// </summary>
+    public static readonly string[] BitwardenMobileSsoCallbackUris =
+    [
+        "bitwarden://sso-callback",
+        "https://bitwarden.com/sso-callback",
+        "https://bitwarden.eu/sso-callback",
+        "https://bitwarden.pw/sso-callback",
+    ];
+
+    /// <summary>
     /// Used by IdentityServer to identify our own provider.
     /// </summary>
     public const string IdentityProvider = "bitwarden";
@@ -142,10 +158,8 @@ public static class FeatureFlagKeys
     /* Admin Console Team */
     public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
-    public const string CreateDefaultLocation = "pm-19467-create-default-location";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
-    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
 
@@ -157,10 +171,8 @@ public static class FeatureFlagKeys
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string DisableAlternateLoginMethods = "pm-22110-disable-alternate-login-methods";
     public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
-    public const string MarketingInitiatedPremiumFlow = "pm-26140-marketing-initiated-premium-flow";
     public const string PrefetchPasswordPrelogin = "pm-23801-prefetch-password-prelogin";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
@@ -191,6 +203,7 @@ public static class FeatureFlagKeys
     public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
     public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
     public const string PM32581_UseUpdateOrganizationSubscriptionCommand = "pm-32581-use-update-organization-subscription-command";
+    public const string PM32645_DeferPriceMigrationToRenewal = "pm-32645-defer-price-migration-to-renewal";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
@@ -231,6 +244,7 @@ public static class FeatureFlagKeys
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
+    public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
 
     /* Tools Team */
     /// <summary>

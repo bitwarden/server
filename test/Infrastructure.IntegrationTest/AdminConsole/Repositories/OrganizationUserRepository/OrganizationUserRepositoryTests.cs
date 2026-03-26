@@ -290,7 +290,8 @@ public class OrganizationUserRepositoryTests
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = 1,
             KdfMemory = 2,
-            KdfParallelism = 3
+            KdfParallelism = 3,
+            MasterPasswordSalt = "master-salt1"
         });
 
         var user2 = await userRepository.CreateAsync(new User
@@ -302,7 +303,8 @@ public class OrganizationUserRepositoryTests
             Kdf = KdfType.Argon2id,
             KdfIterations = 4,
             KdfMemory = 5,
-            KdfParallelism = 6
+            KdfParallelism = 6,
+            MasterPasswordSalt = "master-salt2"
         });
 
         var organization = await organizationRepository.CreateAsync(new Organization
@@ -352,7 +354,8 @@ public class OrganizationUserRepositoryTests
             r.KdfMemory == 2 &&
             r.KdfParallelism == 3 &&
             r.ResetPasswordKey == "resetpasswordkey1" &&
-            r.EncryptedPrivateKey == "privatekey");
+            r.EncryptedPrivateKey == "privatekey" &&
+            r.MasterPasswordSalt == "master-salt1");
         Assert.Contains(recoveryDetails, r =>
             r.OrganizationUserId == orgUser2.Id &&
             r.Kdf == KdfType.Argon2id &&
@@ -360,7 +363,8 @@ public class OrganizationUserRepositoryTests
             r.KdfMemory == 5 &&
             r.KdfParallelism == 6 &&
             r.ResetPasswordKey == "resetpasswordkey2" &&
-            r.EncryptedPrivateKey == "privatekey");
+            r.EncryptedPrivateKey == "privatekey" &&
+            r.MasterPasswordSalt == "master-salt2");
     }
 
     [DatabaseTheory, DatabaseData]
