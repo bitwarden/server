@@ -31,12 +31,12 @@ public class ReceiveValidationService : IReceiveValidationService
 
         if (!await _userService.CanAccessPremium(user))
         {
-            throw new BadRequestException("The creator of this Receive does not have a Premium Subscription.");
+            throw new BadRequestException("Error creating receive.");
         }
 
         if (!user.EmailVerified)
         {
-            throw new BadRequestException("The creator of this Receive has not verified their email.");
+            throw new BadRequestException("Error creating receive.");
         }
 
         if (user.Premium)

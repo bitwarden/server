@@ -44,7 +44,7 @@ public class ReceiveValidationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.StorageRemainingForReceiveAsync(receive));
-        Assert.Contains("does not have a Premium Subscription", exception.Message);
+        Assert.Contains("Error creating receive", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -61,7 +61,7 @@ public class ReceiveValidationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.StorageRemainingForReceiveAsync(receive));
-        Assert.Contains("has not verified their email", exception.Message);
+        Assert.Contains("Error creating receive", exception.Message);
     }
 
     [Theory, BitAutoData]
