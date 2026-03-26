@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -56,6 +56,7 @@ public class UpgradePremiumToOrganizationCommand(
     ILogger<UpgradePremiumToOrganizationCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IUserService userService,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
@@ -80,7 +81,7 @@ public class UpgradePremiumToOrganizationCommand(
         BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
-        if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
+        if (user is not { Premium: true, GatewayCustomerId: not null and not "", GatewaySubscriptionId: not null and not "" })
         {
             return new BadRequest("User does not have an active Premium subscription.");
         }
@@ -307,6 +308,11 @@ public class UpgradePremiumToOrganizationCommand(
         User user,
         string key)
     {
+        await priceIncreaseScheduler.Release(user.GatewayCustomerId, currentSubscription.Id);
+
+        // Update the subscription in Stripe
+        await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
+    }
         // Save the organization
         await organizationRepository.CreateAsync(organization);
 
