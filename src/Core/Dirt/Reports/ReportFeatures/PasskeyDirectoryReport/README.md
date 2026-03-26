@@ -4,7 +4,7 @@
 
 The Passkey Directory Report provides a list of domains that support passkeys, sourced from the [2FA Directory API](https://2fa.directory). This data powers a report in the Bitwarden client that helps organization administrators understand which of their members' credentials could be upgraded to passkeys.
 
-For client-side implementation details, see the [clients README](TODO: add link once generated).
+For client-side implementation details, see the [clients README](https://github.com/bitwarden/clients/blob/d866c8126444bf95f2be2ee5f59646aa1237e8a7/apps/web/src/app/dirt/reports/pages/README.md).
 
 ## Feature Flag
 
