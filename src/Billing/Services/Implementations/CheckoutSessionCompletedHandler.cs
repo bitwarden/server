@@ -68,10 +68,10 @@ public class CheckoutSessionCompletedHandler(
 
         await userRepository.ReplaceAsync(user);
         await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
-        await UpdateDefaultPaymentMethodAsync(subscription.DefaultPaymentMethodId, session.CustomerId);
+        await UpdateDefaultPaymentMethodAsync(subscription.DefaultPaymentMethodId, session.CustomerId, subscription.Id);
     }
 
-    private async Task UpdateDefaultPaymentMethodAsync(string? defaultPaymentMethodId, string customerId)
+    private async Task UpdateDefaultPaymentMethodAsync(string? defaultPaymentMethodId, string customerId, string subscriptionId)
     {
         if (string.IsNullOrWhiteSpace(defaultPaymentMethodId))
         {
