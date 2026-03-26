@@ -26,6 +26,13 @@ public class IndividualUserRecipe(SeederDependencies deps)
         string? password = null, int? kdfIterations = null)
     {
         var result = _orchestrator.Execute(presetName, password, kdfIterations);
+
+        if (result.UserId is null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' is not an individual user preset. Use OrganizationRecipe instead.");
+        }
+
         return ToResult(result);
     }
 

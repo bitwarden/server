@@ -25,6 +25,13 @@ public class OrganizationRecipe(SeederDependencies deps)
     public SeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
     {
         var result = _orchestrator.Execute(presetName, password, kdfIterations);
+
+        if (result.OrganizationId is null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' is not an organization preset. Use IndividualUserRecipe instead.");
+        }
+
         return ToResult(result);
     }
 
