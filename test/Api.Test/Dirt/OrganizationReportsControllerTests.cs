@@ -134,13 +134,11 @@ public class OrganizationReportControllerTests
         // Arrange
         expectedReport.ReportFile = null;
 
+        SetupAuthorization(sutProvider, orgId);
+
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
             .Returns(false);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
 
         sutProvider.GetDependency<IAddOrganizationReportCommand>()
             .AddOrganizationReportAsync(Arg.Any<AddOrganizationReportRequest>())
@@ -248,9 +246,7 @@ public class OrganizationReportControllerTests
         // Arrange
         request.FileSize = null;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
-            .Returns(true);
+        SetupV2Authorization(sutProvider, orgId);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -401,13 +397,11 @@ public class OrganizationReportControllerTests
         // Arrange
         expectedReport.ReportFile = null;
 
+        SetupAuthorization(sutProvider, orgId);
+
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
             .Returns(false);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .AccessReports(orgId)
-            .Returns(true);
 
         sutProvider.GetDependency<IUpdateOrganizationReportCommand>()
             .UpdateOrganizationReportAsync(Arg.Any<UpdateOrganizationReportRequest>())
@@ -455,7 +449,7 @@ public class OrganizationReportControllerTests
     // UpdateOrganizationReportAsync - V2 (flag on)
 
     [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportAsync_V2_NoNewFileUpload_ReturnsReportResponseModel(
+    public async Task UpdateOrganizationReportAsync_V2_ReturnsReportResponseModel(
         SutProvider<OrganizationReportsController> sutProvider,
         Guid orgId,
         Guid reportId,
@@ -463,7 +457,6 @@ public class OrganizationReportControllerTests
         OrganizationReport expectedReport)
     {
         // Arrange
-        request.RequiresNewFileUpload = false;
         expectedReport.ReportFile = null;
 
         SetupV2Authorization(sutProvider, orgId);
@@ -482,46 +475,6 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<IUpdateOrganizationReportV2Command>()
             .Received(1)
             .UpdateAsync(Arg.Any<UpdateOrganizationReportV2Request>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateOrganizationReportAsync_V2_WithNewFileUpload_ReturnsFileResponseModel(
-        SutProvider<OrganizationReportsController> sutProvider,
-        Guid orgId,
-        Guid reportId,
-        UpdateOrganizationReportV2RequestModel request,
-        OrganizationReport expectedReport,
-        string uploadUrl)
-    {
-        // Arrange
-        request.RequiresNewFileUpload = true;
-
-        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
-        expectedReport.SetReportFile(reportFile);
-
-        SetupV2Authorization(sutProvider, orgId);
-
-        sutProvider.GetDependency<IUpdateOrganizationReportV2Command>()
-            .UpdateAsync(Arg.Any<UpdateOrganizationReportV2Request>())
-            .Returns(expectedReport);
-
-        sutProvider.GetDependency<IOrganizationReportStorageService>()
-            .GetReportFileUploadUrlAsync(expectedReport, Arg.Any<ReportFile>())
-            .Returns(uploadUrl);
-
-        sutProvider.GetDependency<IOrganizationReportStorageService>()
-            .FileUploadType
-            .Returns(FileUploadType.Azure);
-
-        // Act
-        var result = await sutProvider.Sut.UpdateOrganizationReportAsync(orgId, reportId, request);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var response = Assert.IsType<OrganizationReportFileResponseModel>(okResult.Value);
-        Assert.Equal(uploadUrl, response.ReportFileUploadUrl);
-        Assert.Equal(FileUploadType.Azure, response.FileUploadType);
-        Assert.NotNull(response.ReportResponse);
     }
 
     [Theory, BitAutoData]

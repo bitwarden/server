@@ -6,7 +6,9 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -15,15 +17,18 @@ public class CreateOrganizationReportCommand : ICreateOrganizationReportCommand
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
     private readonly ILogger<CreateOrganizationReportCommand> _logger;
+    private readonly IFusionCache _cache;
 
     public CreateOrganizationReportCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
-        ILogger<CreateOrganizationReportCommand> logger)
+        ILogger<CreateOrganizationReportCommand> logger,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<OrganizationReport> CreateAsync(AddOrganizationReportRequest request)
@@ -73,6 +78,8 @@ public class CreateOrganizationReportCommand : ICreateOrganizationReportCommand
 
         var data = await _organizationReportRepo.CreateAsync(organizationReport);
 
+        await _cache.RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
+
         _logger.LogInformation(Constants.BypassFiltersEventId,
             "Successfully created organization report for organization {organizationId}, {organizationReportId}",
             request.OrganizationId, data.Id);
@@ -92,6 +99,21 @@ public class CreateOrganizationReportCommand : ICreateOrganizationReportCommand
         if (string.IsNullOrWhiteSpace(request.ContentEncryptionKey))
         {
             return (false, "Content Encryption Key is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SummaryData))
+        {
+            return (false, "Summary Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ApplicationData))
+        {
+            return (false, "Application Data is required");
+        }
+
+        if (request.ReportMetrics == null)
+        {
+            return (false, "Report Metrics is required");
         }
 
         return (true, string.Empty);

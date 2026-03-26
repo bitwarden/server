@@ -9,10 +9,4 @@ public class UpdateOrganizationReportV2Request
     public string? SummaryData { get; set; }
     public string? ApplicationData { get; set; }
     public OrganizationReportMetrics? ReportMetrics { get; set; }
-    public bool RequiresNewFileUpload { get; set; }
-
-    /// <summary>
-    /// Estimated size of the report file in bytes. Required when RequiresNewFileUpload is true.
-    /// </summary>
-    public long? FileSize { get; set; }
 }

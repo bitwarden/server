@@ -1,13 +1,13 @@
 ﻿using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
-using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -15,19 +15,19 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
 {
     private readonly IOrganizationRepository _organizationRepo;
     private readonly IOrganizationReportRepository _organizationReportRepo;
-    private readonly IOrganizationReportStorageService _storageService;
     private readonly ILogger<UpdateOrganizationReportV2Command> _logger;
+    private readonly IFusionCache _cache;
 
     public UpdateOrganizationReportV2Command(
         IOrganizationRepository organizationRepository,
         IOrganizationReportRepository organizationReportRepository,
-        IOrganizationReportStorageService storageService,
-        ILogger<UpdateOrganizationReportV2Command> logger)
+        ILogger<UpdateOrganizationReportV2Command> logger,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache)
     {
         _organizationRepo = organizationRepository;
         _organizationReportRepo = organizationReportRepository;
-        _storageService = storageService;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<OrganizationReport> UpdateAsync(UpdateOrganizationReportV2Request request)
@@ -39,25 +39,17 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
         var (isValid, errorMessage) = await ValidateRequestAsync(request);
         if (!isValid)
         {
-            _logger.LogWarning(Constants.BypassFiltersEventId,
-                "Failed to update v2 organization report {reportId} for organization {organizationId}: {errorMessage}",
-                request.ReportId, request.OrganizationId, errorMessage);
             throw new BadRequestException(errorMessage);
         }
 
         var existingReport = await _organizationReportRepo.GetByIdAsync(request.ReportId);
         if (existingReport == null)
         {
-            _logger.LogWarning(Constants.BypassFiltersEventId,
-                "Organization report {reportId} not found", request.ReportId);
             throw new NotFoundException("Organization report not found");
         }
 
         if (existingReport.OrganizationId != request.OrganizationId)
         {
-            _logger.LogWarning(Constants.BypassFiltersEventId,
-                "Organization report {reportId} does not belong to organization {organizationId}",
-                request.ReportId, request.OrganizationId);
             throw new BadRequestException("Organization report does not belong to the specified organization");
         }
 
@@ -92,26 +84,10 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
             existingReport.CriticalPasswordAtRiskCount = request.ReportMetrics.CriticalPasswordAtRiskCount;
         }
 
-        if (request.RequiresNewFileUpload)
-        {
-            var oldFileData = existingReport.GetReportFile();
-            if (oldFileData?.Id != null)
-            {
-                await _storageService.DeleteReportFilesAsync(existingReport, oldFileData.Id);
-            }
-
-            var fileData = new ReportFile
-            {
-                Id = CoreHelpers.SecureRandomString(32, upper: false, special: false),
-                FileName = "report-data.json",
-                Validated = false,
-                Size = request.FileSize ?? 0
-            };
-            existingReport.SetReportFile(fileData);
-        }
-
         existingReport.RevisionDate = DateTime.UtcNow;
         await _organizationReportRepo.ReplaceAsync(existingReport);
+
+        await _cache.RemoveByTagAsync(OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(request.OrganizationId));
 
         _logger.LogInformation(Constants.BypassFiltersEventId,
             "Successfully updated v2 organization report {reportId} for organization {organizationId}",
@@ -123,20 +99,30 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
     private async Task<(bool IsValid, string errorMessage)> ValidateRequestAsync(
         UpdateOrganizationReportV2Request request)
     {
-        if (request.OrganizationId == Guid.Empty)
-        {
-            return (false, "OrganizationId is required");
-        }
-
-        if (request.ReportId == Guid.Empty)
-        {
-            return (false, "ReportId is required");
-        }
-
         var organization = await _organizationRepo.GetByIdAsync(request.OrganizationId);
         if (organization == null)
         {
             return (false, "Invalid Organization");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ContentEncryptionKey))
+        {
+            return (false, "Content Encryption Key is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SummaryData))
+        {
+            return (false, "Summary Data is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ApplicationData))
+        {
+            return (false, "Application Data is required");
+        }
+
+        if (request.ReportMetrics == null)
+        {
+            return (false, "Report Metrics is required");
         }
 
         return (true, string.Empty);

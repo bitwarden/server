@@ -38,7 +38,7 @@ public class UpdateOrganizationReportV2CommandTests
             ContentEncryptionKey = "new-key",
             SummaryData = "new-summary",
             ApplicationData = "new-app-data",
-            RequiresNewFileUpload = false
+            ReportMetrics = new OrganizationReportMetrics { ApplicationCount = 10 }
         };
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -94,8 +94,10 @@ public class UpdateOrganizationReportV2CommandTests
         {
             ReportId = reportId,
             OrganizationId = orgId,
-            ReportMetrics = metrics,
-            RequiresNewFileUpload = false
+            ContentEncryptionKey = "key",
+            SummaryData = "summary",
+            ApplicationData = "app-data",
+            ReportMetrics = metrics
         };
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -118,86 +120,102 @@ public class UpdateOrganizationReportV2CommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_WithRequiresNewFileUpload_CreatesNewReportFile(
+    public async Task UpdateAsync_NullContentEncryptionKey_ThrowsBadRequestException(
         SutProvider<UpdateOrganizationReportV2Command> sutProvider)
     {
         var fixture = new Fixture();
-        var orgId = Guid.NewGuid();
-        var reportId = Guid.NewGuid();
-
-        var existingReport = fixture.Build<OrganizationReport>()
-            .With(r => r.Id, reportId)
-            .With(r => r.OrganizationId, orgId)
-            .Without(r => r.ReportFile)
-            .Create();
-
         var request = new UpdateOrganizationReportV2Request
         {
-            ReportId = reportId,
-            OrganizationId = orgId,
-            RequiresNewFileUpload = true
+            ReportId = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            ContentEncryptionKey = null,
+            SummaryData = "summary",
+            ApplicationData = "app-data",
+            ReportMetrics = new OrganizationReportMetrics()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(orgId)
+            .GetByIdAsync(request.OrganizationId)
             .Returns(fixture.Create<Organization>());
 
-        sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetByIdAsync(reportId)
-            .Returns(existingReport);
-
-        var result = await sutProvider.Sut.UpdateAsync(request);
-
-        var fileData = result.GetReportFile();
-        Assert.NotNull(fileData);
-        Assert.NotNull(fileData.Id);
-        Assert.Equal(32, fileData.Id.Length);
-        Assert.Equal("report-data.json", fileData.FileName);
-        Assert.False(fileData.Validated);
-        Assert.Equal(0, fileData.Size);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.UpdateAsync(request));
+        Assert.Equal("Content Encryption Key is required", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_NullFields_DoesNotOverwriteExisting(
+    public async Task UpdateAsync_NullSummaryData_ThrowsBadRequestException(
         SutProvider<UpdateOrganizationReportV2Command> sutProvider)
     {
         var fixture = new Fixture();
-        var orgId = Guid.NewGuid();
-        var reportId = Guid.NewGuid();
-
-        var existingReport = fixture.Build<OrganizationReport>()
-            .With(r => r.Id, reportId)
-            .With(r => r.OrganizationId, orgId)
-            .With(r => r.ContentEncryptionKey, "original-key")
-            .With(r => r.SummaryData, "original-summary")
-            .With(r => r.ApplicationData, "original-app-data")
-            .Without(r => r.ReportFile)
-            .Create();
-
         var request = new UpdateOrganizationReportV2Request
         {
-            ReportId = reportId,
-            OrganizationId = orgId,
-            ContentEncryptionKey = null,
+            ReportId = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            ContentEncryptionKey = "key",
             SummaryData = null,
-            ApplicationData = null,
-            RequiresNewFileUpload = false
+            ApplicationData = "app-data",
+            ReportMetrics = new OrganizationReportMetrics()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(orgId)
+            .GetByIdAsync(request.OrganizationId)
             .Returns(fixture.Create<Organization>());
 
-        sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetByIdAsync(reportId)
-            .Returns(existingReport);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.UpdateAsync(request));
+        Assert.Equal("Summary Data is required", exception.Message);
+    }
 
-        var result = await sutProvider.Sut.UpdateAsync(request);
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_NullApplicationData_ThrowsBadRequestException(
+        SutProvider<UpdateOrganizationReportV2Command> sutProvider)
+    {
+        var fixture = new Fixture();
+        var request = new UpdateOrganizationReportV2Request
+        {
+            ReportId = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            ContentEncryptionKey = "key",
+            SummaryData = "summary",
+            ApplicationData = null,
+            ReportMetrics = new OrganizationReportMetrics()
+        };
 
-        Assert.Equal("original-key", result.ContentEncryptionKey);
-        Assert.Equal("original-summary", result.SummaryData);
-        Assert.Equal("original-app-data", result.ApplicationData);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns(fixture.Create<Organization>());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.UpdateAsync(request));
+        Assert.Equal("Application Data is required", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_NullReportMetrics_ThrowsBadRequestException(
+        SutProvider<UpdateOrganizationReportV2Command> sutProvider)
+    {
+        var fixture = new Fixture();
+        var request = new UpdateOrganizationReportV2Request
+        {
+            ReportId = Guid.NewGuid(),
+            OrganizationId = Guid.NewGuid(),
+            ContentEncryptionKey = "key",
+            SummaryData = "summary",
+            ApplicationData = "app-data",
+            ReportMetrics = null
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns(fixture.Create<Organization>());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.UpdateAsync(request));
+        Assert.Equal("Report Metrics is required", exception.Message);
     }
 
     [Theory]
@@ -229,7 +247,11 @@ public class UpdateOrganizationReportV2CommandTests
         var request = new UpdateOrganizationReportV2Request
         {
             ReportId = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid()
+            OrganizationId = Guid.NewGuid(),
+            ContentEncryptionKey = "key",
+            SummaryData = "summary",
+            ApplicationData = "app-data",
+            ReportMetrics = new OrganizationReportMetrics()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -253,7 +275,11 @@ public class UpdateOrganizationReportV2CommandTests
         var request = new UpdateOrganizationReportV2Request
         {
             ReportId = Guid.NewGuid(),
-            OrganizationId = Guid.NewGuid()
+            OrganizationId = Guid.NewGuid(),
+            ContentEncryptionKey = "key",
+            SummaryData = "summary",
+            ApplicationData = "app-data",
+            ReportMetrics = new OrganizationReportMetrics()
         };
 
         var existingReport = fixture.Build<OrganizationReport>()
@@ -288,7 +314,7 @@ public class UpdateOrganizationReportV2CommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             async () => await sutProvider.Sut.UpdateAsync(request));
-        Assert.Equal("OrganizationId is required", exception.Message);
+        Assert.Equal("Invalid Organization", exception.Message);
     }
 
     [Theory]
@@ -304,6 +330,6 @@ public class UpdateOrganizationReportV2CommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             async () => await sutProvider.Sut.UpdateAsync(request));
-        Assert.Equal("ReportId is required", exception.Message);
+        Assert.Equal("Invalid Organization", exception.Message);
     }
 }

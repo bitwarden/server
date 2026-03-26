@@ -9,8 +9,6 @@ public class UpdateOrganizationReportV2RequestModel
     public string? SummaryData { get; set; }
     public string? ApplicationData { get; set; }
     public OrganizationReportMetrics? ReportMetrics { get; set; }
-    public bool RequiresNewFileUpload { get; set; }
-    public long? FileSize { get; set; }
 
     public UpdateOrganizationReportV2Request ToData(Guid organizationId, Guid reportId)
     {
@@ -22,9 +20,7 @@ public class UpdateOrganizationReportV2RequestModel
             ContentEncryptionKey = ContentEncryptionKey,
             SummaryData = SummaryData,
             ApplicationData = ApplicationData,
-            ReportMetrics = ReportMetrics,
-            RequiresNewFileUpload = RequiresNewFileUpload,
-            FileSize = FileSize
+            ReportMetrics = ReportMetrics
         };
     }
 }

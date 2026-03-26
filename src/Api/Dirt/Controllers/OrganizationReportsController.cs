@@ -99,13 +99,15 @@ public class OrganizationReportsController : Controller
         Guid organizationId,
         [FromBody] AddOrganizationReportRequestModel request)
     {
+        if (organizationId == Guid.Empty)
+        {
+            throw new BadRequestException("Organization ID is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
+
         if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
         {
-            if (organizationId == Guid.Empty)
-            {
-                throw new BadRequestException("Organization ID is required.");
-            }
-
             if (!request.FileSize.HasValue)
             {
                 throw new BadRequestException("File size is required.");
@@ -115,8 +117,6 @@ public class OrganizationReportsController : Controller
             {
                 throw new BadRequestException("Max file size is 500 MB.");
             }
-
-            await AuthorizeAsync(organizationId);
 
             var report = await _createReportCommand.CreateAsync(request.ToData(organizationId));
             var fileData = report.GetReportFile()!;
@@ -128,11 +128,6 @@ public class OrganizationReportsController : Controller
                 ReportResponse = new OrganizationReportResponseModel(report),
                 FileUploadType = _storageService.FileUploadType
             });
-        }
-
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
         }
 
         var v1Report = await _addOrganizationReportCommand.AddOrganizationReportAsync(request.ToData(organizationId));
@@ -224,16 +219,14 @@ public class OrganizationReportsController : Controller
     }
 
     /// <summary>
-    /// Updates an existing organization report for the specified organization.
-    /// When the Access Intelligence V2 feature flag is enabled and a new file upload is required,
-    /// validates the file size and returns a presigned upload URL.
-    /// Otherwise, updates the report metadata and inline data.
+    /// Updates an existing organization report's metadata for the specified organization.
+    /// Updates fields such as summary data, application data, metrics, and content encryption key.
+    /// To create a new report with a file upload, use the POST endpoint instead.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report to update.</param>
-    /// <param name="request">The request model containing updated report data and optional file metadata.</param>
-    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with upload URL when a new file is required,
-    /// or an <see cref="OrganizationReportResponseModel"/> otherwise.</returns>
+    /// <param name="request">The request model containing updated report data.</param>
+    /// <returns>An <see cref="OrganizationReportResponseModel"/> with the updated report.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
     [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
@@ -241,43 +234,23 @@ public class OrganizationReportsController : Controller
         Guid reportId,
         [FromBody] UpdateOrganizationReportV2RequestModel request)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        if (organizationId == Guid.Empty)
         {
-            await AuthorizeAsync(organizationId);
-
-            if (request.RequiresNewFileUpload)
-            {
-                if (!request.FileSize.HasValue)
-                {
-                    throw new BadRequestException("File size is required.");
-                }
-
-                if (request.FileSize.Value > Constants.FileSize501mb)
-                {
-                    throw new BadRequestException("Max file size is 500 MB.");
-                }
-            }
-
-            var coreRequest = request.ToData(organizationId, reportId);
-            var report = await _updateReportV2Command.UpdateAsync(coreRequest);
-
-            if (request.RequiresNewFileUpload)
-            {
-                var fileData = report.GetReportFile()!;
-                return Ok(new OrganizationReportFileResponseModel
-                {
-                    ReportFileUploadUrl = await _storageService.GetReportFileUploadUrlAsync(report, fileData),
-                    ReportResponse = new OrganizationReportResponseModel(report),
-                    FileUploadType = _storageService.FileUploadType
-                });
-            }
-
-            return Ok(new OrganizationReportResponseModel(report));
+            throw new BadRequestException("OrganizationId is required.");
         }
 
-        if (!await _currentContext.AccessReports(organizationId))
+        if (reportId == Guid.Empty)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("ReportId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        {
+            var coreRequest = request.ToData(organizationId, reportId);
+            var report = await _updateReportV2Command.UpdateAsync(coreRequest);
+            return Ok(new OrganizationReportResponseModel(report));
         }
 
         var v1Request = new UpdateOrganizationReportRequest
