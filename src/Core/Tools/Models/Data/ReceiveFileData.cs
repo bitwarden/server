@@ -60,5 +60,6 @@ public class ReceiveFileData
     /// the expected tolerance and below the maximum supported
     /// file size.
     /// </summary>
-    public bool Validated { get; set; } = false;  // equivalent Send prop defaults to true, let's see what happens
+    public bool Validated { get; set; } = false;  // equivalent Send prop defaults to true
+                                                  // TODO: test both true and false default
 }
