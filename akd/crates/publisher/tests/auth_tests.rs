@@ -28,6 +28,7 @@ fn create_test_config(api_key: &str) -> ApplicationConfig {
                 key: "dGVzdC1rZXk=".to_string(), // base64 encoded test key
             },
             publish_queue_config: PublishQueueConfig::DbBacked,
+            audit_storage_config: None,
             insertion_parallelism: 32,
             preload_parallelism: 32,
         },

@@ -26,8 +26,7 @@ impl EpochTracker {
 
     /// Record a new epoch publish
     pub(crate) async fn record_publish(&self, published_at: DateTime<Utc>) {
-        let mut inner = self.inner.write().await;
-        inner.last_publish_time = Some(published_at);
+        self.inner.write().await.last_publish_time = Some(published_at);
     }
 
     /// Predict the next epoch publish time using modulus calculation

@@ -187,10 +187,11 @@ async fn main() -> Result<()> {
             key: "4AD95tg8tfveioyS/E2jAQw06FDTUCu+VSEZxa41wuM=".to_string(),
         },
         publish_queue_config: akd_storage::publish_queue_config::PublishQueueConfig::DbBacked,
+        audit_storage_config: None,
         insertion_parallelism: 32,
         preload_parallelism: 32,
     };
-    let (mut directory, db, _) = config
+    let (mut directory, db, _, _) = config
         .initialize_directory::<TC>()
         .await
         .context("Failed to initialize AKD directory")?;

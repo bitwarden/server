@@ -14,6 +14,9 @@ pub enum ReaderError {
     #[error("Invalid epoch range: start_epoch ({start_epoch}) must be <= end_epoch ({end_epoch})")]
     InvalidEpochRange { start_epoch: u64, end_epoch: u64 },
 
+    #[error("Invalid epoch: epoch {epoch} has no predecessor to audit from")]
+    InvalidEpoch { epoch: u64 },
+
     #[error("Empty batch request")]
     EmptyBatch,
 
@@ -23,6 +26,10 @@ pub enum ReaderError {
     // AKD library errors
     #[error("AKD error: {0}")]
     Akd(#[from] AkdError),
+
+    // Server-side invariant failures
+    #[error("Internal error: {0}")]
+    InternalError(String),
 }
 
 /// Error response structure sent to clients
@@ -40,6 +47,7 @@ pub struct ErrorResponse {
 pub enum ErrorCode {
     // Application-level validation errors (400-level)
     InvalidEpochRange,
+    InvalidEpoch,
     EmptyBatch,
     BatchTooLarge,
 
@@ -69,8 +77,11 @@ impl ReaderError {
         match self {
             // 400-level errors
             ReaderError::InvalidEpochRange { .. } => StatusCode::BAD_REQUEST,
+            ReaderError::InvalidEpoch { .. } => StatusCode::BAD_REQUEST,
             ReaderError::EmptyBatch => StatusCode::BAD_REQUEST,
             ReaderError::BatchTooLarge { .. } => StatusCode::BAD_REQUEST,
+
+            ReaderError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
 
             // AKD errors - nuanced mapping
             ReaderError::Akd(akd_err) => match akd_err {
@@ -103,8 +114,10 @@ impl ReaderError {
     pub fn error_code(&self) -> ErrorCode {
         match self {
             ReaderError::InvalidEpochRange { .. } => ErrorCode::InvalidEpochRange,
+            ReaderError::InvalidEpoch { .. } => ErrorCode::InvalidEpoch,
             ReaderError::EmptyBatch => ErrorCode::EmptyBatch,
             ReaderError::BatchTooLarge { .. } => ErrorCode::BatchTooLarge,
+            ReaderError::InternalError(_) => ErrorCode::InternalError,
             ReaderError::Akd(akd_err) => Self::akd_error_code(akd_err),
         }
     }

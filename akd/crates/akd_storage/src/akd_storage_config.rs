@@ -8,7 +8,10 @@ use thiserror::Error;
 use tracing::{error, instrument};
 
 use crate::{
-    db_config::DbConfig, publish_queue_config::PublishQueueConfig, vrf_key_config::VrfKeyConfig,
+    audit_storage::{AuditStorageConfig, AuditStorageType},
+    db_config::DbConfig,
+    publish_queue_config::PublishQueueConfig,
+    vrf_key_config::VrfKeyConfig,
     AkdDatabase, PublishQueueType, ReadOnlyPublishQueueType, VrfKeyDatabase,
 };
 
@@ -26,6 +29,9 @@ pub struct AkdStorageConfig {
     pub cache_clean_ms: usize,
     pub vrf_key_config: VrfKeyConfig,
     pub publish_queue_config: PublishQueueConfig,
+    /// Optional audit proof blob storage. When absent, audit proofs are not persisted.
+    #[serde(default)]
+    pub audit_storage_config: Option<AuditStorageConfig>,
 
     /// Parallelization for node insertion when available parallelism cannot be determined. Defaults to 32
     #[serde(default = "default_insertion_parallelism")]
@@ -59,6 +65,7 @@ impl AkdStorageConfig {
             Directory<TDirectoryConfig, AkdDatabase, VrfKeyDatabase>,
             AkdDatabase,
             PublishQueueType,
+            Option<AuditStorageType>,
         ),
         AkdStorageInitializationError,
     > {
@@ -71,6 +78,16 @@ impl AkdStorageConfig {
 
         let publish_queue = PublishQueueType::new(&self.publish_queue_config, &db);
 
+        let audit_storage = self
+            .audit_storage_config
+            .as_ref()
+            .map(AuditStorageType::new)
+            .transpose()
+            .map_err(|err| {
+                error!(%err, "Failed to initialize audit storage");
+                AkdStorageInitializationError
+            })?;
+
         let directory = Directory::new(storage_manager, vrf_storage, self.parallelism_config())
             .await
             .map_err(|err| {
@@ -78,7 +95,7 @@ impl AkdStorageConfig {
                 AkdStorageInitializationError
             })?;
 
-        Ok((directory, db, publish_queue))
+        Ok((directory, db, publish_queue, audit_storage))
     }
 
     pub async fn initialize_readonly_directory<TDirectoryConfig: akd::Configuration>(
@@ -88,6 +105,7 @@ impl AkdStorageConfig {
             ReadOnlyDirectory<TDirectoryConfig, AkdDatabase, VrfKeyDatabase>,
             AkdDatabase,
             ReadOnlyPublishQueueType,
+            Option<AuditStorageType>,
         ),
         AkdStorageInitializationError,
     > {
@@ -100,6 +118,16 @@ impl AkdStorageConfig {
 
         let publish_queue = ReadOnlyPublishQueueType::new(&self.publish_queue_config, &db);
 
+        let audit_storage = self
+            .audit_storage_config
+            .as_ref()
+            .map(AuditStorageType::new)
+            .transpose()
+            .map_err(|err| {
+                error!(%err, "Failed to initialize audit storage");
+                AkdStorageInitializationError
+            })?;
+
         let directory =
             ReadOnlyDirectory::new(storage_manager, vrf_storage, self.parallelism_config())
                 .await
@@ -108,7 +136,7 @@ impl AkdStorageConfig {
                     AkdStorageInitializationError
                 })?;
 
-        Ok((directory, db, publish_queue))
+        Ok((directory, db, publish_queue, audit_storage))
     }
 
     async fn initialize_storage(

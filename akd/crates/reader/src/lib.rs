@@ -1,5 +1,5 @@
 use akd::directory::ReadOnlyDirectory;
-use akd_storage::{AkdDatabase, VrfKeyDatabase};
+use akd_storage::{AkdDatabase, AuditStorageType, VrfKeyDatabase};
 use anyhow::{Context, Result};
 use axum::Router;
 use bitwarden_akd_configuration::BitwardenV1Configuration;
@@ -25,6 +25,7 @@ struct AppState {
     // publish_queue: ReadOnlyPublishQueueType,
     max_batch_lookup_size: usize,
     epoch_tracker: EpochTracker,
+    audit_storage: Option<AuditStorageType>,
 }
 
 #[instrument(skip_all, name = "reader_start")]
@@ -32,7 +33,7 @@ pub async fn start(
     config: ApplicationConfig,
     shutdown_rx: &Receiver<()>,
 ) -> Result<tokio::task::JoinHandle<Result<()>>> {
-    let (directory, _, _) = config
+    let (directory, _, _, audit_storage) = config
         .storage
         .initialize_readonly_directory::<BitwardenV1Configuration>()
         .await
@@ -48,6 +49,7 @@ pub async fn start(
             // publish_queue: publish_queue,
             max_batch_lookup_size,
             epoch_tracker: epoch_tracker.clone(),
+            audit_storage,
         };
 
         let app = Router::new()

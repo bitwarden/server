@@ -108,6 +108,7 @@ dependencies = [
  "rand 0.8.5",
  "rsa",
  "serde",
+ "tempfile",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
