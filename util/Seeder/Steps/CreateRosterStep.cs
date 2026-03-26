@@ -24,6 +24,7 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
         var userLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         var emailPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        var rosterIndex = 0;
         foreach (var rosterUser in roster.Users)
         {
             var emailPrefix = $"{rosterUser.FirstName}.{rosterUser.LastName}".ToLowerInvariant();
@@ -35,11 +36,10 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
                     "Each user must have a unique FirstName.LastName combination.");
             }
 
-
             var email = $"{emailPrefix}@{domain}";
             var mangledEmail = context.GetMangler().Mangle(email);
             var password = context.GetPassword();
-            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password, kdfIterations);
+            var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password, kdfIterations, (uint)rosterIndex++);
             var (user, _) = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password, kdfIterations: kdfIterations);
             var userOrgKey = RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey);
             var orgUserType = ParseRole(rosterUser.Role);
