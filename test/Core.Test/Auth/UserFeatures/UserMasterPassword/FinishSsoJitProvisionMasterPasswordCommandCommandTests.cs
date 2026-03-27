@@ -49,7 +49,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
             .Returns(mockUpdateUserData);
 
         // Act
-        await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model);
+        await sutProvider.Sut.FinishProvisionAsync(user, model);
 
         // Assert
         await sutProvider.GetDependency<IUserRepository>().Received(1)
@@ -82,7 +82,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishProvisionAsync(user, model));
         Assert.Equal("User already has a master password set.", exception.Message);
     }
 
@@ -98,7 +98,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishProvisionAsync(user, model));
         Assert.Equal("Account keys are required.", exception.Message);
     }
 
@@ -135,7 +135,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishProvisionAsync(user, model));
         Assert.Equal("Invalid master password salt.", exception.Message);
     }
 
@@ -197,7 +197,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishProvisionAsync(user, model));
         Assert.Equal("Organization SSO identifier is invalid.", exception.Message);
     }
 
@@ -221,7 +221,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishProvisionAsync(user, model));
         Assert.Equal("User not found within organization.", exception.Message);
     }
 

@@ -870,7 +870,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _finishSsoJitProvisionMasterPasswordCommand.FinishSsoJitProvisionMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+        _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.CompletedTask);
 
         // Act
@@ -878,7 +878,7 @@ public class AccountsControllerTests : IDisposable
 
         // Assert
         await _finishSsoJitProvisionMasterPasswordCommand.Received(1)
-            .FinishSsoJitProvisionMasterPasswordAsync(
+            .FinishProvisionAsync(
                 Arg.Is<User>(u => u == user),
                 Arg.Is<SetInitialMasterPasswordDataModel>(d =>
                     d.MasterPasswordAuthentication != null &&
@@ -935,7 +935,7 @@ public class AccountsControllerTests : IDisposable
         // Arrange
         UpdateSetInitialPasswordRequestModelToV2(setInitialPasswordRequestModel);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _finishSsoJitProvisionMasterPasswordCommand.FinishSsoJitProvisionMasterPasswordAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
+        _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, Arg.Any<SetInitialMasterPasswordDataModel>())
             .Returns(Task.FromException(new Exception("Setting password failed")));
 
         // Act & Assert

@@ -34,7 +34,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommand : IFinishSsoJitPr
         _eventService = eventService;
     }
 
-    public async Task FinishSsoJitProvisionMasterPasswordAsync(User user,
+    public async Task FinishProvisionAsync(User user,
         SetInitialMasterPasswordDataModel masterPasswordDataModel)
     {
         if (user.Key != null)

@@ -230,7 +230,7 @@ public class AccountsController : Controller
             }
             else
             {
-                await _finishSsoJitProvisionMasterPasswordCommand.FinishSsoJitProvisionMasterPasswordAsync(user, model.ToData());
+                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
             }
         }
         else

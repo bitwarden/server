@@ -23,5 +23,5 @@ public interface IFinishSsoJitProvisionMasterPasswordCommand
     /// Thrown if the user's master password is already set, account keys are missing, the organization
     /// SSO identifier is invalid, or the user is not a member of the organization.
     /// </exception>
-    public Task FinishSsoJitProvisionMasterPasswordAsync(User user, SetInitialMasterPasswordDataModel masterPasswordDataModel);
+    public Task FinishProvisionAsync(User user, SetInitialMasterPasswordDataModel masterPasswordDataModel);
 }
