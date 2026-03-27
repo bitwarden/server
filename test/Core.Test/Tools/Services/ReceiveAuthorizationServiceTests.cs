@@ -13,7 +13,7 @@ public class ReceiveAuthorizationServiceTests
         _sut = new ReceiveAuthorizationService();
     }
 
-    private static Receive CreateReceive(DateTime? expirationDate = null) => new()
+    private static Receive CreateReceive(DateTime expirationDate) => new()
     {
         Id = Guid.NewGuid(),
         UserId = Guid.NewGuid(),
@@ -24,16 +24,6 @@ public class ReceiveAuthorizationServiceTests
         Secret = "secret",
         ExpirationDate = expirationDate,
     };
-
-    [Fact]
-    public void ReceiveCanBeAccessed_NoExpirationDate_ReturnsTrue()
-    {
-        var receive = CreateReceive(expirationDate: null);
-
-        var result = _sut.ReceiveCanBeAccessed(receive);
-
-        Assert.True(result);
-    }
 
     [Fact]
     public void ReceiveCanBeAccessed_FutureExpirationDate_ReturnsTrue()

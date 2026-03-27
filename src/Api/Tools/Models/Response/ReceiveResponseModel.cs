@@ -1,29 +1,46 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
-using Bit.Core.Utilities;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using Bit.Core.Models.Api;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
 
-namespace Bit.Core.Tools.Entities;
+namespace Bit.Api.Tools.Models.Response;
 
-/// <summary>
-/// An end-to-end encrypted file accessible to arbitrary
-/// entities through a fixed URI and secret.
-/// </summary>
-public class Receive : ITableObject<Guid>
+public class ReceiveResponseModel : ResponseModel
 {
+    [SetsRequiredMembers]
+    public ReceiveResponseModel(Receive receive) : base("receive")
+    {
+        Id = receive.Id;
+
+        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
+        Name = fileData!.Name;
+        File = new ReceiveFileModel(fileData);
+
+        UserKeyWrappedSharedContentEncryptionKey = receive.UserKeyWrappedSharedContentEncryptionKey;
+        UserKeyWrappedPrivateKey = receive.UserKeyWrappedPrivateKey;
+        ScekWrappedPublicKey = receive.ScekWrappedPublicKey;
+        Secret = receive.Secret;
+        UploadCount = receive.UploadCount;
+        CreationDate = receive.CreationDate;
+        RevisionDate = receive.RevisionDate;
+        ExpirationDate = receive.ExpirationDate;
+    }
     /// <summary>
     /// Uniquely identifies this Receive.
     /// </summary>
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Identifies the user that created this Receive.
+    /// Label for the Receive. Encrypted.
     /// </summary>
-    public Guid UserId { get; set; }
+    public string Name { get; set; }
 
     /// <summary>
-    /// Stores data containing or pointing to the transmitted file(s). JSON.
+    /// Contains file metadata for the Receive.
     /// </summary>
-    public required string Data { get; set; }
+    public ReceiveFileModel File { get; set; }
 
     /// <summary>
     /// The shared content encryption key (SCEK) wrapped by the owners userKey.
@@ -70,12 +87,4 @@ public class Receive : ITableObject<Guid>
     /// The date this Receive becomes unavailable to potential uploaders.
     /// </summary>
     public DateTime ExpirationDate { get; set; }
-
-    /// <summary>
-    /// Generates the Receive's <see cref="Id" />
-    /// </summary>
-    public void SetNewId()
-    {
-        Id = CoreHelpers.GenerateComb();
-    }
 }

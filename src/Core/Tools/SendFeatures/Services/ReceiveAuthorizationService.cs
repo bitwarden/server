@@ -10,7 +10,7 @@ public class ReceiveAuthorizationService : IReceiveAuthorizationService
 
     public bool ReceiveCanBeAccessed(Receive receive)
     {
-        return receive.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) >= DateTime.UtcNow;
+        return receive.ExpirationDate >= DateTime.UtcNow;
     }
 
     public bool Access(Receive receive)
