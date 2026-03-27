@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Exceptions;
@@ -6,6 +7,7 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -63,7 +65,7 @@ public class ReceivesControllerTests
         SutProvider<ReceivesController> sutProvider)
     {
         receive.Secret = "correct-secret";
-        SetupHttpContext(sutProvider, "wrong-secret");
+        SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes("wrong-secret")));
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(receiveId)
             .Returns(receive);
@@ -79,7 +81,7 @@ public class ReceivesControllerTests
         SutProvider<ReceivesController> sutProvider)
     {
         receive.Secret = "correct-secret";
-        SetupHttpContext(sutProvider, receive.Secret);
+        SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(receiveId)
             .Returns(receive);
@@ -99,7 +101,7 @@ public class ReceivesControllerTests
     {
         receive.Secret = "correct-secret";
         receive.Data = JsonSerializer.Serialize(new ReceiveFileData("encrypted-name", "file.txt"));
-        SetupHttpContext(sutProvider, receive.Secret);
+        SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(receiveId)
             .Returns(receive);

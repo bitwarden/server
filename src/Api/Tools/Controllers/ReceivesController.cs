@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -67,7 +68,8 @@ public class ReceivesController : Controller
             throw new NotFoundException();
         }
 
-        if (!string.Equals(receive.Secret, secret.ToString(), StringComparison.Ordinal))
+        var decodedSecret = System.Text.Encoding.UTF8.GetString(CoreHelpers.Base64UrlDecode(secret.ToString()));
+        if (!string.Equals(receive.Secret, decodedSecret, StringComparison.Ordinal))
         {
             throw new BadRequestException("Invalid request.");
         }
