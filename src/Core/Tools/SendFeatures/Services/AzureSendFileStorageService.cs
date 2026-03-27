@@ -119,7 +119,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
             await blobClient.SetHttpHeadersAsync(headers);
 
             var length = blobProperties.Value.ContentLength;
-            var valid = minimum <= length || length <= maximum;
+            var valid = minimum <= length && length <= maximum;
 
             return (valid, length);
         }

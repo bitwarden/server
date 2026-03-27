@@ -22,24 +22,14 @@ public class SendOrganizationInvitesCommand(
     IPolicyQuery policyQuery,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
-    IMailService mailService,
-    IFeatureService featureService) : ISendOrganizationInvitesCommand
+    IMailService mailService) : ISendOrganizationInvitesCommand
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.UpdateJoinOrganizationEmailTemplate))
-        {
-            var inviterEmail = await GetInviterEmailAsync(request.InvitingUserId);
-            var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(
-                request.Users, request.Organization, request.InitOrganization, inviterEmail);
-            await mailService.SendUpdatedOrganizationInviteEmailsAsync(orgInvitesInfo);
-        }
-        else
-        {
-            var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(
-                request.Users, request.Organization, request.InitOrganization);
-            await mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
-        }
+        var inviterEmail = await GetInviterEmailAsync(request.InvitingUserId);
+        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(
+            request.Users, request.Organization, request.InitOrganization, inviterEmail);
+        await mailService.SendUpdatedOrganizationInviteEmailsAsync(orgInvitesInfo);
     }
 
     private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(IEnumerable<OrganizationUser> orgUsers,
@@ -95,7 +85,7 @@ public class SendOrganizationInvitesCommand(
 
     private async Task<string> GetInviterEmailAsync(Guid? invitingUserId)
     {
-        if (!invitingUserId.HasValue)
+        if (!invitingUserId.HasValue || invitingUserId.Value == Guid.Empty)
         {
             return null;
         }

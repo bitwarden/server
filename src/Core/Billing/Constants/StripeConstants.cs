@@ -65,6 +65,12 @@ public static class StripeConstants
         ];
     }
 
+    public static class Intervals
+    {
+        public const string Month = "month";
+        public const string Year = "year";
+    }
+
     public static class InvoiceStatus
     {
         public const string Draft = "draft";
@@ -89,6 +95,7 @@ public static class StripeConstants
     public static class PaymentBehavior
     {
         public const string DefaultIncomplete = "default_incomplete";
+        public const string PendingIfIncomplete = "pending_if_incomplete";
     }
 
     public static class PaymentMethodTypes
@@ -108,6 +115,23 @@ public static class StripeConstants
         public const string AlwaysInvoice = "always_invoice";
         public const string CreateProrations = "create_prorations";
         public const string None = "none";
+    }
+
+    public static class SubscriptionScheduleEndBehavior
+    {
+        public const string Cancel = "cancel";
+        public const string None = "none";
+        public const string Release = "release";
+        public const string Renew = "renew";
+    }
+
+    public static class SubscriptionScheduleStatus
+    {
+        public const string Active = "active";
+        public const string Canceled = "canceled";
+        public const string Completed = "completed";
+        public const string NotStarted = "not_started";
+        public const string Released = "released";
     }
 
     public static class SubscriptionStatus

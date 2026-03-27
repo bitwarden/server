@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,7 +22,6 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
-
 namespace Bit.Core.Vault.Services;
 
 public class CipherService : ICipherService
@@ -179,7 +179,6 @@ public class CipherService : ICipherService
             ValidateCipherLastKnownRevisionDate(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
             await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
-            await ValidateViewPasswordUserAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -188,8 +187,10 @@ public class CipherService : ICipherService
         }
     }
 
-    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment)
+    public async Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachment, Guid savingUserId, bool orgAdmin = false)
     {
+        await ValidateCipherEditForAttachmentAsync(cipher, savingUserId, orgAdmin, attachment.Size);
+
         if (attachment == null)
         {
             throw new BadRequestException("Cipher attachment does not exist");
@@ -412,12 +413,14 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
+        var url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data);
+
         var response = new AttachmentResponseData
         {
             Cipher = cipher,
             Data = data,
             Id = attachmentId,
-            Url = await _attachmentStorageService.GetAttachmentDownloadUrlAsync(cipher, data),
+            Url = url,
         };
 
         return response;
@@ -909,7 +912,7 @@ public class CipherService : ICipherService
         return new DeleteAttachmentResponseData(cipher);
     }
 
-    private async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
+    public async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
         long requestLength)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, savingUserId)))
@@ -1043,42 +1046,6 @@ public class CipherService : ICipherService
         return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
-    private async Task ValidateViewPasswordUserAsync(Cipher cipher)
-    {
-        if (cipher.Data == null || !cipher.OrganizationId.HasValue)
-        {
-            return;
-        }
-        var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
-        if (existingCipher == null) return;
-
-        var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
-        // Check if user is a "hidden password" user
-        if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
-        {
-            var existingCipherData = DeserializeCipherData(existingCipher);
-            var newCipherData = DeserializeCipherData(cipher);
-
-            // For hidden-password users, never allow Key to change at all.
-            cipher.Key = existingCipher.Key;
-            // Keep only non-hidden fileds from the new cipher
-            var nonHiddenFields = newCipherData.Fields?.Where(f => f.Type != FieldType.Hidden) ?? [];
-            // Get hidden fields from the existing cipher
-            var hiddenFields = existingCipherData.Fields?.Where(f => f.Type == FieldType.Hidden) ?? [];
-            // Replace the hidden fields in new cipher data with the existing ones
-            newCipherData.Fields = nonHiddenFields.Concat(hiddenFields);
-            cipher.Data = SerializeCipherData(newCipherData);
-            if (existingCipherData is CipherLoginData existingLoginData && newCipherData is CipherLoginData newLoginCipherData)
-            {
-                // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
-                newLoginCipherData.Fido2Credentials = existingLoginData.Fido2Credentials;
-                newLoginCipherData.Totp = existingLoginData.Totp;
-                newLoginCipherData.Password = existingLoginData.Password;
-                cipher.Data = SerializeCipherData(newLoginCipherData);
-            }
-        }
-    }
-
     // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections
     private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid> newCollectionIds, Guid userId)
     {
@@ -1150,11 +1117,15 @@ public class CipherService : ICipherService
         Guid userId) where T : CipherDetails
     {
         var user = await _userService.GetUserByIdAsync(userId);
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
-        var filteredCiphers = ciphers
+        var groupedCiphers = ciphers
             .Where(c => cipherIdsSet.Contains(c.Id))
             .GroupBy(c => c.OrganizationId)
+            .ToList();
+
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(groupedCiphers);
+
+        var filteredCiphers = groupedCiphers
             .SelectMany(group =>
             {
                 var organizationAbility = group.Key.HasValue &&
@@ -1166,5 +1137,17 @@ public class CipherService : ICipherService
             .ToList();
 
         return filteredCiphers;
+    }
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync<T>(IEnumerable<IGrouping<Guid?, T>> groupedCiphers) where T : CipherDetails
+    {
+        var organizationIds = groupedCiphers
+            .Select(group => group.Key)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToList();
+
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(organizationIds);
+        return organizationAbilities;
     }
 }

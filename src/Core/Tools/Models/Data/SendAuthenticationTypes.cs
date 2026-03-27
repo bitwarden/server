@@ -48,3 +48,8 @@ public record ResourcePassword(string Hash) : SendAuthenticationMethod;
 /// The list of email addresses permitted access to the send.
 /// </param>
 public record EmailOtp(string[] emails) : SendAuthenticationMethod;
+
+/// <summary>
+/// The send exists but cannot be accessed (expired, disabled, max access exceeded, or past deletion date).
+/// </summary>
+public record SendInaccessible : SendAuthenticationMethod;
