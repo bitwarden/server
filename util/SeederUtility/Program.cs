@@ -95,4 +95,7 @@ public class Program
 
     [Subcommand]
     public SeedCommand Seed { get; set; } = null!;
+
+    [Subcommand]
+    public IndividualCommand Individual { get; set; } = null!;
 }
