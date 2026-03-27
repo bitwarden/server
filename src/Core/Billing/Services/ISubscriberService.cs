@@ -16,12 +16,12 @@ public interface ISubscriberService
     /// Otherwise, this command cancels the subscription immediately.
     /// </summary>
     /// <param name="subscriber">The subscriber with the subscription to cancel.</param>
-    /// <param name="offboardingSurveyResponse">An <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling the subscription.</param>
+    /// <param name="offboardingSurveyResponse">Optional. An <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling. When null (system-initiated cancellations), no metadata or cancellation details are sent to Stripe.</param>
     /// <param name="cancelImmediately">A flag indicating whether to cancel the subscription immediately or at the end of the subscription period.</param>
     Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately);
+        OffboardingSurveyResponse offboardingSurveyResponse = null,
+        bool cancelImmediately = false);
 
     /// <summary>
     /// Creates a Braintree <see cref="Braintree.Customer"/> for the provided <paramref name="subscriber"/> while attaching the provided <paramref name="paymentMethodNonce"/>.

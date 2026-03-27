@@ -35,8 +35,8 @@ public class SubscriberService(
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately)
+        OffboardingSurveyResponse offboardingSurveyResponse = null,
+        bool cancelImmediately = false)
     {
         var subscription = await GetSubscriptionOrThrow(subscriber);
 
@@ -50,11 +50,6 @@ public class SubscriberService(
             throw new BillingException();
         }
 
-        var metadata = new Dictionary<string, string>
-        {
-            { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
-        };
-
         List<string> validCancellationReasons = [
             "customer_service",
             "low_quality",
@@ -66,49 +61,49 @@ public class SubscriberService(
             "unused"
         ];
 
+        // Build once from survey — null when survey is absent (system-initiated cancellation)
+        var cancellationDetails = offboardingSurveyResponse != null
+            ? new SubscriptionCancellationDetailsOptions
+            {
+                Comment = offboardingSurveyResponse.Feedback,
+                Feedback = validCancellationReasons.Contains(offboardingSurveyResponse.Reason)
+                    ? offboardingSurveyResponse.Reason
+                    : null
+            }
+            : null;
+
+        var cancellingUserMetadata = offboardingSurveyResponse != null
+            ? new Dictionary<string, string>
+            {
+                { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+            }
+            : null;
+
         if (cancelImmediately)
         {
-            if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
+            if (cancellingUserMetadata != null &&
+                subscription.Metadata != null &&
+                subscription.Metadata.ContainsKey("organizationId"))
             {
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
-                    Metadata = metadata
+                    Metadata = cancellingUserMetadata
                 });
             }
 
-            var options = new SubscriptionCancelOptions
+            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, new SubscriptionCancelOptions
             {
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                }
-            };
-
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
-            {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
-            }
-
-            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, options);
+                CancellationDetails = cancellationDetails
+            });
         }
         else
         {
-            var options = new SubscriptionUpdateOptions
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
             {
                 CancelAtPeriodEnd = true,
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                },
-                Metadata = metadata
-            };
-
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
-            {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
-            }
-
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+                CancellationDetails = cancellationDetails,
+                Metadata = cancellingUserMetadata
+            });
         }
     }
 

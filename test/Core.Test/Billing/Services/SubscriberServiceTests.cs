@@ -190,6 +190,70 @@ public class SubscriberServiceTests
             .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
     }
 
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_NullSurvey_CancelImmediately_CancelsWithoutMetadataOrDetails(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", "org_id" }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+
+        await sutProvider.Sut.CancelSubscription(organization, null, true);
+
+        // No metadata update because survey is null, even though subscription has organizationId
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+
+        // Cancel called with no CancellationDetails
+        await stripeAdapter
+            .Received(1)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(
+                options => options.CancellationDetails == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_NullSurvey_DoNotCancelImmediately_SetsCancelAtPeriodEndWithoutMetadataOrDetails(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active"
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+
+        await sutProvider.Sut.CancelSubscription(organization, null, false);
+
+        await stripeAdapter
+            .Received(1)
+            .UpdateSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAtPeriodEnd == true &&
+                options.Metadata == null &&
+                options.CancellationDetails == null));
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+    }
+
     #endregion
 
     #region GetCustomer
