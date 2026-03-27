@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace Bit.Api.Tools.Models.Request;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
 
 /// <summary>
@@ -52,7 +54,7 @@ public class ReceiveRequestModel
         {
             Id = CoreHelpers.GenerateComb(),
             UserId = userId,
-            Data = string.Empty, // TODO: how to construct this??  Points to storage locations for files associated with a receive and more.
+            Data = JsonSerializer.Serialize(new ReceiveFileData(Name, string.Empty), JsonHelpers.IgnoreWritingNull),
             UserKeyWrappedSharedContentEncryptionKey = UserKeyWrappedSharedContentEncryptionKey,
             UserKeyWrappedPrivateKey = UserKeyWrappedPrivateKey,
             ScekWrappedPublicKey = ScekWrappedPublicKey,

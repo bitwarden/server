@@ -1,15 +1,23 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Bit.Core.Models.Api;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
 
 namespace Bit.Api.Tools.Models.Response;
 
 public class ReceiveResponseModel : ResponseModel
 {
+    [SetsRequiredMembers]
     public ReceiveResponseModel(Receive receive) : base("receive")
     {
         Id = receive.Id;
-        Data = receive.Data;
+
+        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
+        Name = fileData!.Name;
+        File = new ReceiveFileModel(fileData);
+
         UserKeyWrappedSharedContentEncryptionKey = receive.UserKeyWrappedSharedContentEncryptionKey;
         UserKeyWrappedPrivateKey = receive.UserKeyWrappedPrivateKey;
         ScekWrappedPublicKey = receive.ScekWrappedPublicKey;
@@ -25,9 +33,14 @@ public class ReceiveResponseModel : ResponseModel
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Stores data containing or pointing to the transmitted file(s). JSON.
+    /// Label for the Receive. Encrypted.
     /// </summary>
-    public required string Data { get; set; }
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Contains file metadata for the Receive.
+    /// </summary>
+    public ReceiveFileModel File { get; set; }
 
     /// <summary>
     /// The shared content encryption key (SCEK) wrapped by the owners userKey.
