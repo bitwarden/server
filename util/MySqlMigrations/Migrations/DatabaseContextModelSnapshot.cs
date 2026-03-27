@@ -2572,6 +2572,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("UserId")
+                        .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("UserPreferences", (string)null);

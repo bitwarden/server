@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260326201200_UserPreferencesInit")]
+    [Migration("20260327220803_UserPreferencesInit")]
     partial class UserPreferencesInit
     {
         /// <inheritdoc />
@@ -2564,6 +2564,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("UserId")
+                        .IsUnique()
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.ToTable("UserPreferences", (string)null);
