@@ -5,34 +5,33 @@ using CommandDotNet;
 
 namespace Bit.SeederUtility.Commands;
 
-[Command("organization", Description = "Seed an organization with users and optional vault data (ciphers, collections, groups)")]
-public class OrganizationCommand
+[Command("individual", Description = "Seed a standalone individual user with optional personal vault data")]
+public class IndividualCommand
 {
     [DefaultCommand]
-    public void Execute(OrganizationArgs args)
+    public void Execute(IndividualArgs args)
     {
         try
         {
             args.Validate();
 
             using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-            var recipe = new OrganizationRecipe(deps.ToDependencies());
+            var recipe = new IndividualUserRecipe(deps.ToDependencies());
 
             var result = recipe.Seed(args.ToOptions());
 
-            ConsoleOutput.PrintRow("Organization", result.OrganizationId);
-            if (result.OwnerEmail is not null)
+            ConsoleOutput.PrintRow("User", result.UserId);
+            if (result.Email is not null)
             {
-                ConsoleOutput.PrintRow("Owner", result.OwnerEmail);
+                ConsoleOutput.PrintRow("Email", result.Email);
             }
             ConsoleOutput.PrintRow("Password", result.Password);
+            ConsoleOutput.PrintRow("Premium", result.Premium);
             if (result.ApiKey is not null)
             {
                 ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
             }
-            ConsoleOutput.PrintCountRow("Users", result.UsersCount);
-            ConsoleOutput.PrintCountRow("Groups", result.GroupsCount);
-            ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
+            ConsoleOutput.PrintCountRow("Folders", result.FoldersCount);
             ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
             ConsoleOutput.PrintMangleMap(deps);
