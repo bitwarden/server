@@ -5,6 +5,11 @@ namespace Bit.Api.Vault.Models.Response;
 
 public class UserPreferencesResponseModel : ResponseModel
 {
+    public UserPreferencesResponseModel()
+        : base("userPreferences")
+    {
+    }
+
     public UserPreferencesResponseModel(UserPreferences userPreferences)
         : base("userPreferences")
     {
