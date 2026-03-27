@@ -135,13 +135,7 @@ public class AccountsController(
 
         if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
         {
-            var result = await reinstateSubscriptionCommand.Run(user);
-            result.Switch(
-                _ => { },
-                badRequest => throw new BadRequestException(badRequest.Response),
-                conflict => throw new GatewayException(conflict.Response),
-                _ => throw new GatewayException("Unable to reinstate subscription.")
-            );
+            (await reinstateSubscriptionCommand.Run(user)).GetValueOrThrow();
         }
         else
         {

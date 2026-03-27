@@ -259,13 +259,7 @@ public class OrganizationsController(
                 throw new NotFoundException();
             }
 
-            var result = await reinstateSubscriptionCommand.Run(organization);
-            result.Switch(
-                _ => { },
-                badRequest => throw new BadRequestException(badRequest.Response),
-                conflict => throw new GatewayException(conflict.Response),
-                _ => throw new GatewayException("Unable to reinstate subscription.")
-            );
+            (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
         }
         else
         {
