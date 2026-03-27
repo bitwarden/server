@@ -1,8 +1,11 @@
-﻿using Bit.Core.Billing.Premium.Queries;
+﻿using Bit.Api.Tools.Models.Response;
+using Bit.Core.Billing.Premium.Queries;
+using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Tools.Controllers;
@@ -43,5 +46,31 @@ public class ReceivesController : Controller
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
     }
 
-    // add endpoints
+    [AllowAnonymous]
+    [HttpGet("{receiveId}/shared")]
+    public async Task<SharedReceiveResponseModel> GetShared(Guid receiveId)
+    {
+        if (!Request.Headers.TryGetValue("Receive-Secret", out var secret))
+        {
+            throw new BadRequestException("Invalid request.");
+        }
+
+        var receive = await _receiveRepository.GetByIdAsync(receiveId);
+        if (receive == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!string.Equals(receive.Secret, secret.ToString(), StringComparison.Ordinal))
+        {
+            throw new BadRequestException("Invalid request.");
+        }
+
+        if (!_receiveAuthorizationService.ReceiveCanBeAccessed(receive))
+        {
+            throw new NotFoundException();
+        }
+
+        return new SharedReceiveResponseModel(receive);
+    }
 }
