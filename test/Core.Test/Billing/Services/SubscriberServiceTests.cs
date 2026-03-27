@@ -210,7 +210,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
 
-        await sutProvider.Sut.CancelSubscription(organization, null, true);
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
         // No metadata update because survey is null, even though subscription has organizationId
         await stripeAdapter
@@ -240,7 +240,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
 
-        await sutProvider.Sut.CancelSubscription(organization, null, false);
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
 
         await stripeAdapter
             .Received(1)

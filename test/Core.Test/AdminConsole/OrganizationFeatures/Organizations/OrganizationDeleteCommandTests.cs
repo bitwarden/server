@@ -70,10 +70,7 @@ public class OrganizationDeleteCommandTests
 
         await sutProvider.GetDependency<ISubscriberService>()
             .Received(1)
-            .CancelSubscription(
-                organization,
-                Arg.Is<OffboardingSurveyResponse>(r => r == null),
-                cancelImmediately: false);
+            .CancelSubscription(organization, cancelImmediately: false);
 
         await sutProvider.GetDependency<IStripePaymentService>()
             .DidNotReceiveWithAnyArgs()
