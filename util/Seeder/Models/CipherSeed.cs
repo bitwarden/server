@@ -35,6 +35,11 @@ internal record CipherSeed
     public List<FieldViewDto>? Fields { get; init; }
 
     /// <summary>
+    /// Master-password re-prompt (0 = None, 1 = Password).
+    /// </summary>
+    public CipherRepromptType Reprompt { get; init; }
+
+    /// <summary>
     /// Owning organization. Null for personal vault ciphers.
     /// </summary>
     public Guid? OrganizationId { get; init; }
@@ -71,6 +76,15 @@ internal record CipherSeed
     public SshKeyViewDto? SshKey { get; init; }
 
     /// <summary>
+    /// Validates that required fields are set before factory consumption.
+    /// Call after populating EncryptionKey via <c>with</c>.
+    /// </summary>
+    internal void Validate()
+    {
+        ArgumentException.ThrowIfNullOrEmpty(EncryptionKey);
+    }
+
+    /// <summary>
     /// Maps a deserialized <see cref="SeedVaultItem"/> into a <see cref="CipherSeed"/>,
     /// converting Seed* models to their ViewDto counterparts.
     /// EncryptionKey, OrganizationId, and UserId are left null — callers set them via <c>with</c>.
@@ -80,6 +94,7 @@ internal record CipherSeed
         Type = MapCipherType(item.Type),
         Name = item.Name,
         Notes = item.Notes,
+        Reprompt = item.Reprompt == 1 ? CipherRepromptType.Password : CipherRepromptType.None,
         Fields = MapFields(item.Fields),
         Login = MapLogin(item.Login),
         Card = MapCard(item.Card),

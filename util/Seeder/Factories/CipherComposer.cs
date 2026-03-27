@@ -7,7 +7,7 @@ using Bit.Seeder.Data.Generators;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Models;
 
-namespace Bit.Seeder.Factories.Vault;
+namespace Bit.Seeder.Factories;
 
 /// <summary>
 /// Composes cipher entities from generated data, handling encryption and ownership assignment.

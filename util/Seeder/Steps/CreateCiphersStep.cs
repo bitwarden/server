@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
-using Bit.Seeder.Factories.Vault;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 
@@ -64,6 +64,7 @@ internal sealed class CreateCiphersStep : IStep
                 OrganizationId = organizationId,
                 UserId = userId
             };
+            options.Validate();
             var cipher = options.Type switch
             {
                 CipherType.Login => LoginCipherSeeder.Create(options),
@@ -79,10 +80,7 @@ internal sealed class CreateCiphersStep : IStep
                 cipher.Favorites = CipherComposer.BuildFavoritesJson([userId.Value]);
             }
 
-            if (item.Reprompt == 1)
-            {
-                cipher.Reprompt = Core.Vault.Enums.CipherRepromptType.Password;
-            }
+            cipher.Reprompt = options.Reprompt;
 
             ciphers.Add(cipher);
 

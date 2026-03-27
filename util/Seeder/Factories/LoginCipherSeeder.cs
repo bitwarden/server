@@ -5,13 +5,12 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Models;
 
-namespace Bit.Seeder.Factories.Vault;
+namespace Bit.Seeder.Factories;
 
 internal static class LoginCipherSeeder
 {
     internal static Cipher Create(CipherSeed options)
     {
-        ArgumentException.ThrowIfNullOrEmpty(options.EncryptionKey);
 
         var cipherView = new CipherViewDto
         {
@@ -23,7 +22,7 @@ internal static class LoginCipherSeeder
             Fields = options.Fields
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToLoginData(), CipherType.Login, options.OrganizationId, options.UserId);
     }
 
@@ -35,7 +34,7 @@ internal static class LoginCipherSeeder
 
         // Generate 16-byte random user handle and encode as unpadded base64url
         var userHandleBytes = new byte[16];
-        new Random().NextBytes(userHandleBytes);
+        RandomNumberGenerator.Fill(userHandleBytes);
         var userHandle = CoreHelpers.Base64UrlEncode(userHandleBytes);
 
         return new Fido2CredentialViewDto

@@ -1,5 +1,5 @@
 ﻿using Bit.Seeder.Data.Distributions;
-using Bit.Seeder.Factories.Vault;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 

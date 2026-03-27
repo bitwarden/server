@@ -133,7 +133,7 @@ SeedVaultItem → CipherSeed.FromSeedItem() → CipherSeed → {Type}CipherSeede
 CipherViewDto → JSON + [EncryptProperty] field paths → encrypt_fields (Rust FFI, bitwarden_crypto) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
-Shared logic: `Factories/Vault/CipherEncryption.cs`, `Models/EncryptedCipherDtoExtensions.cs`
+Shared logic: `Factories/CipherEncryption.cs`, `Models/EncryptedCipherDtoExtensions.cs`
 
 ## Rust Crypto Dependency
 

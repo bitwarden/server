@@ -7,7 +7,7 @@ using Bit.RustSDK;
 using Bit.Seeder.Attributes;
 using Bit.Seeder.Models;
 
-namespace Bit.Seeder.Factories.Vault;
+namespace Bit.Seeder.Factories;
 
 internal static class CipherEncryption
 {

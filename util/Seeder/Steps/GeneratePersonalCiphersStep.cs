@@ -3,7 +3,7 @@ using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Data.Static;
-using Bit.Seeder.Factories.Vault;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 

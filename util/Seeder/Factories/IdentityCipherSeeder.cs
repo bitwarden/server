@@ -2,13 +2,12 @@
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Models;
 
-namespace Bit.Seeder.Factories.Vault;
+namespace Bit.Seeder.Factories;
 
 internal static class IdentityCipherSeeder
 {
     internal static Cipher Create(CipherSeed options)
     {
-        ArgumentException.ThrowIfNullOrEmpty(options.EncryptionKey);
 
         var cipherView = new CipherViewDto
         {
@@ -20,7 +19,7 @@ internal static class IdentityCipherSeeder
             Fields = options.Fields
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToIdentityData(), CipherType.Identity, options.OrganizationId, options.UserId);
     }
 

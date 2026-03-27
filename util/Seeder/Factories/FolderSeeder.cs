@@ -2,7 +2,7 @@
 using Bit.Core.Vault.Entities;
 using Bit.RustSDK;
 
-namespace Bit.Seeder.Factories.Vault;
+namespace Bit.Seeder.Factories;
 
 internal static class FolderSeeder
 {

@@ -4,7 +4,7 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.RustSDK;
 using Bit.Seeder.Attributes;
-using Bit.Seeder.Factories.Vault;
+using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Xunit;
 
