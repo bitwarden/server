@@ -1,5 +1,4 @@
-using System.Net;
-using System.Net.Http.Json;
+﻿using System.Net;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Vault.Models.Request;

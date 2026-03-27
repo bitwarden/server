@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
@@ -21,7 +21,7 @@ public class UserPreferencesRepository(string connectionString, string readOnlyC
         await using var connection = new SqlConnection(ConnectionString);
         var result = await connection.QueryFirstOrDefaultAsync<UserPreferences>(
             $"[{Schema}].[UserPreferences_ReadByUserId]",
-            new {UserId = userId},
+            new { UserId = userId },
             commandType: CommandType.StoredProcedure);
 
         return result;
@@ -34,7 +34,7 @@ public class UserPreferencesRepository(string connectionString, string readOnlyC
         {
             await connection.ExecuteAsync(
                 $"[{Schema}].[UserPreferences_DeleteByUserId]",
-                new {UserId = userId},
+                new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
     }

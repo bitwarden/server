@@ -1,4 +1,4 @@
-namespace Bit.Api.Vault.Models.Request;
+﻿namespace Bit.Api.Vault.Models.Request;
 
 public class UpdateUserPreferencesRequestModel
 {

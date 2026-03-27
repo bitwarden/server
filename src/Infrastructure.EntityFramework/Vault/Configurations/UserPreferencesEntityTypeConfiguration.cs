@@ -1,4 +1,4 @@
-using Bit.Infrastructure.EntityFramework.Vault.Models;
+﻿using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

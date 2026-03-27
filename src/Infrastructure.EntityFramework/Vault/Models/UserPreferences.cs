@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Models;

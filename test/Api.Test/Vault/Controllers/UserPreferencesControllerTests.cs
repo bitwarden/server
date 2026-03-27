@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Exceptions;

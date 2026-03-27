@@ -1,4 +1,4 @@
-using Bit.Core.Vault.Commands;
+﻿using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
