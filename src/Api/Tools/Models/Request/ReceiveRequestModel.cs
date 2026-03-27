@@ -46,7 +46,7 @@ public class ReceiveRequestModel
     /// <summary>
     /// The date this Receive becomes unavailable to potential uploaders.
     /// </summary>
-    public DateTime? ExpirationDate { get; set; }
+    public DateTime ExpirationDate { get; set; }
 
     public Receive ToReceive(Guid userId)
     {
@@ -58,7 +58,7 @@ public class ReceiveRequestModel
             UserKeyWrappedSharedContentEncryptionKey = UserKeyWrappedSharedContentEncryptionKey,
             UserKeyWrappedPrivateKey = UserKeyWrappedPrivateKey,
             ScekWrappedPublicKey = ScekWrappedPublicKey,
-            Secret = Guid.NewGuid().ToString(), // TODO: is this what we decided? It isn't sequential and so has greater entropy than comb.
+            Secret = CoreHelpers.SecureRandomString(42),
             ExpirationDate = ExpirationDate
         };
 

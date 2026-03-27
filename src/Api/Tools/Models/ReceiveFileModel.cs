@@ -17,10 +17,17 @@ public class ReceiveFileModel
     }
 
     public string? Id { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string FileName { get; set; } = string.Empty;
+
     [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
     public long? Size { get; set; }
+
     public string? SizeName { get; set; }
+
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string EncapsulatedFileEncryptionKey { get; set; } = string.Empty;
 }

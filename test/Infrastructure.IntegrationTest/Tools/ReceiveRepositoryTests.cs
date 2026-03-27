@@ -31,7 +31,7 @@ public class ReceiveRepositoryTests
         ScekWrappedPublicKey = "2.pubkey|iv|ct",
         Secret = secret,
         UploadCount = 0,
-        ExpirationDate = expirationDate,
+        ExpirationDate = expirationDate ?? DateTime.UtcNow.AddDays(7),
     };
 
     [DatabaseTheory, DatabaseData]
@@ -45,12 +45,11 @@ public class ReceiveRepositoryTests
         var createdReceive = await receiveRepository.CreateAsync(
             NewReceive(user.Id, expirationDate));
 
-        Assert.NotNull(createdReceive.ExpirationDate);
-        Assert.Equal(expirationDate, createdReceive.ExpirationDate!.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(expirationDate, createdReceive.ExpirationDate, LaxDateTimeComparer.Default);
 
         var receiveFromDatabase = await receiveRepository.GetByIdAsync(createdReceive.Id);
         Assert.NotNull(receiveFromDatabase);
-        Assert.Equal(expirationDate, receiveFromDatabase.ExpirationDate!.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(expirationDate, receiveFromDatabase.ExpirationDate, LaxDateTimeComparer.Default);
         Assert.Equal(0, receiveFromDatabase.UploadCount);
         Assert.Equal("2.scek|iv|ct", receiveFromDatabase.UserKeyWrappedSharedContentEncryptionKey);
         Assert.Equal("2.privkey|iv|ct", receiveFromDatabase.UserKeyWrappedPrivateKey);

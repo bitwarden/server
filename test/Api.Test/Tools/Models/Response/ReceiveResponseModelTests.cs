@@ -69,6 +69,7 @@ public class ReceiveResponseModelTests
     {
         var fileData = new ReceiveFileData("encrypted_name", "encrypted_file.txt");
         var receiveId = Guid.NewGuid();
+        var expirationDate = DateTime.UtcNow.AddDays(7);
 
         var receive = new Receive
         {
@@ -80,7 +81,7 @@ public class ReceiveResponseModelTests
             ScekWrappedPublicKey = "encrypted_public_key",
             Secret = "test_secret",
             UploadCount = 5,
-            ExpirationDate = new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc),
+            ExpirationDate = expirationDate,
         };
 
         var response = new ReceiveResponseModel(receive);
@@ -91,7 +92,7 @@ public class ReceiveResponseModelTests
         Assert.Equal("encrypted_public_key", response.ScekWrappedPublicKey);
         Assert.Equal("test_secret", response.Secret);
         Assert.Equal(5, response.UploadCount);
-        Assert.Equal(new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc), response.ExpirationDate);
+        Assert.Equal(expirationDate, response.ExpirationDate);
     }
 
 }

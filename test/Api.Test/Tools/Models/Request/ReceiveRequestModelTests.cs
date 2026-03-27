@@ -16,7 +16,7 @@ public class ReceiveRequestModelTests
             ScekWrappedPublicKey = "encrypted_public_key",
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
-            ExpirationDate = null
+            ExpirationDate = DateTime.UtcNow.AddDays(7)
         };
 
         var receive = request.ToReceive(Guid.NewGuid());
@@ -50,13 +50,14 @@ public class ReceiveRequestModelTests
     public void ToReceive_SetsKeyProperties()
     {
         var userId = Guid.NewGuid();
+        var expirationDate = DateTime.UtcNow.AddDays(7);
         var request = new ReceiveRequestModel
         {
             Name = "encrypted_name",
             ScekWrappedPublicKey = "encrypted_public_key",
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
-            ExpirationDate = new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc)
+            ExpirationDate = expirationDate
         };
 
         var receive = request.ToReceive(userId);
@@ -65,6 +66,6 @@ public class ReceiveRequestModelTests
         Assert.Equal("encrypted_public_key", receive.ScekWrappedPublicKey);
         Assert.Equal("encrypted_scek", receive.UserKeyWrappedSharedContentEncryptionKey);
         Assert.Equal("encrypted_private_key", receive.UserKeyWrappedPrivateKey);
-        Assert.Equal(new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc), receive.ExpirationDate);
+        Assert.Equal(expirationDate, receive.ExpirationDate);
     }
 }

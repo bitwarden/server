@@ -69,7 +69,7 @@ public class Receive : ITableObject<Guid>
     /// <summary>
     /// The date this Receive becomes unavailable to potential uploaders.
     /// </summary>
-    public DateTime? ExpirationDate { get; set; }
+    public DateTime ExpirationDate { get; set; }
 
     /// <summary>
     /// Generates the Receive's <see cref="Id" />

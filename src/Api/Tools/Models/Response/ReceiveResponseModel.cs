@@ -86,5 +86,5 @@ public class ReceiveResponseModel : ResponseModel
     /// <summary>
     /// The date this Receive becomes unavailable to potential uploaders.
     /// </summary>
-    public DateTime? ExpirationDate { get; set; }
+    public DateTime ExpirationDate { get; set; }
 }
