@@ -22,6 +22,7 @@ public class AzureReceiveFileStorageServiceTests
         {
             Id = Guid.Parse("e6a1b2c3-d4e5-f6a7-b8c9-d0e1f2a3b4c5"),
             UserId = Guid.NewGuid(),
+            Name = "mock-name-data",
             Data = "{}",
             UserKeyWrappedSharedContentEncryptionKey = "key",
             UserKeyWrappedPrivateKey = "privkey",
@@ -44,6 +45,7 @@ public class AzureReceiveFileStorageServiceTests
             Id = receiveId,
             UserId = Guid.NewGuid(),
             Data = "{}",
+            Name = "2.scek|iv|ct",
             UserKeyWrappedSharedContentEncryptionKey = "key",
             UserKeyWrappedPrivateKey = "privkey",
             ScekWrappedPublicKey = "pubkey",

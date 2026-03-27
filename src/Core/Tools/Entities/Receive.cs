@@ -21,6 +21,11 @@ public class Receive : ITableObject<Guid>
     public Guid UserId { get; set; }
 
     /// <summary>
+    /// Label for the Receive encrypted by the SCEK.
+    /// </summary>
+    public required string Name { get; set; }
+
+    /// <summary>
     /// Stores data containing or pointing to the transmitted file(s). JSON.
     /// </summary>
     public required string Data { get; set; }

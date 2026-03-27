@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.ReceiveFeatures.Models;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Tools.Models.Request;
@@ -55,6 +56,7 @@ public class ReceiveRequestModel
             // Note the Repository will overwrite this value via SetNewId() before writing to the database.
             Id = CoreHelpers.GenerateComb(),
             UserId = userId,
+            Name = Name,
             Data = JsonSerializer.Serialize(new ReceiveFileData(Name, string.Empty), JsonHelpers.IgnoreWritingNull),
             UserKeyWrappedSharedContentEncryptionKey = UserKeyWrappedSharedContentEncryptionKey,
             UserKeyWrappedPrivateKey = UserKeyWrappedPrivateKey,
@@ -65,5 +67,13 @@ public class ReceiveRequestModel
 
         return receive;
     }
+
+
+    public ReceiveUpdateData ToUpdateData(Guid id)
+    {
+        return new ReceiveUpdateData { Id = id, Name = Name, ExpirationDate = ExpirationDate, };
+    }
+
+
 }
 
