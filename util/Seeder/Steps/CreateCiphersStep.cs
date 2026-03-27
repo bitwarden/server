@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
-using Bit.Seeder.Factories;
+using Bit.Core.Vault.Enums;
+using Bit.Seeder.Factories.Vault;
 using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 
@@ -57,14 +58,20 @@ internal sealed class CreateCiphersStep : IStep
         for (var i = 0; i < seedFile.Items.Count; i++)
         {
             var item = seedFile.Items[i];
-            var cipher = item.Type switch
+            var options = CipherSeed.FromSeedItem(item) with
             {
-                "login" => LoginCipherSeeder.CreateFromSeed(encryptionKey, item, organizationId: organizationId, userId: userId),
-                "card" => CardCipherSeeder.CreateFromSeed(encryptionKey, item, organizationId: organizationId, userId: userId),
-                "identity" => IdentityCipherSeeder.CreateFromSeed(encryptionKey, item, organizationId: organizationId, userId: userId),
-                "secureNote" => SecureNoteCipherSeeder.CreateFromSeed(encryptionKey, item, organizationId: organizationId, userId: userId),
-                "sshKey" => SshKeyCipherSeeder.CreateFromSeed(encryptionKey, item, organizationId: organizationId, userId: userId),
-                _ => throw new InvalidOperationException($"Unknown cipher type: {item.Type}")
+                EncryptionKey = encryptionKey,
+                OrganizationId = organizationId,
+                UserId = userId
+            };
+            var cipher = options.Type switch
+            {
+                CipherType.Login => LoginCipherSeeder.Create(options),
+                CipherType.Card => CardCipherSeeder.Create(options),
+                CipherType.Identity => IdentityCipherSeeder.Create(options),
+                CipherType.SecureNote => SecureNoteCipherSeeder.Create(options),
+                CipherType.SSHKey => SshKeyCipherSeeder.Create(options),
+                _ => throw new ArgumentOutOfRangeException(nameof(options), $"Unsupported cipher type: {options.Type}")
             };
 
             if (item.Favorite == true && userId.HasValue)

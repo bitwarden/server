@@ -24,6 +24,7 @@ dotnet test test/SeederApi.IntegrationTest/ --filter "FullyQualifiedName~TestMet
 ```
 Need to create test data?
 ├─ ONE entity with encryption? → Factory
+├─ ONE cipher from a SeedVaultItem? → CipherSeed.FromSeedItem() + {Type}CipherSeeder.Create()
 ├─ MANY entities as cohesive operation? → Recipe or Pipeline
 ├─ Flexible preset-based seeding? → Pipeline (RecipeBuilder + Steps)
 ├─ Complete test scenario with ID mangling? → Scene
@@ -122,11 +123,17 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 
 ## Data Flow
 
+### Pipeline path (fixture → entity)
+```
+SeedVaultItem → CipherSeed.FromSeedItem() → CipherSeed → {Type}CipherSeeder.Create(options) → CipherViewDto → encrypt_fields (Rust FFI) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
+```
+
+### Core encryption (shared by all paths)
 ```
 CipherViewDto → JSON + [EncryptProperty] field paths → encrypt_fields (Rust FFI, bitwarden_crypto) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
-Shared logic: `CipherEncryption.cs`, `EncryptedCipherDtoExtensions.cs`
+Shared logic: `Factories/Vault/CipherEncryption.cs`, `Models/EncryptedCipherDtoExtensions.cs`
 
 ## Rust Crypto Dependency
 

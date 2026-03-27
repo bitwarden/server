@@ -1,7 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
-using Bit.Seeder.Factories;
+using Bit.Seeder.Factories.Vault;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
@@ -44,7 +45,15 @@ public class UserIdentityCipherScene(IUserRepository userRepository, ICipherRepo
             MiddleName = request.MiddleName,
             LastName = request.LastName
         };
-        var cipher = IdentityCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, identity: identity, notes: request.Notes);
+        var cipher = IdentityCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Identity,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId,
+            Identity = identity
+        });
 
         await cipherRepository.CreateAsync(cipher);
 

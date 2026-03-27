@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Repositories;
-using Bit.Seeder.Factories;
+using Bit.Seeder.Factories.Vault;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;

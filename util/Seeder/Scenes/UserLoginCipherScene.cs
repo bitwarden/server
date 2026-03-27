@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
-using Bit.Seeder.Factories;
+using Bit.Seeder.Factories.Vault;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -55,7 +57,36 @@ public class UserLoginCipherScene(IUserRepository userRepository, ICipherReposit
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        var cipher = LoginCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, username: request.Username, password: request.Password, totp: request.Totp, uri: request.Uri, notes: request.Notes, fields: request.Fields?.Select(f => (f.Name, f.Value, f.Type)), reprompt: request.Reprompt, deleted: request.Deleted, passkeys: request.Passkeys?.Select(p => (p.RpName, p.UserName)));
+        var cipher = LoginCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Login,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId,
+            Login = new LoginViewDto
+            {
+                Username = request.Username,
+                Password = request.Password,
+                Totp = request.Totp,
+                Uris = string.IsNullOrEmpty(request.Uri) ? null : [new LoginUriViewDto { Uri = request.Uri }],
+                Fido2Credentials = request.Passkeys?.Select(p => LoginCipherSeeder.CreateFido2Credential(p.RpName, p.UserName)).ToList()
+            },
+            Fields = request.Fields?.Select(f => new FieldViewDto
+            {
+                Name = f.Name,
+                Value = f.Value,
+                Type = f.Type
+            }).ToList()
+        });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.Deleted)
+        {
+            cipher.DeletedDate = DateTime.UtcNow.AddDays(-1);
+        }
         if (request.Favorite)
         {
             cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>

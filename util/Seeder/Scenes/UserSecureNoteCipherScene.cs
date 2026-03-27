@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
-using Bit.Seeder.Factories;
+using Bit.Seeder.Factories.Vault;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -32,7 +34,14 @@ public class UserSecureNoteCipherScene(IUserRepository userRepository, ICipherRe
             throw new Exception($"User with ID {request.UserId} not found.");
         }
 
-        var cipher = SecureNoteCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, notes: request.Notes);
+        var cipher = SecureNoteCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.SecureNote,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId
+        });
 
         await cipherRepository.CreateAsync(cipher);
 

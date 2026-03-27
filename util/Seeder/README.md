@@ -65,7 +65,9 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Stateless (except for SDK service dependency)
 - Do NOT interact with database directly
 
-**Naming:** `{Entity}Seeder` with `Create{Type}{Entity}()` methods
+**Naming:** `{Entity}Seeder` with `Create()` methods
+
+**Vault factories** (`Factories/Vault/`): Cipher and folder seeders, encryption infrastructure, and the cipher composer. Each cipher factory accepts a single `CipherSeed` parameter. `CipherSeed.FromSeedItem()` converts a deserialized `SeedVaultItem` into a `CipherSeed` for the pipeline path.
 
 #### Recipes
 
