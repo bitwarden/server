@@ -31,6 +31,13 @@ BEGIN
     WHERE
         [UserId] = @Id
 
+    -- Delete user preferences
+    DELETE
+    FROM
+        [dbo].[UserPreferences]
+    WHERE
+        [UserId] = @Id
+
     -- Delete folders
     DELETE
     FROM
