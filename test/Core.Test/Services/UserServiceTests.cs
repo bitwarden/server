@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
@@ -742,6 +743,53 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustStorageAsync(user, Arg.Any<int>(), premiumPlan.Storage.StripePriceId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelPremiumAsync_WhenFlagEnabled_CallsSubscriberService(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(30);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+
+        await sutProvider.Sut.CancelPremiumAsync(user);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .CancelSubscription(
+                user,
+                Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id),
+                cancelImmediately: false);
+
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelPremiumAsync_WhenFlagDisabled_CallsLegacyPaymentService(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(30);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+
+        await sutProvider.Sut.CancelPremiumAsync(user);
+
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .Received(1)
+            .CancelSubscriptionAsync(user, true);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscription(default, default, default);
     }
 }
 

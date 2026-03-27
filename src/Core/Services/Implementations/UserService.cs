@@ -13,8 +13,10 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
@@ -71,6 +73,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly ISubscriberService _subscriberService;
 
     public UserService(
         IUserRepository userRepository,
@@ -106,7 +109,8 @@ public class UserService : UserManager<User>, IUserService
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
-        IHasPremiumAccessQuery hasPremiumAccessQuery)
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        ISubscriberService subscriberService)
         : base(
               store,
               optionsAccessor,
@@ -147,6 +151,7 @@ public class UserService : UserManager<User>, IUserService
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _subscriberService = subscriberService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -274,6 +279,7 @@ public class UserService : UserManager<User>, IUserService
                 await CancelPremiumAsync(user);
             }
             catch (GatewayException) { }
+            catch (BillingException) { }
         }
 
         await _userRepository.DeleteAsync(user);
@@ -826,7 +832,18 @@ public class UserService : UserManager<User>, IUserService
         {
             eop = false;
         }
-        await _paymentService.CancelSubscriptionAsync(user, eop);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            await _subscriberService.CancelSubscription(
+                user,
+                new OffboardingSurveyResponse { UserId = user.Id },
+                cancelImmediately: !eop);
+        }
+        else
+        {
+            await _paymentService.CancelSubscriptionAsync(user, eop);
+        }
     }
 
     // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
