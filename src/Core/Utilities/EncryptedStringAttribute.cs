@@ -156,43 +156,42 @@ public class EncryptedStringAttribute : ValidationAttribute
     };
 
     /// <summary>
-    /// Validates base64 permissively — accepts non-zero trailing bits before padding.
-    /// Fast path uses SIMD-accelerated Base64.IsValid; slow path normalizes trailing
-    /// bits and re-validates.
+    /// Validates base64 permissively by accepting non-zero padding bits.
     /// </summary>
     private static bool IsValidBase64Permissive(ReadOnlySpan<char> value)
     {
-        if (Base64.IsValid(value))
-            return true;
-
-        // Check if non-canonical trailing bits are the only issue
+        // Obviously not base64
         if (value.IsEmpty || value.Length % 4 != 0)
             return false;
 
+        // If there isn't any padding, there's nothing to be permissive about.
         var padCount = 0;
         if (value[^1] == '=') { padCount++; if (value[^2] == '=') padCount++; }
         if (padCount == 0)
-            return false; // no padding → strict was right to reject
+            return Base64.IsValid(value);
 
+        // Get the last non-padding char. Ensure it's in the base64 alphabet.
         var lastDataIdx = value.Length - padCount - 1;
         var charVal = Base64CharValue(value[lastDataIdx]);
         if (charVal < 0)
             return false;
 
-        // 4 trailing bits for == padding, 2 for = padding
-        var trailingBits = padCount == 2 ? 4 : 2;
-        var canonical = charVal & ~((1 << trailingBits) - 1);
-        if (canonical == charVal)
-            return false; // already canonical — something else is wrong
+        // Compute the correct char. If the original char is already valid,
+        // test the full string.
+        var dataBitMask = padCount == 2 ? 0b110000 : 0b111100;
+        var newCharVal = charVal & dataBitMask;
+        if (newCharVal == charVal)
+            return Base64.IsValid(value);
 
-        // Validate prefix (before last 4-char block) with SIMD
+        // Validate all but the last block, to minimize allocation in the next
+        // section.
         if (value.Length > 4 && !Base64.IsValid(value[..^4]))
             return false;
 
-        // Validate last block with normalized character
-        Span<char> lastBlock = stackalloc char[4];
-        value[^4..].CopyTo(lastBlock);
-        lastBlock[4 - padCount - 1] = _base64Chars[canonical];
-        return Base64.IsValid(lastBlock);
+        // Apply the correct char and validate the last block 
+        Span<char> canonical = stackalloc char[4];
+        value[^4..].CopyTo(canonical);
+        canonical[4 - padCount - 1] = _base64Chars[newCharVal];
+        return Base64.IsValid(canonical);
     }
 }
