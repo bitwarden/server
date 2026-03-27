@@ -627,7 +627,7 @@ public class UserRepositoryTests
     /// <summary>
     /// In this test we are testing that the MasterPasswordUnlockData set's the password data correctly.
     /// including setting the masterPasswordSalt.
-    /// <see cref="TdeSetPasswordCommand.SetMasterPasswordAsync"/> and <see cref="FinishSsoJitProvisionMasterPasswordCommandCommand.FinishProvisionAsync"/> for reference.
+    /// <see cref="TdeSetPasswordCommand.SetMasterPasswordAsync"/> and <see cref="FinishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync"/> for reference.
     /// </summary>
     [Theory, DatabaseData]
     public async Task UpdateMasterPassword_MasterPasswordSaltIsUpdated(
