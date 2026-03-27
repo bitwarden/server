@@ -24,21 +24,70 @@ internal static class PresetLoader
     internal static void RegisterRecipe(string presetName, ISeedReader reader, IServiceCollection services)
     {
         var preset = reader.Read<SeedPreset>($"presets.{presetName}");
+        PresetValidator.Validate(preset, presetName);
 
-        if (preset.Organization is null)
+        if (preset.IsIndividual)
         {
-            throw new InvalidOperationException(
-                $"Preset '{presetName}' must specify an organization.");
+            BuildIndividualRecipe(presetName, preset, services);
+        }
+        else
+        {
+            BuildRecipe(presetName, preset, reader, services);
+        }
+    }
+
+    private static void BuildIndividualRecipe(string presetName, SeedPreset preset, IServiceCollection services)
+    {
+        var builder = services.AddRecipe(presetName);
+        var user = preset.User!;
+        var domain = user.Email.Split('@')[1];
+
+        builder.CreateIndividualUser(user.Email, user.Premium, user.MaxStorageGb);
+
+        if (preset.FolderNames is { Count: > 0 })
+        {
+            builder.AddNamedFolders(preset.FolderNames);
         }
 
-        BuildRecipe(presetName, preset, reader, services);
+        var needsGenerator = preset.Folders == true || preset.Ciphers is { Count: > 0 };
+
+        if (needsGenerator)
+        {
+            builder.WithGenerator(domain);
+        }
+
+        if (preset.Folders == true)
+        {
+            builder.AddFolders(null);
+        }
+
+        if (preset.Ciphers?.Fixture is not null)
+        {
+            builder.UsePersonalVaultCiphers(preset.Ciphers.Fixture);
+        }
+        else if (preset.Ciphers is { Count: > 0 })
+        {
+            builder.AddPersonalCiphers(preset.Ciphers.Count);
+        }
+
+        if (preset.FolderAssignments is { Count: > 0 })
+        {
+            builder.CreateCipherFolders(preset.FolderAssignments);
+        }
+
+        if (preset.FavoriteAssignments is { Count: > 0 })
+        {
+            builder.CreateCipherFavorites(preset.FavoriteAssignments);
+        }
+
+        builder.Validate();
     }
 
     /// <summary>
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
     /// </remarks>
     private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
     {
@@ -65,6 +114,8 @@ internal static class PresetLoader
             builder.CreateOrganization(org.Name, org.Domain, org.Seats, planType);
             domain = org.Domain;
         }
+
+        builder.AddOrganizationApiKey();
 
         if (preset.Roster?.Fixture is not null)
         {
