@@ -23,7 +23,7 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count override</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
+    public OrganizationSeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
     {
         var result = _orchestrator.Execute(presetName, password, kdfIterations);
 
@@ -33,7 +33,7 @@ public class OrganizationRecipe(SeederDependencies deps)
                 $"Preset '{presetName}' is not an organization preset. Use IndividualUserRecipe instead.");
         }
 
-        return SeedResult.From(result);
+        return OrganizationSeedResult.From(result);
     }
 
     /// <summary>
@@ -41,9 +41,9 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// </summary>
     /// <param name="options">Options specifying what to seed.</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(OrganizationVaultOptions options)
+    public OrganizationSeedResult Seed(OrganizationVaultOptions options)
     {
         var result = _orchestrator.Execute(options);
-        return SeedResult.From(result);
+        return OrganizationSeedResult.From(result);
     }
 }

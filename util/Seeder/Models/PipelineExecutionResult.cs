@@ -1,9 +1,9 @@
 ﻿namespace Bit.Seeder.Models;
 
 /// <summary>
-/// Internal result of pipeline execution with entity IDs and counts for either an organization or individual user seed.
+/// Internal result produced by the recipe pipeline, carrying entity IDs and counts before being mapped to a public result type.
 /// </summary>
-internal record ExecutionResult(
+internal record PipelineExecutionResult(
     Guid? OrganizationId,
     Guid? UserId,
     string? OwnerEmail,

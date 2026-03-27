@@ -1,9 +1,9 @@
 ﻿namespace Bit.Seeder.Models;
 
 /// <summary>
-/// Result of organization seeding with summary statistics.
+/// Result of seeding an organization with summary statistics for created users, groups, collections, and ciphers.
 /// </summary>
-public record SeedResult(
+public record OrganizationSeedResult(
     Guid OrganizationId,
     string? OwnerEmail,
     string? ApiKey,
@@ -13,7 +13,7 @@ public record SeedResult(
     int CollectionsCount,
     int CiphersCount)
 {
-    internal static SeedResult From(ExecutionResult result) =>
+    internal static OrganizationSeedResult From(PipelineExecutionResult result) =>
         new(result.OrganizationId!.Value,
             result.OwnerEmail,
             result.OrganizationApiKey,

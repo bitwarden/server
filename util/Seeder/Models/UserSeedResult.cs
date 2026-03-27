@@ -1,9 +1,9 @@
 ﻿namespace Bit.Seeder.Models;
 
 /// <summary>
-/// Result of individual user seeding with summary statistics.
+/// Result of seeding a standalone user account with summary statistics for created ciphers and folders.
 /// </summary>
-public record IndividualSeedResult(
+public record UserSeedResult(
     Guid UserId,
     string? Email,
     string? ApiKey,
@@ -12,7 +12,7 @@ public record IndividualSeedResult(
     int CiphersCount,
     int FoldersCount)
 {
-    internal static IndividualSeedResult From(ExecutionResult result) =>
+    internal static UserSeedResult From(PipelineExecutionResult result) =>
         new(result.UserId!.Value,
             result.OwnerEmail,
             result.UserApiKey,

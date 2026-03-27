@@ -27,7 +27,7 @@ internal sealed class RecipeExecutor
     /// <remarks>
     /// Clears the EntityRegistry at the start to ensure a clean slate for each run.
     /// </remarks>
-    internal ExecutionResult Execute()
+    internal PipelineExecutionResult Execute()
     {
         var steps = _serviceProvider.GetKeyedServices<IStep>(_recipeName)
             .OrderBy(s => s is OrderedStep os ? os.Order : int.MaxValue)
@@ -42,7 +42,7 @@ internal sealed class RecipeExecutor
         }
 
         // Capture counts BEFORE committing (commit clears the lists)
-        var result = new ExecutionResult(
+        var result = new PipelineExecutionResult(
             context.Organization?.Id,
             context.Owner?.Id,
             context.Owner?.Email,
