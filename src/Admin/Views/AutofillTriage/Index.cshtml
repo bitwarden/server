@@ -1,4 +1,4 @@
-@using System.Text.Json
+@using System.Net
 @model AutofillTriageModel
 @{
     ViewData["Title"] = "Autofill Triage";
@@ -10,10 +10,9 @@
     <table class="table table-striped table-hover">
         <thead>
             <tr>
-                <th>Created At</th>
+                <th style="white-space: nowrap;">Created At</th>
                 <th>Page URL</th>
-                <th>Target Field</th>
-                <th>Field Count</th>
+                <th>User Message</th>
                 <th></th>
             </tr>
         </thead>
@@ -21,26 +20,25 @@
             @if (!Model.Items.Any())
             {
                 <tr>
-                    <td colspan="5">No reports to show.</td>
+                    <td colspan="4">No reports to show.</td>
                 </tr>
             }
             else
             {
                 @foreach (var item in Model.Items)
                 {
-                    var fieldCount = 0;
-                    try { fieldCount = JsonDocument.Parse(item.ReportData).RootElement.GetArrayLength(); } catch { }
                     var truncatedUrl = item.PageUrl.Length > 80 ? item.PageUrl.Substring(0, 80) + "..." : item.PageUrl;
+                    var rawMessage = item.UserMessage != null ? WebUtility.HtmlDecode(item.UserMessage) : null;
+                    var truncatedMessage = rawMessage != null && rawMessage.Length > 60 ? rawMessage.Substring(0, 60) + "..." : rawMessage;
                     <tr>
-                        <td>
-                            <span title="@item.CreationDate.ToString()">
+                        <td style="white-space: nowrap;">
+                            <a asp-action="Details" asp-route-id="@item.Id" title="@item.CreationDate.ToString()">
                                 @item.CreationDate.ToString("g")
-                            </span>
+                            </a>
                         </td>
                         <td title="@item.PageUrl">@truncatedUrl</td>
-                        <td>@(item.TargetElementRef ?? "—")</td>
-                        <td>@fieldCount</td>
-                        <td class="text-end">
+                        <td title="@rawMessage">@(truncatedMessage ?? "—")</td>
+                        <td class="text-end" style="width: 1%; white-space: nowrap;">
                             <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-secondary me-1">View Details</a>
                             <form method="post" asp-action="Archive" asp-route-id="@item.Id" style="display:inline">
                                 <button type="submit"

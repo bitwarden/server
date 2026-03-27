@@ -39,6 +39,15 @@
             <dt class="col-sm-3">User Message</dt>
             <dd class="col-sm-9">@(Model.UserMessage != null ? WebUtility.HtmlDecode(Model.UserMessage) : "(none)")</dd>
         </dl>
+        <div class="mt-3 pt-3 border-top">
+            <form method="post" asp-action="Archive" asp-route-id="@Model.Id" style="display:inline">
+                <button type="submit" class="btn btn-outline-danger"
+                        onclick="return confirm('Archive this report?')">
+                    Archive
+                </button>
+                @Html.AntiForgeryToken()
+            </form>
+        </div>
     </div>
 </div>
 
@@ -47,7 +56,7 @@
 @for (var i = 0; i < fields.Count; i++)
 {
     var field = fields[i];
-    var fieldLabel = field.HtmlId ?? field.HtmlName ?? "(unnamed)";
+    var fieldLabel = field.HtmlId ?? field.HtmlName ?? field.Placeholder ?? "(unnamed)";
     var collapseId = $"field-{i}";
     var isTarget = field.HtmlId == Model.TargetElementRef || field.HtmlName == Model.TargetElementRef;
     <div class="card mb-3 @(isTarget ? "border-primary" : "")">
@@ -55,7 +64,20 @@
              data-bs-toggle="collapse" data-bs-target="#@collapseId"
              role="button" aria-expanded="false" aria-controls="@collapseId"
              style="cursor: pointer; user-select: none;">
-            <strong>@fieldLabel</strong>
+            <div class="d-flex align-items-center gap-2">
+                <strong>@fieldLabel</strong>
+                <span class="text-muted">|</span>
+                <span>Identified as:
+                    @if (field.Eligible)
+                    {
+                        <span class="badge bg-success">@field.QualifiedAs</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">@field.QualifiedAs</span>
+                    }
+                </span>
+            </div>
             <span data-for="@collapseId" class="text-muted small">Expand</span>
         </div>
         <div class="collapse" id="@collapseId">
@@ -96,17 +118,6 @@
                         <dt class="col-sm-3">Form Index</dt>
                         <dd class="col-sm-9">@field.FormIndex</dd>
                     }
-                    <dt class="col-sm-3">Identified As</dt>
-                    <dd class="col-sm-9">
-                        @if (field.Eligible)
-                        {
-                            <span class="badge bg-success">@field.QualifiedAs</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">@field.QualifiedAs</span>
-                        }
-                    </dd>
                 </dl>
 
                 @if (field.Conditions.Any())
