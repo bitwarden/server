@@ -1,12 +1,8 @@
-﻿using AutoMapper;
-using Bit.Core.Entities;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Seeder.Recipes;
+﻿using Bit.Seeder.Recipes;
 using Bit.Seeder.Services;
 using Bit.SeederUtility.Configuration;
+using Bit.SeederUtility.Helpers;
 using CommandDotNet;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SeederUtility.Commands;
 
@@ -22,29 +18,18 @@ public class SeedCommand
 
             if (args.List)
             {
-                var available = OrganizationRecipe.ListAvailable();
-                PrintAvailableSeeds(available);
+                PrintAvailableSeeds();
                 return;
             }
 
-            var services = new ServiceCollection();
-            ServiceCollectionExtension.ConfigureServices(services, enableMangling: args.Mangle);
-            var serviceProvider = services.BuildServiceProvider();
-
-            using var scope = serviceProvider.CreateScope();
-            var scopedServices = scope.ServiceProvider;
-
-            var db = scopedServices.GetRequiredService<DatabaseContext>();
-            var mapper = scopedServices.GetRequiredService<IMapper>();
-            var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
-            var manglerService = scopedServices.GetRequiredService<IManglerService>();
-
-            var recipe = new OrganizationRecipe(db, mapper, passwordHasher, manglerService);
-
-            Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
-            var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
-
-            PrintSeedResult(result);
+            if (IsIndividualPreset(args.Preset!))
+            {
+                SeedIndividual(args);
+            }
+            else
+            {
+                SeedOrganization(args);
+            }
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
@@ -53,10 +38,85 @@ public class SeedCommand
         }
     }
 
-    private static void PrintAvailableSeeds(AvailableSeeds available)
+    private static void SeedOrganization(SeedArgs args)
     {
-        Console.WriteLine("Available Presets:");
-        foreach (var preset in available.Presets)
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        var recipe = new OrganizationRecipe(deps.ToDependencies());
+
+        Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
+        var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
+
+        ConsoleOutput.PrintRow("Organization", result.OrganizationId);
+        if (result.OwnerEmail is not null)
+        {
+            ConsoleOutput.PrintRow("Owner", result.OwnerEmail);
+        }
+        ConsoleOutput.PrintRow("Password", result.Password);
+        if (result.ApiKey is not null)
+        {
+            ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
+        }
+        ConsoleOutput.PrintCountRow("Users", result.UsersCount);
+        ConsoleOutput.PrintCountRow("Groups", result.GroupsCount);
+        ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
+        ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
+
+        ConsoleOutput.PrintMangleMap(deps);
+    }
+
+    private static void SeedIndividual(SeedArgs args)
+    {
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        var recipe = new IndividualUserRecipe(deps.ToDependencies());
+
+        Console.WriteLine($"Seeding individual user from preset '{args.Preset}'...");
+        var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
+
+        ConsoleOutput.PrintRow("User", result.UserId);
+        if (result.Email is not null)
+        {
+            ConsoleOutput.PrintRow("Email", result.Email);
+        }
+        ConsoleOutput.PrintRow("Password", result.Password);
+        ConsoleOutput.PrintRow("Premium", result.Premium);
+        if (result.ApiKey is not null)
+        {
+            ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
+        }
+        ConsoleOutput.PrintCountRow("Folders", result.FoldersCount);
+        ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
+
+        ConsoleOutput.PrintMangleMap(deps);
+    }
+
+    private static void PrintAvailableSeeds()
+    {
+        var available = PresetCatalogService.ListAvailable();
+
+        var orgPresets = new List<string>();
+        var individualPresets = new List<string>();
+
+        foreach (var presetName in available.Presets)
+        {
+            if (IsIndividualPreset(presetName))
+            {
+                individualPresets.Add(presetName);
+            }
+            else
+            {
+                orgPresets.Add(presetName);
+            }
+        }
+
+        Console.WriteLine("Organization Presets:");
+        foreach (var preset in orgPresets)
+        {
+            Console.WriteLine($"  - {preset}");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("Individual User Presets:");
+        foreach (var preset in individualPresets)
         {
             Console.WriteLine($"  - {preset}");
         }
@@ -83,33 +143,6 @@ public class SeedCommand
         Console.WriteLine("Use: SeederUtility seed --preset <name>");
     }
 
-    private static void PrintSeedResult(SeedResult result)
-    {
-        Console.WriteLine($"✓ Created organization (ID: {result.OrganizationId})");
-
-        if (result.OwnerEmail is not null)
-        {
-            Console.WriteLine($"✓ Owner: {result.OwnerEmail}");
-        }
-
-        if (result.UsersCount > 0)
-        {
-            Console.WriteLine($"✓ Created {result.UsersCount} users");
-        }
-
-        if (result.GroupsCount > 0)
-        {
-            Console.WriteLine($"✓ Created {result.GroupsCount} groups");
-        }
-
-        if (result.CollectionsCount > 0)
-        {
-            Console.WriteLine($"✓ Created {result.CollectionsCount} collections");
-        }
-
-        if (result.CiphersCount > 0)
-        {
-            Console.WriteLine($"✓ Created {result.CiphersCount} ciphers");
-        }
-    }
+    private static bool IsIndividualPreset(string presetName) =>
+        PresetCatalogService.IsIndividualPreset(presetName);
 }
