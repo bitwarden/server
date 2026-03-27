@@ -52,7 +52,6 @@ public class ReceiveRequestModel
     {
         var receive = new Receive
         {
-            Id = CoreHelpers.GenerateComb(),
             UserId = userId,
             Data = JsonSerializer.Serialize(new ReceiveFileData(Name, string.Empty), JsonHelpers.IgnoreWritingNull),
             UserKeyWrappedSharedContentEncryptionKey = UserKeyWrappedSharedContentEncryptionKey,
