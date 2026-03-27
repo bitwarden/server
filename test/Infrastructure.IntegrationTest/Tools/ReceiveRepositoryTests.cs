@@ -26,6 +26,7 @@ public class ReceiveRepositoryTests
     {
         UserId = userId,
         Data = "{\"File\": \"2.t|t|t\"}",
+        Name = "2.scek|iv|ct",
         UserKeyWrappedSharedContentEncryptionKey = "2.scek|iv|ct",
         UserKeyWrappedPrivateKey = "2.privkey|iv|ct",
         ScekWrappedPublicKey = "2.pubkey|iv|ct",

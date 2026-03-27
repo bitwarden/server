@@ -23,6 +23,7 @@ public class ReceiveResponseModelTests
         {
             Id = Guid.NewGuid(),
             UserId = Guid.NewGuid(),
+            Name = "encrypted_name",
             Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull),
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
@@ -49,6 +50,7 @@ public class ReceiveResponseModelTests
         {
             Id = Guid.NewGuid(),
             UserId = Guid.NewGuid(),
+            Name = "encrypted_name",
             Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull),
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
@@ -76,6 +78,7 @@ public class ReceiveResponseModelTests
             Id = receiveId,
             UserId = Guid.NewGuid(),
             Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull),
+            Name = "encrypted_name",
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
             ScekWrappedPublicKey = "encrypted_public_key",
