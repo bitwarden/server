@@ -43,7 +43,8 @@ public class SyncResponseModel() : ResponseModel("sync")
         bool excludeDomains,
         IEnumerable<Policy> policies,
         IEnumerable<Send> sends,
-        IEnumerable<WebAuthnCredential> webAuthnCredentials)
+        IEnumerable<WebAuthnCredential> webAuthnCredentials,
+        UserPreferences userPreferences)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
@@ -70,6 +71,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                 [] // transports as empty array
             ))
             .ToArray();
+
+        UserPreferences = userPreferences != null ? new UserPreferencesResponseModel(userPreferences) : null;
 
         UserDecryption = new UserDecryptionResponseModel
         {
@@ -120,4 +123,5 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
+    public UserPreferencesResponseModel UserPreferences { get; set; }
 }
