@@ -1,7 +1,9 @@
 ﻿using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +13,7 @@ namespace Bit.Api.Vault.Controllers;
 
 [Route("user-preferences")]
 [Authorize("Application")]
+[RequireFeature(FeatureFlagKeys.SyncUserPreferences)]
 public class UserPreferencesController(
     IUserService userService,
     IUserPreferencesRepository userPreferencesRepository,
