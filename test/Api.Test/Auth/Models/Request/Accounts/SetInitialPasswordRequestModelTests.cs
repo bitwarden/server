@@ -16,29 +16,33 @@ public class SetInitialPasswordRequestModelTests
     [Theory]
     [InlineData(KdfType.PBKDF2_SHA256, 600000, null, null)]
     [InlineData(KdfType.Argon2id, 3, 64, 4)]
-    public void Validate_V2Request_WithMatchingKdf_ReturnsNoErrors(KdfType kdfType, int iterations, int? memory, int? parallelism)
+    public void Validate_V2Request_WithMatchingKdfAndSalt_ReturnsNoErrors(KdfType kdfType, int iterations, int? memory, int? parallelism)
     {
-        // Arrange
-        var kdf = new KdfRequestModel
-        {
-            KdfType = kdfType,
-            Iterations = iterations,
-            Memory = memory,
-            Parallelism = parallelism
-        };
-
+        // Arrange — uses separate KDF object instances with identical values to verify value equality
         var model = new SetInitialPasswordRequestModel
         {
             OrgIdentifier = "orgIdentifier",
             MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
             {
-                Kdf = kdf,
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = kdfType,
+                    Iterations = iterations,
+                    Memory = memory,
+                    Parallelism = parallelism
+                },
                 MasterPasswordAuthenticationHash = "authHash",
                 Salt = "salt"
             },
             MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
             {
-                Kdf = kdf,
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = kdfType,
+                    Iterations = iterations,
+                    Memory = memory,
+                    Parallelism = parallelism
+                },
                 MasterKeyWrappedUserKey = "wrappedKey",
                 Salt = "salt"
             },
@@ -93,9 +97,43 @@ public class SetInitialPasswordRequestModelTests
         Assert.Single(result);
         Assert.Contains("KDF settings must be equal", result[0].ErrorMessage);
         var memberNames = result[0].MemberNames.ToList();
-        Assert.Equal(2, memberNames.Count);
-        Assert.Contains("MasterPasswordAuthentication.Kdf", memberNames);
-        Assert.Contains("MasterPasswordUnlock.Kdf", memberNames);
+        Assert.Single(memberNames);
+        Assert.Contains("Kdf", memberNames);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_V2Request_WithMismatchedSalt_ReturnsValidationError(string orgIdentifier)
+    {
+        // Arrange
+        var kdf = new KdfRequestModel
+        {
+            KdfType = KdfType.PBKDF2_SHA256,
+            Iterations = 600000
+        };
+
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = "authHash",
+                Salt = "salt1"
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = "wrappedKey",
+                Salt = "salt2" // Different salt
+            }
+        };
+
+        // Act
+        var result = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert
+        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("Salt must be equal"));
     }
 
     [Theory]
