@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Commands;
+﻿using Bit.Core.Exceptions;
+using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -18,6 +19,10 @@ public class CreateUserPreferencesCommandTest
         Guid userId,
         string data)
     {
+        sutProvider.GetDependency<IUserPreferencesRepository>()
+            .GetByUserIdAsync(userId)
+            .Returns((UserPreferences?)null);
+
         var result = await sutProvider.Sut.CreateAsync(userId, data);
 
         Assert.NotNull(result);
@@ -29,5 +34,26 @@ public class CreateUserPreferencesCommandTest
             .Received(1)
             .CreateAsync(Arg.Is<UserPreferences>(p =>
                 p.UserId == userId && p.Data == data));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateAsync_AlreadyExists_ThrowsBadRequestException(
+        SutProvider<CreateUserPreferencesCommand> sutProvider,
+        Guid userId,
+        string data)
+    {
+        var existing = UserPreferences.Create(userId, "existing-data");
+
+        sutProvider.GetDependency<IUserPreferencesRepository>()
+            .GetByUserIdAsync(userId)
+            .Returns(existing);
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateAsync(userId, data));
+
+        await sutProvider.GetDependency<IUserPreferencesRepository>()
+            .DidNotReceive()
+            .CreateAsync(Arg.Any<UserPreferences>());
     }
 }

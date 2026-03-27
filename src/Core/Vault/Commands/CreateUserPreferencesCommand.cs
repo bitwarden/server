@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Commands.Interfaces;
+using Bit.Core.Exceptions;
+using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 
@@ -9,6 +10,12 @@ public class CreateUserPreferencesCommand(IUserPreferencesRepository userPrefere
 {
     public async Task<UserPreferences> CreateAsync(Guid userId, string data)
     {
+        var existing = await userPreferencesRepository.GetByUserIdAsync(userId);
+        if (existing != null)
+        {
+            throw new BadRequestException("User preferences already exist.");
+        }
+
         var preferences = UserPreferences.Create(userId, data);
         await userPreferencesRepository.CreateAsync(preferences);
         return preferences;

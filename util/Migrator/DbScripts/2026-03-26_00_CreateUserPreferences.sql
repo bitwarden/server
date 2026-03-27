@@ -11,7 +11,7 @@ BEGIN
         CONSTRAINT [FK_UserPreferences_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
     );
 
-    CREATE NONCLUSTERED INDEX [IX_UserPreferences_UserId]
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_UserPreferences_UserId]
         ON [dbo].[UserPreferences]([UserId] ASC);
 END
 GO

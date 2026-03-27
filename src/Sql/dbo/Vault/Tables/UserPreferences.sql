@@ -10,5 +10,5 @@ CREATE TABLE [dbo].[UserPreferences] (
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_UserPreferences_UserId]
+CREATE UNIQUE NONCLUSTERED INDEX [IX_UserPreferences_UserId]
     ON [dbo].[UserPreferences]([UserId] ASC);

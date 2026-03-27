@@ -18,6 +18,7 @@ public class UserPreferencesEntityTypeConfiguration : IEntityTypeConfiguration<U
 
         builder
             .HasIndex(up => up.UserId)
+            .IsUnique()
             .IsClustered(false);
 
         builder
