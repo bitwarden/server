@@ -20,20 +20,19 @@ public class IndividualCommand
 
             var result = recipe.Seed(args.ToOptions());
 
-            Console.WriteLine($"Created user (ID: {result.UserId})");
+            ConsoleOutput.PrintRow("User", result.UserId);
             if (result.Email is not null)
             {
-                Console.WriteLine($"Email: {result.Email}");
+                ConsoleOutput.PrintRow("Email", result.Email);
             }
-            Console.WriteLine($"Premium: {result.Premium}");
-            if (result.FoldersCount > 0)
+            ConsoleOutput.PrintRow("Password", result.Password);
+            ConsoleOutput.PrintRow("Premium", result.Premium);
+            if (result.ApiKey is not null)
             {
-                Console.WriteLine($"Created {result.FoldersCount} folders");
+                ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
             }
-            if (result.CiphersCount > 0)
-            {
-                Console.WriteLine($"Created {result.CiphersCount} ciphers");
-            }
+            ConsoleOutput.PrintCountRow("Folders", result.FoldersCount);
+            ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
             ConsoleOutput.PrintMangleMap(deps);
         }

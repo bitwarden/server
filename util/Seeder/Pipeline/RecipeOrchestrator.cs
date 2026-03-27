@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Options;
+﻿using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -54,6 +55,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var builder = services.AddRecipe(recipeName);
 
         builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType);
+        builder.AddOrganizationApiKey();
         builder.AddOwner();
         builder.WithGenerator(options.Domain);
         builder.AddUsers(options.Users, options.RealisticStatusMix);
@@ -130,17 +132,3 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     }
 
 }
-
-/// <summary>
-/// Result of pipeline execution with entity IDs and counts for either an organization or individual user seed.
-/// </summary>
-internal record ExecutionResult(
-    Guid? OrganizationId,
-    Guid? UserId,
-    string? OwnerEmail,
-    bool Premium,
-    int UsersCount,
-    int GroupsCount,
-    int CollectionsCount,
-    int CiphersCount,
-    int FoldersCount);

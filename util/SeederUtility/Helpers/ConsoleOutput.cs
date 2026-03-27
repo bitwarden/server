@@ -4,6 +4,21 @@ namespace Bit.SeederUtility.Helpers;
 
 internal static class ConsoleOutput
 {
+    private const int _labelWidth = 14;
+
+    internal static void PrintRow(string label, object? value)
+    {
+        Console.WriteLine($"  {label,_labelWidth} : {value}");
+    }
+
+    internal static void PrintCountRow(string label, int count)
+    {
+        if (count > 0)
+        {
+            PrintRow(label, count);
+        }
+    }
+
     internal static void PrintMangleMap(SeederServiceScope deps)
     {
         if (!deps.Mangler.IsEnabled)

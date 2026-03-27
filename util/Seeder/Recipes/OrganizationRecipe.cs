@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Options;
+﻿using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Recipes;
@@ -32,7 +33,7 @@ public class OrganizationRecipe(SeederDependencies deps)
                 $"Preset '{presetName}' is not an organization preset. Use IndividualUserRecipe instead.");
         }
 
-        return ToResult(result);
+        return SeedResult.From(result);
     }
 
     /// <summary>
@@ -43,20 +44,6 @@ public class OrganizationRecipe(SeederDependencies deps)
     public SeedResult Seed(OrganizationVaultOptions options)
     {
         var result = _orchestrator.Execute(options);
-        return ToResult(result);
+        return SeedResult.From(result);
     }
-
-    private static SeedResult ToResult(ExecutionResult result) =>
-        new(result.OrganizationId!.Value, result.OwnerEmail, result.UsersCount, result.GroupsCount, result.CollectionsCount, result.CiphersCount);
 }
-
-/// <summary>
-/// Result of seeding operation with summary statistics.
-/// </summary>
-public record SeedResult(
-    Guid OrganizationId,
-    string? OwnerEmail,
-    int UsersCount,
-    int GroupsCount,
-    int CollectionsCount,
-    int CiphersCount);

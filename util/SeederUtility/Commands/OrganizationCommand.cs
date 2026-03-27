@@ -20,27 +20,20 @@ public class OrganizationCommand
 
             var result = recipe.Seed(args.ToOptions());
 
-            Console.WriteLine($"Created organization (ID: {result.OrganizationId})");
+            ConsoleOutput.PrintRow("Organization", result.OrganizationId);
             if (result.OwnerEmail is not null)
             {
-                Console.WriteLine($"Owner: {result.OwnerEmail}");
+                ConsoleOutput.PrintRow("Owner", result.OwnerEmail);
             }
-            if (result.UsersCount > 0)
+            ConsoleOutput.PrintRow("Password", result.Password);
+            if (result.ApiKey is not null)
             {
-                Console.WriteLine($"Created {result.UsersCount} users");
+                ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
             }
-            if (result.GroupsCount > 0)
-            {
-                Console.WriteLine($"Created {result.GroupsCount} groups");
-            }
-            if (result.CollectionsCount > 0)
-            {
-                Console.WriteLine($"Created {result.CollectionsCount} collections");
-            }
-            if (result.CiphersCount > 0)
-            {
-                Console.WriteLine($"Created {result.CiphersCount} ciphers");
-            }
+            ConsoleOutput.PrintCountRow("Users", result.UsersCount);
+            ConsoleOutput.PrintCountRow("Groups", result.GroupsCount);
+            ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
+            ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
             ConsoleOutput.PrintMangleMap(deps);
         }

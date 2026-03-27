@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Bit.Seeder.Models;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Seeder.Pipeline;
 
@@ -45,6 +46,9 @@ internal sealed class RecipeExecutor
             context.Organization?.Id,
             context.Owner?.Id,
             context.Owner?.Email,
+            context.Owner?.ApiKey,
+            context.OrganizationApiKey?.ApiKey,
+            context.GetPassword(),
             context.Owner?.Premium ?? false,
             context.Users.Count,
             context.Groups.Count,
