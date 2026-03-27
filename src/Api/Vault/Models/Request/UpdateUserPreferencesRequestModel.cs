@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 
 namespace Bit.Api.Vault.Models.Request;
 
