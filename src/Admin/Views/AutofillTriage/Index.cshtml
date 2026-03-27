@@ -13,16 +13,15 @@
                 <th>Created At</th>
                 <th>Page URL</th>
                 <th>Target Field</th>
-                <th>User Message</th>
                 <th>Field Count</th>
-                <th>Archive</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
             @if (!Model.Items.Any())
             {
                 <tr>
-                    <td colspan="6">No reports to show.</td>
+                    <td colspan="5">No reports to show.</td>
                 </tr>
             }
             else
@@ -32,27 +31,20 @@
                     var fieldCount = 0;
                     try { fieldCount = JsonDocument.Parse(item.ReportData).RootElement.GetArrayLength(); } catch { }
                     var truncatedUrl = item.PageUrl.Length > 80 ? item.PageUrl.Substring(0, 80) + "..." : item.PageUrl;
-                    var truncatedMessage = item.UserMessage != null && item.UserMessage.Length > 60
-                        ? item.UserMessage.Substring(0, 60) + "..."
-                        : item.UserMessage;
                     <tr>
                         <td>
                             <span title="@item.CreationDate.ToString()">
                                 @item.CreationDate.ToString("g")
                             </span>
                         </td>
-                        <td>
-                            <a asp-action="Details" asp-route-id="@item.Id" title="@item.PageUrl">
-                                @truncatedUrl
-                            </a>
-                        </td>
+                        <td title="@item.PageUrl">@truncatedUrl</td>
                         <td>@(item.TargetElementRef ?? "—")</td>
-                        <td title="@item.UserMessage">@(truncatedMessage ?? "—")</td>
                         <td>@fieldCount</td>
-                        <td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-secondary me-1">View Details</a>
                             <form method="post" asp-action="Archive" asp-route-id="@item.Id" style="display:inline">
                                 <button type="submit"
-                                        class="btn btn-sm btn-warning"
+                                        class="btn btn-sm btn-outline-danger"
                                         onclick="return confirm('Archive this report?')">
                                     Archive
                                 </button>
