@@ -20,20 +20,17 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class ProviderUsersController : Controller
 {
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderService _providerService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
 
     public ProviderUsersController(
         IProviderUserRepository providerUserRepository,
-        IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         IUserService userService,
         ICurrentContext currentContext)
     {
         _providerUserRepository = providerUserRepository;
-        _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _userService = userService;
         _currentContext = currentContext;
@@ -62,34 +59,6 @@ public class ProviderUsersController : Controller
         var providerUsers = await _providerUserRepository.GetManyDetailsByProviderAsync(providerId);
         var responses = providerUsers.Select(o => new ProviderUserUserDetailsResponseModel(o));
         return new ListResponseModel<ProviderUserUserDetailsResponseModel>(responses);
-    }
-
-    [HttpGet("user-ids")]
-    public async Task<ActionResult<IEnumerable<Guid>>> GetUserIds(Guid providerId)
-    {
-        if (!_currentContext.ProviderProviderAdmin(providerId))
-        {
-            var providerOrgs = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
-            var hasAccess = false;
-            foreach (var org in providerOrgs)
-            {
-                if (await _currentContext.ManageUsers(org.OrganizationId) ||
-                    await _currentContext.ManageResetPassword(org.OrganizationId))
-                {
-                    hasAccess = true;
-                    break;
-                }
-            }
-            if (!hasAccess)
-            {
-                throw new NotFoundException();
-            }
-        }
-
-        var providerUsers = await _providerUserRepository.GetManyByProviderAsync(providerId);
-        return Ok(providerUsers
-            .Where(pu => pu.UserId.HasValue)
-            .Select(pu => pu.UserId!.Value));
     }
 
     [HttpPost("invite")]

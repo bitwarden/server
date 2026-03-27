@@ -147,6 +147,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !data.OrgUser.UsesKeyConnector;
         ClaimedByOrganization = data.ClaimedByOrganization;
+        IsProviderUser = data.OrgUser.IsProviderUser;
     }
 
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
@@ -168,6 +169,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
         ClaimedByOrganization = claimedByOrganization;
+        IsProviderUser = organizationUser.IsProviderUser;
     }
 
     public string Name { get; set; }
@@ -188,6 +190,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public bool ClaimedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
+    public bool IsProviderUser { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel

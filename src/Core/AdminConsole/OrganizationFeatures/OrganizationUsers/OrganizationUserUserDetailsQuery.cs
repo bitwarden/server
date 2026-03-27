@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -15,16 +16,22 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IProviderUserRepository _providerUserRepository;
 
     public OrganizationUserUserDetailsQuery(
         IOrganizationUserRepository organizationUserRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery
+        IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderUserRepository providerUserRepository
     )
     {
         _organizationUserRepository = organizationUserRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _getOrganizationUsersClaimedStatusQuery = getOrganizationUsersClaimedStatusQuery;
+        _providerOrganizationRepository = providerOrganizationRepository;
+        _providerUserRepository = providerUserRepository;
     }
 
     /// <summary>
@@ -37,6 +44,8 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         var organizationUsers = await _organizationUserRepository
             .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
 
+        var providerUserIds = await GetProviderUserIdsAsync(request.OrganizationId);
+
         return organizationUsers
             .Select(o =>
             {
@@ -46,6 +55,8 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
                     var userPermissions = o.GetPermissions();
                     o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
                 }
+
+                o.IsProviderUser = o.UserId.HasValue && providerUserIds.Contains(o.UserId.Value);
 
                 return o;
             });
@@ -64,11 +75,13 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
         var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
         var claimedStatusTask = _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
+        var providerUserIdsTask = GetProviderUserIdsAsync(request.OrganizationId);
 
-        await Task.WhenAll(twoFactorTask, claimedStatusTask);
+        await Task.WhenAll(twoFactorTask, claimedStatusTask, providerUserIdsTask);
 
         var organizationUsersTwoFactorEnabled = twoFactorTask.Result.ToDictionary(u => u.user.Id, u => u.twoFactorIsEnabled);
         var organizationUsersClaimedStatus = claimedStatusTask.Result;
+        var providerUserIds = providerUserIdsTask.Result;
         var responses = organizationUsers.Select(organizationUserDetails =>
         {
             // Only set permissions for Custom user types for performance optimization
@@ -77,6 +90,9 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
                 var organizationUserPermissions = organizationUserDetails.GetPermissions();
                 organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
             }
+
+            organizationUserDetails.IsProviderUser = organizationUserDetails.UserId.HasValue &&
+                providerUserIds.Contains(organizationUserDetails.UserId.Value);
 
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
             var userIsClaimedByOrganization = organizationUsersClaimedStatus[organizationUserDetails.Id];
@@ -103,11 +119,13 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 
         var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
         var claimedStatusTask = _getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.OrganizationId, organizationUsers.Select(o => o.Id));
+        var providerUserIdsTask = GetProviderUserIdsAsync(request.OrganizationId);
 
-        await Task.WhenAll(twoFactorTask, claimedStatusTask);
+        await Task.WhenAll(twoFactorTask, claimedStatusTask, providerUserIdsTask);
 
         var organizationUsersTwoFactorEnabled = twoFactorTask.Result.ToDictionary(u => u.user.Id, u => u.twoFactorIsEnabled);
         var organizationUsersClaimedStatus = claimedStatusTask.Result;
+        var providerUserIds = providerUserIdsTask.Result;
         var responses = organizationUsers.Select(organizationUserDetails =>
         {
             // Only set permissions for Custom user types for performance optimization
@@ -117,6 +135,9 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
                 organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
             }
 
+            organizationUserDetails.IsProviderUser = organizationUserDetails.UserId.HasValue &&
+                providerUserIds.Contains(organizationUserDetails.UserId.Value);
+
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
             var userIsClaimedByOrganization = organizationUsersClaimedStatus[organizationUserDetails.Id];
 
@@ -124,5 +145,20 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         });
 
         return responses;
+    }
+
+    private async Task<HashSet<Guid>> GetProviderUserIdsAsync(Guid organizationId)
+    {
+        var providerOrg = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
+        if (providerOrg is null)
+        {
+            return [];
+        }
+
+        var providerUsers = await _providerUserRepository.GetManyDetailsByProviderAsync(providerOrg.ProviderId);
+        return providerUsers
+            .Where(u => u.UserId.HasValue)
+            .Select(u => u.UserId!.Value)
+            .ToHashSet();
     }
 }
