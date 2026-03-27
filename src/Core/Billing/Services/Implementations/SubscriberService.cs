@@ -94,19 +94,28 @@ public class SubscriberService(
                 });
             }
 
-            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, new SubscriptionCancelOptions
+            var cancelOptions = new SubscriptionCancelOptions();
+            if (offboardingSurveyResponse != null)
             {
-                CancellationDetails = cancellationDetails
-            });
+                cancelOptions.CancellationDetails = cancellationDetails;
+            }
+
+            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, cancelOptions);
         }
         else
         {
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+            var updateOptions = new SubscriptionUpdateOptions
             {
-                CancelAtPeriodEnd = true,
-                CancellationDetails = cancellationDetails,
-                Metadata = cancellingUserMetadata
-            });
+                CancelAtPeriodEnd = true
+            };
+
+            if (offboardingSurveyResponse != null)
+            {
+                updateOptions.CancellationDetails = cancellationDetails;
+                updateOptions.Metadata = cancellingUserMetadata;
+            }
+
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
         }
     }
 
