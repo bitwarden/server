@@ -29,7 +29,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OneOf.Types;
 
 namespace Bit.Api.Billing.Controllers;
 
