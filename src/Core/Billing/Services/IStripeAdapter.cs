@@ -56,6 +56,7 @@ public interface IStripeAdapter
     Task<StripeList<Subscription>> ListSubscriptionsAsync(SubscriptionListOptions options = null);
     Task<Stripe.BillingPortal.Session> CreateBillingPortalSessionAsync(Stripe.BillingPortal.SessionCreateOptions options);
     Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options);
+    Task<Stripe.Checkout.Session> GetCheckoutSessionAsync(string id, Stripe.Checkout.SessionGetOptions options = null);
     Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options);
     Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null);
     Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options);
