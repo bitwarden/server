@@ -68,6 +68,12 @@
         "department": {
           "type": "string",
           "description": "Department for grouping."
+        },
+        "folders": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Named folders to create for this user. Each name becomes an encrypted Folder entity."
         }
       }
     },
