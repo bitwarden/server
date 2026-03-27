@@ -39,7 +39,7 @@ public class AccountsController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
-    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
+    private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -55,7 +55,7 @@ public class AccountsController : Controller
         IProviderUserRepository providerUserRepository,
         IUserService userService,
         IPolicyService policyService,
-        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
+        IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
         ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
         ITdeSetPasswordCommand tdeSetPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
@@ -72,7 +72,7 @@ public class AccountsController : Controller
         _providerUserRepository = providerUserRepository;
         _userService = userService;
         _policyService = policyService;
-        _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
         _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
         _tdeSetPasswordCommand = tdeSetPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
@@ -230,7 +230,7 @@ public class AccountsController : Controller
             }
             else
             {
-                await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(user, model.ToData());
+                await _finishSsoJitProvisionMasterPasswordCommand.FinishSsoJitProvisionMasterPasswordAsync(user, model.ToData());
             }
         }
         else

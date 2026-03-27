@@ -52,7 +52,7 @@ public static class UserServiceCollectionExtensions
 
     private static void AddUserPasswordCommands(this IServiceCollection services)
     {
-        services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
+        services.AddScoped<IFinishSsoJitProvisionMasterPasswordCommand, FinishSsoJitProvisionMasterPasswordCommandCommand>();
         services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
         services.AddScoped<ITdeSetPasswordCommand, TdeSetPasswordCommand>();
     }

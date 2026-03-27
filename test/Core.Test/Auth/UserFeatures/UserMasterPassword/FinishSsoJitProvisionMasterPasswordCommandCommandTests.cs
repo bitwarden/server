@@ -18,11 +18,11 @@ using Xunit;
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
 [SutProviderCustomize]
-public class SetInitialMasterPasswordCommandTests
+public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_Success(SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+    public async Task SetInitialMasterPassword_Success(SutProvider<FinishSsoJitProvisionMasterPasswordCommandCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
         Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
     {
@@ -49,7 +49,7 @@ public class SetInitialMasterPasswordCommandTests
             .Returns(mockUpdateUserData);
 
         // Act
-        await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model);
+        await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model);
 
         // Assert
         await sutProvider.GetDependency<IUserRepository>().Received(1)
@@ -73,7 +73,7 @@ public class SetInitialMasterPasswordCommandTests
     [Theory]
     [BitAutoData]
     public async Task SetInitialMasterPassword_UserAlreadyHasPassword_ThrowsBadRequestException(
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommandCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -82,14 +82,14 @@ public class SetInitialMasterPasswordCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
         Assert.Equal("User already has a master password set.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task SetInitialMasterPassword_AccountKeysNull_ThrowsBadRequestException(
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommandCommand> sutProvider,
         User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -98,7 +98,7 @@ public class SetInitialMasterPasswordCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
         Assert.Equal("Account keys are required.", exception.Message);
     }
 
@@ -108,7 +108,7 @@ public class SetInitialMasterPasswordCommandTests
     [BitAutoData("wrong-salt", "different-wrong-salt")]
     public async Task SetInitialMasterPassword_InvalidSalt_ThrowsBadRequestException(
         string? authSaltOverride, string? unlockSaltOverride,
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommandCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -135,14 +135,14 @@ public class SetInitialMasterPasswordCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
         Assert.Equal("Invalid master password salt.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task SetInitialMasterPassword_InvalidOrgSsoIdentifier_ThrowsBadRequestException(
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommandCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
         // Arrange
@@ -155,14 +155,14 @@ public class SetInitialMasterPasswordCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
         Assert.Equal("Organization SSO identifier is invalid.", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
     public async Task SetInitialMasterPassword_UserNotFoundInOrganization_ThrowsBadRequestException(
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommandCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, Organization org, string masterPasswordHint)
     {
         // Arrange
@@ -179,7 +179,7 @@ public class SetInitialMasterPasswordCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model));
+            async () => await sutProvider.Sut.FinishSsoJitProvisionMasterPasswordAsync(user, model));
         Assert.Equal("User not found within organization.", exception.Message);
     }
 

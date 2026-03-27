@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
-public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
+public class FinishSsoJitProvisionMasterPasswordCommandCommand : IFinishSsoJitProvisionMasterPasswordCommand
 {
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
@@ -20,7 +20,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IEventService _eventService;
 
-    public SetInitialMasterPasswordCommand(IUserService userService, IUserRepository userRepository,
+    public FinishSsoJitProvisionMasterPasswordCommandCommand(IUserService userService, IUserRepository userRepository,
         IAcceptOrgUserCommand acceptOrgUserCommand, IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository, IPasswordHasher<User> passwordHasher,
         IEventService eventService)
@@ -34,7 +34,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         _eventService = eventService;
     }
 
-    public async Task SetInitialMasterPasswordAsync(User user,
+    public async Task FinishSsoJitProvisionMasterPasswordAsync(User user,
         SetInitialMasterPasswordDataModel masterPasswordDataModel)
     {
         if (user.Key != null)
