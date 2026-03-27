@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-
-namespace Bit.Api.Tools.Models.Request;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
+
+namespace Bit.Api.Tools.Models.Request;
 
 /// <summary>
 /// A Receive request issued by a Bitwarden client
@@ -52,6 +52,7 @@ public class ReceiveRequestModel
     {
         var receive = new Receive
         {
+            // Note the Repository will overwrite this value via SetNewId() before writing to the database.
             Id = CoreHelpers.GenerateComb(),
             UserId = userId,
             Data = JsonSerializer.Serialize(new ReceiveFileData(Name, string.Empty), JsonHelpers.IgnoreWritingNull),
