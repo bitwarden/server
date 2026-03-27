@@ -7,7 +7,9 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Entities;
@@ -16,6 +18,7 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -26,6 +29,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OneOf.Types;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -46,7 +50,9 @@ public class OrganizationsController(
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
-    IPricingClient pricingClient)
+    IPricingClient pricingClient,
+    IFeatureService featureService,
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -245,7 +251,26 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await organizationService.ReinstateSubscriptionAsync(id);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var organization = await organizationRepository.GetByIdAsync(id);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            var result = await reinstateSubscriptionCommand.Run(organization);
+            result.Switch(
+                _ => { },
+                badRequest => throw new BadRequestException(badRequest.Response),
+                conflict => throw new GatewayException(conflict.Response),
+                _ => throw new GatewayException("Unable to reinstate subscription.")
+            );
+        }
+        else
+        {
+            await organizationService.ReinstateSubscriptionAsync(id);
+        }
     }
 
     /// <summary>
