@@ -1,6 +1,7 @@
 CREATE PROCEDURE [dbo].[Receive_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
+    @Name VARCHAR(MAX),
     @Data VARCHAR(MAX),
     @UserKeyWrappedSharedContentEncryptionKey VARCHAR(MAX),
     @UserKeyWrappedPrivateKey VARCHAR(MAX),
@@ -18,6 +19,7 @@ BEGIN
     (
         [Id],
         [UserId],
+        [Name],
         [Data],
         [UserKeyWrappedSharedContentEncryptionKey],
         [UserKeyWrappedPrivateKey],
@@ -32,6 +34,7 @@ BEGIN
     (
         @Id,
         @UserId,
+        @Name,
         @Data,
         @UserKeyWrappedSharedContentEncryptionKey,
         @UserKeyWrappedPrivateKey,

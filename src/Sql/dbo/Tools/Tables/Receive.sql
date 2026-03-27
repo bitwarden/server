@@ -2,6 +2,7 @@ CREATE TABLE [dbo].[Receive]
 (
     [Id]             UNIQUEIDENTIFIER NOT NULL,
     [UserId]         UNIQUEIDENTIFIER NOT NULL,
+    [Name]           VARCHAR(MAX)     NOT NULL,
     [Data]           VARCHAR(MAX)     NOT NULL,
     [UserKeyWrappedSharedContentEncryptionKey] VARCHAR(MAX) NOT NULL,
     [UserKeyWrappedPrivateKey]                 VARCHAR(MAX) NOT NULL,
