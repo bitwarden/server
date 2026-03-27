@@ -279,6 +279,7 @@ public static class FeatureFlagKeys
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
+    public const string SyncUserPreferences = "pm-34133-innovation-user-preferences";
 
     /* DIRT Team */
     public const string EventManagementForDataDogAndCrowdStrike = "event-management-for-datadog-and-crowdstrike";
