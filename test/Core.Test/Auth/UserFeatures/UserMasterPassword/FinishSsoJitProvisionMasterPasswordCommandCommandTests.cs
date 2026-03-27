@@ -142,7 +142,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
     [Theory]
     [BitAutoData]
     public async Task SetInitialMasterPassword_NullSalt_UsesEmailFallback(
-        SutProvider<SetInitialMasterPasswordCommand> sutProvider,
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommandCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
         Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
     {
@@ -174,7 +174,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandCommandTests
             .Returns(mockUpdateUserData);
 
         // Act — should not throw since email fallback provides a valid salt
-        await sutProvider.Sut.SetInitialMasterPasswordAsync(user, model);
+        await sutProvider.Sut.FinishProvisionAsync(user, model);
 
         // Assert
         await sutProvider.GetDependency<IEventService>().Received(1)
