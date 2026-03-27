@@ -27,6 +27,7 @@ namespace Bit.Api.Billing.Controllers.VNext;
 public class AccountBillingVNextController(
     ICreateBillingPortalSessionCommand createBillingPortalSessionCommand,
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
+    ICreatePremiumCheckoutSessionCommand createPremiumCheckoutSessionCommand,
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
     ICurrentContext currentContext,
     IGetApplicableDiscountsQuery getApplicableDiscountsQuery,
@@ -46,6 +47,22 @@ public class AccountBillingVNextController(
     {
         var credit = await getCreditQuery.Run(user);
         return TypedResults.Ok(credit);
+    }
+
+    [HttpPost("premium/checkout")]
+    [InjectUser]
+    public async Task<IResult> CreatePremiumCheckoutSessionAsync(
+        [BindNever] User user,
+        [FromBody] CreatePremiumCheckoutSessionRequest request)
+    {
+        var appVersion = currentContext.ClientVersion?.ToString();
+        if (string.IsNullOrWhiteSpace(appVersion))
+        {
+            return Error.BadRequest("Client version is required.");
+        }
+
+        var result = await createPremiumCheckoutSessionCommand.Run(user, appVersion, request.Platform);
+        return Handle(result);
     }
 
     [HttpPost("credit/bitpay")]
