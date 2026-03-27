@@ -1,8 +1,14 @@
-﻿using Bit.Core.Billing.Premium.Queries;
+﻿using Bit.Api.Tools.Models.Request;
+using Bit.Api.Tools.Models.Response;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Billing.Premium.Queries;
+using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
+using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Tools.Controllers;
@@ -18,6 +24,7 @@ public class ReceivesController : Controller
     private readonly ILogger<SendsController> _logger;
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly ICreateReceiveCommand _createReceiveCommand;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public ReceivesController(
@@ -29,6 +36,7 @@ public class ReceivesController : Controller
         ILogger<SendsController> logger,
         IFeatureService featureService,
         IPushNotificationService pushNotificationService,
+        ICreateReceiveCommand createReceiveCommand,
         IHasPremiumAccessQuery hasPremiumAccessQuery
     )
     {
@@ -41,7 +49,24 @@ public class ReceivesController : Controller
         _featureService = featureService;
         _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _createReceiveCommand = createReceiveCommand;
     }
 
     // add endpoints
+
+
+    [Authorize(Policies.Application)]
+    [HttpPost("")]
+    public async Task<ReceiveResponseModel> CreateReceiveAsync([FromBody] ReceiveRequestModel request)
+    {
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+        if (!hasPremium)
+        {
+            throw new BadRequestException("Creating a Receive requires premium");
+        }
+
+        var receive = await _createReceiveCommand.CreateAsync(request.ToReceive(userId));
+        return new ReceiveResponseModel(receive);
+    }
 }

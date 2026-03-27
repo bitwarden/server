@@ -76,12 +76,12 @@ public class ReceiveResponseModel : ResponseModel
     /// <summary>
     /// The date this Receive was created.
     /// </summary>
-    public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime CreationDate { get; internal set; }
 
     /// <summary>
     /// The date this Receive was last modified.
     /// </summary>
-    public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime RevisionDate { get; internal set; }
 
     /// <summary>
     /// The date this Receive becomes unavailable to potential uploaders.
