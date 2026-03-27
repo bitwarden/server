@@ -25,7 +25,8 @@ public class SyncResponseModelTests
 
     private static SyncResponseModel CreateSyncResponseModel(
         User user,
-        IEnumerable<WebAuthnCredential>? webAuthnCredentials = null)
+        IEnumerable<WebAuthnCredential>? webAuthnCredentials = null,
+        UserPreferences? userPreferences = null)
     {
         return new SyncResponseModel(
             new GlobalSettings(),
@@ -48,7 +49,8 @@ public class SyncResponseModelTests
             true, // excludeDomains: true to avoid JSON deserialization issues in tests
             new List<Policy>(),
             new List<Send>(),
-            webAuthnCredentials ?? new List<WebAuthnCredential>());
+            webAuthnCredentials ?? new List<WebAuthnCredential>(),
+            userPreferences);
     }
 
     [Theory]
@@ -188,5 +190,26 @@ public class SyncResponseModelTests
         // Assert
         Assert.NotNull(result.UserDecryption);
         Assert.Null(result.UserDecryption.V2UpgradeToken);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithUserPreferences_SetsUserPreferences(User user)
+    {
+        var preferences = UserPreferences.Create(user.Id, "encrypted-preferences");
+
+        var result = CreateSyncResponseModel(user, userPreferences: preferences);
+
+        Assert.NotNull(result.UserPreferences);
+        Assert.Equal("encrypted-preferences", result.UserPreferences.Data);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithoutUserPreferences_UserPreferencesIsNull(User user)
+    {
+        var result = CreateSyncResponseModel(user);
+
+        Assert.Null(result.UserPreferences);
     }
 }
