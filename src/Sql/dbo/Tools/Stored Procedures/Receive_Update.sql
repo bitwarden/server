@@ -1,6 +1,7 @@
 CREATE PROCEDURE [dbo].[Receive_Update]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
+    @Name VARCHAR(MAX),
     @Data VARCHAR(MAX),
     @UserKeyWrappedSharedContentEncryptionKey VARCHAR(MAX),
     @UserKeyWrappedPrivateKey VARCHAR(MAX),
@@ -18,6 +19,7 @@ BEGIN
         [dbo].[Receive]
     SET
         [UserId] = @UserId,
+        [Name] = @Name,
         [Data] = @Data,
         [UserKeyWrappedSharedContentEncryptionKey] = @UserKeyWrappedSharedContentEncryptionKey,
         [UserKeyWrappedPrivateKey] = @UserKeyWrappedPrivateKey,
