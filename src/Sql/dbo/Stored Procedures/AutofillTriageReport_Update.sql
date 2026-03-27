@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[AutofillTriageReport_Update]
+CREATE PROCEDURE [dbo].[AutofillTriageReport_Update]
     @Id               UNIQUEIDENTIFIER,
     @PageUrl          NVARCHAR (1024),
     @TargetElementRef NVARCHAR (512),

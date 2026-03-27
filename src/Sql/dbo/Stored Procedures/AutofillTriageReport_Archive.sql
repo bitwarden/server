@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[AutofillTriageReport_Archive]
+CREATE PROCEDURE [dbo].[AutofillTriageReport_Archive]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN

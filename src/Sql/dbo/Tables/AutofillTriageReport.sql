@@ -8,6 +8,8 @@ CREATE TABLE [dbo].[AutofillTriageReport] (
     [Archived]         BIT              NOT NULL CONSTRAINT [DF_AutofillTriageReport_Archived] DEFAULT (0),
     CONSTRAINT [PK_AutofillTriageReport] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
+GO
 
 CREATE NONCLUSTERED INDEX [IX_AutofillTriageReport_CreationDate]
     ON [dbo].[AutofillTriageReport] ([Archived] ASC, [CreationDate] DESC);
+GO

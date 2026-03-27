@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[AutofillTriageReport_ReadActiveWithPagination]
+CREATE PROCEDURE [dbo].[AutofillTriageReport_ReadActiveWithPagination]
     @Skip INT = 0,
     @Take INT = 25
 AS
