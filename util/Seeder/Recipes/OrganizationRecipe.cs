@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Options;
+﻿using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Recipes;
@@ -22,7 +23,7 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count override</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
+    public OrganizationSeedResult Seed(string presetName, string? password = null, int? kdfIterations = null)
     {
         var result = _orchestrator.Execute(presetName, password, kdfIterations);
 
@@ -32,7 +33,7 @@ public class OrganizationRecipe(SeederDependencies deps)
                 $"Preset '{presetName}' is not an organization preset. Use IndividualUserRecipe instead.");
         }
 
-        return ToResult(result);
+        return OrganizationSeedResult.From(result);
     }
 
     /// <summary>
@@ -40,23 +41,9 @@ public class OrganizationRecipe(SeederDependencies deps)
     /// </summary>
     /// <param name="options">Options specifying what to seed.</param>
     /// <returns>The organization ID and summary statistics.</returns>
-    public SeedResult Seed(OrganizationVaultOptions options)
+    public OrganizationSeedResult Seed(OrganizationVaultOptions options)
     {
         var result = _orchestrator.Execute(options);
-        return ToResult(result);
+        return OrganizationSeedResult.From(result);
     }
-
-    private static SeedResult ToResult(ExecutionResult result) =>
-        new(result.OrganizationId!.Value, result.OwnerEmail, result.UsersCount, result.GroupsCount, result.CollectionsCount, result.CiphersCount);
 }
-
-/// <summary>
-/// Result of seeding operation with summary statistics.
-/// </summary>
-public record SeedResult(
-    Guid OrganizationId,
-    string? OwnerEmail,
-    int UsersCount,
-    int GroupsCount,
-    int CollectionsCount,
-    int CiphersCount);

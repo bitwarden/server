@@ -42,7 +42,7 @@ internal static class UserSeeder
             PrivateKey = keys.PrivateKey,
             Premium = premium,
             MaxStorageGb = maxStorageGb,
-            ApiKey = Guid.NewGuid().ToString("N")[..30],
+            ApiKey = CoreHelpers.SecureRandomString(30),
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = kdfIterations
         };

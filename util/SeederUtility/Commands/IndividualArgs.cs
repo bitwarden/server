@@ -28,7 +28,7 @@ public class IndividualArgs : IArgumentModel
     public int KdfIterations { get; set; } = 5_000;
 
     [Option("mangle", Description = "Enable ID mangling for test isolation")]
-    public bool Mangle { get; set; } = false;
+    public bool Mangle { get; set; }
 
     public void Validate()
     {

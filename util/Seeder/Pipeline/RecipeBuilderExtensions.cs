@@ -47,6 +47,23 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Create a Default API key for the organization (required for OAuth client_credentials).
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <returns>The builder for fluent chaining</returns>
+    public static RecipeBuilder AddOrganizationApiKey(this RecipeBuilder builder)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Organization API key requires an organization. Call UseOrganization() or CreateOrganization() first.");
+        }
+
+        builder.AddStep(_ => new CreateOrganizationApiKeyStep());
+        return builder;
+    }
+
+    /// <summary>
     /// Add an organization owner user with admin privileges.
     /// </summary>
     /// <param name="builder">The recipe builder</param>

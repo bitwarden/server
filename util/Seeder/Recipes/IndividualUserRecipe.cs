@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Options;
+﻿using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Recipes;
@@ -22,7 +23,7 @@ public class IndividualUserRecipe(SeederDependencies deps)
     /// <param name="password">Optional password for the seeded account</param>
     /// <param name="kdfIterations">Optional KDF iteration count override</param>
     /// <returns>The user ID and summary statistics.</returns>
-    public IndividualSeedResult Seed(string presetName,
+    public UserSeedResult Seed(string presetName,
         string? password = null, int? kdfIterations = null)
     {
         var result = _orchestrator.Execute(presetName, password, kdfIterations);
@@ -33,7 +34,7 @@ public class IndividualUserRecipe(SeederDependencies deps)
                 $"Preset '{presetName}' is not an individual user preset. Use OrganizationRecipe instead.");
         }
 
-        return ToResult(result);
+        return UserSeedResult.From(result);
     }
 
     /// <summary>
@@ -41,18 +42,9 @@ public class IndividualUserRecipe(SeederDependencies deps)
     /// </summary>
     /// <param name="options">Options specifying what to seed.</param>
     /// <returns>The user ID and summary statistics.</returns>
-    public IndividualSeedResult Seed(IndividualUserOptions options)
+    public UserSeedResult Seed(IndividualUserOptions options)
     {
         var result = _orchestrator.Execute(options);
-        return ToResult(result);
+        return UserSeedResult.From(result);
     }
-
-    private static IndividualSeedResult ToResult(ExecutionResult result) =>
-        new(result.UserId!.Value, result.OwnerEmail, result.Premium, result.CiphersCount, result.FoldersCount);
 }
-
-/// <summary>
-/// Result of individual user seeding with summary statistics.
-/// </summary>
-public record IndividualSeedResult(
-    Guid UserId, string? Email, bool Premium, int CiphersCount, int FoldersCount);

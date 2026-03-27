@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Options;
+﻿using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,7 +17,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <param name="password">Optional password for all seeded accounts</param>
     /// <param name="kdfIterations">Optional KDF iteration count. Defaults to 5,000 for fast seeding.</param>
     /// <returns>Execution result with organization ID and entity counts</returns>
-    internal ExecutionResult Execute(
+    internal PipelineExecutionResult Execute(
         string presetName,
         string? password = null,
         int? kdfIterations = null)
@@ -43,7 +44,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <summary>
     /// Executes a recipe built programmatically from CLI options.
     /// </summary>
-    internal ExecutionResult Execute(OrganizationVaultOptions options)
+    internal PipelineExecutionResult Execute(OrganizationVaultOptions options)
     {
         var services = new ServiceCollection();
         services.AddSingleton(deps.PasswordHasher);
@@ -54,6 +55,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         var builder = services.AddRecipe(recipeName);
 
         builder.CreateOrganization(options.Name, options.Domain, options.Users + 1, options.PlanType);
+        builder.AddOrganizationApiKey();
         builder.AddOwner();
         builder.WithGenerator(options.Domain);
         builder.AddUsers(options.Users, options.RealisticStatusMix);
@@ -90,7 +92,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     /// <summary>
     /// Executes a recipe for an individual user built programmatically from CLI options.
     /// </summary>
-    internal ExecutionResult Execute(IndividualUserOptions options)
+    internal PipelineExecutionResult Execute(IndividualUserOptions options)
     {
         var firstName = options.FirstName ?? new Bogus.Faker().Name.FirstName();
         var lastName = options.LastName ?? new Bogus.Faker().Name.LastName();
@@ -121,7 +123,7 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
         return BuildAndExecute(recipeName, services);
     }
 
-    private ExecutionResult BuildAndExecute(string recipeName, ServiceCollection services)
+    private PipelineExecutionResult BuildAndExecute(string recipeName, ServiceCollection services)
     {
         using var serviceProvider = services.BuildServiceProvider();
         var committer = new BulkCommitter(deps.Db, deps.Mapper);
@@ -130,17 +132,3 @@ internal sealed class RecipeOrchestrator(SeederDependencies deps)
     }
 
 }
-
-/// <summary>
-/// Result of pipeline execution with entity IDs and counts for either an organization or individual user seed.
-/// </summary>
-internal record ExecutionResult(
-    Guid? OrganizationId,
-    Guid? UserId,
-    string? OwnerEmail,
-    bool Premium,
-    int UsersCount,
-    int GroupsCount,
-    int CollectionsCount,
-    int CiphersCount,
-    int FoldersCount);

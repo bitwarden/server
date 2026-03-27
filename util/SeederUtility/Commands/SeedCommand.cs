@@ -46,32 +46,20 @@ public class SeedCommand
         Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
         var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
 
-        Console.WriteLine($"Created organization (ID: {result.OrganizationId})");
-
+        ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
         {
-            Console.WriteLine($"Owner: {result.OwnerEmail}");
+            ConsoleOutput.PrintRow("Owner", result.OwnerEmail);
         }
-
-        if (result.UsersCount > 0)
+        ConsoleOutput.PrintRow("Password", result.Password);
+        if (result.ApiKey is not null)
         {
-            Console.WriteLine($"Created {result.UsersCount} users");
+            ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
         }
-
-        if (result.GroupsCount > 0)
-        {
-            Console.WriteLine($"Created {result.GroupsCount} groups");
-        }
-
-        if (result.CollectionsCount > 0)
-        {
-            Console.WriteLine($"Created {result.CollectionsCount} collections");
-        }
-
-        if (result.CiphersCount > 0)
-        {
-            Console.WriteLine($"Created {result.CiphersCount} ciphers");
-        }
+        ConsoleOutput.PrintCountRow("Users", result.UsersCount);
+        ConsoleOutput.PrintCountRow("Groups", result.GroupsCount);
+        ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
+        ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
         ConsoleOutput.PrintMangleMap(deps);
     }
@@ -84,24 +72,19 @@ public class SeedCommand
         Console.WriteLine($"Seeding individual user from preset '{args.Preset}'...");
         var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
 
-        Console.WriteLine($"Created user (ID: {result.UserId})");
-
+        ConsoleOutput.PrintRow("User", result.UserId);
         if (result.Email is not null)
         {
-            Console.WriteLine($"Email: {result.Email}");
+            ConsoleOutput.PrintRow("Email", result.Email);
         }
-
-        Console.WriteLine($"Premium: {result.Premium}");
-
-        if (result.FoldersCount > 0)
+        ConsoleOutput.PrintRow("Password", result.Password);
+        ConsoleOutput.PrintRow("Premium", result.Premium);
+        if (result.ApiKey is not null)
         {
-            Console.WriteLine($"Created {result.FoldersCount} folders");
+            ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
         }
-
-        if (result.CiphersCount > 0)
-        {
-            Console.WriteLine($"Created {result.CiphersCount} ciphers");
-        }
+        ConsoleOutput.PrintCountRow("Folders", result.FoldersCount);
+        ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
         ConsoleOutput.PrintMangleMap(deps);
     }
