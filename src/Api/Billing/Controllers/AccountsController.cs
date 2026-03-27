@@ -3,15 +3,18 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OneOf.Types;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -20,7 +23,8 @@ namespace Bit.Api.Billing.Controllers;
 public class AccountsController(
     IUserService userService,
     IFeatureService featureService,
-    ILicensingService licensingService) : Controller
+    ILicensingService licensingService,
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand) : Controller
 {
     // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
     [HttpGet("subscription")]
@@ -129,6 +133,19 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        await userService.ReinstatePremiumAsync(user);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var result = await reinstateSubscriptionCommand.Run(user);
+            result.Switch(
+                _ => { },
+                badRequest => throw new BadRequestException(badRequest.Response),
+                conflict => throw new GatewayException(conflict.Response),
+                _ => throw new GatewayException("Unable to reinstate subscription.")
+            );
+        }
+        else
+        {
+            await userService.ReinstatePremiumAsync(user);
+        }
     }
 }
