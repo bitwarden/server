@@ -22,7 +22,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_Success(SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
+    public async Task FinishProvisionAsync_Success(SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
         Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
     {
@@ -72,7 +72,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_UserAlreadyHasPassword_ThrowsBadRequestException(
+    public async Task FinishProvisionAsync_UserAlreadyHasPassword_ThrowsBadRequestException(
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
@@ -88,7 +88,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_AccountKeysNull_ThrowsBadRequestException(
+    public async Task FinishProvisionAsync_AccountKeysNull_ThrowsBadRequestException(
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
@@ -106,7 +106,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     [BitAutoData("wrong-salt", null)]
     [BitAutoData([null, "wrong-salt"])]
     [BitAutoData("wrong-salt", "different-wrong-salt")]
-    public async Task SetInitialMasterPassword_InvalidSalt_ThrowsBadRequestException(
+    public async Task FinishProvisionAsync_InvalidSalt_ThrowsBadRequestException(
         string? authSaltOverride, string? unlockSaltOverride,
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
@@ -141,7 +141,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_NullSalt_UsesEmailFallback(
+    public async Task FinishProvisionAsync_NullSalt_UsesEmailFallback(
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
         Organization org, OrganizationUser orgUser, string serverSideHash, string masterPasswordHint)
@@ -183,7 +183,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_InvalidOrgSsoIdentifier_ThrowsBadRequestException(
+    public async Task FinishProvisionAsync_InvalidOrgSsoIdentifier_ThrowsBadRequestException(
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
     {
@@ -203,7 +203,7 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_UserNotFoundInOrganization_ThrowsBadRequestException(
+    public async Task FinishProvisionAsync_UserNotFoundInOrganization_ThrowsBadRequestException(
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
         User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, Organization org, string masterPasswordHint)
     {
