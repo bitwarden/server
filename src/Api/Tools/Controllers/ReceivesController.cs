@@ -26,6 +26,7 @@ public class ReceivesController : Controller
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICreateReceiveCommand _createReceiveCommand;
+    private readonly IUpdateReceiveCommand _updateReceiveCommand;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public ReceivesController(
@@ -38,6 +39,7 @@ public class ReceivesController : Controller
         IFeatureService featureService,
         IPushNotificationService pushNotificationService,
         ICreateReceiveCommand createReceiveCommand,
+        IUpdateReceiveCommand updateReceiveCommand,
         IHasPremiumAccessQuery hasPremiumAccessQuery
     )
     {
@@ -51,6 +53,7 @@ public class ReceivesController : Controller
         _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _createReceiveCommand = createReceiveCommand;
+        _updateReceiveCommand = updateReceiveCommand;
     }
 
     [AllowAnonymous]
@@ -95,5 +98,21 @@ public class ReceivesController : Controller
 
         var receive = await _createReceiveCommand.CreateAsync(request.ToReceive(userId));
         return new ReceiveResponseModel(receive);
+    }
+
+    [Authorize(Policies.Application)]
+    [HttpPut("id")]
+    public async Task<ReceiveResponseModel> UpdateReceiveAsync([FromRoute] Guid id, [FromBody] ReceiveRequestModel request)
+    {
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+        if (!hasPremium)
+        {
+            throw new BadRequestException("Updating a receive requires premium");
+        }
+
+        var updatedReceive = await _updateReceiveCommand.UpdateAsync(request.ToUpdateData(id), userId);
+
+        return new ReceiveResponseModel(updatedReceive);
     }
 }

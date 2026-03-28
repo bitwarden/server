@@ -17,6 +17,7 @@ public class ReceiveAuthorizationServiceTests
     {
         Id = Guid.NewGuid(),
         UserId = Guid.NewGuid(),
+        Name = "2.scek|iv|ct",
         Data = "{}",
         UserKeyWrappedSharedContentEncryptionKey = "2.scek|iv|ct",
         UserKeyWrappedPrivateKey = "2.privkey|iv|ct",
