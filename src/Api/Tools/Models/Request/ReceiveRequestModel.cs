@@ -53,8 +53,6 @@ public class ReceiveRequestModel
     {
         var receive = new Receive
         {
-            // Note the Repository will overwrite this value via SetNewId() before writing to the database.
-            Id = CoreHelpers.GenerateComb(),
             UserId = userId,
             Name = Name,
             Data = JsonSerializer.Serialize(new ReceiveFileData(Name, string.Empty), JsonHelpers.IgnoreWritingNull),
