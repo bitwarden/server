@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddLicenseServices();
         services.AddLicenseOperations();
         services.AddPricingClient();
+        services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
