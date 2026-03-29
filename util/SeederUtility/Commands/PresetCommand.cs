@@ -6,11 +6,11 @@ using CommandDotNet;
 
 namespace Bit.SeederUtility.Commands;
 
-[Command("seed", Description = "Seed database using fixture-based presets")]
-public class SeedCommand
+[Command("preset", Description = "Seed database using a named preset")]
+public class PresetCommand
 {
     [DefaultCommand]
-    public void Execute(SeedArgs args)
+    public void Execute(PresetArgs args)
     {
         try
         {
@@ -18,17 +18,17 @@ public class SeedCommand
 
             if (args.List)
             {
-                PrintAvailableSeeds();
+                PrintAvailablePresets();
                 return;
             }
 
-            if (IsIndividualPreset(args.Preset!))
+            if (IsIndividualPreset(args.Name!))
             {
-                SeedIndividual(args);
+                RunIndividualPreset(args);
             }
             else
             {
-                SeedOrganization(args);
+                RunOrganizationPreset(args);
             }
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -38,13 +38,13 @@ public class SeedCommand
         }
     }
 
-    private static void SeedOrganization(SeedArgs args)
+    private static void RunOrganizationPreset(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
         var recipe = new OrganizationRecipe(deps.ToDependencies());
 
-        Console.WriteLine($"Seeding organization from preset '{args.Preset}'...");
-        var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
+        Console.WriteLine($"Seeding organization from preset '{args.Name}'...");
+        var result = recipe.Seed(args.Name!, args.Password, args.KdfIterations);
 
         ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
@@ -64,13 +64,13 @@ public class SeedCommand
         ConsoleOutput.PrintMangleMap(deps);
     }
 
-    private static void SeedIndividual(SeedArgs args)
+    private static void RunIndividualPreset(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
         var recipe = new IndividualUserRecipe(deps.ToDependencies());
 
-        Console.WriteLine($"Seeding individual user from preset '{args.Preset}'...");
-        var result = recipe.Seed(args.Preset!, args.Password, args.KdfIterations);
+        Console.WriteLine($"Seeding individual user from preset '{args.Name}'...");
+        var result = recipe.Seed(args.Name!, args.Password, args.KdfIterations);
 
         ConsoleOutput.PrintRow("User", result.UserId);
         if (result.Email is not null)
@@ -89,7 +89,7 @@ public class SeedCommand
         ConsoleOutput.PrintMangleMap(deps);
     }
 
-    private static void PrintAvailableSeeds()
+    private static void PrintAvailablePresets()
     {
         var available = PresetCatalogService.ListAvailable();
 
@@ -140,7 +140,7 @@ public class SeedCommand
         }
 
         Console.WriteLine();
-        Console.WriteLine("Use: SeederUtility seed --preset <name>");
+        Console.WriteLine("Use: SeederUtility preset --name <name>");
     }
 
     private static bool IsIndividualPreset(string presetName) =>
