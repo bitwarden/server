@@ -2,6 +2,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using Bit.Api.Utilities;
 using Bit.Core.Autofill.Entities;
 using Bit.Core.Utilities;
 
@@ -25,6 +26,7 @@ public class AutofillTriageReportRequestModel
 
     [Required]
     [MaxLength(51200)]
+    [ValidJsonArray]
     public required string ReportData { get; set; }
 
     [Required]

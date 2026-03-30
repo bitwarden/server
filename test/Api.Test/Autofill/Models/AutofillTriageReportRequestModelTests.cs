@@ -32,7 +32,7 @@ public class AutofillTriageReportRequestModelTests
         var model = new AutofillTriageReportRequestModel
         {
             PageUrl = "https://example.com/login",
-            ReportData = "{}",
+            ReportData = "[]",
             ExtensionVersion = "2025.3.0",
         };
 
