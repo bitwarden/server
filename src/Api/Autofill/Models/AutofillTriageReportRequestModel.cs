@@ -2,10 +2,10 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Bit.Core.Entities;
+using Bit.Core.Autofill.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request;
+namespace Bit.Api.Autofill.Models;
 
 public class AutofillTriageReportRequestModel
 {

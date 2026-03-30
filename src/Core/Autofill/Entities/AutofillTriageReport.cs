@@ -1,9 +1,10 @@
 ﻿#nullable enable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.Autofill.Entities;
 
 public class AutofillTriageReport : ITableObject<Guid>
 {

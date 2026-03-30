@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Autofill.Entities;
 
 namespace Bit.Admin.Models;
 

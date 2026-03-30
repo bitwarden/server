@@ -1,11 +1,12 @@
 ﻿using AutoMapper;
-using Bit.Core.Entities;
-using Bit.Core.Repositories;
+using Bit.Core.Autofill.Entities;
+using Bit.Core.Autofill.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using EFAutofillTriageReport = Bit.Infrastructure.EntityFramework.Models.AutofillTriageReport;
+using EFAutofillTriageReport = Bit.Infrastructure.EntityFramework.Autofill.Models.AutofillTriageReport;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Autofill.Repositories;
 
 public class AutofillTriageReportRepository(IMapper mapper, IServiceScopeFactory serviceScopeFactory)
     : Repository<AutofillTriageReport, EFAutofillTriageReport, Guid>(

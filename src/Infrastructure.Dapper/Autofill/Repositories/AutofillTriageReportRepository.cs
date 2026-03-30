@@ -1,11 +1,12 @@
 ﻿using System.Data;
-using Bit.Core.Entities;
-using Bit.Core.Repositories;
+using Bit.Core.Autofill.Entities;
+using Bit.Core.Autofill.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.Autofill.Repositories;
 
 public class AutofillTriageReportRepository(GlobalSettings globalSettings)
     : Repository<AutofillTriageReport, Guid>(

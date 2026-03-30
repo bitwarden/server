@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
+using Bit.Core.Autofill;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
@@ -184,6 +185,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
+        services.AddAutofillOperations();
         services.AddBillingOperations();
         services.AddReportingServices(globalSettings);
         services.AddImportServices();

@@ -1,8 +1,9 @@
 ﻿#nullable enable
 
-using Bit.Core.Entities;
+using Bit.Core.Autofill.Entities;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.Autofill.Repositories;
 
 public interface IAutofillTriageReportRepository : IRepository<AutofillTriageReport, Guid>
 {

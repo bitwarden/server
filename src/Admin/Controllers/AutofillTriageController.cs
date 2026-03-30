@@ -3,7 +3,7 @@
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
-using Bit.Core.Repositories;
+using Bit.Core.Autofill.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
