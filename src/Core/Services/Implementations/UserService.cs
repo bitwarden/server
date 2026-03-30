@@ -276,7 +276,17 @@ public class UserService : UserManager<User>, IUserService
         {
             try
             {
-                await CancelPremiumAsync(user);
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    await _subscriberService.CancelSubscription(
+                        user,
+                        cancelImmediately: false,
+                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
+                }
+                else
+                {
+                    await CancelPremiumAsync(user);
+                }
             }
             catch (GatewayException) { }
             catch (BillingException) { }
@@ -823,7 +833,7 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
         return secret;
     }
-
+    //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
         var eop = endOfPeriod.GetValueOrDefault(true);
@@ -832,18 +842,8 @@ public class UserService : UserManager<User>, IUserService
         {
             eop = false;
         }
+        await _paymentService.CancelSubscriptionAsync(user, eop);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            await _subscriberService.CancelSubscription(
-                user,
-                cancelImmediately: !eop,
-                offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
-        }
-        else
-        {
-            await _paymentService.CancelSubscriptionAsync(user, eop);
-        }
     }
 
     // TODO: Remove with deletion of pm-29594-update-individual-subscription-page
