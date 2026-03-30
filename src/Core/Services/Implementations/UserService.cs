@@ -837,8 +837,8 @@ public class UserService : UserManager<User>, IUserService
         {
             await _subscriberService.CancelSubscription(
                 user,
-                new OffboardingSurveyResponse { UserId = user.Id },
-                cancelImmediately: !eop);
+                cancelImmediately: !eop,
+                offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
         }
         else
         {
