@@ -27,7 +27,8 @@
             {
                 @foreach (var item in Model.Items)
                 {
-                    var truncatedUrl = item.PageUrl.Length > 80 ? item.PageUrl.Substring(0, 80) + "..." : item.PageUrl;
+                    var decodedUrl = WebUtility.HtmlDecode(item.PageUrl);
+                    var truncatedUrl = decodedUrl.Length > 80 ? decodedUrl.Substring(0, 80) + "..." : decodedUrl;
                     var rawMessage = item.UserMessage != null ? WebUtility.HtmlDecode(item.UserMessage) : null;
                     var truncatedMessage = rawMessage != null && rawMessage.Length > 60 ? rawMessage.Substring(0, 60) + "..." : rawMessage;
                     <tr>
@@ -36,7 +37,7 @@
                                 @item.CreationDate.ToString("g")
                             </a>
                         </td>
-                        <td title="@item.PageUrl">@truncatedUrl</td>
+                        <td title="@decodedUrl">@truncatedUrl</td>
                         <td title="@rawMessage">@(truncatedMessage ?? "—")</td>
                         <td class="text-end" style="width: 1%; white-space: nowrap;">
                             <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-secondary me-1">View Details</a>

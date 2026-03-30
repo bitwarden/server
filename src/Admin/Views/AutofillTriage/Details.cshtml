@@ -24,14 +24,15 @@
 
             <dt class="col-sm-3">Page URL</dt>
             <dd class="col-sm-9">
-                <a href="@Model.PageUrl" target="_blank" rel="noreferrer noopener">@Model.PageUrl</a>
+                @{ var decodedPageUrl = WebUtility.HtmlDecode(Model.PageUrl); }
+                <a href="@decodedPageUrl" target="_blank" rel="noreferrer noopener">@decodedPageUrl</a>
             </dd>
 
             @if (Model.TargetElementRef != null)
             {
                 <dt class="col-sm-3">Targeted Field</dt>
                 <dd class="col-sm-9">
-                    <code class="text-danger">@Model.TargetElementRef</code>
+                    <code class="text-danger">@WebUtility.HtmlDecode(Model.TargetElementRef)</code>
                     <small class="text-muted">(field the user right-clicked)</small>
                 </dd>
             }
