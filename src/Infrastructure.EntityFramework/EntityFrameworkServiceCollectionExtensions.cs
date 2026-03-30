@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Autofill.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -15,6 +16,7 @@ using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
+using Bit.Infrastructure.EntityFramework.Autofill.Repositories;
 using Bit.Infrastructure.EntityFramework.Billing.Repositories;
 using Bit.Infrastructure.EntityFramework.Dirt;
 using Bit.Infrastructure.EntityFramework.Dirt.Repositories;
@@ -116,6 +118,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
+        services.AddSingleton<IAutofillTriageReportRepository, AutofillTriageReportRepository>();
 
         if (selfHosted)
         {

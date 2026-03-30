@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Autofill.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -14,6 +15,7 @@ using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
+using Bit.Infrastructure.Dapper.Autofill.Repositories;
 using Bit.Infrastructure.Dapper.Billing.Repositories;
 using Bit.Infrastructure.Dapper.Dirt;
 using Bit.Infrastructure.Dapper.Dirt.Repositories;
@@ -79,6 +81,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
+        services.AddSingleton<IAutofillTriageReportRepository, AutofillTriageReportRepository>();
 
         if (selfHosted)
         {

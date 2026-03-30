@@ -1,0 +1,93 @@
+@using System.Net
+@model AutofillTriageModel
+@{
+    ViewData["Title"] = "Autofill Triage";
+}
+
+<h1>Autofill Triage Reports</h1>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th style="white-space: nowrap;">Created At</th>
+                <th>Page URL</th>
+                <th>User Message</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Items.Any())
+            {
+                <tr>
+                    <td colspan="4">No reports to show.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Model.Items)
+                {
+                    var decodedUrl = WebUtility.HtmlDecode(item.PageUrl);
+                    var truncatedUrl = decodedUrl.Length > 80 ? decodedUrl.Substring(0, 80) + "..." : decodedUrl;
+                    var rawMessage = item.UserMessage != null ? WebUtility.HtmlDecode(item.UserMessage) : null;
+                    var truncatedMessage = rawMessage != null && rawMessage.Length > 60 ? rawMessage.Substring(0, 60) + "..." : rawMessage;
+                    <tr>
+                        <td style="white-space: nowrap;">
+                            <a asp-action="Details" asp-route-id="@item.Id" title="@item.CreationDate.ToString()">
+                                @item.CreationDate.ToString("g")
+                            </a>
+                        </td>
+                        <td title="@decodedUrl">@truncatedUrl</td>
+                        <td title="@rawMessage">@(truncatedMessage ?? "—")</td>
+                        <td class="text-end" style="width: 1%; white-space: nowrap;">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-secondary me-1">View Details</a>
+                            <form method="post" asp-action="Archive" asp-route-id="@item.Id" style="display:inline">
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Archive this report?')">
+                                    Archive
+                                </button>
+                                @Html.AntiForgeryToken()
+                            </form>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<nav>
+    <ul class="pagination">
+        @if (Model.PreviousPage.HasValue)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-page="@Model.PreviousPage.Value"
+                   asp-route-count="@Model.Count">
+                    Previous
+                </a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Previous</a>
+            </li>
+        }
+        @if (Model.NextPage.HasValue)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-page="@Model.NextPage.Value"
+                   asp-route-count="@Model.Count">
+                    Next
+                </a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Next</a>
+            </li>
+        }
+    </ul>
+</nav>

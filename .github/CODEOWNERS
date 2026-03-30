@@ -53,6 +53,7 @@ test/Identity.IntegrationTest @bitwarden/team-auth-dev
 test/Identity.Test @bitwarden/team-auth-dev
 
 # Autofill team
+**/Autofill @bitwarden/team-autofill-dev
 src/Core/Utilities/StaticStore.cs @bitwarden/team-autofill-dev
 src/Core/Enums/GlobalEquivalentDomainsType.cs @bitwarden/team-autofill-dev
 

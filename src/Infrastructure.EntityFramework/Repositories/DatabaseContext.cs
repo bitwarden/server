@@ -3,6 +3,7 @@ using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
+using Bit.Infrastructure.EntityFramework.Autofill.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Dirt.Models;
@@ -89,6 +90,7 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
     public DbSet<OrganizationReport> OrganizationReports { get; set; }
     public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
+    public DbSet<AutofillTriageReport> AutofillTriageReport { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
