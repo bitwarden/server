@@ -41,7 +41,6 @@ public class ReceiveRequestModel
     /// </summary>
     [Required]
     [EncryptedString]
-    [EncryptedStringLength(1000)]
     public required string UserKeyWrappedPrivateKey { get; set; }
 
     /// <summary>
