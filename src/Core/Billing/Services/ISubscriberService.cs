@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Stripe;
 
@@ -103,15 +102,6 @@ public interface ISubscriberService
     /// </summary>
     /// <param name="subscriber">The subscriber to remove the saved payment source for.</param>
     Task RemovePaymentSource(ISubscriber subscriber);
-
-    /// <summary>
-    /// Updates the tax information for the provided <paramref name="subscriber"/>.
-    /// </summary>
-    /// <param name="subscriber">The <paramref name="subscriber"/> to update the tax information for.</param>
-    /// <param name="taxInformation">A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s updated tax information.</param>
-    Task UpdateTaxInformation(
-        ISubscriber subscriber,
-        TaxInformation taxInformation);
 
     /// <summary>
     /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> exists in the gateway.
