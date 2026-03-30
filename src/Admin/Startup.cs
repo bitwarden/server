@@ -92,6 +92,7 @@ public class Startup
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
         services.AddHttpClient();
+        services.AddHttpClient(HomeController.ExternalHttpClientName).AddSsrfProtection();
 
 #if OSS
         services.AddOosServices();
