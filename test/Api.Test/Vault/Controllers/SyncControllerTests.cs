@@ -73,6 +73,7 @@ public class SyncControllerTests
         var folderRepository = sutProvider.GetDependency<IFolderRepository>();
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         var sendRepository = sutProvider.GetDependency<ISendRepository>();
+        var receiveRepository = sutProvider.GetDependency<IReceiveRepository>();
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
@@ -139,7 +140,8 @@ public class SyncControllerTests
         // Assert that methods are called
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
         await this.AssertMethodsCalledAsync(userService, twoFactorIsEnabledQuery, organizationUserRepository, providerUserRepository, folderRepository,
-            cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
+            cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs,
+            receiveRepository);
 
         Assert.IsType<SyncResponseModel>(result);
 
@@ -170,6 +172,7 @@ public class SyncControllerTests
         var folderRepository = sutProvider.GetDependency<IFolderRepository>();
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         var sendRepository = sutProvider.GetDependency<ISendRepository>();
+        var receiveRepository = sutProvider.GetDependency<IReceiveRepository>();
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
@@ -233,7 +236,8 @@ public class SyncControllerTests
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
         await this.AssertMethodsCalledAsync(userService, twoFactorIsEnabledQuery, organizationUserRepository, providerUserRepository, folderRepository,
-            cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
+            cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs,
+            receiveRepository);
 
         Assert.IsType<SyncResponseModel>(result);
 
@@ -266,6 +270,7 @@ public class SyncControllerTests
         var folderRepository = sutProvider.GetDependency<IFolderRepository>();
         var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
         var sendRepository = sutProvider.GetDependency<ISendRepository>();
+        var receiveRepository = sutProvider.GetDependency<IReceiveRepository>();
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
         var collectionRepository = sutProvider.GetDependency<ICollectionRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
@@ -322,7 +327,8 @@ public class SyncControllerTests
 
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
         await this.AssertMethodsCalledAsync(userService, twoFactorIsEnabledQuery, organizationUserRepository, providerUserRepository, folderRepository,
-            cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs);
+            cipherRepository, sendRepository, collectionRepository, collectionCipherRepository, hasEnabledOrgs,
+            receiveRepository);
 
         Assert.IsType<SyncResponseModel>(result);
 
@@ -412,7 +418,8 @@ public class SyncControllerTests
         ICipherRepository cipherRepository, ISendRepository sendRepository,
         ICollectionRepository collectionRepository,
         ICollectionCipherRepository collectionCipherRepository,
-        bool hasEnabledOrgs)
+        bool hasEnabledOrgs,
+        IReceiveRepository receiveRepository = null)
     {
         await userService.ReceivedWithAnyArgs(1).GetUserByPrincipalAsync(default);
         await organizationUserRepository.ReceivedWithAnyArgs(1)
@@ -430,6 +437,12 @@ public class SyncControllerTests
 
         await sendRepository.ReceivedWithAnyArgs(1)
             .GetManyByUserIdAsync(default);
+
+        if (receiveRepository != null)
+        {
+            await receiveRepository.ReceivedWithAnyArgs(1)
+                .GetManyByUserIdAsync(default);
+        }
 
         // These two are only called when at least 1 enabled org.
         if (hasEnabledOrgs)

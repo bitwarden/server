@@ -1,4 +1,5 @@
-﻿using Bit.Api.Tools.Models.Request;
+﻿using Bit.Api.Models.Response;
+using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Premium.Queries;
@@ -6,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
+using Bit.Core.Tools.ReceiveFeatures.Queries.Interfaces;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -22,13 +24,14 @@ public class ReceivesController : Controller
     private readonly IReceiveFileStorageService _receiveFileStorageService;
     private readonly IReceiveValidationService _receiveValidationService;
     private readonly IUserService _userService;
-    private readonly ILogger<SendsController> _logger;
+    private readonly ILogger<ReceivesController> _logger;
     private readonly IFeatureService _featureService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICreateReceiveCommand _createReceiveCommand;
     private readonly IUpdateReceiveCommand _updateReceiveCommand;
     private readonly IUploadReceiveFileCommand _uploadReceiveFileCommand;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly IReceiveOwnerQuery _receiveOwnerQuery;
 
     public ReceivesController(
         IReceiveRepository receiveRepository,
@@ -36,13 +39,14 @@ public class ReceivesController : Controller
         IReceiveFileStorageService receiveFileStorageService,
         IReceiveValidationService receiveValidationService,
         IUserService userService,
-        ILogger<SendsController> logger,
+        ILogger<ReceivesController> logger,
         IFeatureService featureService,
         IPushNotificationService pushNotificationService,
         ICreateReceiveCommand createReceiveCommand,
         IUpdateReceiveCommand updateReceiveCommand,
         IUploadReceiveFileCommand uploadReceiveFileCommand,
-        IHasPremiumAccessQuery hasPremiumAccessQuery
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        IReceiveOwnerQuery receiveOwnerQuery
     )
     {
         _receiveRepository = receiveRepository;
@@ -57,6 +61,25 @@ public class ReceivesController : Controller
         _createReceiveCommand = createReceiveCommand;
         _updateReceiveCommand = updateReceiveCommand;
         _uploadReceiveFileCommand = uploadReceiveFileCommand;
+        _receiveOwnerQuery = receiveOwnerQuery;
+    }
+
+    [Authorize(Policies.Application)]
+    [HttpGet("{id}")]
+    public async Task<ReceiveResponseModel> Get(string id)
+    {
+        var receiveId = new Guid(id);
+        var receive = await _receiveOwnerQuery.Get(receiveId, User);
+        return new ReceiveResponseModel(receive);
+    }
+
+    [Authorize(Policies.Application)]
+    [HttpGet("")]
+    public async Task<ListResponseModel<ReceiveResponseModel>> GetAll()
+    {
+        var receives = await _receiveOwnerQuery.GetOwned(User);
+        var responses = receives.Select(r => new ReceiveResponseModel(r));
+        return new ListResponseModel<ReceiveResponseModel>(responses);
     }
 
     [AllowAnonymous]
@@ -124,7 +147,7 @@ public class ReceivesController : Controller
     }
 
     [Authorize(Policies.Application)]
-    [HttpPut("id")]
+    [HttpPut("{id}")]
     public async Task<ReceiveResponseModel> UpdateReceiveAsync([FromRoute] Guid id, [FromBody] ReceiveRequestModel request)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");

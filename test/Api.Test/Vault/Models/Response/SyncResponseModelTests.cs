@@ -25,7 +25,8 @@ public class SyncResponseModelTests
 
     private static SyncResponseModel CreateSyncResponseModel(
         User user,
-        IEnumerable<WebAuthnCredential>? webAuthnCredentials = null)
+        IEnumerable<WebAuthnCredential>? webAuthnCredentials = null,
+        IEnumerable<Receive>? receives = null)
     {
         return new SyncResponseModel(
             new GlobalSettings(),
@@ -48,6 +49,7 @@ public class SyncResponseModelTests
             true, // excludeDomains: true to avoid JSON deserialization issues in tests
             new List<Policy>(),
             new List<Send>(),
+            receives ?? new List<Receive>(),
             webAuthnCredentials ?? new List<WebAuthnCredential>());
     }
 
@@ -188,5 +190,49 @@ public class SyncResponseModelTests
         // Assert
         Assert.NotNull(result.UserDecryption);
         Assert.Null(result.UserDecryption.V2UpgradeToken);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithReceives_PopulatesReceivesProperty(User user)
+    {
+        // Arrange
+        var receives = new List<Receive>
+        {
+            new Receive
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Name = "encrypted-name",
+                Data = """{"Name":"encrypted-name","FileName":"test.txt","Size":1024}""",
+                UserKeyWrappedSharedContentEncryptionKey = _mockEncryptedKey1,
+                UserKeyWrappedPrivateKey = _mockEncryptedKey2,
+                ScekWrappedPublicKey = _mockEncryptedKey3,
+                Secret = "test-secret",
+                ExpirationDate = DateTime.UtcNow.AddDays(7)
+            }
+        };
+
+        // Act
+        var result = CreateSyncResponseModel(user, receives: receives);
+
+        // Assert
+        Assert.NotNull(result.Receives);
+        var receiveList = result.Receives.ToList();
+        Assert.Single(receiveList);
+        Assert.Equal(receives[0].Id, receiveList[0].Id);
+        Assert.Equal(_mockEncryptedKey1, receiveList[0].UserKeyWrappedSharedContentEncryptionKey);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Constructor_WithEmptyReceives_ReturnsEmptyCollection(User user)
+    {
+        // Act
+        var result = CreateSyncResponseModel(user);
+
+        // Assert
+        Assert.NotNull(result.Receives);
+        Assert.Empty(result.Receives);
     }
 }
