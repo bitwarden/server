@@ -361,10 +361,12 @@ public static class ServiceCollectionExtensions
         else if (CoreHelpers.SettingHasValue(globalSettings.Send.BaseDirectory))
         {
             services.AddSingleton<ISendFileStorageService, LocalSendStorageService>();
+            services.AddSingleton<IReceiveFileStorageService, NoopReceiveFileStorageService>();
         }
         else
         {
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
+            services.AddSingleton<IReceiveFileStorageService, NoopReceiveFileStorageService>();
         }
     }
 

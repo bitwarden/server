@@ -5,6 +5,7 @@ using Bit.Api.Tools.Models.Response;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -115,5 +116,90 @@ public class ReceivesControllerTests
         var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
         Assert.Equal(receive.Name, result.Name);
         Assert.Equal(receive.ScekWrappedPublicKey, result.ScekWrappedPublicKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetReceiveFileUploadUrl_MissingHeader_ThrowsBadRequest(
+        Guid id,
+        SutProvider<ReceivesController> sutProvider)
+    {
+        SetupHttpContext(sutProvider);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetReceiveFileUploadUrl_ReceiveNotFound_ThrowsNotFound(
+        Guid id,
+        SutProvider<ReceivesController> sutProvider)
+    {
+        SetupHttpContext(sutProvider, "some-secret");
+        sutProvider.GetDependency<IReceiveRepository>()
+            .GetByIdAsync(id)
+            .Returns((Receive?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetReceiveFileUploadUrl_SecretMismatch_ThrowsBadRequest(
+        Guid id,
+        Receive receive,
+        SutProvider<ReceivesController> sutProvider)
+    {
+        receive.Secret = "correct-secret";
+        SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes("wrong-secret")));
+        sutProvider.GetDependency<IReceiveRepository>()
+            .GetByIdAsync(id)
+            .Returns(receive);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetReceiveFileUploadUrl_ReceiveExpired_ThrowsNotFound(
+        Guid id,
+        Receive receive,
+        SutProvider<ReceivesController> sutProvider)
+    {
+        receive.Secret = "correct-secret";
+        SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
+        sutProvider.GetDependency<IReceiveRepository>()
+            .GetByIdAsync(id)
+            .Returns(receive);
+        sutProvider.GetDependency<IReceiveAuthorizationService>()
+            .ReceiveCanBeAccessed(receive)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetReceiveFileUploadUrl_ValidRequest_ReturnsUploadUrl(
+        Guid id,
+        Receive receive,
+        string expectedUrl,
+        SutProvider<ReceivesController> sutProvider)
+    {
+        receive.Secret = "correct-secret";
+        SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
+        sutProvider.GetDependency<IReceiveRepository>()
+            .GetByIdAsync(id)
+            .Returns(receive);
+        sutProvider.GetDependency<IReceiveAuthorizationService>()
+            .ReceiveCanBeAccessed(receive)
+            .Returns(true);
+        sutProvider.GetDependency<IUploadReceiveFileCommand>()
+            .GetUploadUrlAsync(receive)
+            .Returns(expectedUrl);
+
+        var result = await sutProvider.Sut.GetReceiveFileUploadUrl(id);
+
+        Assert.IsType<ReceiveFileUploadDataResponseModel>(result);
+        Assert.Equal(expectedUrl, result.Url);
     }
 }

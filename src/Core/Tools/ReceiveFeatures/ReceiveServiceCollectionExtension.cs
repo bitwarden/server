@@ -11,6 +11,7 @@ public static class ReceiveServiceCollectionExtension
     public static void AddReceiveServices(this IServiceCollection services)
     {
         services.AddScoped<ICreateReceiveCommand, CreateReceiveCommand>();
+        services.AddScoped<IUploadReceiveFileCommand, UploadReceiveFileCommand>();
         services.AddScoped<IReceiveAuthorizationService, ReceiveAuthorizationService>();
         services.AddScoped<IReceiveValidationService, ReceiveValidationService>();
     }

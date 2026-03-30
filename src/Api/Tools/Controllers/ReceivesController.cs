@@ -27,6 +27,7 @@ public class ReceivesController : Controller
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ICreateReceiveCommand _createReceiveCommand;
     private readonly IUpdateReceiveCommand _updateReceiveCommand;
+    private readonly IUploadReceiveFileCommand _uploadReceiveFileCommand;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
 
     public ReceivesController(
@@ -40,6 +41,7 @@ public class ReceivesController : Controller
         IPushNotificationService pushNotificationService,
         ICreateReceiveCommand createReceiveCommand,
         IUpdateReceiveCommand updateReceiveCommand,
+        IUploadReceiveFileCommand uploadReceiveFileCommand,
         IHasPremiumAccessQuery hasPremiumAccessQuery
     )
     {
@@ -54,18 +56,39 @@ public class ReceivesController : Controller
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _createReceiveCommand = createReceiveCommand;
         _updateReceiveCommand = updateReceiveCommand;
+        _uploadReceiveFileCommand = uploadReceiveFileCommand;
     }
 
     [AllowAnonymous]
     [HttpGet("{receiveId}/shared")]
     public async Task<SharedReceiveResponseModel> GetShared(Guid receiveId)
     {
+        var receive = await GetReceiveWithSecretValidationAsync(receiveId);
+        return new SharedReceiveResponseModel(receive);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("{id}/file")]
+    public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(Guid id)
+    {
+        var receive = await GetReceiveWithSecretValidationAsync(id);
+        var url = await _uploadReceiveFileCommand.GetUploadUrlAsync(receive);
+        if (url == null)
+        {
+            throw new BadRequestException("Invalid request.");
+        }
+
+        return new ReceiveFileUploadDataResponseModel(url, _receiveFileStorageService.FileUploadType);
+    }
+
+    private async Task<Core.Tools.Entities.Receive> GetReceiveWithSecretValidationAsync(Guid id)
+    {
         if (!Request.Headers.TryGetValue("Receive-Secret", out var secret))
         {
             throw new BadRequestException("Invalid request.");
         }
 
-        var receive = await _receiveRepository.GetByIdAsync(receiveId);
+        var receive = await _receiveRepository.GetByIdAsync(id);
         if (receive == null)
         {
             throw new NotFoundException();
@@ -82,7 +105,7 @@ public class ReceivesController : Controller
             throw new NotFoundException();
         }
 
-        return new SharedReceiveResponseModel(receive);
+        return receive;
     }
 
     [Authorize(Policies.Application)]
