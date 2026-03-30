@@ -8,7 +8,7 @@ public class AutofillTriageReportTests
     [Fact]
     public void SetNewId_SetsNonEmptyGuid()
     {
-        var report = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}" };
+        var report = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}", ExtensionVersion = "2025.3.0" };
 
         report.SetNewId();
 
@@ -18,8 +18,8 @@ public class AutofillTriageReportTests
     [Fact]
     public void SetNewId_SetsUniqueIds()
     {
-        var report1 = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}" };
-        var report2 = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}" };
+        var report1 = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}", ExtensionVersion = "2025.3.0" };
+        var report2 = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}", ExtensionVersion = "2025.3.0" };
 
         report1.SetNewId();
         report2.SetNewId();
@@ -31,7 +31,7 @@ public class AutofillTriageReportTests
     public void CreationDate_DefaultsToUtcNow()
     {
         var before = DateTime.UtcNow;
-        var report = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}" };
+        var report = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}", ExtensionVersion = "2025.3.0" };
         var after = DateTime.UtcNow;
 
         Assert.InRange(report.CreationDate, before, after);
@@ -40,7 +40,7 @@ public class AutofillTriageReportTests
     [Fact]
     public void Archived_DefaultsToFalse()
     {
-        var report = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}" };
+        var report = new AutofillTriageReport { PageUrl = "https://example.com", ReportData = "{}", ExtensionVersion = "2025.3.0" };
 
         Assert.False(report.Archived);
     }

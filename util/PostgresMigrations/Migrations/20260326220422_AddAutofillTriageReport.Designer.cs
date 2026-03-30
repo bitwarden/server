@@ -1227,6 +1227,11 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(51200)
                         .HasColumnType("character varying(51200)");
 
+                    b.Property<string>("ExtensionVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("TargetElementRef")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");

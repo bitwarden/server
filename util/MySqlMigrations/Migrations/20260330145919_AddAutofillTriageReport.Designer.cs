@@ -1222,6 +1222,11 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(51200)
                         .HasColumnType("longtext");
 
+                    b.Property<string>("ExtensionVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<string>("TargetElementRef")
                         .HasMaxLength(512)
                         .HasColumnType("varchar(512)");

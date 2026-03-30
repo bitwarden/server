@@ -19,6 +19,7 @@ public partial class AddAutofillTriageReport : Migration
                 TargetElementRef = table.Column<string>(type: "TEXT", maxLength: 512, nullable: true),
                 UserMessage = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
                 ReportData = table.Column<string>(type: "TEXT", maxLength: 51200, nullable: false),
+                ExtensionVersion = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 Archived = table.Column<bool>(type: "INTEGER", nullable: false)
             },

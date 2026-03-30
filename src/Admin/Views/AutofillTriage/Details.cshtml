@@ -41,6 +41,9 @@
                 </dd>
             }
 
+            <dt class="col-sm-3">Extension Version</dt>
+            <dd class="col-sm-9">@Model.ExtensionVersion</dd>
+
             <dt class="col-sm-3">User Message</dt>
             <dd class="col-sm-9">@(Model.UserMessage != null ? WebUtility.HtmlDecode(Model.UserMessage) : "(none)")</dd>
         </dl>

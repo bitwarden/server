@@ -22,6 +22,9 @@ public class AutofillTriageReport : ITableObject<Guid>
     [MaxLength(51200)]
     public required string ReportData { get; set; }
 
+    [MaxLength(50)]
+    public required string ExtensionVersion { get; set; }
+
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     public bool Archived { get; set; } = false;

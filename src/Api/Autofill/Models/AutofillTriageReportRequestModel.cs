@@ -27,11 +27,16 @@ public class AutofillTriageReportRequestModel
     [MaxLength(51200)]
     public required string ReportData { get; set; }
 
+    [Required]
+    [MaxLength(50)]
+    public required string ExtensionVersion { get; set; }
+
     public AutofillTriageReport ToEntity() => new()
     {
         PageUrl = PageUrl,
         TargetElementRef = TargetElementRef,
         UserMessage = UserMessage,
         ReportData = ReportData,
+        ExtensionVersion = ExtensionVersion,
     };
 }

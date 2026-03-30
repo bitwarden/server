@@ -1211,6 +1211,11 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(51200)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ExtensionVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("TargetElementRef")
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");

@@ -4,6 +4,7 @@ CREATE TABLE [dbo].[AutofillTriageReport] (
     [TargetElementRef] NVARCHAR (512)   NULL,
     [UserMessage]      NVARCHAR (200)   NULL,
     [ReportData]       NVARCHAR (MAX)   NOT NULL,
+    [ExtensionVersion] NVARCHAR (50)    NOT NULL,
     [CreationDate]     DATETIME2 (7)    NOT NULL,
     [Archived]         BIT              NOT NULL CONSTRAINT [DF_AutofillTriageReport_Archived] DEFAULT (0),
     CONSTRAINT [PK_AutofillTriageReport] PRIMARY KEY CLUSTERED ([Id] ASC)

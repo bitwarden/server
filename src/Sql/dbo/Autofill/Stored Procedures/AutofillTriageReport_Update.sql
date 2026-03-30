@@ -4,6 +4,7 @@ CREATE PROCEDURE [dbo].[AutofillTriageReport_Update]
     @TargetElementRef NVARCHAR (512),
     @UserMessage      NVARCHAR (200),
     @ReportData       NVARCHAR (MAX),
+    @ExtensionVersion NVARCHAR (50),
     @CreationDate     DATETIME2 (7),
     @Archived         BIT
 AS
@@ -17,6 +18,7 @@ BEGIN
         [TargetElementRef] = @TargetElementRef,
         [UserMessage]      = @UserMessage,
         [ReportData]       = @ReportData,
+        [ExtensionVersion] = @ExtensionVersion,
         [CreationDate]     = @CreationDate,
         [Archived]         = @Archived
     WHERE

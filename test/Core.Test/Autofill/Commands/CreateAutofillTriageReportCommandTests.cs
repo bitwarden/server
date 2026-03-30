@@ -33,6 +33,7 @@ public class CreateAutofillTriageReportCommandTests
         {
             PageUrl = "https://example.com",
             ReportData = "{}",
+            ExtensionVersion = "2025.3.0",
         };
 
         await sutProvider.Sut.Run(report);

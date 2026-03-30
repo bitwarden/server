@@ -6,6 +6,7 @@ BEGIN
         [TargetElementRef] NVARCHAR (512)   NULL,
         [UserMessage]      NVARCHAR (200)   NULL,
         [ReportData]       NVARCHAR (MAX)   NOT NULL,
+        [ExtensionVersion] NVARCHAR (50)    NOT NULL,
         [CreationDate]     DATETIME2 (7)    NOT NULL,
         [Archived]         BIT              NOT NULL CONSTRAINT [DF_AutofillTriageReport_Archived] DEFAULT (0),
         CONSTRAINT [PK_AutofillTriageReport] PRIMARY KEY CLUSTERED ([Id] ASC)
@@ -30,6 +31,7 @@ CREATE OR ALTER PROCEDURE [dbo].[AutofillTriageReport_Create]
     @TargetElementRef NVARCHAR (512),
     @UserMessage      NVARCHAR (200),
     @ReportData       NVARCHAR (MAX),
+    @ExtensionVersion NVARCHAR (50),
     @CreationDate     DATETIME2 (7),
     @Archived         BIT
 AS
@@ -43,6 +45,7 @@ BEGIN
         [TargetElementRef],
         [UserMessage],
         [ReportData],
+        [ExtensionVersion],
         [CreationDate],
         [Archived]
     )
@@ -53,6 +56,7 @@ BEGIN
         @TargetElementRef,
         @UserMessage,
         @ReportData,
+        @ExtensionVersion,
         @CreationDate,
         @Archived
     )
@@ -65,6 +69,7 @@ CREATE OR ALTER PROCEDURE [dbo].[AutofillTriageReport_Update]
     @TargetElementRef NVARCHAR (512),
     @UserMessage      NVARCHAR (200),
     @ReportData       NVARCHAR (MAX),
+    @ExtensionVersion NVARCHAR (50),
     @CreationDate     DATETIME2 (7),
     @Archived         BIT
 AS
@@ -78,6 +83,7 @@ BEGIN
         [TargetElementRef] = @TargetElementRef,
         [UserMessage]      = @UserMessage,
         [ReportData]       = @ReportData,
+        [ExtensionVersion] = @ExtensionVersion,
         [CreationDate]     = @CreationDate,
         [Archived]         = @Archived
     WHERE

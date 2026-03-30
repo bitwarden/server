@@ -23,6 +23,8 @@ public partial class AddAutofillTriageReport : Migration
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 ReportData = table.Column<string>(type: "longtext", maxLength: 51200, nullable: false)
                     .Annotation("MySql:CharSet", "utf8mb4"),
+                ExtensionVersion = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
                 CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                 Archived = table.Column<bool>(type: "tinyint(1)", nullable: false)
             },
