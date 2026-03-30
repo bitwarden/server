@@ -22,7 +22,7 @@ Fixtures are stored under `fixtures/organizations/`, `fixtures/rosters/`, and `f
 
 ## Presets = Assembly Instructions
 
-A preset picks one of each fixture (or generates data inline) and defines the relationships between them. It's the entry point for the `--preset` CLI flag.
+A preset picks one of each fixture (or generates data inline) and defines the relationships between them. It's the entry point for the `preset --name` CLI command.
 
 There are three composition modes:
 
