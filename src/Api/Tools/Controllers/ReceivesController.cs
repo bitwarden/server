@@ -60,10 +60,10 @@ public class ReceivesController : Controller
     }
 
     [AllowAnonymous]
-    [HttpGet("{receiveId}/shared")]
-    public async Task<SharedReceiveResponseModel> GetShared(Guid receiveId)
+    [HttpGet("{id}/shared")]
+    public async Task<SharedReceiveResponseModel> GetShared(Guid id)
     {
-        var receive = await GetReceiveWithSecretValidationAsync(receiveId);
+        var receive = await GetReceiveWithSecretValidationAsync(id);
         return new SharedReceiveResponseModel(receive);
     }
 
