@@ -18,6 +18,7 @@ internal static class UserSeeder
         string? name = null,
         bool emailVerified = true,
         bool premium = false,
+        short? maxStorageGb = null,
         UserKeys? keys = null,
         string? password = null,
         int kdfIterations = 5_000,
@@ -40,7 +41,8 @@ internal static class UserSeeder
             PublicKey = keys.PublicKey,
             PrivateKey = keys.PrivateKey,
             Premium = premium,
-            ApiKey = Guid.NewGuid().ToString("N")[..30],
+            MaxStorageGb = maxStorageGb,
+            ApiKey = CoreHelpers.SecureRandomString(30),
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = kdfIterations
         };
