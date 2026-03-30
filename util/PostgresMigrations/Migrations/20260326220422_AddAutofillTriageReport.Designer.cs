@@ -1205,7 +1205,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("PasswordHealthReportApplication", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AutofillTriageReport", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Autofill.Models.AutofillTriageReport", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1217,6 +1217,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ExtensionVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("PageUrl")
                         .IsRequired()
                         .HasMaxLength(1024)
@@ -1226,11 +1231,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired()
                         .HasMaxLength(51200)
                         .HasColumnType("character varying(51200)");
-
-                    b.Property<string>("ExtensionVersion")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("TargetElementRef")
                         .HasMaxLength(512)
