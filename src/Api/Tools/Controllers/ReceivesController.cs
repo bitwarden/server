@@ -10,6 +10,7 @@ using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
 using Bit.Core.Tools.ReceiveFeatures.Queries.Interfaces;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -76,6 +77,33 @@ public class ReceivesController : Controller
         var receives = await _receiveOwnerQuery.GetOwned(User);
         var responses = receives.Select(r => new ReceiveResponseModel(r));
         return new ListResponseModel<ReceiveResponseModel>(responses);
+    [AllowAnonymous]
+    [HttpGet("{receiveId}/shared")]
+    public async Task<SharedReceiveResponseModel> GetShared(Guid receiveId)
+    {
+        if (!Request.Headers.TryGetValue("Receive-Secret", out var secret))
+        {
+            throw new BadRequestException("Invalid request.");
+        }
+
+        var receive = await _receiveRepository.GetByIdAsync(receiveId);
+        if (receive == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var decodedSecret = System.Text.Encoding.UTF8.GetString(CoreHelpers.Base64UrlDecode(secret.ToString()));
+        if (!string.Equals(receive.Secret, decodedSecret, StringComparison.Ordinal))
+        {
+            throw new BadRequestException("Invalid request.");
+        }
+
+        if (!_receiveAuthorizationService.ReceiveCanBeAccessed(receive))
+        {
+            throw new NotFoundException();
+        }
+
+        return new SharedReceiveResponseModel(receive);
     }
 
     [Authorize(Policies.Application)]
