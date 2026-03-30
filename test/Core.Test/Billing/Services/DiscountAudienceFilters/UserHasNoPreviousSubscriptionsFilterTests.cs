@@ -118,7 +118,8 @@ public class UserHasNoPreviousSubscriptionsFilterTests
 
         Assert.False(result[DiscountTierType.Premium]);
         await _pricingClient.Received(1).ListPremiumPlans();
-        await _stripeAdapter.Received(1).ListSubscriptionsAsync(Arg.Any<SubscriptionListOptions>());
+        await _stripeAdapter.Received(1).ListSubscriptionsAsync(
+            Arg.Is<SubscriptionListOptions>(o => o.Status == "all"));
     }
 
     [Theory, BitAutoData]
@@ -334,6 +335,7 @@ public class UserHasNoPreviousSubscriptionsFilterTests
         await _organizationUserRepository.Received(1)
             .GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed);
         await _pricingClient.Received(1).ListPremiumPlans();
-        await _stripeAdapter.Received(1).ListSubscriptionsAsync(Arg.Any<SubscriptionListOptions>());
+        await _stripeAdapter.Received(1).ListSubscriptionsAsync(
+            Arg.Is<SubscriptionListOptions>(o => o.Status == "all"));
     }
 }

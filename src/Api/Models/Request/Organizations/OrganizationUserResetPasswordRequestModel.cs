@@ -1,19 +1,25 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
+using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Request.Organizations;
 
 public class OrganizationUserResetPasswordRequestModel
 {
+    public bool ResetMasterPassword { get; set; }
+    public bool ResetTwoFactor { get; set; }
+
     [StringLength(300)]
     public string? NewMasterPasswordHash { get; set; }
     public string? Key { get; set; }
 
-    public MasterPasswordAuthenticationDataRequestModel? MasterPasswordAuthentication { get; set; }
-    public MasterPasswordUnlockDataRequestModel? MasterPasswordUnlock { get; set; }
-
-    public bool UnlockAndAuthenticationDataExist()
+    public RecoverAccountRequest ToCommandRequest(Guid orgId, OrganizationUser organizationUser) => new()
     {
-        return MasterPasswordAuthentication is not null && MasterPasswordUnlock is not null;
-    }
+        OrgId = orgId,
+        OrganizationUser = organizationUser,
+        ResetMasterPassword = ResetMasterPassword,
+        ResetTwoFactor = ResetTwoFactor,
+        NewMasterPasswordHash = NewMasterPasswordHash,
+        Key = Key
+    };
 }

@@ -43,8 +43,8 @@ using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
@@ -85,6 +85,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
+    private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -116,6 +117,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
+        AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
@@ -151,6 +153,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
+        _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
     }
 
@@ -313,29 +316,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit))
+        var request = new InitPendingOrganizationRequest
         {
-            var request = new InitPendingOrganizationRequest
-            {
-                User = user,
-                OrganizationId = orgId,
-                OrganizationUserId = organizationUserId,
-                OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
-                CollectionName = model.CollectionName,
-                EmailToken = model.Token,
-                EncryptedOrganizationSymmetricKey = model.Key
-            };
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = organizationUserId,
+            OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
+            CollectionName = model.CollectionName,
+            EmailToken = model.Token,
+            EncryptedOrganizationSymmetricKey = model.Key
+        };
 
-            var result = await _initPendingOrganizationCommand.InitPendingOrganizationVNextAsync(request);
+        var result = await _initPendingOrganizationCommand.InitPendingOrganizationAsync(request);
 
-            return Handle(result);
-        }
-
-        await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
-        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
-        await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
-
-        return TypedResults.Ok();
+        return Handle(result);
     }
 
     [HttpPost("{organizationUserId}/accept")]
@@ -527,9 +521,17 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
 #nullable enable
+    /// <summary>
+    /// Backward compat alias — remove after clients migrate to recover-account.
+    /// </summary>
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+        => PutRecoverAccount(orgId, id, model);
+
+    [HttpPut("{id}/recover-account")]
+    [Authorize<ManageAccountRecoveryRequirement>]
+    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
@@ -547,28 +549,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        IdentityResult result;
-
-        if (model.UnlockAndAuthenticationDataExist())
+        if (_featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
         {
-            // Use new unlock and authentication data types
-            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
-                orgId,
-                targetOrganizationUser,
-                model.MasterPasswordUnlock!.ToData(),
-                model.MasterPasswordAuthentication!.ToData());
-        }
-        else
-        {
-            // Old data types used to perform recover account
-            if (model.NewMasterPasswordHash == null || model.Key == null) throw new BadRequestException("Payload is malformed, not enough data to perform reset password.");
-            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
-                orgId,
-                targetOrganizationUser,
-                model.NewMasterPasswordHash,
-                model.Key);
+            var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+            return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
         }
 
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+            orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
         if (result.Succeeded)
         {
             return TypedResults.Ok();

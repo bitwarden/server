@@ -98,7 +98,7 @@ public class LocalSendStorageService : ISendFileStorageService
         }
 
         length = new FileInfo(path).Length;
-        var valid = minimum < length || length < maximum;
+        var valid = minimum < length && length < maximum;
         return Task.FromResult((valid, length));
     }
 }
