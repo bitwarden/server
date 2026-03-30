@@ -762,8 +762,8 @@ public class UserServiceTests
             .Received(1)
             .CancelSubscription(
                 user,
-                Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id),
-                cancelImmediately: false);
+                cancelImmediately: false,
+                offboardingSurveyResponse: Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
 
         await sutProvider.GetDependency<IStripePaymentService>()
             .DidNotReceiveWithAnyArgs()
