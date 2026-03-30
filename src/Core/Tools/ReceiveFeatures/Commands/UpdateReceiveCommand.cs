@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
 using Bit.Core.Tools.ReceiveFeatures.Models;
@@ -9,10 +10,12 @@ namespace Bit.Core.Tools.ReceiveFeatures.Commands;
 public class UpdateReceiveCommand : IUpdateReceiveCommand
 {
     private readonly IReceiveRepository _receiveRepository;
+    private readonly IPushNotificationService _pushNotificationService;
 
-    public UpdateReceiveCommand(IReceiveRepository receiveRepository)
+    public UpdateReceiveCommand(IReceiveRepository receiveRepository, IPushNotificationService pushNotificationService)
     {
         _receiveRepository = receiveRepository;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Receive> UpdateAsync(ReceiveUpdateData updateData, Guid userId)
@@ -28,6 +31,7 @@ public class UpdateReceiveCommand : IUpdateReceiveCommand
         receive.RevisionDate = DateTime.UtcNow;
 
         await _receiveRepository.ReplaceAsync(receive);
+        await _pushNotificationService.PushSyncReceiveUpdateAsync(receive);
         return receive;
     }
 }

@@ -57,8 +57,7 @@ public class AzureReceiveFileStorageService : IReceiveFileStorageService
         receive.UploadCount++;
         await _receiveRepository.ReplaceAsync(receive);
 
-        // TODO: investigate if this belongs here, if it does adapt the existing Send method to support Receive type
-        // await _pushNotificationService.PushSyncSendUpdateAsync(receive);
+        await _pushNotificationService.PushSyncReceiveUpdateAsync(receive);
     }
 
     public async Task DeleteFileAsync(Receive receive, string fileId) => await DeleteBlobAsync(BlobName(receive, fileId));

@@ -105,4 +105,13 @@ public enum PushType : byte
 
     [NotificationInfo("@bitwarden/team-billing-dev", typeof(Billing.Models.PremiumStatusPushNotification))]
     PremiumStatusChanged = 27,
+
+    [NotificationInfo("@bitwarden/team-tools-dev", typeof(Models.SyncReceivePushNotification))]
+    SyncReceiveCreate = 28,
+
+    [NotificationInfo("@bitwarden/team-tools-dev", typeof(Models.SyncReceivePushNotification))]
+    SyncReceiveUpdate = 29,
+
+    [NotificationInfo("@bitwarden/team-tools-dev", typeof(Models.SyncReceivePushNotification))]
+    SyncReceiveDelete = 30,
 }

@@ -91,6 +91,9 @@ public abstract class PushTestBase
     protected abstract JsonNode GetPushSendCreatePayload(Send send);
     protected abstract JsonNode GetPushSendUpdatePayload(Send send);
     protected abstract JsonNode GetPushSendDeletePayload(Send send);
+    protected abstract JsonNode GetPushReceiveCreatePayload(Receive receive);
+    protected abstract JsonNode GetPushReceiveUpdatePayload(Receive receive);
+    protected abstract JsonNode GetPushReceiveDeletePayload(Receive receive);
     protected abstract JsonNode GetPushAuthRequestPayload(AuthRequest authRequest);
     protected abstract JsonNode GetPushAuthRequestResponsePayload(AuthRequest authRequest);
     protected abstract JsonNode GetPushNotificationResponsePayload(Notification notification, Guid? userId, Guid? organizationId);
@@ -324,6 +327,69 @@ public abstract class PushTestBase
         await VerifyNotificationAsync(
             async sut => await sut.PushSyncSendDeleteAsync(send),
             GetPushSendDeletePayload(send)
+        );
+    }
+
+    [Fact]
+    public async Task PushSyncReceiveCreateAsync_SendsExpectedResponse()
+    {
+        var receive = new Receive
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Name = "test",
+            Data = "{}",
+            UserKeyWrappedSharedContentEncryptionKey = "key",
+            UserKeyWrappedPrivateKey = "private-key",
+            ScekWrappedPublicKey = "public-key",
+            Secret = "secret",
+        };
+
+        await VerifyNotificationAsync(
+            async sut => await sut.PushSyncReceiveCreateAsync(receive),
+            GetPushReceiveCreatePayload(receive)
+        );
+    }
+
+    [Fact]
+    public async Task PushSyncReceiveUpdateAsync_SendsExpectedResponse()
+    {
+        var receive = new Receive
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Name = "test",
+            Data = "{}",
+            UserKeyWrappedSharedContentEncryptionKey = "key",
+            UserKeyWrappedPrivateKey = "private-key",
+            ScekWrappedPublicKey = "public-key",
+            Secret = "secret",
+        };
+
+        await VerifyNotificationAsync(
+            async sut => await sut.PushSyncReceiveUpdateAsync(receive),
+            GetPushReceiveUpdatePayload(receive)
+        );
+    }
+
+    [Fact]
+    public async Task PushSyncReceiveDeleteAsync_SendsExpectedResponse()
+    {
+        var receive = new Receive
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Name = "test",
+            Data = "{}",
+            UserKeyWrappedSharedContentEncryptionKey = "key",
+            UserKeyWrappedPrivateKey = "private-key",
+            ScekWrappedPublicKey = "public-key",
+            Secret = "secret",
+        };
+
+        await VerifyNotificationAsync(
+            async sut => await sut.PushSyncReceiveDeleteAsync(receive),
+            GetPushReceiveDeletePayload(receive)
         );
     }
 
