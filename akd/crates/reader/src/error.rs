@@ -1,13 +1,10 @@
 use akd::errors::AkdError;
 use axum::http::StatusCode;
+use bitwarden_akd_configuration::request_models::RequestConversionError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Main error type for the Reader API
-///
-/// Note: Base64 validation for input fields happens automatically during JSON
-/// deserialization via the `bitwarden_encoding::B64` type, so invalid base64
-/// will be rejected before reaching the handlers with a 400 Bad Request error.
 #[derive(Error, Debug)]
 pub enum ReaderError {
     // Application-level validation errors (4xx)
@@ -22,6 +19,9 @@ pub enum ReaderError {
 
     #[error("Batch size limit exceeded: {limit}")]
     BatchTooLarge { limit: usize },
+
+    #[error("Invalid request: {0}")]
+    RequestConversion(#[from] RequestConversionError),
 
     // AKD library errors
     #[error("AKD error: {0}")]
@@ -50,6 +50,7 @@ pub enum ErrorCode {
     InvalidEpoch,
     EmptyBatch,
     BatchTooLarge,
+    RequestConversion,
 
     // AKD-specific errors
     AkdTreeNode,
@@ -80,6 +81,7 @@ impl ReaderError {
             ReaderError::InvalidEpoch { .. } => StatusCode::BAD_REQUEST,
             ReaderError::EmptyBatch => StatusCode::BAD_REQUEST,
             ReaderError::BatchTooLarge { .. } => StatusCode::BAD_REQUEST,
+            ReaderError::RequestConversion(_) => StatusCode::BAD_REQUEST,
 
             ReaderError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
 
@@ -117,6 +119,7 @@ impl ReaderError {
             ReaderError::InvalidEpoch { .. } => ErrorCode::InvalidEpoch,
             ReaderError::EmptyBatch => ErrorCode::EmptyBatch,
             ReaderError::BatchTooLarge { .. } => ErrorCode::BatchTooLarge,
+            ReaderError::RequestConversion(_) => ErrorCode::RequestConversion,
             ReaderError::InternalError(_) => ErrorCode::InternalError,
             ReaderError::Akd(akd_err) => Self::akd_error_code(akd_err),
         }

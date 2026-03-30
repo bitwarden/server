@@ -1,5 +1,7 @@
 use axum::{extract::State, http::StatusCode, Json};
-use bitwarden_akd_configuration::BitwardenAkdLabelMaterial;
+use bitwarden_akd_configuration::{
+    request_models::BitwardenAkdLabelMaterialRequest, BitwardenAkdLabelMaterial,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
@@ -11,8 +13,7 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BatchLookupRequest {
-    /// An array of labels to look up. Each label is encoded as base64.
-    pub bitwarden_akd_labels: Vec<BitwardenAkdLabelMaterial>,
+    pub bitwarden_akd_labels: Vec<BitwardenAkdLabelMaterialRequest>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,10 +59,22 @@ pub async fn batch_lookup_handler(
         );
     }
 
-    let labels = bitwarden_akd_labels
+    let labels: Vec<akd::AkdLabel> = match bitwarden_akd_labels
         .into_iter()
-        .map(|label_b64| (&label_b64).into())
-        .collect::<Vec<akd::AkdLabel>>();
+        .map(|req| -> Result<akd::AkdLabel, _> {
+            let label: BitwardenAkdLabelMaterial = req.try_into()?;
+            Ok((&label).into())
+        })
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(labels) => labels,
+        Err(e) => {
+            let reader_error = ReaderError::RequestConversion(e);
+            let status = reader_error.status_code();
+            error!(err = ?reader_error, status = %status, "Invalid request");
+            return (status, Json(Response::error(reader_error)));
+        }
+    };
     let lookup_proofs = directory.batch_lookup(&labels).await;
 
     match lookup_proofs {
@@ -92,7 +105,7 @@ mod tests {
     fn test_empty_batch_rejected() {
         // Threat model: DoS via empty batch requests
         // Tests handler logic at lines 36-42
-        let labels_b64: Vec<BitwardenAkdLabelMaterial> = vec![];
+        let labels_b64: Vec<BitwardenAkdLabelMaterialRequest> = vec![];
         assert!(labels_b64.is_empty(), "Empty batch should be detected");
     }
 

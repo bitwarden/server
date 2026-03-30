@@ -1,5 +1,7 @@
 use axum::{extract::State, http::StatusCode, Json};
-use bitwarden_akd_configuration::BitwardenAkdLabelMaterial;
+use bitwarden_akd_configuration::{
+    request_models::BitwardenAkdLabelMaterialRequest, BitwardenAkdLabelMaterial,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
@@ -11,7 +13,7 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KeyHistoryRequest {
-    pub bitwarden_akd_label_material: BitwardenAkdLabelMaterial,
+    pub bitwarden_akd_label_material: BitwardenAkdLabelMaterialRequest,
     /// the label to look up encoded as an uppercase hex string
     pub history_params: HistoryParams,
 }
@@ -50,11 +52,17 @@ pub async fn key_history_handler(
     }): Json<KeyHistoryRequest>,
 ) -> (StatusCode, Json<Response<HistoryData>>) {
     info!("Handling get key history request");
+    let label: BitwardenAkdLabelMaterial = match bitwarden_akd_label_material.try_into() {
+        Ok(label) => label,
+        Err(e) => {
+            let reader_error = ReaderError::RequestConversion(e);
+            let status = reader_error.status_code();
+            error!(err = ?reader_error, status = %status, "Invalid request");
+            return (status, Json(Response::error(reader_error)));
+        }
+    };
     let history_proof = directory
-        .key_history(
-            &(&bitwarden_akd_label_material).into(),
-            history_params.into(),
-        )
+        .key_history(&(&label).into(), history_params.into())
         .await;
 
     match history_proof {

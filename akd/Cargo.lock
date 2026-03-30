@@ -528,6 +528,7 @@ name = "bitwarden-akd-configuration"
 version = "0.1.0"
 dependencies = [
  "akd",
+ "bitwarden-encoding",
  "blake3",
  "config",
  "serde",

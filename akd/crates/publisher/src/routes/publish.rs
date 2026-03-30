@@ -1,7 +1,9 @@
 use super::AppState;
 use akd_storage::PublishQueue;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-use bitwarden_akd_configuration::BitwardenAkdPairMaterial;
+use bitwarden_akd_configuration::{
+    request_models::BitwardenAkdPairMaterialRequest, BitwardenAkdPairMaterial,
+};
 use serde::Serialize;
 use tracing::{error, info, instrument};
 
@@ -13,9 +15,20 @@ pub struct PublishResponse {
 #[instrument(skip_all)]
 pub async fn publish_handler(
     State(AppState { publish_queue, .. }): State<AppState>,
-    Json(bitwarden_akd_pair): Json<BitwardenAkdPairMaterial>,
+    Json(pair_request): Json<BitwardenAkdPairMaterialRequest>,
 ) -> impl IntoResponse {
     info!("Handling publish request");
+
+    let bitwarden_akd_pair: BitwardenAkdPairMaterial = match pair_request.try_into() {
+        Ok(pair) => pair,
+        Err(e) => {
+            error!("Invalid request: {:?}", e);
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(PublishResponse { success: false }),
+            );
+        }
+    };
 
     let label = (&bitwarden_akd_pair).into();
     let value = (&bitwarden_akd_pair).into();
