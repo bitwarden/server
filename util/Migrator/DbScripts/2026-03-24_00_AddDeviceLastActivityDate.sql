@@ -100,9 +100,17 @@ BEGIN
         [EncryptedPublicKey] = @EncryptedPublicKey,
         [EncryptedPrivateKey] = @EncryptedPrivateKey,
         [Active] = @Active,
-        -- NULL preserves the existing value, preventing general updates from overwriting a recently-bumped
-        -- LastActivityDate. Pass a non-NULL value to update it in the same write.
-        [LastActivityDate] = COALESCE(@LastActivityDate, [LastActivityDate])
+        -- LastActivityDate only moves forward. Two scenarios could silently clobber a valid bump:
+        --   1. NULL passthrough: a general save that does not intend to touch LastActivityDate passes NULL
+        --      (the default); we must not overwrite an existing value with NULL.
+        --   2. Stale non-null overwrite: a thread that loaded the device before a concurrent bump fires
+        --      may call SaveAsync with an older date; we must not clobber the fresher DB value.
+        -- The CASE expression handles both: LastActivityDate is updated only when the incoming value is
+        -- strictly greater than the current DB value (ISNULL baseline of '1900-01-01' handles NULL DB values).
+        [LastActivityDate] = CASE
+            WHEN @LastActivityDate > ISNULL([LastActivityDate], '1900-01-01') THEN @LastActivityDate
+            ELSE [LastActivityDate]
+        END
     WHERE
         [Id] = @Id
 END
