@@ -18,7 +18,6 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class AccountsController(
     IUserService userService,
-    IFeatureService featureService,
     ILicensingService licensingService) : Controller
 {
     // TODO: Remove with deletion of pm-29594-update-individual-subscription-page

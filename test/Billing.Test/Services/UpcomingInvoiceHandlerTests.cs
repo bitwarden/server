@@ -175,12 +175,6 @@ public class UpcomingInvoiceHandlerTests
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
-        // If milestone 2 is disabled, the default email is sent
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(false);
-
-
         // Act
         await _sut.HandleAsync(parsedEvent);
 
@@ -268,11 +262,6 @@ public class UpcomingInvoiceHandlerTests
                 subscription.Id,
                 Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
-
-        // If milestone 2 is true, the updated invoice email is sent
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(true);
 
         var coupon = new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount };
 
@@ -1090,10 +1079,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
 
         _userRepository.GetByIdAsync(_userId).Returns(user);
-
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(true);
 
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
@@ -2685,7 +2670,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns((Coupon)null);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
@@ -2777,7 +2761,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
@@ -2869,7 +2852,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
@@ -2954,7 +2936,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
             .ThrowsAsync(new StripeException("Stripe API error"));
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -3039,7 +3020,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
             .Returns(new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount });
