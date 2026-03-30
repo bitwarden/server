@@ -1200,7 +1200,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("PasswordHealthReportApplication", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AutofillTriageReport", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Autofill.Models.AutofillTriageReport", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1212,6 +1212,11 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("ExtensionVersion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<string>("PageUrl")
                         .IsRequired()
                         .HasMaxLength(1024)
@@ -1221,11 +1226,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired()
                         .HasMaxLength(51200)
                         .HasColumnType("longtext");
-
-                    b.Property<string>("ExtensionVersion")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
 
                     b.Property<string>("TargetElementRef")
                         .HasMaxLength(512)
