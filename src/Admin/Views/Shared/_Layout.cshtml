@@ -74,7 +74,7 @@
                                     </a>
                                 </li>
                             }
-                            @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableAutofillIssueReporting))
+                            @if (canViewUsers && FeatureService.IsEnabled(FeatureFlagKeys.EnableAutofillIssueReporting))
                             {
                                 <li class="nav-item" active-controller="AutofillTriage">
                                     <a class="nav-link" asp-controller="AutofillTriage" asp-action="Index">
