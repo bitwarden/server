@@ -551,20 +551,22 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         if (model.UnlockAndAuthenticationDataExist())
         {
+            // Use new unlock and authentication data types
+            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+                orgId,
+                targetOrganizationUser,
+                model.MasterPasswordUnlock!.ToData(),
+                model.MasterPasswordAuthentication!.ToData());
+        }
+        else
+        {
+            // Old data types used to perform recover account
             if (model.NewMasterPasswordHash == null || model.Key == null) throw new BadRequestException("Payload is malformed, not enough data to perform reset password.");
             result = await _adminRecoverAccountCommand.RecoverAccountAsync(
                 orgId,
                 targetOrganizationUser,
                 model.NewMasterPasswordHash,
                 model.Key);
-        }
-        else
-        {
-            result = await _adminRecoverAccountCommand.RecoverAccountAsync(
-                orgId,
-                targetOrganizationUser,
-                model.MasterPasswordUnlock!.ToData(),
-                model.MasterPasswordAuthentication!.ToData());
         }
 
         if (result.Succeeded)

@@ -1,7 +1,6 @@
-﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 
@@ -26,42 +25,45 @@ public class MasterPasswordService : IMasterPasswordService
         _updateMasterPasswordStateCommand = updateMasterPasswordStateCommand;
     }
 
-    public async Task<IdentityResult> SetInitialMasterPassword(User user, string masterPasswordHash, string key,
-        KdfSettings kdf, string? salt = null, bool validatePassword = true, bool refreshStamp = true)
+    public async Task<IdentityResult> SetInitialMasterPasswordAsync(
+        User user,
+        SetInitialPasswordData setInitialData)
     {
-        if (user.MasterPassword != null || user.Key != null)
-        {
-            throw new BadRequestException("User already has a master password set.");
-        }
+        setInitialData.ValidateDataForUser(user);
 
-        var result = await _userService.UpdatePasswordHash(user, masterPasswordHash, validatePassword, refreshStamp);
+        var result = await _userService.UpdatePasswordHash(
+            user,
+            setInitialData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash,
+            setInitialData.ValidatePassword,
+            setInitialData.RefreshStamp);
         if (!result.Succeeded)
         {
             return result;
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        // Set kdf data on the user.
+        user.Key = setInitialData.MasterPasswordUnlockData.MasterKeyWrappedUserKey;
+        user.Kdf = setInitialData.MasterPasswordUnlockData.Kdf.KdfType;
+        user.KdfIterations = setInitialData.MasterPasswordUnlockData.Kdf.Iterations;
+        user.KdfMemory = setInitialData.MasterPasswordUnlockData.Kdf.Memory;
+        user.KdfParallelism = setInitialData.MasterPasswordUnlockData.Kdf.Parallelism;
 
-        user.Key = key;
-        user.Kdf = kdf.KdfType;
-        user.KdfIterations = kdf.Iterations;
-        user.KdfMemory = kdf.Memory;
-        user.KdfParallelism = kdf.Parallelism;
+        // Set salt on the user
+        user.MasterPasswordSalt = setInitialData.MasterPasswordUnlockData.Salt;
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         user.LastPasswordChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;
-
-        if (salt != null)
-        {
-            user.MasterPasswordSalt = salt;
-        }
 
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPasswordHash, string key,
-        KdfSettings kdf, string? salt = null, bool validatePassword = true, bool refreshStamp = true)
+    // Should this use IUserRepository.SetMasterPassword?
+    public async Task<IdentityResult> SetInitialMasterPasswordAndSaveAsync(
+        User user,
+        SetInitialPasswordData setInitialData)
     {
-        var result = await SetInitialMasterPassword(user, masterPasswordHash, key, kdf, salt, validatePassword, refreshStamp);
+        var result = await SetInitialMasterPasswordAsync(user, setInitialData);
         if (!result.Succeeded)
         {
             return result;
@@ -71,17 +73,17 @@ public class MasterPasswordService : IMasterPasswordService
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> UpdateMasterPassword(User user, string masterPasswordHash, string key,
-        KdfSettings kdf, string? salt = null, bool validatePassword = true, bool refreshStamp = true)
+    public async Task<IdentityResult> UpdateExistingMasterPasswordAsync(
+        User user,
+        UpdateExistingPasswordData updateExistingData)
     {
-        if (!user.HasMasterPassword())
-        {
-            throw new BadRequestException("User does not have an existing master password to update.");
-        }
+        updateExistingData.ValidateDataForUser(user);
 
-        kdf.ValidateUnchangedForUser(user);
-
-        var result = await _userService.UpdatePasswordHash(user, masterPasswordHash, validatePassword, refreshStamp);
+        var result = await _userService.UpdatePasswordHash(
+            user,
+            updateExistingData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash,
+            updateExistingData.ValidatePassword,
+            updateExistingData.RefreshStamp);
         if (!result.Succeeded)
         {
             return result;
@@ -89,22 +91,21 @@ public class MasterPasswordService : IMasterPasswordService
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        user.Key = key;
+        user.Key = updateExistingData.MasterPasswordUnlockData.MasterKeyWrappedUserKey;
+
+        user.MasterPasswordSalt = updateExistingData.MasterPasswordUnlockData.Salt;
+
         user.LastPasswordChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;
-
-        if (salt != null)
-        {
-            user.MasterPasswordSalt = salt;
-        }
 
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> UpdateMasterPasswordAsync(User user, string masterPasswordHash, string key,
-        KdfSettings kdf, string? salt = null, bool validatePassword = true, bool refreshStamp = true)
+    public async Task<IdentityResult> UpdateExistingMasterPasswordAndSaveAsync(
+        User user,
+        UpdateExistingPasswordData updateExistingData)
     {
-        var result = await UpdateMasterPassword(user, masterPasswordHash, key, kdf, salt, validatePassword, refreshStamp);
+        var result = await UpdateExistingMasterPasswordAsync(user, updateExistingData);
         if (!result.Succeeded)
         {
             return result;

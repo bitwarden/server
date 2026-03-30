@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -121,21 +122,28 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         }
 
         IdentityResult mutationResult;
+
+        // We can recover an account for users who both have a master password and
+        // those who do not. TDE users can be recovered and will not have a password
         if (user.HasMasterPassword())
         {
-            mutationResult = await masterPasswordService.UpdateMasterPassword(
+            mutationResult = await masterPasswordService.UpdateExistingMasterPasswordAsync(
                 user,
-                authenticationData.MasterPasswordAuthenticationHash,
-                unlockData.MasterKeyWrappedUserKey,
-                unlockData.Kdf);
+                new UpdateExistingPasswordData
+                {
+                    MasterPasswordUnlockData = unlockData,
+                    MasterPasswordAuthenticationData = authenticationData,
+                });
         }
         else
         {
-            mutationResult = await masterPasswordService.SetInitialMasterPassword(
+            mutationResult = await masterPasswordService.SetInitialMasterPasswordAsync(
                 user,
-                authenticationData.MasterPasswordAuthenticationHash,
-                unlockData.MasterKeyWrappedUserKey,
-                unlockData.Kdf);
+                new SetInitialPasswordData
+                {
+                    MasterPasswordUnlockData = unlockData,
+                    MasterPasswordAuthenticationData = authenticationData,
+                });
         }
 
         if (!mutationResult.Succeeded)
