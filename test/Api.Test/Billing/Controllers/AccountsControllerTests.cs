@@ -24,7 +24,6 @@ public class AccountsControllerTests : IDisposable
     private const string TestMilestone2CouponId = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount;
 
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
     private readonly IStripePaymentService _paymentService;
     private readonly ILicensingService _licensingService;
     private readonly GlobalSettings _globalSettings;
@@ -33,14 +32,12 @@ public class AccountsControllerTests : IDisposable
     public AccountsControllerTests()
     {
         _userService = Substitute.For<IUserService>();
-        _featureService = Substitute.For<IFeatureService>();
         _paymentService = Substitute.For<IStripePaymentService>();
         _licensingService = Substitute.For<ILicensingService>();
         _globalSettings = new GlobalSettings { SelfHosted = false };
 
         _sut = new AccountsController(
             _userService,
-            _featureService,
             _licensingService
         );
     }
