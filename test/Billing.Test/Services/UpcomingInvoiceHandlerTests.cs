@@ -63,6 +63,7 @@ public class UpcomingInvoiceHandlerTests
         _mailService = Substitute.For<IMailService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _pricingClient = Substitute.For<IPricingClient>();
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan>());
         _providerRepository = Substitute.For<IProviderRepository>();
         _stripeAdapter = Substitute.For<IStripeAdapter>();
         _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
