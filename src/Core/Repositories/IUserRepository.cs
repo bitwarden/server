@@ -83,7 +83,6 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="serverSideHashedMasterPasswordAuthenticationHash">Server side hash of the user master authentication password hash</param>
     /// <param name="masterPasswordHint">Optional hint for the master password.</param>
     /// <returns>A task to complete the operation.</returns>
-    [Obsolete("Deprecated, use MasterPasswordService to set a password.")]
     UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint);
 
