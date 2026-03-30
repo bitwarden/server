@@ -39,6 +39,7 @@ public class SyncController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly ISendRepository _sendRepository;
+    private readonly IReceiveRepository _receiveRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
@@ -58,6 +59,7 @@ public class SyncController : Controller
         IProviderUserRepository providerUserRepository,
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
+        IReceiveRepository receiveRepository,
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
         IFeatureService featureService,
@@ -75,6 +77,7 @@ public class SyncController : Controller
         _providerUserRepository = providerUserRepository;
         _policyRepository = policyRepository;
         _sendRepository = sendRepository;
+        _receiveRepository = receiveRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
@@ -106,6 +109,7 @@ public class SyncController : Controller
         var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
         var ciphers = FilterSSHKeys(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
+        var receives = await _receiveRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
@@ -137,7 +141,7 @@ public class SyncController : Controller
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, receives, webAuthnCredentials);
         return response;
     }
 

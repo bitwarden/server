@@ -50,6 +50,13 @@ public class SyncSendPushNotification
     public DateTime RevisionDate { get; set; }
 }
 
+public class SyncReceivePushNotification
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public DateTime RevisionDate { get; set; }
+}
+
 public class NotificationPushNotification
 {
     public Guid Id { get; set; }
