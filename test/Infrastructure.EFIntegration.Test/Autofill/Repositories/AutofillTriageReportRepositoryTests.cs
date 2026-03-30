@@ -1,11 +1,9 @@
-using AutoFixture;
+﻿using AutoFixture;
 using Bit.Core.Autofill.Entities;
-using Bit.Core.Autofill.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Xunit;
 using EfAutofillRepo = Bit.Infrastructure.EntityFramework.Autofill.Repositories;
-using SqlAutofillRepo = Bit.Infrastructure.Dapper.Autofill.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Autofill.Repositories;
 

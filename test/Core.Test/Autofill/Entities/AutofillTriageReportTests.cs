@@ -1,4 +1,4 @@
-using Bit.Core.Autofill.Entities;
+﻿using Bit.Core.Autofill.Entities;
 using Xunit;
 
 namespace Bit.Core.Test.Autofill.Entities;

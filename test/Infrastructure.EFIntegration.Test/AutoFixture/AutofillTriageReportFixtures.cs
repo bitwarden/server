@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.Autofill.Entities;
 using Bit.Infrastructure.EntityFramework.Autofill.Repositories;

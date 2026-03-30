@@ -5,12 +5,16 @@
 @{
     ViewData["Title"] = "Autofill Triage Report";
     var fields = new List<AutofillTriageFieldResultModel>();
+    string? parseError = null;
     try
     {
         fields = JsonSerializer.Deserialize<List<AutofillTriageFieldResultModel>>(Model.ReportData,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
     }
-    catch { }
+    catch
+    {
+        parseError = "Could not parse report data. The stored JSON may be malformed.";
+    }
 }
 
 <h1>Autofill Triage Report</h1>
@@ -51,6 +55,11 @@
         </div>
     </div>
 </div>
+
+@if (parseError != null)
+{
+    <div class="alert alert-warning">@parseError</div>
+}
 
 <h2>Field Analysis (@fields.Count fields)</h2>
 

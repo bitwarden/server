@@ -1,4 +1,4 @@
-using Bit.Core.Autofill.Commands;
+﻿using Bit.Core.Autofill.Commands;
 using Bit.Core.Autofill.Entities;
 using Bit.Core.Autofill.Repositories;
 using Bit.Test.Common.AutoFixture;
