@@ -6,51 +6,21 @@ namespace Bit.Seeder.Factories;
 
 internal static class SshKeyCipherSeeder
 {
-    internal static Cipher Create(
-        string encryptionKey,
-        string name,
-        SshKeyViewDto sshKey,
-        Guid? organizationId = null,
-        Guid? userId = null,
-        string? notes = null,
-        bool reprompt = false)
+    internal static Cipher Create(CipherSeed options)
     {
+
         var cipherView = new CipherViewDto
         {
-            OrganizationId = organizationId,
-            Name = name,
-            Notes = notes,
+            OrganizationId = options.OrganizationId,
+            Name = options.Name,
+            Notes = options.Notes,
             Type = CipherTypes.SshKey,
-            SshKey = sshKey,
-            Reprompt = reprompt ? RepromptTypes.Password : RepromptTypes.None,
+            SshKey = options.SshKey,
+            Fields = options.Fields
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSshKeyData(), CipherType.SSHKey, organizationId, userId);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSshKeyData(), CipherType.SSHKey, options.OrganizationId, options.UserId);
     }
 
-    internal static Cipher CreateFromSeed(
-        string encryptionKey,
-        SeedVaultItem item,
-        Guid? organizationId = null,
-        Guid? userId = null)
-    {
-        var cipherView = new CipherViewDto
-        {
-            OrganizationId = organizationId,
-            Name = item.Name,
-            Notes = item.Notes,
-            Type = CipherTypes.SshKey,
-            SshKey = item.SshKey == null ? null : new SshKeyViewDto
-            {
-                PrivateKey = item.SshKey.PrivateKey,
-                PublicKey = item.SshKey.PublicKey,
-                Fingerprint = item.SshKey.KeyFingerprint
-            },
-            Fields = SeedItemMapping.MapFields(item.Fields)
-        };
-
-        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToSshKeyData(), CipherType.SSHKey, organizationId, userId);
-    }
 }

@@ -17,6 +17,8 @@ dotnet run -- <command> [options]
 
 ### `organization` - Seed an Organization
 
+Full control over the org shape via CLI flags — user count, domain, structure, region, density, and plan type. Reach for this when you need flexibility the preset catalog doesn't offer, including orgs with no vault data (every preset includes ciphers).
+
 ```bash
 # Users only — no vault data
 dotnet run -- organization -n MyOrgNoCiphers -u 100 -d myorg-no-ciphers.example
@@ -58,6 +60,8 @@ dotnet run -- organization -n E2eOrg -d e2e.example -u 5 -c 25 --kdf-iterations 
 
 ### `individual` - Seed an Individual User
 
+Full control over the user via CLI flags — subscription tier, identity, and optional vault data. Reach for this when you need a named user with a predictable email or a personal vault with generated items; the individual presets create bare accounts with no vault data.
+
 ```bash
 # Named user — predictable email (john.doe@individual.example), no mangling needed
 dotnet run -- individual --subscription free --first-name John --last-name Doe
@@ -75,34 +79,36 @@ dotnet run -- individual --subscription free --first-name John --last-name Doe -
 dotnet run -- individual --subscription premium --first-name Test --last-name User --kdf-iterations 600000
 ```
 
-### `seed` - Fixture-Based Seeding
+### `preset` - Fixture-Based Seeding
+
+Loads a named configuration from the embedded catalog. Presets are curated JSON fixtures with specific users, groups, collections, and cipher relationships — the same data every time. Reach for this when you need a known, reproducible scenario rather than generated data.
 
 ```bash
 # List available presets and fixtures
-dotnet run -- seed --list
+dotnet run -- preset --list
 
 # Load the Dunder Mifflin preset (58 users, 14 groups, 15 collections, ciphers)
-dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full
+dotnet run -- preset --name qa.dunder-mifflin-enterprise-full
 
 # Zero Knowledge Labs — 429 users, named folders, favorites
-dotnet run -- seed --preset qa.zero-knowledge-labs-enterprise --mangle
+dotnet run -- preset --name qa.zero-knowledge-labs-enterprise --mangle
 
 # Load with ID mangling for test isolation
-dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --mangle
+dotnet run -- preset --name qa.dunder-mifflin-enterprise-full --mangle
 
-dotnet run -- seed --preset qa.stark-free-basic --mangle
+dotnet run -- preset --name qa.stark-free-basic --mangle
 
 # Scale preset for performance testing
-dotnet run -- seed --preset scale.xs-central-perk --mangle
+dotnet run -- preset --name scale.xs-central-perk --mangle
 
-dotnet run -- seed --preset qa.dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
+dotnet run -- preset --name qa.dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
 
 # Override KDF iterations for a preset (overrides preset's kdfIterations value)
-dotnet run -- seed --preset qa.enterprise-basic --kdf-iterations 600000 --mangle
+dotnet run -- preset --name qa.enterprise-basic --kdf-iterations 600000 --mangle
 
 # Seed a free individual user
-dotnet run -- seed --preset individual.free --mangle
+dotnet run -- preset --name individual.free --mangle
 
 # Seed a premium individual user
-dotnet run -- seed --preset individual.premium --mangle
+dotnet run -- preset --name individual.premium --mangle
 ```
