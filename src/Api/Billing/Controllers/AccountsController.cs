@@ -116,8 +116,8 @@ public class AccountsController(
         }
 
         await subscriberService.CancelSubscription(user,
-            new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback },
-            user.IsExpired());
+            user.IsExpired(),
+            new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback });
     }
 
     // TODO: Remove with deletion of pm-29594-update-individual-subscription-page

@@ -231,13 +231,13 @@ public class OrganizationsController(
         }
 
         await subscriberService.CancelSubscription(organization,
+            organization.IsExpired(),
             new OffboardingSurveyResponse
             {
                 UserId = currentContext.UserId!.Value,
                 Reason = request.Reason,
                 Feedback = request.Feedback
-            },
-            organization.IsExpired());
+            });
     }
 
     [HttpPost("{id:guid}/reinstate")]
