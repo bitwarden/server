@@ -156,7 +156,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
 
         await userRepository.ReplaceAsync(user);
 
-        await mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
+        await mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName(), true, false);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminResetPassword);
         await pushNotificationService.PushLogOutAsync(user.Id);
 

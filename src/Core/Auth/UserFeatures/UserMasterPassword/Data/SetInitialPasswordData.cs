@@ -8,11 +8,14 @@ public class SetInitialPasswordData
 {
     public required MasterPasswordAuthenticationData MasterPasswordAuthenticationData { get; set; }
     public required MasterPasswordUnlockData MasterPasswordUnlockData { get; set; }
+    // Document this.
     public bool ValidatePassword { get; set; } = true;
     public bool RefreshStamp { get; set; } = true;
 
     public void ValidateDataForUser(User user)
     {
+        // TODO: Verify if
+
         // Validate that the user does not have a master password set.
         if (user.HasMasterPassword())
         {

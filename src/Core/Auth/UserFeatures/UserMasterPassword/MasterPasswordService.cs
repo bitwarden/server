@@ -1,26 +1,37 @@
 ﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
 public class MasterPasswordService : IMasterPasswordService
 {
-    private readonly IUserService _userService;
     private readonly TimeProvider _timeProvider;
+    private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
+    private readonly UserManager<User> _userManager;
+    private readonly ILogger<MasterPasswordService> _logger;
     private readonly ISetInitialMasterPasswordStateCommand _setInitialMasterPasswordStateCommand;
     private readonly IUpdateMasterPasswordStateCommand _updateMasterPasswordStateCommand;
 
     public MasterPasswordService(
-        IUserService userService,
         TimeProvider timeProvider,
+        IPasswordHasher<User> passwordHasher,
+        IEnumerable<IPasswordValidator<User>> passwordValidators,
+        UserManager<User> userManager,
+        ILogger<MasterPasswordService> logger,
         ISetInitialMasterPasswordStateCommand setInitialMasterPasswordStateCommand,
-        IUpdateMasterPasswordStateCommand updateMasterPasswordStateCommand)
+        IUpdateMasterPasswordStateCommand updateMasterPasswordStateCommand
+        )
     {
-        _userService = userService;
         _timeProvider = timeProvider;
+        _passwordHasher = passwordHasher;
+        _passwordValidators = passwordValidators;
+        _userManager = userManager;
+        _logger = logger;
         _setInitialMasterPasswordStateCommand = setInitialMasterPasswordStateCommand;
         _updateMasterPasswordStateCommand = updateMasterPasswordStateCommand;
     }
@@ -31,7 +42,7 @@ public class MasterPasswordService : IMasterPasswordService
     {
         setInitialData.ValidateDataForUser(user);
 
-        var result = await _userService.UpdatePasswordHash(
+        var result = await UpdatePasswordHash(
             user,
             setInitialData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash,
             setInitialData.ValidatePassword,
@@ -79,7 +90,7 @@ public class MasterPasswordService : IMasterPasswordService
     {
         updateExistingData.ValidateDataForUser(user);
 
-        var result = await _userService.UpdatePasswordHash(
+        var result = await UpdatePasswordHash(
             user,
             updateExistingData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash,
             updateExistingData.ValidatePassword,
@@ -112,6 +123,50 @@ public class MasterPasswordService : IMasterPasswordService
         }
 
         await _updateMasterPasswordStateCommand.ExecuteAsync(user);
+        return IdentityResult.Success;
+    }
+
+    //
+    private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
+        bool validatePassword = true, bool refreshStamp = true)
+    {
+        if (validatePassword)
+        {
+            var validate = await ValidatePasswordInternal(user, newPassword);
+            if (!validate.Succeeded)
+            {
+                return validate;
+            }
+        }
+
+        user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
+        if (refreshStamp)
+        {
+            user.SecurityStamp = Guid.NewGuid().ToString();
+        }
+
+        return IdentityResult.Success;
+    }
+
+    private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
+    {
+        var errors = new List<IdentityError>();
+        foreach (var v in _passwordValidators)
+        {
+            var result = await v.ValidateAsync(_userManager, user, password);
+            if (!result.Succeeded)
+            {
+                errors.AddRange(result.Errors);
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            _logger.LogWarning("User {userId} password validation failed: {errors}.", user.Id,
+                string.Join(";", errors.Select(e => e.Code)));
+            return IdentityResult.Failed(errors.ToArray());
+        }
+
         return IdentityResult.Success;
     }
 }
