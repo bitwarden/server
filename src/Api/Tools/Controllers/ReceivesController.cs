@@ -77,6 +77,8 @@ public class ReceivesController : Controller
         var receives = await _receiveOwnerQuery.GetOwned(User);
         var responses = receives.Select(r => new ReceiveResponseModel(r));
         return new ListResponseModel<ReceiveResponseModel>(responses);
+    }
+
     [AllowAnonymous]
     [HttpGet("{receiveId}/shared")]
     public async Task<SharedReceiveResponseModel> GetShared(Guid receiveId)
