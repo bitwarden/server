@@ -33,13 +33,10 @@ public class SubscriberService(
     IStripeAdapter stripeAdapter,
     IUserRepository userRepository) : ISubscriberService
 {
-    public Task CancelSubscription(ISubscriber subscriber, bool cancelImmediately)
-        => CancelSubscription(subscriber, null, cancelImmediately);
-
     public async Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately)
+        bool cancelImmediately,
+        OffboardingSurveyResponse offboardingSurveyResponse = null)
     {
         var subscription = await GetSubscriptionOrThrow(subscriber);
 
