@@ -801,6 +801,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Archived", "CreationDate")
+                        .HasDatabaseName("IX_AutofillTriageReport_CreationDate");
+
                     b.ToTable("AutofillTriageReport");
                 });
 

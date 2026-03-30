@@ -33,11 +33,20 @@ public partial class AddAutofillTriageReport : Migration
                 table.PrimaryKey("PK_AutofillTriageReport", x => x.Id);
             })
             .Annotation("MySql:CharSet", "utf8mb4");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_AutofillTriageReport_CreationDate",
+            table: "AutofillTriageReport",
+            columns: new[] { "Archived", "CreationDate" });
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropIndex(
+            name: "IX_AutofillTriageReport_CreationDate",
+            table: "AutofillTriageReport");
+
         migrationBuilder.DropTable(
             name: "AutofillTriageReport");
     }
