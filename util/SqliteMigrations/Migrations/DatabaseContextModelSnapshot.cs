@@ -801,7 +801,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AutofillTriageReports");
+                    b.ToTable("AutofillTriageReport");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.ClientOrganizationMigrationRecord", b =>

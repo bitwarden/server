@@ -10,14 +10,14 @@ namespace Bit.Infrastructure.EntityFramework.Autofill.Repositories;
 
 public class AutofillTriageReportRepository(IMapper mapper, IServiceScopeFactory serviceScopeFactory)
     : Repository<AutofillTriageReport, EFAutofillTriageReport, Guid>(
-        serviceScopeFactory, mapper, context => context.AutofillTriageReports),
+        serviceScopeFactory, mapper, context => context.AutofillTriageReport),
       IAutofillTriageReportRepository
 {
     public async Task<IEnumerable<AutofillTriageReport>> GetActiveAsync(int skip, int take)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var db = GetDatabaseContext(scope);
-        var results = await db.AutofillTriageReports
+        var results = await db.AutofillTriageReport
             .Where(r => !r.Archived)
             .OrderByDescending(r => r.CreationDate)
             .Skip(skip)
@@ -30,7 +30,7 @@ public class AutofillTriageReportRepository(IMapper mapper, IServiceScopeFactory
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var db = GetDatabaseContext(scope);
-        await db.AutofillTriageReports
+        await db.AutofillTriageReport
             .Where(r => r.Id == id)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.Archived, true));
     }

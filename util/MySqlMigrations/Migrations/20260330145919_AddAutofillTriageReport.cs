@@ -11,7 +11,7 @@ public partial class AddAutofillTriageReport : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: "AutofillTriageReports",
+            name: "AutofillTriageReport",
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -30,7 +30,7 @@ public partial class AddAutofillTriageReport : Migration
             },
             constraints: table =>
             {
-                table.PrimaryKey("PK_AutofillTriageReports", x => x.Id);
+                table.PrimaryKey("PK_AutofillTriageReport", x => x.Id);
             })
             .Annotation("MySql:CharSet", "utf8mb4");
     }
@@ -39,6 +39,6 @@ public partial class AddAutofillTriageReport : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(
-            name: "AutofillTriageReports");
+            name: "AutofillTriageReport");
     }
 }

@@ -1242,7 +1242,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AutofillTriageReports");
+                    b.ToTable("AutofillTriageReport");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cache", b =>
