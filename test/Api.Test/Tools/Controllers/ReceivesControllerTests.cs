@@ -113,7 +113,7 @@ public class ReceivesControllerTests
 
         Assert.IsType<SharedReceiveResponseModel>(result);
         var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
-        Assert.Equal(fileData!.Name, result.Name);
+        Assert.Equal(receive.Name, result.Name);
         Assert.Equal(receive.ScekWrappedPublicKey, result.ScekWrappedPublicKey);
     }
 }

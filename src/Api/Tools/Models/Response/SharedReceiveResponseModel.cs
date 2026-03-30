@@ -1,7 +1,5 @@
-﻿using System.Text.Json;
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Models.Data;
 
 namespace Bit.Api.Tools.Models.Response;
 
@@ -9,8 +7,7 @@ public class SharedReceiveResponseModel : ResponseModel
 {
     public SharedReceiveResponseModel(Receive receive) : base("receiveShared")
     {
-        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
-        Name = fileData!.Name;
+        Name = receive.Name;
         ScekWrappedPublicKey = receive.ScekWrappedPublicKey;
     }
 
