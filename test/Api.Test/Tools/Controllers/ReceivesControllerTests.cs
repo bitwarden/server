@@ -101,7 +101,7 @@ public class ReceivesControllerTests
         SutProvider<ReceivesController> sutProvider)
     {
         receive.Secret = "correct-secret";
-        receive.Data = JsonSerializer.Serialize(new ReceiveFileData("encrypted-name", "file.txt"));
+        receive.Data = JsonSerializer.Serialize(new ReceiveData { Name = "encrypted-name" });
         SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(receiveId)
@@ -113,7 +113,6 @@ public class ReceivesControllerTests
         var result = await sutProvider.Sut.GetShared(receiveId);
 
         Assert.IsType<SharedReceiveResponseModel>(result);
-        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
         Assert.Equal(receive.Name, result.Name);
         Assert.Equal(receive.ScekWrappedPublicKey, result.ScekWrappedPublicKey);
     }
@@ -195,7 +194,7 @@ public class ReceivesControllerTests
             .Returns(true);
         sutProvider.GetDependency<IUploadReceiveFileCommand>()
             .GetUploadUrlAsync(receive)
-            .Returns(expectedUrl);
+            .Returns((expectedUrl, "generatedFileId"));
 
         var result = await sutProvider.Sut.GetReceiveFileUploadUrl(id);
 

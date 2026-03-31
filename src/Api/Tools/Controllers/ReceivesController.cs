@@ -86,10 +86,10 @@ public class ReceivesController : Controller
     }
 
     [Authorize(Policies.Application)]
-    [HttpGet("{id}/file")]
-    public async Task<ReceiveFileDownloadDataResponseModel> GetFileDownloadData(Guid id)
+    [HttpGet("{id}/file/{fileId}")]
+    public async Task<ReceiveFileDownloadDataResponseModel> GetFileDownloadData(Guid id, string fileId)
     {
-        var (url, fileId) = await _getReceiveFileDownloadQuery.GetDownloadUrlAsync(id, User);
+        var url = await _getReceiveFileDownloadQuery.GetDownloadUrlAsync(id, fileId, User);
         return new ReceiveFileDownloadDataResponseModel { Id = fileId, Url = url };
     }
 
@@ -106,7 +106,7 @@ public class ReceivesController : Controller
     public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(Guid id)
     {
         var receive = await GetReceiveWithSecretValidationAsync(id);
-        var url = await _uploadReceiveFileCommand.GetUploadUrlAsync(receive);
+        var (url, fileId) = await _uploadReceiveFileCommand.GetUploadUrlAsync(receive);
         if (url == null)
         {
             throw new BadRequestException("Invalid request.");

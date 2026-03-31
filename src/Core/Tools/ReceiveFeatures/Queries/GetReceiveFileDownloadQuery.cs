@@ -27,7 +27,7 @@ public class GetReceiveFileDownloadQuery : IGetReceiveFileDownloadQuery
     }
 
     /// <inheritdoc />
-    public async Task<(string Url, string FileId)> GetDownloadUrlAsync(Guid receiveId, ClaimsPrincipal user)
+    public async Task<string> GetDownloadUrlAsync(Guid receiveId, string fileId, ClaimsPrincipal user)
     {
         var userId = _userService.GetProperUserId(user) ?? throw new BadRequestException("invalid user.");
         var receive = await _repository.GetByIdAsync(receiveId);
@@ -37,13 +37,13 @@ public class GetReceiveFileDownloadQuery : IGetReceiveFileDownloadQuery
             throw new NotFoundException();
         }
 
-        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
-        if (fileData?.Id == null)
+        var receiveData = JsonSerializer.Deserialize<ReceiveData>(receive.Data);
+        var file = receiveData?.Files.FirstOrDefault(f => f.Id == fileId);
+        if (file == null)
         {
-            throw new BadRequestException("No file has been uploaded to this Receive.");
+            throw new NotFoundException();
         }
 
-        var url = await _fileStorageService.GetReceiveFileDownloadUrlAsync(receive, fileData.Id);
-        return (url, fileData.Id);
+        return await _fileStorageService.GetReceiveFileDownloadUrlAsync(receive, fileId);
     }
 }

@@ -14,9 +14,9 @@ public class ReceiveResponseModel : ResponseModel
     {
         Id = receive.Id;
 
-        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
-        Name = fileData!.Name;
-        File = new ReceiveFileModel(fileData);
+        var receiveData = JsonSerializer.Deserialize<ReceiveData>(receive.Data);
+        Name = receiveData!.Name;
+        Files = receiveData.Files.Select(f => new ReceiveFileModel(f));
 
         UserKeyWrappedSharedContentEncryptionKey = receive.UserKeyWrappedSharedContentEncryptionKey;
         UserKeyWrappedPrivateKey = receive.UserKeyWrappedPrivateKey;
@@ -38,9 +38,9 @@ public class ReceiveResponseModel : ResponseModel
     public string Name { get; set; }
 
     /// <summary>
-    /// Contains file metadata for the Receive.
+    /// Metadata for each file uploaded to this Receive.
     /// </summary>
-    public ReceiveFileModel File { get; set; }
+    public IEnumerable<ReceiveFileModel> Files { get; set; }
 
     /// <summary>
     /// The shared content encryption key (SCEK) wrapped by the owners userKey.

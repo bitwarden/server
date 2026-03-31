@@ -29,5 +29,5 @@ public class ReceiveFileModel
 
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string EncapsulatedFileEncryptionKey { get; set; } = string.Empty;
+    public string EncapsulatedFileContentEncryptionKey { get; set; } = string.Empty;
 }
