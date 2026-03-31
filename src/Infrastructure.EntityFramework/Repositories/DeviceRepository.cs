@@ -33,12 +33,17 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         var entity = await GetDbSet(dbContext).FindAsync(obj.Id);
         if (entity != null)
         {
+            var originalLastActivityDate = entity.LastActivityDate;
             var mappedEntity = Mapper.Map<Device>(obj);
             dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
-            // Null preserves the existing value, preventing general updates from overwriting a recently-bumped
-            // LastActivityDate. Set a non-null value to update it in the same write.
-            if (obj.LastActivityDate == null)
+            // LastActivityDate only moves forward. Mirrors the CASE expression in Device_Update.sql:
+            //   1. NULL passthrough: a general save that does not intend to touch LastActivityDate passes NULL;
+            //      we must not overwrite an existing value with NULL.
+            //   2. Stale non-null overwrite: a thread that loaded the device before a concurrent bump fires
+            //      may call ReplaceAsync with an older date; we must not clobber the fresher DB value.
+            if (obj.LastActivityDate == null ||
+                (originalLastActivityDate != null && obj.LastActivityDate <= originalLastActivityDate))
             {
                 dbContext.Entry(entity).Property(d => d.LastActivityDate).IsModified = false;
             }

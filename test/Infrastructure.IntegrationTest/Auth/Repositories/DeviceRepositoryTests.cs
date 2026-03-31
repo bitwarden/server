@@ -48,6 +48,44 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
+    public async Task ReplaceAsync_WithStaleLastActivityDate_PreservesNewerExistingValue(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var device = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+        var afterBump = await sutRepository.GetByIdAsync(device.Id);
+        var bumpedDate = afterBump!.LastActivityDate;
+        Assert.NotNull(bumpedDate);
+
+        // Act — ReplaceAsync with a stale (older) LastActivityDate should not overwrite the newer bumped value
+        afterBump.LastActivityDate = bumpedDate.Value.AddDays(-1);
+        await sutRepository.ReplaceAsync(afterBump);
+
+        // Assert
+        var afterReplace = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal(bumpedDate, afterReplace!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
     public async Task BumpLastActivityDateByIdentifierAndUserIdAsync_SetsLastActivityDate(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
