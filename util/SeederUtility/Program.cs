@@ -26,8 +26,6 @@ public class Program
         (string Color, string Art)[] sections =
         [
             (brightGreen, """
-                                            ...........
-                                         ..::------==:.
                                        ..-----=====+-.
                                      ..----======+=-.
                                      .--==+=======-.
@@ -41,10 +39,7 @@ public class Program
                       ....:----:-=:..
                 """),
             (green, """
-                         ..:=:.
-                           .+:
-                           .=-..
-                           .-=.....
+                           ..:=:.
                            .:=:....
                            ..=:.
                              --.
@@ -69,7 +64,6 @@ public class Program
             .Where(l => !string.IsNullOrWhiteSpace(l));
         var minIndent = allLines.Min(l => l.Length - l.TrimStart().Length);
 
-        Console.WriteLine();
         foreach (var (color, art) in sections)
         {
             foreach (var line in art.Split('\n'))
@@ -83,16 +77,17 @@ public class Program
             }
         }
 
-        Console.WriteLine();
-        Console.WriteLine($"  {bold}{cyan}╔══════════════════════════════╗{reset}");
-        Console.WriteLine($"  {bold}{cyan}║      SEEDER    UTILITY       ║{reset}");
-        Console.WriteLine($"  {bold}{cyan}╚══════════════════════════════╝{reset}");
-        Console.WriteLine();
+        Console.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
+        Console.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
+        Console.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
     }
 
     [Subcommand]
     public OrganizationCommand Organization { get; set; } = null!;
 
     [Subcommand]
-    public SeedCommand Seed { get; set; } = null!;
+    public PresetCommand Preset { get; set; } = null!;
+
+    [Subcommand]
+    public IndividualCommand Individual { get; set; } = null!;
 }

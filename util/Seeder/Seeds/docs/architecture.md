@@ -22,7 +22,7 @@ Fixtures are stored under `fixtures/organizations/`, `fixtures/rosters/`, and `f
 
 ## Presets = Assembly Instructions
 
-A preset picks one of each fixture (or generates data inline) and defines the relationships between them. It's the entry point for the `--preset` CLI flag.
+A preset picks one of each fixture (or generates data inline) and defines the relationships between them. It's the entry point for the `preset --name` CLI command.
 
 There are three composition modes:
 
@@ -42,7 +42,7 @@ The preset owns all relationships that cross fixture boundaries. Three assignmen
 
 ### Folder Assignments (user-scoped)
 
-Folder **declarations** go in the roster — each user can optionally declare a `folders` array of named folders. Folder **assignments** go in the preset — `folderAssignments` maps `(cipher, user, folder)` tuples, mirroring the `Cipher.Folders` JSON column: `{"USERID":"FOLDERID"}`.
+Folder **declarations** go in the roster — each user can optionally declare a `folders` array of named folders. For individual user presets (no roster), folder declarations use the preset-level `folderNames` array instead. Folder **assignments** go in the preset — `folderAssignments` maps `(cipher, user, folder)` tuples, mirroring the `Cipher.Folders` JSON column: `{"USERID":"FOLDERID"}`.
 
 ### Favorite Assignments (user-scoped)
 
