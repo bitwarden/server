@@ -291,6 +291,7 @@ public static class FeatureFlagKeys
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
+    public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
