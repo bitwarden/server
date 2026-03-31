@@ -7,7 +7,7 @@ using OneOf.Types;
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
 /// <summary>
-/// Provides policy-specific event handlers used during the save workflow in <see cref="IVNextSavePolicyCommand"/>.
+/// Provides policy-specific event handlers used during the save workflow in <see cref="ISavePolicyCommand"/>.
 /// </summary>
 /// <remarks>
 /// Supported handlers:  

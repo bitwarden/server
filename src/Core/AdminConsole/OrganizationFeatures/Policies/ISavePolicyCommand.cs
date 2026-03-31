@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Microsoft.Azure.NotificationHubs.Messaging;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
+using Bit.Core.Exceptions;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 /// <summary>
 /// Handles creating or updating organization policies with validation and side effect execution.
@@ -17,7 +18,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents
 /// 6. Logs the event
 /// 7. Executes post-save logic (<see cref="IOnPolicyPostUpdateEvent"/>)
 /// </remarks>
-public interface IVNextSavePolicyCommand
+public interface ISavePolicyCommand
 {
     /// <summary>
     /// Performs the necessary validations, saves the policy and any side effects

@@ -12,7 +12,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
-public class VNextSavePolicyCommand(
+public class SavePolicyCommand(
     IOrganizationRepository organizationRepository,
     IEventService eventService,
     IPolicyRepository policyRepository,
@@ -20,7 +20,7 @@ public class VNextSavePolicyCommand(
     TimeProvider timeProvider,
     IPolicyEventHandlerFactory policyEventHandlerFactory,
     IPushNotificationService pushNotificationService)
-    : IVNextSavePolicyCommand
+    : ISavePolicyCommand
 {
 
     public async Task<Policy> SaveAsync(SavePolicyModel policyRequest)

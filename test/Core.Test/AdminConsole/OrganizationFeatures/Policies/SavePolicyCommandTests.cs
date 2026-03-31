@@ -20,7 +20,7 @@ using EventType = Bit.Core.Enums.EventType;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 
-public class VNextSavePolicyCommandTests
+public class SavePolicyCommandTests
 {
     [Theory, BitAutoData]
     public async Task SaveAsync_NewPolicy_Success([PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate)
@@ -380,7 +380,7 @@ public class VNextSavePolicyCommandTests
     /// <summary>
     /// Returns a new SutProvider with the PolicyUpdateEvents registered in the Sut.
     /// </summary>
-    private static SutProvider<VNextSavePolicyCommand> SutProviderFactory(
+    private static SutProvider<SavePolicyCommand> SutProviderFactory(
         IEnumerable<IPolicyUpdateEvent>? policyUpdateEvents = null)
     {
         var policyEventHandlerFactory = Substitute.For<IPolicyEventHandlerFactory>();
@@ -409,14 +409,14 @@ public class VNextSavePolicyCommandTests
         policyEventHandlerFactory.GetHandler<IOnPolicyPostUpdateEvent>(Arg.Any<PolicyType>())
             .Returns(new None());
 
-        return new SutProvider<VNextSavePolicyCommand>()
+        return new SutProvider<SavePolicyCommand>()
             .WithFakeTimeProvider()
             .SetDependency(handlers)
             .SetDependency(policyEventHandlerFactory)
             .Create();
     }
 
-    private static void ArrangeOrganization(SutProvider<VNextSavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
+    private static void ArrangeOrganization(SutProvider<SavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
     {
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(policyUpdate.OrganizationId)
@@ -427,7 +427,7 @@ public class VNextSavePolicyCommandTests
             });
     }
 
-    private static async Task AssertPolicyNotSavedAsync(SutProvider<VNextSavePolicyCommand> sutProvider)
+    private static async Task AssertPolicyNotSavedAsync(SutProvider<SavePolicyCommand> sutProvider)
     {
         await sutProvider.GetDependency<IPolicyRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -438,7 +438,7 @@ public class VNextSavePolicyCommandTests
             .LogPolicyEventAsync(default, default);
     }
 
-    private static async Task AssertPolicySavedAsync(SutProvider<VNextSavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
+    private static async Task AssertPolicySavedAsync(SutProvider<SavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
     {
         await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(ExpectedPolicy());
 

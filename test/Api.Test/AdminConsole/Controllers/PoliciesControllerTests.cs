@@ -8,7 +8,6 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -395,7 +394,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_UsesVNextSavePolicyCommand(
+    public async Task Put_UsesSavePolicyCommand(
         SutProvider<PoliciesController> sutProvider, Guid orgId,
         SavePolicyRequest model, Policy policy, Guid userId)
     {
@@ -410,7 +409,7 @@ public class PoliciesControllerTests
             .OrganizationOwner(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        sutProvider.GetDependency<ISavePolicyCommand>()
             .SaveAsync(Arg.Any<SavePolicyModel>())
             .Returns(policy);
 
@@ -418,7 +417,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.Put(orgId, policy.Type, model.Policy);
 
         // Assert
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m => m.PolicyUpdate.OrganizationId == orgId &&
                                                     m.PolicyUpdate.Type == policy.Type &&
@@ -433,7 +432,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutVNext_UsesVNextSavePolicyCommand(
+    public async Task PutVNext_UsesSavePolicyCommand(
         SutProvider<PoliciesController> sutProvider, Guid orgId,
         SavePolicyRequest model, Policy policy, Guid userId)
     {
@@ -448,7 +447,7 @@ public class PoliciesControllerTests
             .OrganizationOwner(orgId)
             .Returns(true);
 
-        sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        sutProvider.GetDependency<ISavePolicyCommand>()
             .SaveAsync(Arg.Any<SavePolicyModel>())
             .Returns(policy);
 
@@ -456,7 +455,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.PutVNext(orgId, policy.Type, model);
 
         // Assert
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m => m.PolicyUpdate.OrganizationId == orgId &&
                                                     m.PolicyUpdate.Type == policy.Type &&

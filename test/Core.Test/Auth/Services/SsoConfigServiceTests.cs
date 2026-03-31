@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -340,14 +339,14 @@ public class SsoConfigServiceTests
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>().Received(1)
+        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
                 Arg.Is<SavePolicyModel>(t => t.PolicyUpdate.Type == PolicyType.SingleOrg &&
                                              t.PolicyUpdate.OrganizationId == organization.Id &&
                                              t.PolicyUpdate.Enabled)
             );
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>().Received(1)
+        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
                 Arg.Is<SavePolicyModel>(t => t.PolicyUpdate.Type == PolicyType.ResetPassword &&
                                              t.PolicyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled &&
@@ -355,7 +354,7 @@ public class SsoConfigServiceTests
                                              t.PolicyUpdate.Enabled)
             );
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>().Received(1)
+        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
                 Arg.Is<SavePolicyModel>(t => t.PolicyUpdate.Type == PolicyType.RequireSso &&
                                              t.PolicyUpdate.OrganizationId == organization.Id &&
@@ -367,7 +366,7 @@ public class SsoConfigServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_Tde_UsesVNextSavePolicyCommand(
+    public async Task SaveAsync_Tde_UsesSavePolicyCommand(
         SutProvider<SsoConfigService> sutProvider, Organization organization)
     {
         var ssoConfig = new SsoConfig
@@ -383,7 +382,7 @@ public class SsoConfigServiceTests
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m =>
                 m.PolicyUpdate.Type == PolicyType.SingleOrg &&
@@ -391,7 +390,7 @@ public class SsoConfigServiceTests
                 m.PolicyUpdate.Enabled &&
                 m.PerformedBy is SystemUser));
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m =>
                 m.PolicyUpdate.Type == PolicyType.ResetPassword &&
@@ -400,7 +399,7 @@ public class SsoConfigServiceTests
                 m.PolicyUpdate.Enabled &&
                 m.PerformedBy is SystemUser));
 
-        await sutProvider.GetDependency<IVNextSavePolicyCommand>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
             .SaveAsync(Arg.Is<SavePolicyModel>(m =>
                 m.PolicyUpdate.Type == PolicyType.RequireSso &&

@@ -15,7 +15,7 @@ public static class PolicyServiceCollectionExtensions
     public static void AddPolicyServices(this IServiceCollection services)
     {
         services.AddScoped<IPolicyService, PolicyService>();
-        services.AddScoped<IVNextSavePolicyCommand, VNextSavePolicyCommand>();
+        services.AddScoped<ISavePolicyCommand, SavePolicyCommand>();
         services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
         services.AddScoped<IPolicyQuery, PolicyQuery>();
         services.AddScoped<IPolicyEventHandlerFactory, PolicyEventHandlerHandlerFactory>();
