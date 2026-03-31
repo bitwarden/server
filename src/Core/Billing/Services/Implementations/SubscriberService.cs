@@ -5,12 +5,8 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Tax.Models;
-using Bit.Core.Billing.Tax.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -35,13 +31,12 @@ public class SubscriberService(
     IOrganizationRepository organizationRepository,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService,
     IUserRepository userRepository) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately)
+        bool cancelImmediately,
+        OffboardingSurveyResponse offboardingSurveyResponse = null)
     {
         var subscription = await GetSubscriptionOrThrow(subscriber);
 
@@ -55,11 +50,6 @@ public class SubscriberService(
             throw new BillingException();
         }
 
-        var metadata = new Dictionary<string, string>
-        {
-            { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
-        };
-
         List<string> validCancellationReasons = [
             "customer_service",
             "low_quality",
@@ -71,49 +61,58 @@ public class SubscriberService(
             "unused"
         ];
 
+        // Build once from survey — null when survey is absent (system-initiated cancellation)
+        var cancellationDetails = offboardingSurveyResponse != null
+            ? new SubscriptionCancellationDetailsOptions
+            {
+                Comment = offboardingSurveyResponse.Feedback,
+                Feedback = validCancellationReasons.Contains(offboardingSurveyResponse.Reason)
+                    ? offboardingSurveyResponse.Reason
+                    : null
+            }
+            : null;
+
+        var cancellingUserMetadata = offboardingSurveyResponse != null
+            ? new Dictionary<string, string>
+            {
+                { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+            }
+            : null;
+
         if (cancelImmediately)
         {
-            if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
+            if (cancellingUserMetadata != null &&
+                subscription.Metadata != null &&
+                subscription.Metadata.ContainsKey("organizationId"))
             {
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
-                    Metadata = metadata
+                    Metadata = cancellingUserMetadata
                 });
             }
 
-            var options = new SubscriptionCancelOptions
+            var cancelOptions = new SubscriptionCancelOptions();
+            if (offboardingSurveyResponse != null)
             {
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                }
-            };
-
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
-            {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
+                cancelOptions.CancellationDetails = cancellationDetails;
             }
 
-            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, options);
+            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, cancelOptions);
         }
         else
         {
-            var options = new SubscriptionUpdateOptions
+            var updateOptions = new SubscriptionUpdateOptions
             {
-                CancelAtPeriodEnd = true,
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                },
-                Metadata = metadata
+                CancelAtPeriodEnd = true
             };
 
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
+            if (offboardingSurveyResponse != null)
             {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
+                updateOptions.CancellationDetails = cancellationDetails;
+                updateOptions.Metadata = cancellingUserMetadata;
             }
 
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
         }
     }
 
@@ -501,144 +500,6 @@ public class SubscriberService(
             await foreach (var paymentMethod in paymentMethods)
             {
                 await stripeAdapter.DetachPaymentMethodAsync(paymentMethod.Id);
-            }
-        }
-    }
-
-    public async Task UpdateTaxInformation(
-        ISubscriber subscriber,
-        TaxInformation taxInformation)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNull(taxInformation);
-
-        var customer = await GetCustomerOrThrow(subscriber, new CustomerGetOptions
-        {
-            Expand = ["subscriptions", "tax", "tax_ids"]
-        });
-
-        customer = await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
-        {
-            Address = new AddressOptions
-            {
-                Country = taxInformation.Country,
-                PostalCode = taxInformation.PostalCode,
-                Line1 = taxInformation.Line1 ?? string.Empty,
-                Line2 = taxInformation.Line2,
-                City = taxInformation.City,
-                State = taxInformation.State
-            },
-            Expand = ["subscriptions", "tax", "tax_ids"]
-        });
-
-        var taxId = customer.TaxIds?.FirstOrDefault();
-
-        if (taxId != null)
-        {
-            await stripeAdapter.DeleteTaxIdAsync(customer.Id, taxId.Id);
-        }
-
-        if (!string.IsNullOrWhiteSpace(taxInformation.TaxId))
-        {
-            var taxIdType = taxInformation.TaxIdType;
-            if (string.IsNullOrWhiteSpace(taxIdType))
-            {
-                taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
-                    taxInformation.TaxId);
-
-                if (taxIdType == null)
-                {
-                    logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
-                        taxInformation.Country,
-                        taxInformation.TaxId);
-
-                    throw new BadRequestException("billingTaxIdTypeInferenceError");
-                }
-            }
-
-            try
-            {
-                await stripeAdapter.CreateTaxIdAsync(customer.Id,
-                    new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
-
-                if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
-                {
-                    await stripeAdapter.CreateTaxIdAsync(customer.Id,
-                        new TaxIdCreateOptions { Type = StripeConstants.TaxIdType.EUVAT, Value = $"ES{taxInformation.TaxId}" });
-                }
-            }
-            catch (StripeException e)
-            {
-                switch (e.StripeError.Code)
-                {
-                    case StripeConstants.ErrorCodes.TaxIdInvalid:
-                        logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
-                            taxInformation.TaxId,
-                            taxInformation.Country);
-
-                        throw new BadRequestException("billingInvalidTaxIdError");
-
-                    default:
-                        logger.LogError(e,
-                            "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
-                            taxInformation.TaxId,
-                            taxInformation.Country,
-                            customer.Id);
-
-                        throw new BadRequestException("billingTaxIdCreationError");
-                }
-            }
-        }
-
-        var subscription =
-            customer.Subscriptions.First(subscription => subscription.Id == subscriber.GatewaySubscriptionId);
-
-        var isBusinessUseSubscriber = subscriber switch
-        {
-            Organization organization => organization.PlanType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families,
-            Provider => true,
-            _ => false
-        };
-
-        if (isBusinessUseSubscriber)
-        {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-            switch (customer)
-            {
-                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                    when determinedTaxExemptStatus != customerTaxExemptStatus:
-                    await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                    break;
-            }
-
-            if (!subscription.AutomaticTax.Enabled)
-            {
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
-            }
-        }
-        else
-        {
-            var automaticTaxShouldBeEnabled = subscriber switch
-            {
-                User => true,
-                Organization organization => organization.PlanType.GetProductTier() == ProductTierType.Families ||
-                                             TaxHelpers.IsDirectTaxCountry(customer.Address?.Country) || (customer.TaxIds?.Any() ?? false),
-                Provider provider => TaxHelpers.IsDirectTaxCountry(customer.Address?.Country) || (customer.TaxIds?.Any() ?? false),
-                _ => false
-            };
-
-            if (automaticTaxShouldBeEnabled && !subscription.AutomaticTax.Enabled)
-            {
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
             }
         }
     }
