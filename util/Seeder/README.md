@@ -47,7 +47,8 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **Mix & Match**: Fixtures + generation in one preset
 - **Extensible**: Add entity types via new step implementations
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+**Phase order (org)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → FolderAssignments → FavoriteAssignments
 
 **Files**: `Pipeline/` folder
 
@@ -64,7 +65,9 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Stateless (except for SDK service dependency)
 - Do NOT interact with database directly
 
-**Naming:** `{Entity}Seeder` with `Create{Type}{Entity}()` methods
+**Naming:** `{Entity}Seeder` with `Create()` methods
+
+**Pipeline cipher path:** Each cipher factory accepts a single `CipherSeed` parameter. `CipherSeed.FromSeedItem()` converts a deserialized `SeedVaultItem` into a `CipherSeed` for the pipeline path.
 
 #### Recipes
 
@@ -85,16 +88,16 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 #### Models
 
-**Purpose:** DTOs that bridge the gap between SDK encryption format and server storage format.
+**Purpose:** DTOs that transform plaintext cipher data into encrypted form for database storage.
 
-**When to use:** Need data transformation during the encryption pipeline (SDK → Server format).
+**When to use:** Need to convert `CipherViewDto` to `EncryptedCipherDto` during the encryption pipeline.
 
 **Key characteristics:**
 
 - Pure data structures (DTOs)
 - No business logic
-- Handle serialization/deserialization
-- Bridge SDK ↔ Server format differences
+- Handle serialization/deserialization (camelCase ↔ PascalCase)
+- Mark encryptable fields with `[EncryptProperty]` attribute
 
 #### Scenes
 
@@ -150,7 +153,7 @@ Context-aware string mangling for test isolation. Adds unique prefixes to emails
 The seeder uses FFI calls to the Rust SDK for cryptographically correct encryption:
 
 ```
-CipherView → Rust SDK encrypt → EncryptedCipher → Server Format
+CipherViewDto → encrypt_fields (field-level encryption via bitwarden_crypto) → EncryptedCipherDto → Server Format
 ```
 
 This ensures seeded data can be decrypted and displayed in the actual Bitwarden clients.

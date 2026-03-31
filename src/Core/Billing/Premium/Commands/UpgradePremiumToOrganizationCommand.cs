@@ -2,19 +2,20 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
-using TaxExempt = Bit.Core.Billing.Constants.StripeConstants.TaxExempt;
 
 namespace Bit.Core.Billing.Premium.Commands;
 /// <summary>
@@ -50,12 +51,14 @@ public class UpgradePremiumToOrganizationCommand(
     ILogger<UpgradePremiumToOrganizationCommand> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IUserService userService,
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
     ICollectionRepository collectionRepository,
-    IApplicationCacheService applicationCacheService)
+    IApplicationCacheService applicationCacheService,
+    IPushNotificationService pushNotificationService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -71,7 +74,7 @@ public class UpgradePremiumToOrganizationCommand(
         BillingAddress billingAddress) => HandleAsync<Guid>(async () =>
     {
         // Validate that the user has an active Premium subscription
-        if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
+        if (user is not { Premium: true, GatewayCustomerId: not null and not "", GatewaySubscriptionId: not null and not "" })
         {
             return new BadRequest("User does not have an active Premium subscription.");
         }
@@ -202,7 +205,7 @@ public class UpgradePremiumToOrganizationCommand(
                 Country = billingAddress.Country,
                 PostalCode = billingAddress.PostalCode
             },
-            TaxExempt = billingAddress.Country != CountryAbbreviations.UnitedStates ? TaxExempt.Reverse : TaxExempt.None
+            TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country)
         });
 
         // Add tax ID to customer for accurate tax calculation if provided
@@ -210,6 +213,8 @@ public class UpgradePremiumToOrganizationCommand(
         {
             await AddTaxIdToCustomerAsync(user, billingAddress.TaxId);
         }
+
+        await priceIncreaseScheduler.Release(user.GatewayCustomerId, currentSubscription.Id);
 
         // Update the subscription in Stripe
         await stripeAdapter.UpdateSubscriptionAsync(currentSubscription.Id, subscriptionUpdateOptions);
@@ -278,6 +283,19 @@ public class UpgradePremiumToOrganizationCommand(
         user.GatewayCustomerId = null;
         user.RevisionDate = DateTime.UtcNow;
         await userService.SaveUserAsync(user);
+
+        await pushNotificationService.PushAsync(new PushNotification<PremiumStatusPushNotification>
+        {
+            Type = PushType.PremiumStatusChanged,
+            Target = NotificationTarget.User,
+            TargetId = user.Id,
+            Payload = new PremiumStatusPushNotification
+            {
+                UserId = user.Id,
+                Premium = user.Premium,
+            },
+            ExcludeCurrentContext = false,
+        });
 
         return organization.Id;
     });
