@@ -516,24 +516,23 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public UpdateUserData SetMasterPasswordUnlockUserData(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData)
+    public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
     {
         return async (connection, transaction) =>
         {
             var timestamp = DateTime.UtcNow;
 
             await connection!.ExecuteAsync(
-                "[dbo].[User_UpdateMasterPasswordUnlockUserData]",
+                "[dbo].[User_UpdateMasterPasswordUnlockData]",
                 new
                 {
                     Id = userId,
-                    Kdf = masterPasswordUnlockData.Kdf.KdfType,
-                    KdfIterations = masterPasswordUnlockData.Kdf.Iterations,
-                    KdfMemory = masterPasswordUnlockData.Kdf.Memory,
-                    KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
-                    // PM-28827 TODO after MasterPasswordSalt is added to the user column
-                    // MasterPasswordSalt = masterPasswordUnlockData.Salt;
-                    Key = masterPasswordUnlockData.MasterKeyWrappedUserKey,
+                    Kdf = registerFinishData.Kdf.KdfType,
+                    KdfIterations = registerFinishData.Kdf.Iterations,
+                    KdfMemory = registerFinishData.Kdf.Memory,
+                    KdfParallelism = registerFinishData.Kdf.Parallelism,
+                    MasterPasswordSalt = registerFinishData.Salt,
+                    Key = registerFinishData.MasterKeyWrappedUserKey,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
                 },

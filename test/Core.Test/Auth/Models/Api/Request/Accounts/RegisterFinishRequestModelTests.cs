@@ -194,29 +194,22 @@ public class RegisterFinishRequestModelTests
 
         // Assert
         Assert.False(legacyData.IsV2Encryption());
-        Assert.Equal(legacyData.MasterPasswordUnlockData.Kdf.KdfType, kdf);
-        Assert.Equal(legacyData.MasterPasswordUnlockData.Kdf.Iterations, kdfIterations);
-        Assert.Equal(legacyData.MasterPasswordUnlockData.Kdf.Memory, kdfMemory);
-        Assert.Equal(legacyData.MasterPasswordUnlockData.Kdf.Parallelism, kdfParallelism);
-        Assert.Equal(legacyData.MasterPasswordUnlockData.MasterKeyWrappedUserKey, userSymmetricKey);
-        Assert.Equal(legacyData.MasterPasswordUnlockData.Salt, email.ToLowerInvariant().Trim());
+        Assert.Equal(legacyData.Kdf.KdfType, kdf);
+        Assert.Equal(legacyData.Kdf.Iterations, kdfIterations);
+        Assert.Equal(legacyData.Kdf.Memory, kdfMemory);
+        Assert.Equal(legacyData.Kdf.Parallelism, kdfParallelism);
+        Assert.Equal(legacyData.MasterKeyWrappedUserKey, userSymmetricKey);
         Assert.Equal(legacyData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.PublicKey, userAsymmetricKeys.PublicKey);
         Assert.Equal(legacyData.UserAccountKeysData.PublicKeyEncryptionKeyPairData.WrappedPrivateKey, userAsymmetricKeys.EncryptedPrivateKey);
-        Assert.Equal(legacyData.MasterPasswordAuthenticationData.Kdf.KdfType, kdf);
-        Assert.Equal(legacyData.MasterPasswordAuthenticationData.Kdf.Iterations, kdfIterations);
-        Assert.Equal(legacyData.MasterPasswordAuthenticationData.Kdf.Memory, kdfMemory);
-        Assert.Equal(legacyData.MasterPasswordAuthenticationData.Kdf.Parallelism, kdfParallelism);
-        Assert.Equal(legacyData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
-        Assert.Equal(legacyData.MasterPasswordAuthenticationData.Salt, email.ToLowerInvariant().Trim());
+        Assert.Equal(legacyData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
+        Assert.Null(legacyData.Salt);
 
 
         Assert.True(newData.IsV2Encryption());
-        Assert.Equal(newData.MasterPasswordUnlockData.Kdf, kdfRequest.ToData());
-        Assert.Equal(newData.MasterPasswordUnlockData.MasterKeyWrappedUserKey, userSymmetricKey);
-        Assert.Equal(newData.MasterPasswordUnlockData.Salt, email.ToLowerInvariant());
-        Assert.Equal(newData.MasterPasswordAuthenticationData.Kdf, kdfRequest.ToData());
-        Assert.Equal(newData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
-        Assert.Equal(newData.MasterPasswordAuthenticationData.Salt, email.ToLowerInvariant().Trim());
+        Assert.Equal(newData.Kdf, kdfRequest.ToData());
+        Assert.Equal(newData.MasterKeyWrappedUserKey, userSymmetricKey);
+        Assert.Equal(newData.Salt, email.ToLowerInvariant());
+        Assert.Equal(newData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
         Assert.Equal(newData.UserAccountKeysData, accountKeysRequest.ToAccountKeysData());
     }
 

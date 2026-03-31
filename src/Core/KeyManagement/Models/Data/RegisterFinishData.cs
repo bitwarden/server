@@ -2,9 +2,12 @@
 
 public class RegisterFinishData
 {
-    public required MasterPasswordUnlockData MasterPasswordUnlockData { get; set; }
     public required UserAccountKeysData UserAccountKeysData { get; set; }
-    public required MasterPasswordAuthenticationData MasterPasswordAuthenticationData { get; set; }
+    public required KdfSettings Kdf { get; init; }
+    public required string MasterKeyWrappedUserKey { get; init; }
+
+    public required string MasterPasswordAuthenticationHash { get; init; }
+    public string? Salt { get; init; }
 
     public bool IsV2Encryption()
     {
@@ -18,14 +21,16 @@ public class RegisterFinishData
             return false;
         }
 
-        return MasterPasswordUnlockData.Equals(other.MasterPasswordUnlockData) &&
-               MasterPasswordAuthenticationData.Equals(other.MasterPasswordAuthenticationData) &&
-               UserAccountKeysData.Equals(other.UserAccountKeysData) &&
+        return UserAccountKeysData.Equals(other.UserAccountKeysData) &&
+               Kdf.Equals(other.Kdf) &&
+               MasterKeyWrappedUserKey == other.MasterKeyWrappedUserKey &&
+               MasterPasswordAuthenticationHash == other.MasterPasswordAuthenticationHash &&
+               Salt == other.Salt &&
                IsV2Encryption() == other.IsV2Encryption();
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(MasterPasswordUnlockData, UserAccountKeysData, MasterPasswordAuthenticationData);
+        return HashCode.Combine(UserAccountKeysData, Kdf, MasterKeyWrappedUserKey, MasterPasswordAuthenticationHash, Salt);
     }
 }

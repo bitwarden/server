@@ -327,13 +327,13 @@ public class UserService : UserManager<User>, IUserService
         // https://bitwarden.atlassian.net/browse/PM-27326
         if (!registerFinishData.IsV2Encryption())
         {
-            return await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
+            return await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
         }
 
-        var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationData.MasterPasswordAuthenticationHash);
+        var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
         if (result.Succeeded)
         {
-            var setRegisterFinishUserDataTask = _userRepository.SetMasterPasswordUnlockUserData(user.Id, registerFinishData.MasterPasswordUnlockData);
+            var setRegisterFinishUserDataTask = _userRepository.UpdateMasterPasswordUnlockData(user.Id, registerFinishData);
             await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, [setRegisterFinishUserDataTask]);
         }
         return result;

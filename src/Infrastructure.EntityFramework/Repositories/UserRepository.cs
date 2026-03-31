@@ -582,7 +582,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         await transaction.CommitAsync();
     }
 
-    public UpdateUserData SetMasterPasswordUnlockUserData(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData)
+    public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
     {
         return async (_, _) =>
         {
@@ -592,13 +592,12 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             var userEntity = await dbContext.Users.FindAsync(userId) ?? throw new ArgumentException("User not found", nameof(userId));
             var timestamp = DateTime.UtcNow;
 
-            userEntity.Kdf = masterPasswordUnlockData.Kdf.KdfType;
-            userEntity.KdfIterations = masterPasswordUnlockData.Kdf.Iterations;
-            userEntity.KdfMemory = masterPasswordUnlockData.Kdf.Memory;
-            userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
-            // PM-28827 TODO after MasterPasswordSalt is added to the user column
-            // userEntity.MasterPasswordSalt = masterPasswordUnlockData.Salt;
-            userEntity.Key = masterPasswordUnlockData.MasterKeyWrappedUserKey;
+            userEntity.Kdf = registerFinishData.Kdf.KdfType;
+            userEntity.KdfIterations = registerFinishData.Kdf.Iterations;
+            userEntity.KdfMemory = registerFinishData.Kdf.Memory;
+            userEntity.KdfParallelism = registerFinishData.Kdf.Parallelism;
+            userEntity.MasterPasswordSalt = registerFinishData.Salt;
+            userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
 

@@ -100,25 +100,12 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public RegisterFinishData ToData()
     {
+        var unlockData = MasterPasswordUnlock?.ToData();
+        var authenticationData = MasterPasswordAuthentication?.ToData();
         // TODO clean up flow once old fields are deprecated
         // https://bitwarden.atlassian.net/browse/PM-27326
         return new RegisterFinishData
         {
-            MasterPasswordUnlockData = MasterPasswordUnlock?.ToData() ??
-                new MasterPasswordUnlockData
-                {
-                    Kdf = new KdfSettings
-                    {
-                        KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
-                        Iterations = KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
-                        // KdfMemory and KdfParallelism are optional (only used for Argon2id)
-                        Memory = KdfMemory,
-                        Parallelism = KdfParallelism,
-                    },
-                    MasterKeyWrappedUserKey = UserSymmetricKey ?? throw new Exception("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
-                    // PM-28827 To be added when MasterPasswordSalt is added to the user column
-                    Salt = Email.ToLowerInvariant().Trim(),
-                },
             UserAccountKeysData = AccountKeys?.ToAccountKeysData() ??
                 new UserAccountKeysData
                 {
@@ -130,20 +117,17 @@ public class RegisterFinishRequestModel : IValidatableObject
                             throw new Exception("PublicKey couldn't be found in either AccountKeys or UserAsymmetricKeys")
                     ),
                 },
-            MasterPasswordAuthenticationData = MasterPasswordAuthentication?.ToData() ??
-                new MasterPasswordAuthenticationData
-                {
-                    Kdf = new KdfSettings
-                    {
-                        KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
-                        Iterations = KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
-                        // KdfMemory and KdfParallelism are optional (only used for Argon2id)
-                        Memory = KdfMemory,
-                        Parallelism = KdfParallelism,
-                    },
-                    MasterPasswordAuthenticationHash = MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in."),
-                    Salt = Email.ToLowerInvariant().Trim(),
-                }
+            Kdf = unlockData?.Kdf ?? new KdfSettings
+            {
+                KdfType = Kdf ?? throw new Exception("KdfType couldn't be found on either the MasterPasswordUnlockData or the Kdf property passed in."),
+                Iterations = KdfIterations ?? throw new Exception("KdfIterations couldn't be found on either the MasterPasswordUnlockData or the KdfIterations property passed in."),
+                // KdfMemory and KdfParallelism are optional (only used for Argon2id)
+                Memory = KdfMemory,
+                Parallelism = KdfParallelism,
+            },
+            MasterKeyWrappedUserKey = unlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new Exception("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
+            MasterPasswordAuthenticationHash = authenticationData?.MasterPasswordAuthenticationHash ?? MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in."),
+            Salt = unlockData?.Salt,
         };
     }
 
