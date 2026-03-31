@@ -1,0 +1,124 @@
+﻿using System.Security.Claims;
+using System.Text.Json;
+using Bit.Core.Exceptions;
+using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.ReceiveFeatures.Queries;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.Services;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Core.Test.Tools.Services;
+
+public class GetReceiveFileDownloadQueryTests
+{
+    private readonly IReceiveRepository _receiveRepository;
+    private readonly IUserService _userService;
+    private readonly IReceiveFileStorageService _fileStorageService;
+    private readonly GetReceiveFileDownloadQuery _query;
+    private readonly Guid _currentUserId = Guid.NewGuid();
+    private readonly ClaimsPrincipal _user;
+
+    public GetReceiveFileDownloadQueryTests()
+    {
+        _receiveRepository = Substitute.For<IReceiveRepository>();
+        _userService = Substitute.For<IUserService>();
+        _fileStorageService = Substitute.For<IReceiveFileStorageService>();
+        _user = new ClaimsPrincipal();
+        _userService.GetProperUserId(_user).Returns(_currentUserId);
+        _query = new GetReceiveFileDownloadQuery(_receiveRepository, _userService, _fileStorageService);
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_ValidOwnedReceiveWithFile_ReturnsUrlAndFileId()
+    {
+        // Arrange
+        var receiveId = Guid.NewGuid();
+        var fileId = "abc123fileId";
+        var receive = CreateReceive(receiveId, _currentUserId, fileId);
+        var expectedUrl = "https://storage.example.com/receivefiles/download?sastoken";
+
+        _receiveRepository.GetByIdAsync(receiveId).Returns(receive);
+        _fileStorageService.GetReceiveFileDownloadUrlAsync(receive, fileId).Returns(expectedUrl);
+
+        // Act
+        var (url, returnedFileId) = await _query.GetDownloadUrlAsync(receiveId, _user);
+
+        // Assert
+        Assert.Equal(expectedUrl, url);
+        Assert.Equal(fileId, returnedFileId);
+        await _fileStorageService.Received(1).GetReceiveFileDownloadUrlAsync(receive, fileId);
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_NonExistentReceive_ThrowsNotFoundException()
+    {
+        // Arrange
+        var receiveId = Guid.NewGuid();
+        _receiveRepository.GetByIdAsync(receiveId).Returns((Receive?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => _query.GetDownloadUrlAsync(receiveId, _user));
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_ReceiveOwnedByDifferentUser_ThrowsNotFoundException()
+    {
+        // Arrange
+        var receiveId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var receive = CreateReceive(receiveId, differentUserId, "someFileId");
+
+        _receiveRepository.GetByIdAsync(receiveId).Returns(receive);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => _query.GetDownloadUrlAsync(receiveId, _user));
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_FileNotYetUploaded_ThrowsBadRequestException()
+    {
+        // Arrange
+        var receiveId = Guid.NewGuid();
+        var receive = CreateReceive(receiveId, _currentUserId, fileId: null);
+
+        _receiveRepository.GetByIdAsync(receiveId).Returns(receive);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _query.GetDownloadUrlAsync(receiveId, _user));
+        Assert.Equal("No file has been uploaded to this Receive.", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_InvalidUser_ThrowsBadRequestException()
+    {
+        // Arrange
+        var receiveId = Guid.NewGuid();
+        var nullUser = new ClaimsPrincipal();
+        _userService.GetProperUserId(nullUser).Returns((Guid?)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _query.GetDownloadUrlAsync(receiveId, nullUser));
+        Assert.Equal("invalid user.", exception.Message);
+    }
+
+    private static Receive CreateReceive(Guid id, Guid userId, string? fileId)
+    {
+        var fileData = new ReceiveFileData("test-name", "test-file.txt") { Id = fileId };
+        return new Receive
+        {
+            Id = id,
+            UserId = userId,
+            Name = "test-name",
+            Data = JsonSerializer.Serialize(fileData),
+            UserKeyWrappedSharedContentEncryptionKey = "test-key",
+            UserKeyWrappedPrivateKey = "test-private-key",
+            ScekWrappedPublicKey = "test-public-key",
+            Secret = "test-secret"
+        };
+    }
+}

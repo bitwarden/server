@@ -32,6 +32,7 @@ public class ReceivesController : Controller
     private readonly IUploadReceiveFileCommand _uploadReceiveFileCommand;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IReceiveOwnerQuery _receiveOwnerQuery;
+    private readonly IGetReceiveFileDownloadQuery _getReceiveFileDownloadQuery;
 
     public ReceivesController(
         IReceiveRepository receiveRepository,
@@ -46,7 +47,8 @@ public class ReceivesController : Controller
         IUpdateReceiveCommand updateReceiveCommand,
         IUploadReceiveFileCommand uploadReceiveFileCommand,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
-        IReceiveOwnerQuery receiveOwnerQuery
+        IReceiveOwnerQuery receiveOwnerQuery,
+        IGetReceiveFileDownloadQuery getReceiveFileDownloadQuery
     )
     {
         _receiveRepository = receiveRepository;
@@ -62,6 +64,7 @@ public class ReceivesController : Controller
         _updateReceiveCommand = updateReceiveCommand;
         _uploadReceiveFileCommand = uploadReceiveFileCommand;
         _receiveOwnerQuery = receiveOwnerQuery;
+        _getReceiveFileDownloadQuery = getReceiveFileDownloadQuery;
     }
 
     [Authorize(Policies.Application)]
@@ -80,6 +83,14 @@ public class ReceivesController : Controller
         var receives = await _receiveOwnerQuery.GetOwned(User);
         var responses = receives.Select(r => new ReceiveResponseModel(r));
         return new ListResponseModel<ReceiveResponseModel>(responses);
+    }
+
+    [Authorize(Policies.Application)]
+    [HttpGet("{id}/file")]
+    public async Task<ReceiveFileDownloadDataResponseModel> GetFileDownloadData(Guid id)
+    {
+        var (url, fileId) = await _getReceiveFileDownloadQuery.GetDownloadUrlAsync(id, User);
+        return new ReceiveFileDownloadDataResponseModel { Id = fileId, Url = url };
     }
 
     [AllowAnonymous]
