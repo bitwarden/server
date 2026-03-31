@@ -2,6 +2,7 @@
 
 #nullable disable
 
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Billing.Pricing;
@@ -48,13 +49,13 @@ public class SendValidationService : ISendValidationService
         }
 
         // Once data migration has run, query only SendControls
-        // var sendControlsTask = _policyRequirementQuery.GetAsync<SendControlsPolicyRequirement>(userId.Value);
+        var sendControlsTask = _policyRequirementQuery.GetAsync<SendControlsPolicyRequirement>(userId.Value);
         var disableSendTask = _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
         var sendOptionsTask = _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
 
         await Task.WhenAll(disableSendTask, sendOptionsTask);
 
-        // var sendControlsRequirement = sendControlsTask.Result;
+        var sendControlsRequirement = sendControlsTask.Result;
         var disableSendRequirement = disableSendTask.Result;
         var sendOptionsRequirement = sendOptionsTask.Result;
 
@@ -67,6 +68,24 @@ public class SendValidationService : ISendValidationService
         {
             throw new BadRequestException(
                 "Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+        }
+
+        var passwordRequired = sendControlsRequirement.WhoCanAccess == SendWhoCanAccessType.PasswordProtected;
+        var emailsRequired = sendControlsRequirement.WhoCanAccess == SendWhoCanAccessType.SpecificPeople;
+        if ((passwordRequired && send.Password == null) || (emailsRequired && send.Emails == null))
+        {
+            var requiredAccessControl = passwordRequired ? "password" : emailsRequired ? "email verification" : "(cannot determine required auth)";
+            throw new BadRequestException($"Due to an Enterpise Policy your Sends must be protected by {requiredAccessControl}");
+        }
+
+        if (emailsRequired && sendControlsRequirement.AllowedDomains != null)
+        {
+            var domains = sendControlsRequirement.AllowedDomains.Split(",").Select(domain => domain.Trim());
+            var emails = send.Emails.Split(",").Select(email => email.Trim());
+            if (emails.Any(email => !domains.Any(domain => email.EndsWith(domain))))
+            {
+                throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {string.Join(", ", domains)}");
+            }
         }
     }
 
