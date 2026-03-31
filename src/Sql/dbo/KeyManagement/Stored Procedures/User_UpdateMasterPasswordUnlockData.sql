@@ -4,8 +4,8 @@ CREATE PROCEDURE [dbo].[User_UpdateMasterPasswordUnlockData]
     @KdfIterations INT,
     @KdfMemory INT,
     @KdfParallelism INT,
-    @Key VARCHAR(MAX),
     @MasterPasswordSalt NVARCHAR(256) = NULL,
+    @Key VARCHAR(MAX),
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7)
 AS
