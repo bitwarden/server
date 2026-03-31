@@ -15,11 +15,6 @@ public class JobsHostedService : BaseJobsHostedService
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        var everyTopOfTheHourTrigger = TriggerBuilder.Create()
-            .WithIdentity("EveryTopOfTheHourTrigger")
-            .StartNow()
-            .WithCronSchedule("0 0 * * * ?")
-            .Build();
         var everyFifteenMinutesTrigger = TriggerBuilder.Create()
             .WithIdentity("everyFifteenMinutesTrigger")
             .StartNow()
@@ -29,7 +24,6 @@ public class JobsHostedService : BaseJobsHostedService
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
-            new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteOldPlayDataJob), everyFifteenMinutesTrigger),
         };
 
@@ -39,7 +33,6 @@ public class JobsHostedService : BaseJobsHostedService
 
     public static void AddJobsServices(IServiceCollection services)
     {
-        services.AddTransient<AliveJob>();
         services.AddTransient<DeleteOldPlayDataJob>();
     }
 }
