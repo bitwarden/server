@@ -14,7 +14,7 @@ public class OrganizationDataOwnershipPolicyValidator(
     ICollectionRepository collectionRepository,
     IOrganizationRepository organizationRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
-    : OrganizationPolicyValidator(policyRepository, factories), IPostSavePolicySideEffect, IOnPolicyPostUpdateEvent
+    : OrganizationPolicyValidator(policyRepository, factories), IOnPolicyPostUpdateEvent
 {
     public PolicyType Type => PolicyType.OrganizationDataOwnership;
 
@@ -26,7 +26,7 @@ public class OrganizationDataOwnershipPolicyValidator(
         await ExecuteSideEffectsAsync(policyRequest, postUpsertedPolicyState, previousPolicyState);
     }
 
-    public async Task ExecuteSideEffectsAsync(
+    private async Task ExecuteSideEffectsAsync(
         SavePolicyModel policyRequest,
         Policy postUpdatedPolicy,
         Policy? previousPolicyState)

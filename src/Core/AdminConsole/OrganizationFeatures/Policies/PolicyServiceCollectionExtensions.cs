@@ -24,15 +24,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator, AutomaticUserConfirmationOrganizationPolicyComplianceValidator>();
 
         services.AddPolicyRequirements();
-        services.AddPolicySideEffects();
         services.AddPolicyUpdateEvents();
-
-    }
-
-    [Obsolete("Use AddPolicyUpdateEvents instead.")]
-    private static void AddPolicySideEffects(this IServiceCollection services)
-    {
-        services.AddScoped<IPostSavePolicySideEffect, OrganizationDataOwnershipPolicyValidator>();
     }
 
     private static void AddPolicyUpdateEvents(this IServiceCollection services)
