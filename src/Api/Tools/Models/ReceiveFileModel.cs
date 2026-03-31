@@ -14,6 +14,7 @@ public class ReceiveFileModel
         FileName = data.FileName;
         Size = data.Size;
         SizeName = CoreHelpers.ReadableBytesSize(data.Size);
+        EncapsulatedFileContentEncryptionKey = data.EncapsulatedFileContentEncryptionKey;
     }
 
     public string? Id { get; set; }

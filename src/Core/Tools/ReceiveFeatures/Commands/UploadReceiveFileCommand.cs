@@ -21,13 +21,19 @@ public class UploadReceiveFileCommand : IUploadReceiveFileCommand
         _receiveRepository = receiveRepository;
     }
 
-    public async Task<(string Url, string FileId)> GetUploadUrlAsync(Receive receive)
+    public async Task<(string Url, string FileId)> GetUploadUrlAsync(
+        Receive receive, string fileName, string encapsulatedFileContentEncryptionKey)
     {
         var fileId = CoreHelpers.SecureRandomString(32, upper: false, special: false);
         var url = await _receiveFileStorageService.GetReceiveFileUploadUrlAsync(receive, fileId);
 
         var receiveData = JsonSerializer.Deserialize<ReceiveData>(receive.Data) ?? new ReceiveData();
-        receiveData.Files.Add(new ReceiveFileData { Id = fileId });
+        receiveData.Files.Add(new ReceiveFileData
+        {
+            Id = fileId,
+            FileName = fileName,
+            EncapsulatedFileContentEncryptionKey = encapsulatedFileContentEncryptionKey
+        });
         receive.Data = JsonSerializer.Serialize(receiveData);
         receive.RevisionDate = DateTime.UtcNow;
 

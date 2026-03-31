@@ -103,10 +103,12 @@ public class ReceivesController : Controller
 
     [AllowAnonymous]
     [HttpPost("{id}/file")]
-    public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(Guid id)
+    public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(
+        Guid id, [FromBody] ReceiveFileUploadRequestModel request)
     {
         var receive = await GetReceiveWithSecretValidationAsync(id);
-        var (url, fileId) = await _uploadReceiveFileCommand.GetUploadUrlAsync(receive);
+        var (url, fileId) = await _uploadReceiveFileCommand.GetUploadUrlAsync(
+            receive, request.FileName, request.EncapsulatedFileContentEncryptionKey);
         if (url == null)
         {
             throw new BadRequestException("Invalid request.");

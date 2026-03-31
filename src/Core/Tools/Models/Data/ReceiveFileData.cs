@@ -49,6 +49,12 @@ public class ReceiveFileData
     public string FileName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The file content encryption key, encapsulated (wrapped) with
+    /// the Receive's public key by the uploading client.
+    /// </summary>
+    public string EncapsulatedFileContentEncryptionKey { get; set; } = string.Empty;
+
+    /// <summary>
     /// When true the uploaded file's length was confirmed within
     /// the expected tolerance and below the maximum supported
     /// file size.

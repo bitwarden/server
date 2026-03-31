@@ -28,7 +28,7 @@ public class ReceiveRequestModelTests
     }
 
     [Fact]
-    public void ToReceive_SetsEmptyFileName()
+    public void ToReceive_InitializesEmptyFilesArray()
     {
         var request = new ReceiveRequestModel
         {
@@ -42,8 +42,8 @@ public class ReceiveRequestModelTests
 
         using var jsonDocument = JsonDocument.Parse(receive.Data);
         var root = jsonDocument.RootElement;
-        var fileName = AssertHelper.AssertJsonProperty(root, "FileName", JsonValueKind.String).GetString();
-        Assert.Equal(string.Empty, fileName);
+        var files = AssertHelper.AssertJsonProperty(root, "Files", JsonValueKind.Array);
+        Assert.Equal(0, files.GetArrayLength());
     }
 
     [Fact]
