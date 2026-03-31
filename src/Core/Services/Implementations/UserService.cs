@@ -13,8 +13,10 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
@@ -71,6 +73,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly ISubscriberService _subscriberService;
 
     public UserService(
         IUserRepository userRepository,
@@ -106,7 +109,8 @@ public class UserService : UserManager<User>, IUserService
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
-        IHasPremiumAccessQuery hasPremiumAccessQuery)
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        ISubscriberService subscriberService)
         : base(
               store,
               optionsAccessor,
@@ -147,6 +151,7 @@ public class UserService : UserManager<User>, IUserService
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _subscriberService = subscriberService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -271,9 +276,20 @@ public class UserService : UserManager<User>, IUserService
         {
             try
             {
-                await CancelPremiumAsync(user);
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    await _subscriberService.CancelSubscription(
+                        user,
+                        cancelImmediately: false,
+                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
+                }
+                else
+                {
+                    await CancelPremiumAsync(user);
+                }
             }
             catch (GatewayException) { }
+            catch (BillingException) { }
         }
 
         await _userRepository.DeleteAsync(user);
@@ -637,7 +653,7 @@ public class UserService : UserManager<User>, IUserService
         user.Key = key;
 
         await _userRepository.ReplaceAsync(user);
-        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
+        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName(), resetMasterPassword: true, resetTwoFactor: false);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
         await _pushService.PushLogOutAsync(user.Id);
 
@@ -817,7 +833,7 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
         return secret;
     }
-
+    //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
         var eop = endOfPeriod.GetValueOrDefault(true);
