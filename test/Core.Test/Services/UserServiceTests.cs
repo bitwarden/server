@@ -7,10 +7,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
@@ -742,6 +744,88 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IStripePaymentService>().Received(1)
             .AdjustStorageAsync(user, Arg.Any<int>(), premiumPlan.Storage.StripePriceId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelPremiumAsync_CallsPaymentService(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(30);
+
+        await sutProvider.Sut.CancelPremiumAsync(user);
+
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .Received(1)
+            .CancelSubscriptionAsync(user, true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_FlagEnabled_WithGatewaySubscription_CallsSubscriberService(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        user.GatewaySubscriptionId = "sub_test";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+
+        var result = await sutProvider.Sut.DeleteAsync(user);
+
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .CancelSubscription(
+                user,
+                cancelImmediately: false,
+                Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
+
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_FlagDisabled_WithGatewaySubscription_CallsCancelPremium(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        user.GatewaySubscriptionId = "sub_test";
+        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(30);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.DeleteAsync(user);
+
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .Received(1)
+            .CancelSubscriptionAsync(user, true);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscription(default, default, default);
     }
 }
 
