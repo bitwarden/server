@@ -148,7 +148,7 @@ public class ReceivesController : Controller
 
     [Authorize(Policies.Application)]
     [HttpPut("{id}")]
-    public async Task<ReceiveResponseModel> UpdateReceiveAsync([FromRoute] Guid id, [FromBody] ReceiveRequestModel request)
+    public async Task<ReceiveResponseModel> UpdateReceiveAsync([FromRoute] Guid id, [FromBody] UpdateReceiveRequestModel request)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);

@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
-using Bit.Core.Tools.ReceiveFeatures.Models;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Tools.Models.Request;
@@ -64,13 +63,5 @@ public class ReceiveRequestModel
 
         return receive;
     }
-
-
-    public ReceiveUpdateData ToUpdateData(Guid id)
-    {
-        return new ReceiveUpdateData { Id = id, Name = Name, ExpirationDate = ExpirationDate, };
-    }
-
-
 }
 
