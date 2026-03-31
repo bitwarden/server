@@ -8,10 +8,10 @@ public enum PolicyType : byte
     SingleOrg = 3,
     RequireSso = 4,
     OrganizationDataOwnership = 5,
-    // Deprecated: superseded by SendControls (20) when pm-31885-send-controls flag is active.
+    // Deprecated: superseded by SendControls (21) when pm-31885-send-controls flag is active.
     // Do not add [Obsolete] until the flag is retired.
     DisableSend = 6,
-    // Deprecated: superseded by SendControls (20) when pm-31885-send-controls flag is active.
+    // Deprecated: superseded by SendControls (21) when pm-31885-send-controls flag is active.
     // Do not add [Obsolete] until the flag is retired.
     SendOptions = 7,
     ResetPassword = 8,
@@ -26,10 +26,11 @@ public enum PolicyType : byte
     AutotypeDefaultSetting = 17,
     AutomaticUserConfirmation = 18,
     BlockClaimedDomainAccountCreation = 19,
+    OrganizationUserNotification = 20,
     /// <summary>
     /// Supersedes DisableSend (6) and SendOptions (7) when the pm-31885-send-controls feature flag is active.
     /// </summary>
-    SendControls = 20,
+    SendControls = 21,
 }
 
 public static class PolicyTypeExtensions
@@ -62,6 +63,7 @@ public static class PolicyTypeExtensions
             PolicyType.AutotypeDefaultSetting => "Autotype default setting",
             PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
             PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
+            PolicyType.OrganizationUserNotification => "Vault banner message",
             PolicyType.SendControls => "Send controls",
         };
     }
