@@ -39,7 +39,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -67,7 +67,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -93,7 +93,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await collectionRepository
@@ -182,7 +182,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert - Should call with all user IDs (repository does internal filtering)
         await collectionRepository
@@ -223,7 +223,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, metadata);
 
         // Act
-        await sutProvider.Sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>()
@@ -443,7 +443,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState));
+            sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState));
     }
 
     [Theory]
@@ -469,7 +469,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act
-        await sut.ExecuteSideEffectsAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
+        await sut.ExecutePostUpsertSideEffectAsync(policyRequest, postUpdatedPolicy, previousPolicyState);
 
         // Assert - Should NOT create collections when UseMyItems is disabled
         await collectionRepository

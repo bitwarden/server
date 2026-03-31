@@ -24,7 +24,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
             .Returns(false);
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
         Assert.Equal("You must claim at least one domain to turn on this policy", result);
@@ -41,7 +41,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
             .Returns(true);
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
@@ -53,7 +53,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
         SutProvider<BlockClaimedDomainAccountCreationPolicyValidator> sutProvider)
     {
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
@@ -128,16 +128,4 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
         Assert.Equal(PolicyType.BlockClaimedDomainAccountCreation, validator.Type);
     }
 
-    [Fact]
-    public void RequiredPolicies_ReturnsEmpty()
-    {
-        // Arrange
-        var validator = new BlockClaimedDomainAccountCreationPolicyValidator(null);
-
-        // Act
-        var requiredPolicies = validator.RequiredPolicies.ToList();
-
-        // Assert
-        Assert.Empty(requiredPolicies);
-    }
 }

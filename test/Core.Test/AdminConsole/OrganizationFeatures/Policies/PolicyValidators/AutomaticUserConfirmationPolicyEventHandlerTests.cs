@@ -42,7 +42,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
             .Returns(Invalid(request, new UserNotCompliantWithSingleOrganization()));
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
         Assert.Contains("compliant with the Single organization policy", result, StringComparison.OrdinalIgnoreCase);
@@ -61,7 +61,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
             .Returns(Invalid(request, new ProviderExistsInOrganization()));
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
         Assert.Contains("Provider user type", result, StringComparison.OrdinalIgnoreCase);
@@ -80,7 +80,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
             .Returns(Valid(request));
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
@@ -96,7 +96,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, currentPolicy);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), currentPolicy);
 
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
@@ -116,7 +116,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         currentPolicy.OrganizationId = policyUpdate.OrganizationId;
 
         // Act
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, currentPolicy);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), currentPolicy);
 
         // Assert
         Assert.True(string.IsNullOrEmpty(result));
@@ -138,7 +138,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
             .Returns(Valid(request));
 
         // Act
-        await sutProvider.Sut.ValidateAsync(policyUpdate, null);
+        await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
         await sutProvider.GetDependency<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator>()

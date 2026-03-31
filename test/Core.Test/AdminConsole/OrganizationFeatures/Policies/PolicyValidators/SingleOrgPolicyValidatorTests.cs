@@ -42,7 +42,7 @@ public class SingleOrgPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), policy);
         Assert.Contains("Key Connector is enabled", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -60,7 +60,7 @@ public class SingleOrgPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), policy);
         Assert.True(string.IsNullOrEmpty(result));
     }
 
@@ -127,7 +127,7 @@ public class SingleOrgPolicyValidatorTests
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
-        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy);
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)

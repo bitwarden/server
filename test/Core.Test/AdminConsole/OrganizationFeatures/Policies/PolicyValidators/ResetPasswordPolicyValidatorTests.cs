@@ -43,7 +43,7 @@ public class ResetPasswordPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), policy);
         Assert.Contains("Trusted device encryption is on and requires this policy.", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -65,7 +65,7 @@ public class ResetPasswordPolicyValidatorTests
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
-        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
+        var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), policy);
         Assert.True(string.IsNullOrEmpty(result));
     }
 

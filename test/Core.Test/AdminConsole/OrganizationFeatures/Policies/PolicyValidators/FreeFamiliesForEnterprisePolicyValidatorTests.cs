@@ -36,7 +36,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
             .GetManyBySponsoringOrganizationAsync(policyUpdate.OrganizationId)
             .Returns(organizationSponsorships);
 
-        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy);
 
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
             .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(organizationSponsorships[0].FriendlyName, organizationSponsorships[0].ValidUntil.ToString(),
@@ -63,7 +63,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
             .GetManyBySponsoringOrganizationAsync(policyUpdate.OrganizationId)
             .Returns(organizationSponsorships);
         // Act
-        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy);
 
         // Assert
         var offerAcceptanceDate = organizationSponsorships[0].ValidUntil!.Value.AddDays(-7).ToString("MM/dd/yyyy");
