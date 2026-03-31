@@ -23,25 +23,10 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementValidator, AutomaticUserConfirmationPolicyEnforcementValidator>();
         services.AddScoped<IAutomaticUserConfirmationOrganizationPolicyComplianceValidator, AutomaticUserConfirmationOrganizationPolicyComplianceValidator>();
 
-        services.AddPolicyValidators();
         services.AddPolicyRequirements();
         services.AddPolicySideEffects();
         services.AddPolicyUpdateEvents();
 
-    }
-
-    [Obsolete("Use AddPolicyUpdateEvents instead.")]
-    private static void AddPolicyValidators(this IServiceCollection services)
-    {
-        services.AddScoped<IPolicyValidator, TwoFactorAuthenticationPolicyValidator>();
-        services.AddScoped<IPolicyValidator, SingleOrgPolicyValidator>();
-        services.AddScoped<IPolicyValidator, RequireSsoPolicyValidator>();
-        services.AddScoped<IPolicyValidator, ResetPasswordPolicyValidator>();
-        services.AddScoped<IPolicyValidator, MaximumVaultTimeoutPolicyValidator>();
-        services.AddScoped<IPolicyValidator, UriMatchDefaultPolicyValidator>();
-        services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
-        services.AddScoped<IPolicyValidator, BlockClaimedDomainAccountCreationPolicyValidator>();
-        services.AddScoped<IPolicyValidator, AutomaticUserConfirmationPolicyEventHandler>();
     }
 
     [Obsolete("Use AddPolicyUpdateEvents instead.")]

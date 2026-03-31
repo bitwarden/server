@@ -22,13 +22,16 @@ public class AutomaticUserConfirmationPolicyEventHandler(
     IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator,
     IOrganizationUserRepository organizationUserRepository,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
-    : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent, IOnPolicyPreUpdateEvent
+    : IPolicyValidationEvent, IEnforceDependentPoliciesEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.AutomaticUserConfirmation;
 
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
-    public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
+        await ValidateAsync(savePolicyModel.PolicyUpdate, currentPolicy);
+
+    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
         var policyAlreadyEnabled = currentPolicy is { Enabled: true };
@@ -44,15 +47,12 @@ public class AutomaticUserConfirmationPolicyEventHandler(
                 _ => string.Empty);
     }
 
-    public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
-        await ValidateAsync(savePolicyModel.PolicyUpdate, currentPolicy);
-
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
         await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
         var policyAlreadyEnabled = currentPolicy is { Enabled: true };

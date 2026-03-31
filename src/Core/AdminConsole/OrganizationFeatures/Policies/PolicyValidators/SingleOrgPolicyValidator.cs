@@ -16,7 +16,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class SingleOrgPolicyValidator : IPolicyValidator, IPolicyValidationEvent, IOnPolicyPreUpdateEvent
+public class SingleOrgPolicyValidator : IPolicyValidationEvent, IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.SingleOrg;
     private const string OrganizationNotFoundErrorMessage = "Organization not found.";
@@ -48,8 +48,6 @@ public class SingleOrgPolicyValidator : IPolicyValidator, IPolicyValidationEvent
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
-    public IEnumerable<PolicyType> RequiredPolicies => [];
-
     public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
         return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
@@ -60,7 +58,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator, IPolicyValidationEvent
         await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
@@ -112,7 +110,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator, IPolicyValidationEvent
             _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
     }
 
-    public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (policyUpdate is not { Enabled: true })
         {

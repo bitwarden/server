@@ -13,17 +13,16 @@ public class FreeFamiliesForEnterprisePolicyValidator(
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IMailService mailService,
     IOrganizationRepository organizationRepository)
-    : IPolicyValidator, IOnPolicyPreUpdateEvent
+    : IOnPolicyPreUpdateEvent
 {
     public PolicyType Type => PolicyType.FreeFamiliesSponsorshipPolicy;
-    public IEnumerable<PolicyType> RequiredPolicies => [];
 
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
         await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
@@ -48,5 +47,4 @@ public class FreeFamiliesForEnterprisePolicyValidator(
         }
     }
 
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 }

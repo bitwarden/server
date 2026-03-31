@@ -17,7 +17,7 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolicyPreUpdateEvent
+public class TwoFactorAuthenticationPolicyValidator : IOnPolicyPreUpdateEvent
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -29,7 +29,6 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolic
     public const string NonCompliantMembersWillLoseAccessMessage = "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.";
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
-    public IEnumerable<PolicyType> RequiredPolicies => [];
 
     public TwoFactorAuthenticationPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
@@ -52,7 +51,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolic
         await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
@@ -121,5 +120,4 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator, IOnPolic
                 !x.HasMasterPassword && !organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == x.Id)
                     .isTwoFactorEnabled);
 
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 }

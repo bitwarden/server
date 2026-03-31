@@ -9,7 +9,7 @@ using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class RequireSsoPolicyValidator : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
+public class RequireSsoPolicyValidator : IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
@@ -26,7 +26,7 @@ public class RequireSsoPolicyValidator : IPolicyValidator, IPolicyValidationEven
         return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (policyUpdate is not { Enabled: true })
         {
@@ -39,6 +39,4 @@ public class RequireSsoPolicyValidator : IPolicyValidator, IPolicyValidationEven
 
         return "";
     }
-
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }

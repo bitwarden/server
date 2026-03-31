@@ -8,7 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Int
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class BlockClaimedDomainAccountCreationPolicyValidator : IPolicyValidator, IPolicyValidationEvent
+public class BlockClaimedDomainAccountCreationPolicyValidator : IPolicyValidationEvent
 {
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
@@ -20,15 +20,12 @@ public class BlockClaimedDomainAccountCreationPolicyValidator : IPolicyValidator
 
     public PolicyType Type => PolicyType.BlockClaimedDomainAccountCreation;
 
-    // No prerequisites - this policy stands alone
-    public IEnumerable<PolicyType> RequiredPolicies => [];
-
     public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
         return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         // Only validate when trying to ENABLE the policy
         if (policyUpdate is { Enabled: true })
@@ -43,7 +40,4 @@ public class BlockClaimedDomainAccountCreationPolicyValidator : IPolicyValidator
         // Disabling the policy is always allowed
         return string.Empty;
     }
-
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-        => Task.CompletedTask;
 }

@@ -10,7 +10,7 @@ using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 
-public class ResetPasswordPolicyValidator : IPolicyValidator, IPolicyValidationEvent, IEnforceDependentPoliciesEvent
+public class ResetPasswordPolicyValidator : IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
     public PolicyType Type => PolicyType.ResetPassword;
@@ -26,7 +26,7 @@ public class ResetPasswordPolicyValidator : IPolicyValidator, IPolicyValidationE
         return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
     }
 
-    public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (policyUpdate is not { Enabled: true } ||
             policyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false)
@@ -37,6 +37,4 @@ public class ResetPasswordPolicyValidator : IPolicyValidator, IPolicyValidationE
 
         return "";
     }
-
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }
