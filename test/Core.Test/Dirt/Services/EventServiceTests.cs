@@ -383,7 +383,7 @@ public class EventServiceTests
         };
 
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetProviderAbilitiesAsync()
@@ -418,7 +418,7 @@ public class EventServiceTests
         };
 
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
         sutProvider.GetDependency<IApplicationCacheService>()
             .GetProviderAbilitiesAsync()
