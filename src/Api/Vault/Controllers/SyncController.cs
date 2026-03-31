@@ -139,7 +139,9 @@ public class SyncController : Controller
             userAccountKeys = await _userAccountKeysQuery.Run(user);
         }
 
-        var userPreferences = await _userPreferencesRepository.GetByUserIdAsync(user.Id);
+        var userPreferences = _featureService.IsEnabled(FeatureFlagKeys.SyncUserPreferences)
+            ? await _userPreferencesRepository.GetByUserIdAsync(user.Id)
+            : null;
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
