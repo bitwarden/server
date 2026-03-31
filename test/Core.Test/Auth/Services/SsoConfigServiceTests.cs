@@ -366,7 +366,7 @@ public class SsoConfigServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_Tde_UsesSavePolicyCommand(
+    public async Task SaveAsync_Tde_SavesRequiredPolicies(
         SutProvider<SsoConfigService> sutProvider, Organization organization)
     {
         var ssoConfig = new SsoConfig

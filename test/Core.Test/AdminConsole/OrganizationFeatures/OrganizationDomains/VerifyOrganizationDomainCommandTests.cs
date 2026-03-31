@@ -192,7 +192,7 @@ public class VerifyOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UserVerifyOrganizationDomainAsync_UsesSavePolicyCommand(
+    public async Task UserVerifyOrganizationDomainAsync_SavesPolicy(
         OrganizationDomain domain, Guid userId, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()

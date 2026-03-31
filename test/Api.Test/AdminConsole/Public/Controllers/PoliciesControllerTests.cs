@@ -19,7 +19,7 @@ public class PoliciesControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async Task Put_UsesSavePolicyCommand(
+    public async Task Put_SavesPolicyWithCorrectArguments(
         Guid organizationId,
         PolicyType policyType,
         PolicyUpdateRequestModel model,

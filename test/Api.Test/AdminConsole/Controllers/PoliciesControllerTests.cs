@@ -394,7 +394,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_UsesSavePolicyCommand(
+    public async Task Put_SavesPolicyWithCorrectArguments(
         SutProvider<PoliciesController> sutProvider, Guid orgId,
         SavePolicyRequest model, Policy policy, Guid userId)
     {
@@ -432,7 +432,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutVNext_UsesSavePolicyCommand(
+    public async Task PutVNext_SavesPolicyWithCorrectArguments(
         SutProvider<PoliciesController> sutProvider, Guid orgId,
         SavePolicyRequest model, Policy policy, Guid userId)
     {
