@@ -43,6 +43,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
         services.AddScoped<IPolicyValidator, BlockClaimedDomainAccountCreationPolicyValidator>();
         services.AddScoped<IPolicyValidator, AutomaticUserConfirmationPolicyEventHandler>();
+        services.AddScoped<IPolicyValidator, OrganizationUserNotificationPolicyValidator>();
     }
 
     [Obsolete("Use AddPolicyUpdateEvents instead.")]
@@ -63,6 +64,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, BlockClaimedDomainAccountCreationPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, OrganizationUserNotificationPolicyValidator>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
