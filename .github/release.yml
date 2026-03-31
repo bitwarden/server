@@ -1,0 +1,17 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: "💙 Community Highlight"
+      labels:
+        - community-pr
+    - title: ":shipit: Feature Development"
+      labels:
+        - feature-flag
+    - title: "📦 Dependency Updates"
+      labels:
+        - major-update
+    - title: "🎨 Other"
+      labels:
+        - "*"
