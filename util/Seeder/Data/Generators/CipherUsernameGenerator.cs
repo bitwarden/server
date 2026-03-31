@@ -97,7 +97,7 @@ internal sealed class CipherUsernameGenerator
             UsernameCategory.PhoneNumber => GeneratePhoneNumber(seededFaker, index),
             UsernameCategory.LegacySystem => GenerateLegacySystem(firstName, lastName, index),
             UsernameCategory.RandomAlphanumeric => GenerateRandomAlphanumeric(seededFaker),
-            _ => GenerateCorporateEmail(firstName, lastName, domain ?? "example.com")
+            _ => throw new ArgumentOutOfRangeException(nameof(category), category, null)
         };
     }
 
@@ -115,7 +115,7 @@ internal sealed class CipherUsernameGenerator
             UsernamePatternType.LastDotFirst => $"{last}.{first}@{domain}",
             UsernamePatternType.First_Last => $"{first}_{last}@{domain}",
             UsernamePatternType.LastFirst => $"{last}{f}@{domain}",
-            _ => $"{first}.{last}@{domain}"
+            _ => throw new ArgumentOutOfRangeException(nameof(_corporateEmailPattern), _corporateEmailPattern, null)
         };
     }
 
@@ -226,7 +226,7 @@ internal sealed class CipherUsernameGenerator
         GeographicRegion.MiddleEast => PickLocale(MiddleEastLocales, seed),
         GeographicRegion.Africa => PickLocale(AfricanLocales, seed),
         GeographicRegion.Global => "en",
-        _ => "en"
+        _ => throw new ArgumentOutOfRangeException(nameof(region), region, null)
     };
 
     private static string PickLocale(string[] locales, int seed)

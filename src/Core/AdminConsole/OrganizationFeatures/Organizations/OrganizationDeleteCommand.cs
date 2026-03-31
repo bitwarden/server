@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -17,19 +18,25 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICipherService _cipherService;
+    private readonly ISubscriberService _subscriberService;
+    private readonly IFeatureService _featureService;
 
     public OrganizationDeleteCommand(
         IApplicationCacheService applicationCacheService,
         IOrganizationRepository organizationRepository,
         IStripePaymentService paymentService,
         ISsoConfigRepository ssoConfigRepository,
-        ICipherService cipherService)
+        ICipherService cipherService,
+        ISubscriberService subscriberService,
+        IFeatureService featureService)
     {
         _applicationCacheService = applicationCacheService;
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
         _cipherService = cipherService;
+        _subscriberService = subscriberService;
+        _featureService = featureService;
     }
 
     public async Task DeleteAsync(Organization organization)
@@ -42,9 +49,18 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             {
                 var eop = !organization.ExpirationDate.HasValue ||
                           organization.ExpirationDate.Value >= DateTime.UtcNow;
-                await _paymentService.CancelSubscriptionAsync(organization, eop);
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    await _subscriberService.CancelSubscription(organization, cancelImmediately: !eop);
+                }
+                else
+                {
+                    await _paymentService.CancelSubscriptionAsync(organization, eop);
+                }
             }
             catch (GatewayException) { }
+            catch (BillingException) { }
         }
 
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
