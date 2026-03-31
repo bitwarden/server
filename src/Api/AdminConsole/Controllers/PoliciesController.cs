@@ -14,10 +14,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Int
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,42 +32,32 @@ public class PoliciesController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IUserService _userService;
-    private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
     private readonly IPolicyQuery _policyQuery;
 
     public PoliciesController(IPolicyRepository policyRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IUserService userService,
         ICurrentContext currentContext,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
-        ISavePolicyCommand savePolicyCommand,
         IVNextSavePolicyCommand vNextSavePolicyCommand,
         IPolicyQuery policyQuery)
     {
         _policyRepository = policyRepository;
         _organizationUserRepository = organizationUserRepository;
-        _userService = userService;
         _currentContext = currentContext;
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
-        _savePolicyCommand = savePolicyCommand;
         _vNextSavePolicyCommand = vNextSavePolicyCommand;
         _policyQuery = policyQuery;
     }
 
     [HttpGet("{type}")]
+    [Authorize<ManagePoliciesRequirement>]
     public async Task<PolicyStatusResponseModel> Get(Guid orgId, PolicyType type)
     {
-        if (!await _currentContext.ManagePolicies(orgId))
-        {
-            throw new NotFoundException();
-        }
-
         var policy = await _policyQuery.RunAsync(orgId, type);
         if (policy.Type is PolicyType.SingleOrg)
         {
@@ -80,15 +68,10 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(string orgId)
+    [Authorize<ManagePoliciesRequirement>]
+    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(Guid orgId)
     {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
 
         return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
     }
@@ -124,48 +107,13 @@ public class PoliciesController : Controller
         return new ListResponseModel<PolicyResponseModel>(responses);
     }
 
-    // TODO: PM-4097 - remove GetByInvitedUser once all clients are updated to use the GetMasterPasswordPolicy endpoint below
-    [Obsolete("Deprecated API", false)]
-    [AllowAnonymous]
-    [HttpGet("invited-user")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(Guid orgId, [FromQuery] Guid userId)
-    {
-        var user = await _userService.GetUserByIdAsync(userId);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-        var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
-        if (orgUser == null)
-        {
-            throw new NotFoundException();
-        }
-        if (orgUser.Status != OrganizationUserStatusType.Invited)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
-        var responses = policies.Where(p => p.Enabled).Select(p => new PolicyResponseModel(p));
-        return new ListResponseModel<PolicyResponseModel>(responses);
-    }
-
     [HttpGet("master-password")]
+    [Authorize<OrgUserLinkedToUserIdRequirement>]
     public async Task<PolicyResponseModel> GetMasterPasswordPolicy(Guid orgId)
     {
         var organization = await _organizationRepository.GetByIdAsync(orgId);
 
         if (organization is not { UsePolicies: true })
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User).Value;
-
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
-
-        if (orgUser == null)
         {
             throw new NotFoundException();
         }
@@ -181,6 +129,7 @@ public class PoliciesController : Controller
     }
 
     [HttpPut("{type}")]
+    [Authorize<ManagePoliciesRequirement>]
     public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
     {
         return await PutVNext(orgId, type, new SavePolicyRequest { Policy = model });

@@ -279,7 +279,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagEnabled_PassesFromMarketingToCommandAsync(
+    public async Task PostRegisterSendEmailVerification_PassesFromMarketingToCommandAsync(
         string email, string name, bool receiveMarketingEmails)
     {
         // Arrange
@@ -292,8 +292,6 @@ public class AccountsControllerTests : IDisposable
             FromMarketing = fromMarketing,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(true);
-
         // Act
         await _sut.PostRegisterSendVerificationEmail(model);
 
@@ -302,31 +300,7 @@ public class AccountsControllerTests : IDisposable
             .Run(email, name, receiveMarketingEmails, fromMarketing);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagDisabled_PassesNullFromMarketingToCommandAsync(
-        string email, string name, bool receiveMarketingEmails)
-    {
-        // Arrange
-        var model = new RegisterSendVerificationEmailRequestModel
-        {
-            Email = email,
-            Name = name,
-            ReceiveMarketingEmails = receiveMarketingEmails,
-            FromMarketing = MarketingInitiativeConstants.Premium, // model includes FromMarketing: "premium"
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(false);
-
-        // Act
-        await _sut.PostRegisterSendVerificationEmail(model);
-
-        // Assert
-        await _sendVerificationEmailForRegistrationCommand.Received(1)
-            .Run(email, name, receiveMarketingEmails, null); // fromMarketing gets ignored and null gets passed
-    }
-
-    [Theory, BitAutoData, SignatureKeyPairRequestModelCustomize]
+    [Theory, BitAutoData, SignatureKeyPairRequestModelCustomizeAttribute]
     public async Task PostRegisterFinish_WhenGivenOrgInvite_ShouldRegisterUser(
         string email, string masterPasswordHash, string orgInviteToken, Guid organizationUserId, string userSymmetricKey,
         KeysRequestModel userAsymmetricKeys, AccountKeysRequestModel accountKeys)

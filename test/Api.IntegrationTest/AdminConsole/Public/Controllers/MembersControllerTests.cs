@@ -5,12 +5,15 @@ using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.Helpers;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Public.Controllers;
@@ -28,6 +31,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     public MembersControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
+        _factory.SubstituteService<IFeatureService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -397,5 +401,120 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var response = await _client.PostAsync($"/public/members/{orgUser.Id}/restore", null);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_CustomMember_WithPublicMembersInviteRefactor_Success()
+    {
+        var featureService = _factory.GetService<IFeatureService>();
+        featureService
+            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
+            .Returns(true);
+
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var expectedPermissions = new PermissionsModel
+        {
+            AccessEventLogs = true,
+            AccessImportExport = true,
+            AccessReports = true,
+            CreateNewCollections = true,
+            EditAnyCollection = true,
+            DeleteAnyCollection = true,
+            ManageGroups = true,
+            ManagePolicies = true,
+            ManageSso = true,
+            ManageUsers = true,
+            ManageResetPassword = true,
+            ManageScim = true,
+        };
+
+        var request = new MemberCreateRequestModel
+        {
+            Email = email,
+            Type = OrganizationUserType.Custom,
+            ExternalId = "myCustomUser",
+            Permissions = expectedPermissions,
+            Collections = [],
+            Groups = []
+        };
+
+        var response = await _client.PostAsync("/public/members", JsonContent.Create(request));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
+        Assert.NotNull(result);
+
+        Assert.Equal(email, result.Email);
+        Assert.Equal(OrganizationUserType.Custom, result.Type);
+        Assert.Equal("myCustomUser", result.ExternalId);
+        Assert.Empty(result.Collections);
+        Assert.NotNull(result.Permissions);
+        AssertHelper.AssertPropertyEqual(expectedPermissions, result.Permissions);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var orgUser = await organizationUserRepository.GetByIdAsync(result.Id);
+
+        Assert.NotNull(orgUser);
+        Assert.Equal(email, orgUser.Email);
+        Assert.Equal(OrganizationUserType.Custom, orgUser.Type);
+        Assert.Equal("myCustomUser", orgUser.ExternalId);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.Equal(_organization.Id, orgUser.OrganizationId);
+
+        var dbPermissions = orgUser.GetPermissions();
+        Assert.NotNull(dbPermissions);
+        AssertHelper.AssertPropertyEqual(
+            new Permissions
+            {
+                AccessEventLogs = true,
+                AccessImportExport = true,
+                AccessReports = true,
+                CreateNewCollections = true,
+                EditAnyCollection = true,
+                DeleteAnyCollection = true,
+                ManageGroups = true,
+                ManagePolicies = true,
+                ManageSso = true,
+                ManageUsers = true,
+                ManageResetPassword = true,
+                ManageScim = true,
+            },
+            dbPermissions);
+    }
+
+    [Fact]
+    public async Task Post_UserMember_WithPublicMembersInviteRefactor_Success()
+    {
+        var featureService = _factory.GetService<IFeatureService>();
+        featureService
+            .IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor)
+            .Returns(true);
+
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var request = new MemberCreateRequestModel
+        {
+            Email = email,
+            Type = OrganizationUserType.User,
+            Collections = [],
+            Groups = []
+        };
+
+        var response = await _client.PostAsync("/public/members", JsonContent.Create(request));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
+        Assert.NotNull(result);
+
+        Assert.Equal(email, result.Email);
+        Assert.Equal(OrganizationUserType.User, result.Type);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        var orgUser = await organizationUserRepository.GetByIdAsync(result.Id);
+
+        Assert.NotNull(orgUser);
+        Assert.Equal(email, orgUser.Email);
+        Assert.Equal(OrganizationUserType.User, orgUser.Type);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.Equal(_organization.Id, orgUser.OrganizationId);
     }
 }

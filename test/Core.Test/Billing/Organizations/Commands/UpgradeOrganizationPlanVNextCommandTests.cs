@@ -180,7 +180,7 @@ public class UpgradeOrganizationPlanVNextCommandTests
             organization,
             Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
                 cs.Changes.Count >= 1 &&
-                cs.Changes.Any(c => c.IsItemPriceChange)));
+                cs.ChargeImmediately));
         await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization, null);
         Assert.Equal(targetPlan.Name, organization.Plan);
         Assert.Equal(targetPlan.Type, organization.PlanType);
@@ -203,7 +203,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
         await _updateOrganizationSubscriptionCommand.Received(1).Run(
             organization,
             Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
-                cs.Changes.Count(c => c.IsItemPriceChange) == 2));
+                cs.Changes.Count == 2 &&
+                cs.ChargeImmediately));
     }
 
     [Fact]
@@ -224,7 +225,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
         await _updateOrganizationSubscriptionCommand.Received(1).Run(
             organization,
             Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
-                cs.Changes.Count(c => c.IsItemPriceChange) >= 2));
+                cs.Changes.Count >= 2 &&
+                cs.ChargeImmediately));
     }
 
     [Fact]
@@ -248,7 +250,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
         await _updateOrganizationSubscriptionCommand.Received(1).Run(
             organization,
             Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
-                cs.Changes.Count(c => c.IsItemPriceChange) == 3));
+                cs.Changes.Count == 3 &&
+                cs.ChargeImmediately));
     }
 
     [Fact]

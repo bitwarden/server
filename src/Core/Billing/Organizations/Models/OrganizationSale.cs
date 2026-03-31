@@ -63,12 +63,12 @@ public class OrganizationSale
     {
         var customerSetup = new CustomerSetup
         {
-            Coupon = signup.IsFromProvider
+            Coupons = signup.IsFromProvider
             // TODO: Remove when last of the legacy providers has been migrated.
-            ? StripeConstants.CouponIDs.LegacyMSPDiscount
+            ? [StripeConstants.CouponIDs.LegacyMSPDiscount]
             : signup.IsFromSecretsManagerTrial
-                ? StripeConstants.CouponIDs.SecretsManagerStandalone
-                : null
+                ? [StripeConstants.CouponIDs.SecretsManagerStandalone]
+                : signup.Coupons
         };
 
         if (!signup.PaymentMethodType.HasValue)

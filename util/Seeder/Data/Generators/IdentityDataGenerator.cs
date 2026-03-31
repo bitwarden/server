@@ -10,6 +10,9 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
 
     private readonly GeographicRegion _region = region;
 
+    // Instance-level (not static) because each generator needs locale-aware Faker from the constructor
+    private readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker(MapRegionToLocale(region)));
+
     private static readonly Dictionary<GeographicRegion, string[]> _regionalTitles = new()
     {
         [GeographicRegion.NorthAmerica] = ["Mr", "Mrs", "Ms", "Dr", "Prof"],
@@ -26,16 +29,18 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
     /// </summary>
     internal IdentityViewDto GenerateByIndex(int index)
     {
-        var seededFaker = new Faker(MapRegionToLocale(_region)) { Random = new Randomizer(_seed + index) };
-        var person = seededFaker.Person;
+        var seededFaker = _threadFaker.Value!;
+        seededFaker.Random = new Randomizer(_seed + index);
         var titles = _regionalTitles[_region];
+        var firstName = seededFaker.Name.FirstName();
+        var lastName = seededFaker.Name.LastName();
 
         return new IdentityViewDto
         {
             Title = titles[index % titles.Length],
-            FirstName = person.FirstName,
+            FirstName = firstName,
             MiddleName = index % 3 == 0 ? seededFaker.Name.FirstName() : null,
-            LastName = person.LastName,
+            LastName = lastName,
             Address1 = seededFaker.Address.StreetAddress(),
             Address2 = index % 5 == 0 ? seededFaker.Address.SecondaryAddress() : null,
             Address3 = null,
@@ -44,10 +49,10 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
             PostalCode = seededFaker.Address.ZipCode(),
             Country = GetCountryCode(seededFaker),
             Company = index % 2 == 0 ? seededFaker.Company.CompanyName() : null,
-            Email = person.Email,
+            Email = seededFaker.Internet.Email(firstName, lastName),
             Phone = seededFaker.Phone.PhoneNumber(),
             SSN = GenerateNationalIdByIndex(index),
-            Username = person.UserName,
+            Username = seededFaker.Internet.UserName(firstName, lastName),
             PassportNumber = index % 3 == 0 ? GeneratePassportNumberByIndex(index) : null,
             LicenseNumber = index % 2 == 0 ? GenerateLicenseNumberByIndex(index) : null
         };
@@ -59,7 +64,8 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         GeographicRegion.Europe => $"AB {10 + (index % 90):D2} {10 + ((index + 1) % 90):D2} {10 + ((index + 2) % 90):D2} C",
         GeographicRegion.AsiaPacific => $"{1000 + (index % 9000):D4}-{1000 + ((index + 1) % 9000):D4}-{1000 + ((index + 2) % 9000):D4}",
         GeographicRegion.LatinAmerica => $"{100 + (index % 900):D3}.{100 + ((index + 1) % 900):D3}.{100 + ((index + 2) % 900):D3}-{10 + (index % 90):D2}",
-        _ => $"{100 + (index % 899):D3}-{10 + (index % 90):D2}-{1000 + (index % 9000):D4}"
+        GeographicRegion.MiddleEast or GeographicRegion.Africa or GeographicRegion.Global => $"{100 + (index % 899):D3}-{10 + (index % 90):D2}-{1000 + (index % 9000):D4}",
+        _ => throw new ArgumentOutOfRangeException(nameof(_region), _region, null)
     };
 
     private static string GeneratePassportNumberByIndex(int index) =>
@@ -76,7 +82,8 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         GeographicRegion.LatinAmerica => faker.PickRandom("BR", "MX", "AR", "CO", "CL"),
         GeographicRegion.MiddleEast => faker.PickRandom("AE", "SA", "IL", "TR"),
         GeographicRegion.Africa => faker.PickRandom("ZA", "NG", "EG", "KE"),
-        _ => faker.Address.CountryCode()
+        GeographicRegion.Global => faker.Address.CountryCode(),
+        _ => throw new ArgumentOutOfRangeException(nameof(_region), _region, null)
     };
 
     private static string MapRegionToLocale(GeographicRegion region) => region switch
@@ -87,6 +94,7 @@ internal sealed class IdentityDataGenerator(int seed, GeographicRegion region = 
         GeographicRegion.LatinAmerica => "es",
         GeographicRegion.MiddleEast => "en",
         GeographicRegion.Africa => "en",
-        _ => "en"
+        GeographicRegion.Global => "en",
+        _ => throw new ArgumentOutOfRangeException(nameof(region), region, null)
     };
 }

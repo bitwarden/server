@@ -277,6 +277,7 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(userSymmetricKey, legacyResult.Key);
         Assert.Equal(userAsymmetricKeys.PublicKey, legacyResult.PublicKey);
         Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, legacyResult.PrivateKey);
+        Assert.Null(legacyResult.MasterPasswordSalt);
 
         // V2 expected fields
         // all should be default/unset, with the exception of email and masterPasswordHint
@@ -289,6 +290,37 @@ public class RegisterFinishRequestModelTests
         Assert.Null(newResult.Key);
         Assert.Null(newResult.PublicKey);
         Assert.Null(newResult.PrivateKey);
+        Assert.Null(newResult.MasterPasswordSalt);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ToUser_WithMasterPasswordUnlock_MapsSalt(string email, string masterPasswordHint,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        // Arrange
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHint = masterPasswordHint,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+                },
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Salt = "explicit-salt-value"
+            }
+        };
+
+        // Act
+        var resultUser = model.ToUser(false);
+
+        // Assert
+        Assert.Equal("explicit-salt-value", resultUser.MasterPasswordSalt);
     }
 
     [Fact]

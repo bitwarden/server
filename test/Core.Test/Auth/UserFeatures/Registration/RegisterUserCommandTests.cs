@@ -452,7 +452,7 @@ public class RegisterUserCommandTests
                         return true;
                     });
 
-                expectedErrorMessage = "Organization invite token is invalid.";
+                expectedErrorMessage = "Invalid token.";
                 break;
             case "nullOrgInviteToken":
                 orgInviteToken = null;
