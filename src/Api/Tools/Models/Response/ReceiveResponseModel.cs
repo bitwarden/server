@@ -14,9 +14,9 @@ public class ReceiveResponseModel : ResponseModel
     {
         Id = receive.Id;
 
+        Name = receive.Name;
         var receiveData = JsonSerializer.Deserialize<ReceiveData>(receive.Data);
-        Name = receiveData!.Name;
-        Files = receiveData.Files.Select(f => new ReceiveFileModel(f));
+        Files = receiveData!.Files.Select(f => new ReceiveFileModel(f));
 
         UserKeyWrappedSharedContentEncryptionKey = receive.UserKeyWrappedSharedContentEncryptionKey;
         UserKeyWrappedPrivateKey = receive.UserKeyWrappedPrivateKey;

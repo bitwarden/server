@@ -54,7 +54,7 @@ public class ReceiveRequestModel
         {
             UserId = userId,
             Name = Name,
-            Data = JsonSerializer.Serialize(new ReceiveData { Name = Name }),
+            Data = JsonSerializer.Serialize(new ReceiveData()),
             UserKeyWrappedSharedContentEncryptionKey = UserKeyWrappedSharedContentEncryptionKey,
             UserKeyWrappedPrivateKey = UserKeyWrappedPrivateKey,
             ScekWrappedPublicKey = ScekWrappedPublicKey,

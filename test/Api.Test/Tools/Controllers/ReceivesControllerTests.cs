@@ -108,7 +108,7 @@ public class ReceivesControllerTests
         SutProvider<ReceivesController> sutProvider)
     {
         receive.Secret = "correct-secret";
-        receive.Data = JsonSerializer.Serialize(new ReceiveData { Name = "encrypted-name" });
+        receive.Data = JsonSerializer.Serialize(new ReceiveData());
         SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(receiveId)

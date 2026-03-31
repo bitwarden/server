@@ -145,7 +145,6 @@ public class GetReceiveFileDownloadQueryTests
     {
         var receiveData = new ReceiveData
         {
-            Name = "test-name",
             Files = fileIds.Select(fid => new ReceiveFileData { Id = fid }).ToList()
         };
         return new Receive

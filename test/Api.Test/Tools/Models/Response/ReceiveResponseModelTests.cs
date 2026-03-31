@@ -9,11 +9,10 @@ namespace Bit.Api.Test.Tools.Models.Response;
 public class ReceiveResponseModelTests
 {
     [Fact]
-    public void Constructor_UnpacksNameFromData()
+    public void Constructor_MapsNameFromEntity()
     {
         var receiveData = new ReceiveData
         {
-            Name = "encrypted_name",
             Files = new List<ReceiveFileData>
             {
                 new() { Id = "file_id_123", FileName = "encrypted_file.txt", Size = 2048, Validated = true }
@@ -42,7 +41,6 @@ public class ReceiveResponseModelTests
     {
         var receiveData = new ReceiveData
         {
-            Name = "encrypted_name",
             Files = new List<ReceiveFileData>
             {
                 new() { Id = "file_id_123", FileName = "encrypted_file.txt", Size = 2048, Validated = true },
@@ -76,7 +74,7 @@ public class ReceiveResponseModelTests
     [Fact]
     public void Constructor_EmptyFiles_ReturnsEmptyCollection()
     {
-        var receiveData = new ReceiveData { Name = "encrypted_name" };
+        var receiveData = new ReceiveData();
 
         var receive = new Receive
         {
@@ -99,7 +97,7 @@ public class ReceiveResponseModelTests
     [Fact]
     public void Constructor_MapsAllEntityProperties()
     {
-        var receiveData = new ReceiveData { Name = "encrypted_name" };
+        var receiveData = new ReceiveData();
         var receiveId = Guid.NewGuid();
         var expirationDate = DateTime.UtcNow.AddDays(7);
 

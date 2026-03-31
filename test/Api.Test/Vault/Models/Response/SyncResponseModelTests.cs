@@ -204,7 +204,7 @@ public class SyncResponseModelTests
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 Name = "encrypted-name",
-                Data = """{"Name":"encrypted-name","Files":[{"Id":"file1","FileName":"test.txt","Size":1024}]}""",
+                Data = """{"Files":[{"Id":"file1","FileName":"test.txt","Size":1024}]}""",
                 UserKeyWrappedSharedContentEncryptionKey = _mockEncryptedKey1,
                 UserKeyWrappedPrivateKey = _mockEncryptedKey2,
                 ScekWrappedPublicKey = _mockEncryptedKey3,
