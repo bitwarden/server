@@ -1,9 +1,10 @@
-CREATE OR ALTER PROCEDURE [dbo].[User_UpdateMasterPasswordUnlockUserData]
+CREATE OR ALTER PROCEDURE [dbo].[User_UpdateMasterPasswordUnlockData]
     @Id UNIQUEIDENTIFIER,
     @Kdf TINYINT,
     @KdfIterations INT,
     @KdfMemory INT,
     @KdfParallelism INT,
+    @MasterPasswordSalt NVARCHAR(256) = NULL,
     @Key VARCHAR(MAX),
     @RevisionDate DATETIME2(7),
     @AccountRevisionDate DATETIME2(7)
@@ -19,6 +20,7 @@ BEGIN
         [KdfIterations] = @KdfIterations,
         [KdfMemory] = @KdfMemory,
         [KdfParallelism] = @KdfParallelism,
+        [MasterPasswordSalt] = @MasterPasswordSalt,
         [RevisionDate] = @RevisionDate,
         [AccountRevisionDate] = @AccountRevisionDate
     WHERE
