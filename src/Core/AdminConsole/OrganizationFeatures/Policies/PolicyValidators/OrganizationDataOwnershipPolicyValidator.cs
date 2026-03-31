@@ -23,14 +23,6 @@ public class OrganizationDataOwnershipPolicyValidator(
         Policy postUpsertedPolicyState,
         Policy? previousPolicyState)
     {
-        await ExecuteSideEffectsAsync(policyRequest, postUpsertedPolicyState, previousPolicyState);
-    }
-
-    private async Task ExecuteSideEffectsAsync(
-        SavePolicyModel policyRequest,
-        Policy postUpdatedPolicy,
-        Policy? previousPolicyState)
-    {
         if (policyRequest.Metadata is not OrganizationModelOwnershipPolicyModel metadata)
         {
             return;
@@ -41,9 +33,9 @@ public class OrganizationDataOwnershipPolicyValidator(
             return;
         }
 
-        var isFirstTimeEnabled = postUpdatedPolicy.Enabled && previousPolicyState == null;
+        var isFirstTimeEnabled = postUpsertedPolicyState.Enabled && previousPolicyState == null;
         var reEnabled = previousPolicyState?.Enabled == false
-                        && postUpdatedPolicy.Enabled;
+                        && postUpsertedPolicyState.Enabled;
 
         if (isFirstTimeEnabled || reEnabled)
         {

@@ -22,11 +22,8 @@ public class BlockClaimedDomainAccountCreationPolicyValidator : IPolicyValidatio
 
     public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
-    }
+        var policyUpdate = policyRequest.PolicyUpdate;
 
-    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
         // Only validate when trying to ENABLE the policy
         if (policyUpdate is { Enabled: true })
         {

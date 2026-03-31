@@ -50,16 +50,32 @@ public class SingleOrgPolicyValidator : IPolicyValidationEvent, IOnPolicyPreUpda
 
     public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
+        var policyUpdate = policyRequest.PolicyUpdate;
+
+        if (policyUpdate is not { Enabled: true })
+        {
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
+
+            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+
+            if (!string.IsNullOrWhiteSpace(validateDecryptionErrorMessage))
+            {
+                return validateDecryptionErrorMessage;
+            }
+
+            if (await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
+            {
+                return ClaimedDomainSingleOrganizationRequiredErrorMessage;
+            }
+        }
+
+        return string.Empty;
     }
 
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
-    }
+        var policyUpdate = policyRequest.PolicyUpdate;
 
-    private async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
             var currentUser = _currentContext.UserId ?? Guid.Empty;
@@ -110,25 +126,4 @@ public class SingleOrgPolicyValidator : IPolicyValidationEvent, IOnPolicyPreUpda
             _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
     }
 
-    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
-        if (policyUpdate is not { Enabled: true })
-        {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-
-            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
-
-            if (!string.IsNullOrWhiteSpace(validateDecryptionErrorMessage))
-            {
-                return validateDecryptionErrorMessage;
-            }
-
-            if (await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
-            {
-                return ClaimedDomainSingleOrganizationRequiredErrorMessage;
-            }
-        }
-
-        return string.Empty;
-    }
 }

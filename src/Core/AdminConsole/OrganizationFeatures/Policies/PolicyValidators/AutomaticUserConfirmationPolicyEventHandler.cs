@@ -28,11 +28,10 @@ public class AutomaticUserConfirmationPolicyEventHandler(
 
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
-    public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy) =>
-        await ValidateAsync(savePolicyModel.PolicyUpdate, currentPolicy);
-
-    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
+    public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy)
     {
+        var policyUpdate = savePolicyModel.PolicyUpdate;
+
         var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
         var policyAlreadyEnabled = currentPolicy is { Enabled: true };
         if (isNotEnablingPolicy || policyAlreadyEnabled)
@@ -49,11 +48,8 @@ public class AutomaticUserConfirmationPolicyEventHandler(
 
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
-    }
+        var policyUpdate = policyRequest.PolicyUpdate;
 
-    private async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
         var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
         var policyAlreadyEnabled = currentPolicy is { Enabled: true };
         if (isNotEnablingPolicy || policyAlreadyEnabled)

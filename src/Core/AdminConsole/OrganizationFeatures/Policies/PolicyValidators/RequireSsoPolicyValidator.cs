@@ -23,11 +23,8 @@ public class RequireSsoPolicyValidator : IPolicyValidationEvent, IEnforceDepende
 
     public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        return await ValidateAsync(policyRequest.PolicyUpdate, currentPolicy);
-    }
+        var policyUpdate = policyRequest.PolicyUpdate;
 
-    private async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
         if (policyUpdate is not { Enabled: true })
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);

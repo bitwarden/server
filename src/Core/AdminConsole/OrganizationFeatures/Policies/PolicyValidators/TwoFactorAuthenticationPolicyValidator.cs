@@ -48,11 +48,8 @@ public class TwoFactorAuthenticationPolicyValidator : IOnPolicyPreUpdateEvent
 
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {
-        await OnSaveSideEffectsAsync(policyRequest.PolicyUpdate, currentPolicy);
-    }
+        var policyUpdate = policyRequest.PolicyUpdate;
 
-    private async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
-    {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
             var currentUser = _currentContext.UserId ?? Guid.Empty;
