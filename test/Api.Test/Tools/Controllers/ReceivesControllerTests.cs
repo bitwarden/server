@@ -3,7 +3,9 @@ using System.Text.Json;
 using Bit.Api.Tools.Controllers;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
@@ -105,11 +107,14 @@ public class ReceivesControllerTests
     public async Task GetShared_ValidRequest_ReturnsSharedModel(
         Guid receiveId,
         Receive receive,
+        User user,
         SutProvider<ReceivesController> sutProvider)
     {
         receive.Secret = "correct-secret";
         receive.Data = JsonSerializer.Serialize(new ReceiveData());
+        user.Id = receive.UserId;
         SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(receive.UserId).Returns(user);
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(receiveId)
             .Returns(receive);
@@ -122,6 +127,7 @@ public class ReceivesControllerTests
         Assert.IsType<SharedReceiveResponseModel>(result);
         Assert.Equal(receive.Name, result.Name);
         Assert.Equal(receive.ScekWrappedPublicKey, result.ScekWrappedPublicKey);
+        Assert.Equal(user.Email, result.OwnerEmail);
     }
 
     [Theory, BitAutoData]
