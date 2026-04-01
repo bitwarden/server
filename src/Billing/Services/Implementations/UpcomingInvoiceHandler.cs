@@ -333,19 +333,15 @@ public class UpcomingInvoiceHandler(
 
         await AlignPremiumUsersTaxConcernsAsync(user, @event, customer, subscription);
 
-        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
-        if (milestone2Feature)
-        {
-            var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
+        var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
 
-            /*
-             * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
-             * with processing.
-             */
-            if (subscriptionAligned)
-            {
-                return;
-            }
+        /*
+         * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
+         * with processing.
+         */
+        if (subscriptionAligned)
+        {
+            return;
         }
 
         if (user.Premium)
