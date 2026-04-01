@@ -1,11 +1,11 @@
-﻿#nullable enable
+#nullable enable
 
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public static class PolicyValidatorHelpers
+public static class PolicyEventHandlerHelpers
 {
     /// <summary>
     /// Validate that given Member Decryption Options are not enabled.

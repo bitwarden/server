@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class UriMatchDefaultPolicyValidator : IEnforceDependentPoliciesEvent
+public class UriMatchDefaultPolicyEventHandler : IEnforceDependentPoliciesEvent
 {
     public PolicyType Type => PolicyType.UriMatchDefaults;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];

@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -13,10 +13,10 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 [SutProviderCustomize]
-public class ResetPasswordPolicyValidatorTests
+public class ResetPasswordPolicyEventHandlerTests
 {
     [Theory]
     [BitAutoData(true, false)]
@@ -27,7 +27,7 @@ public class ResetPasswordPolicyValidatorTests
         bool autoEnrollEnabled,
         [PolicyUpdate(PolicyType.ResetPassword)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+        SutProvider<ResetPasswordPolicyEventHandler> sutProvider)
     {
         policyUpdate.Enabled = policyEnabled;
         policyUpdate.SetDataModel(new ResetPasswordDataModel
@@ -51,7 +51,7 @@ public class ResetPasswordPolicyValidatorTests
     public async Task ValidateAsync_DisablingPolicy_TdeNotEnabled_Success(
         [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+        SutProvider<ResetPasswordPolicyEventHandler> sutProvider)
     {
         policyUpdate.SetDataModel(new ResetPasswordDataModel
         {
@@ -78,7 +78,7 @@ public class ResetPasswordPolicyValidatorTests
         bool autoEnrollEnabled,
         [PolicyUpdate(PolicyType.ResetPassword)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+        SutProvider<ResetPasswordPolicyEventHandler> sutProvider)
     {
         policyUpdate.Enabled = policyEnabled;
         policyUpdate.SetDataModel(new ResetPasswordDataModel
@@ -104,7 +104,7 @@ public class ResetPasswordPolicyValidatorTests
     public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_TdeNotEnabled_Success(
         [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+        SutProvider<ResetPasswordPolicyEventHandler> sutProvider)
     {
         policyUpdate.SetDataModel(new ResetPasswordDataModel
         {

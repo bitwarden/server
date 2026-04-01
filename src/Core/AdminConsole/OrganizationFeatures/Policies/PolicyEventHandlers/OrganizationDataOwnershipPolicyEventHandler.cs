@@ -1,4 +1,4 @@
-﻿
+
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -7,14 +7,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Int
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class OrganizationDataOwnershipPolicyValidator(
+public class OrganizationDataOwnershipPolicyEventHandler(
     IPolicyRepository policyRepository,
     ICollectionRepository collectionRepository,
     IOrganizationRepository organizationRepository,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
-    : OrganizationPolicyValidator(policyRepository, factories), IOnPolicyPostUpdateEvent
+    : OrganizationPolicyEventHandler(policyRepository, factories), IOnPolicyPostUpdateEvent
 {
     public PolicyType Type => PolicyType.OrganizationDataOwnership;
 

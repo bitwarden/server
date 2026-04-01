@@ -1,10 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -22,16 +22,16 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 [SutProviderCustomize]
-public class SingleOrgPolicyValidatorTests
+public class SingleOrgPolicyEventHandlerTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_DisablingPolicy_KeyConnectorEnabled_ValidationError(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<SingleOrgPolicyValidator> sutProvider)
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -50,7 +50,7 @@ public class SingleOrgPolicyValidatorTests
     public async Task ValidateAsync_DisablingPolicy_KeyConnectorNotEnabled_Success(
         [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<SingleOrgPolicyValidator> sutProvider)
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -70,7 +70,7 @@ public class SingleOrgPolicyValidatorTests
         [Policy(PolicyType.SingleOrg, false)] Policy policy,
         Guid savingUserId,
         Guid nonCompliantUserId,
-        Organization organization, SutProvider<SingleOrgPolicyValidator> sutProvider)
+        Organization organization, SutProvider<SingleOrgPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
 
@@ -151,7 +151,7 @@ public class SingleOrgPolicyValidatorTests
     public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_KeyConnectorEnabled_ValidationError(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<SingleOrgPolicyValidator> sutProvider)
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -172,7 +172,7 @@ public class SingleOrgPolicyValidatorTests
     public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_KeyConnectorNotEnabled_Success(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<SingleOrgPolicyValidator> sutProvider)
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -199,7 +199,7 @@ public class SingleOrgPolicyValidatorTests
         Guid savingUserId,
         Guid nonCompliantUserId,
         Organization organization,
-        SutProvider<SingleOrgPolicyValidator> sutProvider)
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
 

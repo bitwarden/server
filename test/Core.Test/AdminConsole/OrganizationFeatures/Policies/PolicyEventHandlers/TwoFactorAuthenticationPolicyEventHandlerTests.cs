@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Enums;
@@ -17,17 +17,17 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 [SutProviderCustomize]
-public class TwoFactorAuthenticationPolicyValidatorTests
+public class TwoFactorAuthenticationPolicyEventHandlerTests
 {
     [Theory, BitAutoData]
     public async Task OnSaveSideEffectsAsync_GivenNonCompliantUsersWithoutMasterPassword_Throws(
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
-        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+        SutProvider<TwoFactorAuthenticationPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -56,7 +56,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy));
 
-        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccessMessage, exception.Message);
+        Assert.Equal(TwoFactorAuthenticationPolicyEventHandler.NonCompliantMembersWillLoseAccessMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -64,7 +64,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
-        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+        SutProvider<TwoFactorAuthenticationPolicyEventHandler> sutProvider)
     {
         // Arrange
         policy.OrganizationId = policyUpdate.OrganizationId;
@@ -142,7 +142,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
-        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+        SutProvider<TwoFactorAuthenticationPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -174,7 +174,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy));
 
-        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccessMessage, exception.Message);
+        Assert.Equal(TwoFactorAuthenticationPolicyEventHandler.NonCompliantMembersWillLoseAccessMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -182,7 +182,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
-        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+        SutProvider<TwoFactorAuthenticationPolicyEventHandler> sutProvider)
     {
         // Arrange
         policy.OrganizationId = policyUpdate.OrganizationId;

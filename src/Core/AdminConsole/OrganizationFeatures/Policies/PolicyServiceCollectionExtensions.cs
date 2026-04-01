@@ -1,9 +1,9 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,17 +29,17 @@ public static class PolicyServiceCollectionExtensions
 
     private static void AddPolicyUpdateEvents(this IServiceCollection services)
     {
-        services.AddScoped<IPolicyUpdateEvent, RequireSsoPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, TwoFactorAuthenticationPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, SingleOrgPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, ResetPasswordPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, MaximumVaultTimeoutPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
-        services.AddScoped<IPolicyUpdateEvent, BlockClaimedDomainAccountCreationPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, RequireSsoPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, TwoFactorAuthenticationPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, SingleOrgPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, ResetPasswordPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, MaximumVaultTimeoutPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, FreeFamiliesForEnterprisePolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, OrganizationDataOwnershipPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, BlockClaimedDomainAccountCreationPolicyEventHandler>();
         services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
-        services.AddScoped<IPolicyUpdateEvent, OrganizationUserNotificationPolicyValidator>();
+        services.AddScoped<IPolicyUpdateEvent, OrganizationUserNotificationPolicyEventHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)

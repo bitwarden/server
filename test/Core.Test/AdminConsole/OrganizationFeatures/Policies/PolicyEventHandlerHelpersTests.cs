@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 
-public class PolicyValidatorHelpersTests
+public class PolicyEventHandlerHelpersTests
 {
     [Fact]
     public void ValidateDecryptionOptionsNotEnabled_RequiredByKeyConnector_ValidationError()

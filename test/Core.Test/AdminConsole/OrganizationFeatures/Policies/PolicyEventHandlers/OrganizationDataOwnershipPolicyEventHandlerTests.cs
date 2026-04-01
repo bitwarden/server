@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -12,10 +12,10 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 [SutProviderCustomize]
-public class OrganizationDataOwnershipPolicyValidatorTests
+public class OrganizationDataOwnershipPolicyEventHandlerTests
 {
     private const string _defaultUserCollectionName = "Default";
 
@@ -25,7 +25,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy previousPolicyState,
         Organization organization,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyEventHandler> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -53,7 +53,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership)] Policy previousPolicyState,
         Organization organization,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyEventHandler> sutProvider)
     {
         // Arrange
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
@@ -208,7 +208,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
         Organization organization,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyEventHandler> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -241,7 +241,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         return policyRepository;
     }
 
-    private static OrganizationDataOwnershipPolicyValidator ArrangeSut(
+    private static OrganizationDataOwnershipPolicyEventHandler ArrangeSut(
         OrganizationDataOwnershipPolicyRequirementFactory factory,
         IPolicyRepository policyRepository,
         ICollectionRepository collectionRepository,
@@ -255,7 +255,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
                 Id = callInfo.Arg<Guid>(),
                 UseMyItems = useMyItems
             });
-        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, organizationRepository, [factory]);
+        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, [factory]);
         return sut;
     }
 
@@ -265,7 +265,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy previousPolicyState,
         Organization organization,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyEventHandler> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -293,7 +293,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership)] Policy previousPolicyState,
         Organization organization,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyEventHandler> sutProvider)
     {
         // Arrange
         previousPolicyState.OrganizationId = policyUpdate.OrganizationId;
@@ -392,7 +392,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         [Policy(PolicyType.OrganizationDataOwnership, true)] Policy postUpdatedPolicy,
         [Policy(PolicyType.OrganizationDataOwnership, false)] Policy previousPolicyState,
         Organization organization,
-        SutProvider<OrganizationDataOwnershipPolicyValidator> sutProvider)
+        SutProvider<OrganizationDataOwnershipPolicyEventHandler> sutProvider)
     {
         // Arrange
         postUpdatedPolicy.OrganizationId = policyUpdate.OrganizationId;
@@ -438,7 +438,7 @@ public class OrganizationDataOwnershipPolicyValidatorTests
         // Return null to simulate organization not found
         organizationRepository.GetByIdAsync(Arg.Any<Guid>()).Returns((Organization?)null);
 
-        var sut = new OrganizationDataOwnershipPolicyValidator(policyRepository, collectionRepository, organizationRepository, [factory]);
+        var sut = new OrganizationDataOwnershipPolicyEventHandler(policyRepository, collectionRepository, organizationRepository, [factory]);
         var policyRequest = new SavePolicyModel(policyUpdate, new OrganizationModelOwnershipPolicyModel(_defaultUserCollectionName));
 
         // Act & Assert

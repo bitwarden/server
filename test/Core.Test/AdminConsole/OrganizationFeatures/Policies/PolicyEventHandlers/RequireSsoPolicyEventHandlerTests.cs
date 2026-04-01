@@ -1,9 +1,9 @@
-﻿namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -15,13 +15,13 @@ using NSubstitute;
 using Xunit;
 
 [SutProviderCustomize]
-public class RequireSsoPolicyValidatorTests
+public class RequireSsoPolicyEventHandlerTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_DisablingPolicy_KeyConnectorEnabled_ValidationError(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<RequireSsoPolicyValidator> sutProvider)
+        SutProvider<RequireSsoPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -40,7 +40,7 @@ public class RequireSsoPolicyValidatorTests
     public async Task ValidateAsync_DisablingPolicy_TdeEnabled_ValidationError(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<RequireSsoPolicyValidator> sutProvider)
+        SutProvider<RequireSsoPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -59,7 +59,7 @@ public class RequireSsoPolicyValidatorTests
     public async Task ValidateAsync_DisablingPolicy_DecryptionOptionsNotEnabled_Success(
         [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<RequireSsoPolicyValidator> sutProvider)
+        SutProvider<RequireSsoPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -77,7 +77,7 @@ public class RequireSsoPolicyValidatorTests
     public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_KeyConnectorEnabled_ValidationError(
         [PolicyUpdate(PolicyType.RequireSso, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.RequireSso)] Policy policy,
-        SutProvider<RequireSsoPolicyValidator> sutProvider)
+        SutProvider<RequireSsoPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -98,7 +98,7 @@ public class RequireSsoPolicyValidatorTests
     public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_TdeEnabled_ValidationError(
         [PolicyUpdate(PolicyType.RequireSso, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.RequireSso)] Policy policy,
-        SutProvider<RequireSsoPolicyValidator> sutProvider)
+        SutProvider<RequireSsoPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
@@ -119,7 +119,7 @@ public class RequireSsoPolicyValidatorTests
     public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_DecryptionOptionsNotEnabled_Success(
         [PolicyUpdate(PolicyType.RequireSso, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.RequireSso)] Policy policy,
-        SutProvider<RequireSsoPolicyValidator> sutProvider)
+        SutProvider<RequireSsoPolicyEventHandler> sutProvider)
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 

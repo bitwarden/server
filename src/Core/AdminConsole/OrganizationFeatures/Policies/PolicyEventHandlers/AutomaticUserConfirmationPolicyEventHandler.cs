@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -6,7 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Int
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 /// <summary>
 /// Represents an event handler for the Automatic User Confirmation policy.

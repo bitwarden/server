@@ -1,17 +1,17 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class RequireSsoPolicyValidator : IPolicyValidationEvent, IEnforceDependentPoliciesEvent
+public class RequireSsoPolicyEventHandler : IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
 
-    public RequireSsoPolicyValidator(ISsoConfigRepository ssoConfigRepository)
+    public RequireSsoPolicyEventHandler(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
     }

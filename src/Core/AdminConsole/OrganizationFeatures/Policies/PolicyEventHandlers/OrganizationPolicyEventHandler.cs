@@ -1,15 +1,15 @@
-﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 
 /// <summary>
 /// Please do not use this validator. We're currently in the process of refactoring our policy validator pattern.
 /// This is a stop-gap solution for post-policy-save side effects, but it is not the long-term solution.
 /// </summary>
-public abstract class OrganizationPolicyValidator(IPolicyRepository policyRepository, IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
+public abstract class OrganizationPolicyEventHandler(IPolicyRepository policyRepository, IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
 {
     protected async Task<IEnumerable<T>> GetUserPolicyRequirementsByOrganizationIdAsync<T>(Guid organizationId, PolicyType policyType) where T : IPolicyRequirement
     {

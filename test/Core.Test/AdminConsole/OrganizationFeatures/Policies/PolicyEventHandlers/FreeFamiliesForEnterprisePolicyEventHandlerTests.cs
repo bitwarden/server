@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -11,10 +11,10 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 [SutProviderCustomize]
-public class FreeFamiliesForEnterprisePolicyValidatorTests
+public class FreeFamiliesForEnterprisePolicyEventHandlerTests
 {
     [Theory, BitAutoData]
     public async Task OnSaveSideEffectsAsync_DoesNotNotifyUserWhenPolicyDisabled(
@@ -22,7 +22,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
         List<OrganizationSponsorship> organizationSponsorships,
         [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, true)] Policy policy,
-        SutProvider<FreeFamiliesForEnterprisePolicyValidator> sutProvider)
+        SutProvider<FreeFamiliesForEnterprisePolicyEventHandler> sutProvider)
     {
 
         policy.Enabled = true;
@@ -49,7 +49,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
         List<OrganizationSponsorship> organizationSponsorships,
         [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, true)] Policy policy,
-        SutProvider<FreeFamiliesForEnterprisePolicyValidator> sutProvider)
+        SutProvider<FreeFamiliesForEnterprisePolicyEventHandler> sutProvider)
     {
 
         policy.Enabled = false;
@@ -79,7 +79,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
         List<OrganizationSponsorship> organizationSponsorships,
         [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, true)] Policy policy,
-        SutProvider<FreeFamiliesForEnterprisePolicyValidator> sutProvider)
+        SutProvider<FreeFamiliesForEnterprisePolicyEventHandler> sutProvider)
     {
         policy.Enabled = true;
         policyUpdate.Enabled = false;
@@ -107,7 +107,7 @@ public class FreeFamiliesForEnterprisePolicyValidatorTests
         List<OrganizationSponsorship> organizationSponsorships,
         [PolicyUpdate(PolicyType.FreeFamiliesSponsorshipPolicy)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] Policy policy,
-        SutProvider<FreeFamiliesForEnterprisePolicyValidator> sutProvider)
+        SutProvider<FreeFamiliesForEnterprisePolicyEventHandler> sutProvider)
     {
         policy.Enabled = false;
         policyUpdate.Enabled = true;

@@ -1,16 +1,16 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class BlockClaimedDomainAccountCreationPolicyValidator : IPolicyValidationEvent
+public class BlockClaimedDomainAccountCreationPolicyEventHandler : IPolicyValidationEvent
 {
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
-    public BlockClaimedDomainAccountCreationPolicyValidator(
+    public BlockClaimedDomainAccountCreationPolicyEventHandler(
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;

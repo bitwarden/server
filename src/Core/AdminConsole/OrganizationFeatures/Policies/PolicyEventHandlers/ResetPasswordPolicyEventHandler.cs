@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
@@ -6,15 +6,15 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Int
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class ResetPasswordPolicyValidator : IPolicyValidationEvent, IEnforceDependentPoliciesEvent
+public class ResetPasswordPolicyEventHandler : IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
     public PolicyType Type => PolicyType.ResetPassword;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
-    public ResetPasswordPolicyValidator(ISsoConfigRepository ssoConfigRepository)
+    public ResetPasswordPolicyEventHandler(ISsoConfigRepository ssoConfigRepository)
     {
         _ssoConfigRepository = ssoConfigRepository;
     }

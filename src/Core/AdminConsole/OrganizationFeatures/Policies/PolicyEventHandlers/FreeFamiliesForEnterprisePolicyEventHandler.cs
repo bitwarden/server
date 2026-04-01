@@ -1,13 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class FreeFamiliesForEnterprisePolicyValidator(
+public class FreeFamiliesForEnterprisePolicyEventHandler(
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
     IMailService mailService,
     IOrganizationRepository organizationRepository)

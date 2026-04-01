@@ -1,12 +1,12 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class UriMatchDefaultPolicyValidatorTests
+public class UriMatchDefaultPolicyEventHandlerTests
 {
-    private readonly UriMatchDefaultPolicyValidator _validator = new();
+    private readonly UriMatchDefaultPolicyEventHandler _validator = new();
 
     [Fact]
     // Test that the Type property returns the correct PolicyType for this validator

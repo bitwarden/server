@@ -1,75 +1,47 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
-using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class SingleOrgPolicyValidator : IPolicyValidationEvent, IOnPolicyPreUpdateEvent
+public class TwoFactorAuthenticationPolicyEventHandler : IOnPolicyPreUpdateEvent
 {
-    public PolicyType Type => PolicyType.SingleOrg;
-    private const string OrganizationNotFoundErrorMessage = "Organization not found.";
-    private const string ClaimedDomainSingleOrganizationRequiredErrorMessage = "The Single organization policy is required for organizations that have enabled domain verification.";
-
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
 
-    public SingleOrgPolicyValidator(
+    public const string NonCompliantMembersWillLoseAccessMessage = "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.";
+
+    public PolicyType Type => PolicyType.TwoFactorAuthentication;
+
+    public TwoFactorAuthenticationPolicyEventHandler(
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
-        ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext,
-        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
-        _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
-        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
-    }
-
-    public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
-    {
-        var policyUpdate = policyRequest.PolicyUpdate;
-
-        if (policyUpdate is not { Enabled: true })
-        {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-
-            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
-
-            if (!string.IsNullOrWhiteSpace(validateDecryptionErrorMessage))
-            {
-                return validateDecryptionErrorMessage;
-            }
-
-            if (await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
-            {
-                return ClaimedDomainSingleOrganizationRequiredErrorMessage;
-            }
-        }
-
-        return string.Empty;
     }
 
     public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
@@ -90,7 +62,7 @@ public class SingleOrgPolicyValidator : IPolicyValidationEvent, IOnPolicyPreUpda
 
         if (organization is null)
         {
-            throw new NotFoundException(OrganizationNotFoundErrorMessage);
+            return;
         }
 
         var currentActiveRevocableOrganizationUsers =
@@ -107,23 +79,40 @@ public class SingleOrgPolicyValidator : IPolicyValidationEvent, IOnPolicyPreUpda
             return;
         }
 
-        var allRevocableUserOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
-            currentActiveRevocableOrganizationUsers.Select(ou => ou.UserId!.Value));
-        var usersToRevoke = currentActiveRevocableOrganizationUsers.Where(ou =>
-            allRevocableUserOrgs.Any(uo => uo.UserId == ou.UserId &&
-                uo.OrganizationId != organizationId &&
-                uo.Status != OrganizationUserStatusType.Invited)).ToList();
+        var revocableUsersWithTwoFactorStatus =
+            await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(currentActiveRevocableOrganizationUsers);
+
+        var nonCompliantUsers = revocableUsersWithTwoFactorStatus
+            .Where(x => !x.twoFactorIsEnabled)
+            .ToArray();
+
+        if (nonCompliantUsers.Length == 0)
+        {
+            return;
+        }
+
+        if (MembersWithNoMasterPasswordWillLoseAccess(currentActiveRevocableOrganizationUsers, nonCompliantUsers))
+        {
+            throw new BadRequestException(NonCompliantMembersWillLoseAccessMessage);
+        }
 
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, usersToRevoke, performedBy));
+            new RevokeOrganizationUsersRequest(organizationId, nonCompliantUsers.Select(x => x.user), performedBy));
 
         if (commandResult.HasErrors)
         {
             throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
         }
 
-        await Task.WhenAll(usersToRevoke.Select(x =>
-            _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
+        await Task.WhenAll(nonCompliantUsers.Select(nonCompliantUser =>
+            _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), nonCompliantUser.user.Email)));
     }
+
+    private static bool MembersWithNoMasterPasswordWillLoseAccess(
+        IEnumerable<OrganizationUserUserDetails> orgUserDetails,
+        IEnumerable<(OrganizationUserUserDetails user, bool isTwoFactorEnabled)> organizationUsersTwoFactorEnabled) =>
+            orgUserDetails.Any(x =>
+                !x.HasMasterPassword && !organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == x.Id)
+                    .isTwoFactorEnabled);
 
 }

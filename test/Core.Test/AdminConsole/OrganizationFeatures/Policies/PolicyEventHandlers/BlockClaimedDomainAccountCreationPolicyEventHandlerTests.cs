@@ -1,9 +1,9 @@
-﻿namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -11,12 +11,12 @@ using NSubstitute;
 using Xunit;
 
 [SutProviderCustomize]
-public class BlockClaimedDomainAccountCreationPolicyValidatorTests
+public class BlockClaimedDomainAccountCreationPolicyEventHandlerTests
 {
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_NoVerifiedDomains_ValidationError(
         [PolicyUpdate(PolicyType.BlockClaimedDomainAccountCreation, true)] PolicyUpdate policyUpdate,
-        SutProvider<BlockClaimedDomainAccountCreationPolicyValidator> sutProvider)
+        SutProvider<BlockClaimedDomainAccountCreationPolicyEventHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
@@ -33,7 +33,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_EnablingPolicy_HasVerifiedDomains_Success(
         [PolicyUpdate(PolicyType.BlockClaimedDomainAccountCreation, true)] PolicyUpdate policyUpdate,
-        SutProvider<BlockClaimedDomainAccountCreationPolicyValidator> sutProvider)
+        SutProvider<BlockClaimedDomainAccountCreationPolicyEventHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
@@ -50,7 +50,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_DisablingPolicy_NoValidation(
         [PolicyUpdate(PolicyType.BlockClaimedDomainAccountCreation, false)] PolicyUpdate policyUpdate,
-        SutProvider<BlockClaimedDomainAccountCreationPolicyValidator> sutProvider)
+        SutProvider<BlockClaimedDomainAccountCreationPolicyEventHandler> sutProvider)
     {
         // Act
         var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
@@ -65,7 +65,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithSavePolicyModel_EnablingPolicy_NoVerifiedDomains_ValidationError(
         [PolicyUpdate(PolicyType.BlockClaimedDomainAccountCreation, true)] PolicyUpdate policyUpdate,
-        SutProvider<BlockClaimedDomainAccountCreationPolicyValidator> sutProvider)
+        SutProvider<BlockClaimedDomainAccountCreationPolicyEventHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
@@ -84,7 +84,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithSavePolicyModel_EnablingPolicy_HasVerifiedDomains_Success(
         [PolicyUpdate(PolicyType.BlockClaimedDomainAccountCreation, true)] PolicyUpdate policyUpdate,
-        SutProvider<BlockClaimedDomainAccountCreationPolicyValidator> sutProvider)
+        SutProvider<BlockClaimedDomainAccountCreationPolicyEventHandler> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
@@ -103,7 +103,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_NoValidation(
         [PolicyUpdate(PolicyType.BlockClaimedDomainAccountCreation, false)] PolicyUpdate policyUpdate,
-        SutProvider<BlockClaimedDomainAccountCreationPolicyValidator> sutProvider)
+        SutProvider<BlockClaimedDomainAccountCreationPolicyEventHandler> sutProvider)
     {
         // Arrange
         var savePolicyModel = new SavePolicyModel(policyUpdate, null, new EmptyMetadataModel());
@@ -122,7 +122,7 @@ public class BlockClaimedDomainAccountCreationPolicyValidatorTests
     public void Type_ReturnsBlockClaimedDomainAccountCreation()
     {
         // Arrange
-        var validator = new BlockClaimedDomainAccountCreationPolicyValidator(null);
+        var validator = new BlockClaimedDomainAccountCreationPolicyEventHandler(null);
 
         // Act & Assert
         Assert.Equal(PolicyType.BlockClaimedDomainAccountCreation, validator.Type);
