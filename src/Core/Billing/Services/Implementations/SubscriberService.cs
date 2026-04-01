@@ -35,8 +35,8 @@ public class SubscriberService(
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately)
+        bool cancelImmediately,
+        OffboardingSurveyResponse offboardingSurveyResponse = null)
     {
         var subscription = await GetSubscriptionOrThrow(subscriber);
 
@@ -50,11 +50,6 @@ public class SubscriberService(
             throw new BillingException();
         }
 
-        var metadata = new Dictionary<string, string>
-        {
-            { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
-        };
-
         List<string> validCancellationReasons = [
             "customer_service",
             "low_quality",
@@ -66,49 +61,58 @@ public class SubscriberService(
             "unused"
         ];
 
+        // Build once from survey — null when survey is absent (system-initiated cancellation)
+        var cancellationDetails = offboardingSurveyResponse != null
+            ? new SubscriptionCancellationDetailsOptions
+            {
+                Comment = offboardingSurveyResponse.Feedback,
+                Feedback = validCancellationReasons.Contains(offboardingSurveyResponse.Reason)
+                    ? offboardingSurveyResponse.Reason
+                    : null
+            }
+            : null;
+
+        var cancellingUserMetadata = offboardingSurveyResponse != null
+            ? new Dictionary<string, string>
+            {
+                { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+            }
+            : null;
+
         if (cancelImmediately)
         {
-            if (subscription.Metadata != null && subscription.Metadata.ContainsKey("organizationId"))
+            if (cancellingUserMetadata != null &&
+                subscription.Metadata != null &&
+                subscription.Metadata.ContainsKey("organizationId"))
             {
                 await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
                 {
-                    Metadata = metadata
+                    Metadata = cancellingUserMetadata
                 });
             }
 
-            var options = new SubscriptionCancelOptions
+            var cancelOptions = new SubscriptionCancelOptions();
+            if (offboardingSurveyResponse != null)
             {
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                }
-            };
-
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
-            {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
+                cancelOptions.CancellationDetails = cancellationDetails;
             }
 
-            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, options);
+            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, cancelOptions);
         }
         else
         {
-            var options = new SubscriptionUpdateOptions
+            var updateOptions = new SubscriptionUpdateOptions
             {
-                CancelAtPeriodEnd = true,
-                CancellationDetails = new SubscriptionCancellationDetailsOptions
-                {
-                    Comment = offboardingSurveyResponse.Feedback
-                },
-                Metadata = metadata
+                CancelAtPeriodEnd = true
             };
 
-            if (validCancellationReasons.Contains(offboardingSurveyResponse.Reason))
+            if (offboardingSurveyResponse != null)
             {
-                options.CancellationDetails.Feedback = offboardingSurveyResponse.Reason;
+                updateOptions.CancellationDetails = cancellationDetails;
+                updateOptions.Metadata = cancellingUserMetadata;
             }
 
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, options);
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
         }
     }
 
