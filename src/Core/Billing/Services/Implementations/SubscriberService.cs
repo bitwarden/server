@@ -316,14 +316,10 @@ public class SubscriberService(
             updateOptions.CancelAtPeriodEnd = true;
         }
 
-        if (cancellationDetails != null)
+        if (updateOptions.CancelAtPeriodEnd == true || cancellationDetails != null)
         {
             updateOptions.CancellationDetails = cancellationDetails;
             updateOptions.Metadata = cancellingUserMetadata;
-        }
-
-        if (updateOptions.CancelAtPeriodEnd == true || cancellationDetails != null)
-        {
             await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
         }
     }
