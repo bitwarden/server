@@ -192,6 +192,7 @@ public static class FeatureFlagKeys
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
     public const string FillAssistTargetingRules = "fill-assist-targeting-rules";
     public const string NotificationUndeterminedCipherScenarioLogic = "undetermined-cipher-scenario-logic";
+    public const string MagnifyMvp = "magnify-mvp";
 
     /* Billing Team */
     public const string TrialPayment = "PM-8163-trial-payment";
