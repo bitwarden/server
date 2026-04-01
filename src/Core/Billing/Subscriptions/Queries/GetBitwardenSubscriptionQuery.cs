@@ -109,6 +109,8 @@ public class GetBitwardenSubscriptionQuery(
 
         var (cartLevelDiscount, productLevelDiscounts) = GetStripeDiscounts(subscription);
 
+        var cartDiscount = cartLevelDiscount ?? await GetSchedulePhase2DiscountAsync(subscription);
+
         var availablePlan = plans.First(plan => plan.Available);
         var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
 
@@ -152,7 +154,7 @@ public class GetBitwardenSubscriptionQuery(
                 AdditionalStorage = additionalStorage
             },
             Cadence = PlanCadenceType.Annually,
-            Discount = cartLevelDiscount,
+            Discount = cartDiscount,
             EstimatedTax = estimatedTax
         };
     }
@@ -242,6 +244,37 @@ public class GetBitwardenSubscriptionQuery(
         }
 
         return (cartLevel.FirstOrDefault(), productLevel);
+    }
+
+    private async Task<BitwardenDiscount?> GetSchedulePhase2DiscountAsync(Subscription subscription)
+    {
+        if (string.IsNullOrEmpty(subscription.ScheduleId))
+        {
+            return null;
+        }
+
+        try
+        {
+            var schedule = await stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
+                new SubscriptionScheduleGetOptions
+                {
+                    Expand = ["phases.discounts.coupon"]
+                });
+
+            if (schedule.Status != SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return null;
+            }
+
+            return schedule.Phases[1].Discounts?.FirstOrDefault()?.Coupon;
+        }
+        catch (StripeException stripeException)
+        {
+            logger.LogError(stripeException,
+                "Failed to retrieve subscription schedule ({ScheduleID}) for discount resolution",
+                subscription.ScheduleId);
+            return null;
+        }
     }
 
     private async Task<Subscription?> FetchSubscriptionAsync(User user)
