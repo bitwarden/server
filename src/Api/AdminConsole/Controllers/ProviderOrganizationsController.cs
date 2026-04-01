@@ -63,7 +63,8 @@ public class ProviderOrganizationsController : Controller
     [HttpPost("add")]
     public async Task Add(Guid providerId, [FromBody] ProviderOrganizationAddRequestModel model)
     {
-        if (!_currentContext.ManageProviderOrganizations(providerId))
+        if (!_currentContext.ManageProviderOrganizations(providerId) ||
+            !await _currentContext.OrganizationOwner(model.OrganizationId))
         {
             throw new NotFoundException();
         }
