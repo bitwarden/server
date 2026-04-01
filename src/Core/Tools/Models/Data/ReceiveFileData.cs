@@ -4,7 +4,7 @@ using static System.Text.Json.Serialization.JsonNumberHandling;
 namespace Bit.Core.Tools.Models.Data;
 
 /// <summary>
-/// A file being sent end-toend encrypted, the file may be uploaded by anonymous users.
+/// Metadata for a single file uploaded to a Receive.
 /// </summary>
 public class ReceiveFileData
 {
@@ -14,11 +14,9 @@ public class ReceiveFileData
     public ReceiveFileData() { }
 
     /// <inheritdoc cref="ReceiveFileData()"/>
-    /// <param name="name">User-provided name of the Receive.</param>
     /// <param name="fileName">Attached file name.</param>
-    public ReceiveFileData(string name, string fileName)
+    public ReceiveFileData(string fileName)
     {
-        Name = name;
         FileName = fileName;
     }
 
@@ -33,16 +31,11 @@ public class ReceiveFileData
     public string? Id { get; set; }
 
     /// <summary>
-    /// User-provided name of the Receive.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
-
-    /// <summary>
     /// Size of the attached file in bytes.
     /// </summary>
     /// <remarks>
-    /// Serialized as a string since JSON (or Javascript)  doesn't support
-    /// full precision for long numbers
+    /// Serialized as a string since JSON (or Javascript) doesn't support
+    /// full precision for long numbers.
     /// </remarks>
     [JsonNumberHandling(WriteAsString | AllowReadingFromString)]
     public long Size { get; set; }
@@ -56,15 +49,15 @@ public class ReceiveFileData
     public string FileName { get; set; } = string.Empty;
 
     /// <summary>
+    /// The file content encryption key, encapsulated (wrapped) with
+    /// the Receive's public key by the uploading client.
+    /// </summary>
+    public string EncapsulatedFileContentEncryptionKey { get; set; } = string.Empty;
+
+    /// <summary>
     /// When true the uploaded file's length was confirmed within
     /// the expected tolerance and below the maximum supported
     /// file size.
     /// </summary>
     public bool Validated { get; set; } = false;
-
-    /// <summary>
-    /// The file encryption key encapsulated with the Receive's public key.
-    /// The owner uses their private key to decapsulate this and decrypt the file.
-    /// </summary>
-    public string EncapsulatedFileEncryptionKey { get; set; } = string.Empty;
 }

@@ -4,12 +4,13 @@ using Bit.Core.Utilities;
 namespace Bit.Api.Tools.Models.Request;
 
 /// <summary>
-/// Request model for anonymous file upload to a Receive.
+/// Request model for uploading a file to a Receive.
+/// Sent by the anonymous uploader alongside the Receive-Secret header.
 /// </summary>
 public class ReceiveFileUploadRequestModel
 {
     /// <summary>
-    /// The encrypted file name.
+    /// Encrypted file name. Encrypted with the per-file content encryption key.
     /// </summary>
     [Required]
     [EncryptedString]
@@ -17,17 +18,11 @@ public class ReceiveFileUploadRequestModel
     public required string FileName { get; set; }
 
     /// <summary>
-    /// Expected file size in bytes.
-    /// </summary>
-    [Required]
-    [Range(1, long.MaxValue)]
-    public long FileLength { get; set; }
-
-    /// <summary>
-    /// The file encryption key encapsulated with the Receive's public key.
+    /// The per-file content encryption key, encapsulated (wrapped)
+    /// with the Receive's public key.
     /// </summary>
     [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public required string EncapsulatedFileEncryptionKey { get; set; }
+    public required string EncapsulatedFileContentEncryptionKey { get; set; }
 }

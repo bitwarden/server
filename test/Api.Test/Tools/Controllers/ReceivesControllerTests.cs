@@ -23,6 +23,12 @@ namespace Bit.Api.Test.Tools.Controllers;
 [SutProviderCustomize]
 public class ReceivesControllerTests
 {
+    private static readonly ReceiveFileUploadRequestModel _uploadRequest = new()
+    {
+        FileName = "encrypted-filename",
+        EncapsulatedFileContentEncryptionKey = "encrypted-key"
+    };
+
     private static void SetupHttpContext(
         SutProvider<ReceivesController> sutProvider,
         string? secretHeaderValue = null)
@@ -34,13 +40,6 @@ public class ReceivesControllerTests
         }
         sutProvider.Sut.ControllerContext = new ControllerContext { HttpContext = context };
     }
-
-    private static ReceiveFileUploadRequestModel CreateUploadRequest() => new()
-    {
-        FileName = "2.encrypted-file-name",
-        FileLength = 1024,
-        EncapsulatedFileEncryptionKey = "2.encapsulated-key"
-    };
 
     [Theory, BitAutoData]
     public async Task GetShared_MissingHeader_ThrowsBadRequest(
@@ -109,7 +108,7 @@ public class ReceivesControllerTests
         SutProvider<ReceivesController> sutProvider)
     {
         receive.Secret = "correct-secret";
-        receive.Data = JsonSerializer.Serialize(new ReceiveFileData("encrypted-name", "file.txt"));
+        receive.Data = JsonSerializer.Serialize(new ReceiveData());
         SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(receiveId)
@@ -133,7 +132,7 @@ public class ReceivesControllerTests
         SetupHttpContext(sutProvider);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, CreateUploadRequest()));
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, _uploadRequest));
     }
 
     [Theory, BitAutoData]
@@ -147,7 +146,7 @@ public class ReceivesControllerTests
             .Returns((Receive?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, CreateUploadRequest()));
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, _uploadRequest));
     }
 
     [Theory, BitAutoData]
@@ -163,7 +162,7 @@ public class ReceivesControllerTests
             .Returns(receive);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, CreateUploadRequest()));
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, _uploadRequest));
     }
 
     [Theory, BitAutoData]
@@ -182,7 +181,7 @@ public class ReceivesControllerTests
             .Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, CreateUploadRequest()));
+            () => sutProvider.Sut.GetReceiveFileUploadUrl(id, _uploadRequest));
     }
 
     [Theory, BitAutoData]
@@ -190,12 +189,9 @@ public class ReceivesControllerTests
         Guid id,
         Receive receive,
         string expectedUrl,
-        string expectedFileId,
         SutProvider<ReceivesController> sutProvider)
     {
         receive.Secret = "correct-secret";
-        receive.Data = JsonSerializer.Serialize(new ReceiveFileData("name", ""));
-        var model = CreateUploadRequest();
         SetupHttpContext(sutProvider, CoreHelpers.Base64UrlEncode(Encoding.UTF8.GetBytes(receive.Secret)));
         sutProvider.GetDependency<IReceiveRepository>()
             .GetByIdAsync(id)
@@ -204,13 +200,12 @@ public class ReceivesControllerTests
             .ReceiveCanBeAccessed(receive)
             .Returns(true);
         sutProvider.GetDependency<IUploadReceiveFileCommand>()
-            .GetUploadUrlAsync(receive, model.FileName, model.FileLength, model.EncapsulatedFileEncryptionKey)
-            .Returns((expectedUrl, expectedFileId));
+            .GetUploadUrlAsync(receive, Arg.Any<string>(), Arg.Any<string>())
+            .Returns((expectedUrl, "generatedFileId"));
 
-        var result = await sutProvider.Sut.GetReceiveFileUploadUrl(id, model);
+        var result = await sutProvider.Sut.GetReceiveFileUploadUrl(id, _uploadRequest);
 
         Assert.IsType<ReceiveFileUploadDataResponseModel>(result);
         Assert.Equal(expectedUrl, result.Url);
-        Assert.Equal(expectedFileId, result.FileId);
     }
 }

@@ -2,8 +2,10 @@
 
 namespace Bit.Api.Tools.Models.Response;
 
-public class ReceiveFileDownloadDataResponseModel(string fileId, string url) : ResponseModel("receiveFileDownload")
+public class ReceiveFileDownloadDataResponseModel : ResponseModel
 {
-    public string Id { get; } = fileId;
-    public string Url { get; } = url;
+    public string Id { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+
+    public ReceiveFileDownloadDataResponseModel() : base("receive-fileDownload") { }
 }
