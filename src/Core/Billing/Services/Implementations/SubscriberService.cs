@@ -11,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -26,6 +27,7 @@ using static StripeConstants;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
@@ -81,38 +83,11 @@ public class SubscriberService(
 
         if (cancelImmediately)
         {
-            if (cancellingUserMetadata != null &&
-                subscription.Metadata != null &&
-                subscription.Metadata.ContainsKey("organizationId"))
-            {
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
-                {
-                    Metadata = cancellingUserMetadata
-                });
-            }
-
-            var cancelOptions = new SubscriptionCancelOptions();
-            if (offboardingSurveyResponse != null)
-            {
-                cancelOptions.CancellationDetails = cancellationDetails;
-            }
-
-            await stripeAdapter.CancelSubscriptionAsync(subscription.Id, cancelOptions);
+            await CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata);
         }
         else
         {
-            var updateOptions = new SubscriptionUpdateOptions
-            {
-                CancelAtPeriodEnd = true
-            };
-
-            if (offboardingSurveyResponse != null)
-            {
-                updateOptions.CancellationDetails = cancellationDetails;
-                updateOptions.Metadata = cancellingUserMetadata;
-            }
-
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
+            await CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata);
         }
     }
 
@@ -249,6 +224,120 @@ public class SubscriberService(
         string? Max30Characters(string? input)
             => input?.Length <= 30 ? input : input?[..30];
     }
+
+    private async Task CancelSubscriptionImmediatelyAsync(
+        Subscription subscription,
+        SubscriptionCancellationDetailsOptions? cancellationDetails,
+        Dictionary<string, string>? cancellingUserMetadata)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var activeSchedule = await GetActiveScheduleAsync(subscription);
+            if (activeSchedule != null)
+            {
+                await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+            }
+        }
+
+        if (cancellingUserMetadata != null &&
+            subscription.Metadata != null &&
+            subscription.Metadata.ContainsKey("organizationId"))
+        {
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+            {
+                Metadata = cancellingUserMetadata
+            });
+        }
+
+        var cancelOptions = new SubscriptionCancelOptions
+        {
+            CancellationDetails = cancellationDetails
+        };
+
+        await stripeAdapter.CancelSubscriptionAsync(subscription.Id, cancelOptions);
+    }
+
+    private async Task CancelSubscriptionAtPeriodEndAsync(
+        Subscription subscription,
+        SubscriptionCancellationDetailsOptions? cancellationDetails,
+        Dictionary<string, string>? cancellingUserMetadata)
+    {
+        var updateOptions = new SubscriptionUpdateOptions();
+
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var activeSchedule = await GetActiveScheduleAsync(subscription);
+
+            if (activeSchedule is { Phases.Count: > 0 })
+            {
+                if (activeSchedule.Phases.Count > 2)
+                {
+                    logger.LogWarning(
+                        "{Service}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1-2), updating to only one phase for cancellation",
+                        GetType().Name, activeSchedule.Id, activeSchedule.Phases.Count);
+                }
+
+                logger.LogInformation(
+                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
+                    GetType().Name, activeSchedule.Id, subscription.Id);
+
+                var phase1 = activeSchedule.Phases[0];
+
+                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                    new SubscriptionScheduleUpdateOptions
+                    {
+                        EndBehavior = SubscriptionScheduleEndBehavior.Cancel,
+                        Phases =
+                        [
+                            new SubscriptionSchedulePhaseOptions
+                            {
+                                StartDate = phase1.StartDate,
+                                EndDate = phase1.EndDate,
+                                Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                                {
+                                    Price = i.PriceId, Quantity = i.Quantity
+                                }).ToList(),
+                                Discounts = phase1.Discounts?.Select(d =>
+                                    new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                                ProrationBehavior = ProrationBehavior.None
+                            }
+                        ]
+                    });
+            }
+            else
+            {
+                // If there are no phases, we can just cancel the subscription at the period end
+                updateOptions.CancelAtPeriodEnd = true;
+            }
+        }
+        else
+        {
+            // If the feature flag is not enabled, we can just cancel the subscription at the period end
+            updateOptions.CancelAtPeriodEnd = true;
+        }
+
+        if (cancellationDetails != null)
+        {
+            updateOptions.CancellationDetails = cancellationDetails;
+            updateOptions.Metadata = cancellingUserMetadata;
+        }
+
+        if (updateOptions.CancelAtPeriodEnd == true || cancellationDetails != null)
+        {
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
+        }
+    }
+
+    private async Task<SubscriptionSchedule?> GetActiveScheduleAsync(Subscription subscription)
+    {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+        return schedules.Data.FirstOrDefault(s =>
+            s.SubscriptionId == subscription.Id &&
+            s.Status == SubscriptionScheduleStatus.Active);
+    }
+
 #nullable disable
 
     public async Task<Customer> GetCustomer(
