@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -31,6 +32,7 @@ public class SubscriberService(
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
     IUserRepository userRepository) : ISubscriberService
@@ -235,18 +237,14 @@ public class SubscriberService(
             var activeSchedule = await GetActiveScheduleAsync(subscription);
             if (activeSchedule != null)
             {
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+                await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
             }
         }
 
-        if (cancellingUserMetadata != null &&
-            subscription.Metadata != null &&
-            subscription.Metadata.ContainsKey("organizationId"))
+        if (cancellingUserMetadata != null && subscription.Metadata.ContainsKey(MetadataKeys.OrganizationId))
         {
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
-            {
-                Metadata = cancellingUserMetadata
-            });
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                new SubscriptionUpdateOptions { Metadata = cancellingUserMetadata });
         }
 
         var cancelOptions = new SubscriptionCancelOptions
@@ -303,25 +301,29 @@ public class SubscriberService(
                             }
                         ]
                     });
+
+                // Update the subscription with the cancellation details so that we can reference it when the schedule ends the subscription at the end of the period.
+                if (cancellationDetails != null)
+                {
+                    updateOptions.CancellationDetails = cancellationDetails;
+                    updateOptions.Metadata = cancellingUserMetadata;
+                    await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
+                }
+
+                return;
             }
-            else
-            {
-                // If there are no phases, we can just cancel the subscription at the period end
-                updateOptions.CancelAtPeriodEnd = true;
-            }
-        }
-        else
-        {
-            // If the feature flag is not enabled, we can just cancel the subscription at the period end
-            updateOptions.CancelAtPeriodEnd = true;
         }
 
-        if (updateOptions.CancelAtPeriodEnd == true || cancellationDetails != null)
+        updateOptions.CancelAtPeriodEnd = true;
+
+        if (cancellationDetails != null)
         {
             updateOptions.CancellationDetails = cancellationDetails;
             updateOptions.Metadata = cancellingUserMetadata;
-            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
         }
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
+
     }
 
     private async Task<SubscriptionSchedule?> GetActiveScheduleAsync(Subscription subscription)

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
@@ -297,7 +298,8 @@ public class SubscriberServiceTests
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
-        await stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(scheduleId, null);
+        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .Received(1).Release("cus_1", subscriptionId);
         await stripeAdapter.Received(1).CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
     }
 
@@ -325,8 +327,8 @@ public class SubscriberServiceTests
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
             .ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>());
-        await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .ReleaseSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleReleaseOptions>());
+        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .DidNotReceiveWithAnyArgs().Release(Arg.Any<string>(), Arg.Any<string>());
         await stripeAdapter.Received(1).CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
     }
 
@@ -354,8 +356,8 @@ public class SubscriberServiceTests
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
-        await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .ReleaseSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleReleaseOptions>());
+        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .DidNotReceiveWithAnyArgs().Release(Arg.Any<string>(), Arg.Any<string>());
         await stripeAdapter.Received(1).CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
     }
 

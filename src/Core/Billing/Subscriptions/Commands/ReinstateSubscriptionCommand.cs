@@ -48,9 +48,10 @@ public class ReinstateSubscriptionCommand(
             {
                 if (activeSchedule.Phases.Count > 1)
                 {
-                    _logger.LogWarning(
+                    _logger.LogError(
                         "{Command}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1 after cancellation), updating to add Phase 2",
                         CommandName, activeSchedule.Id, activeSchedule.Phases.Count);
+                    return DefaultConflict;
                 }
 
                 _logger.LogInformation(
