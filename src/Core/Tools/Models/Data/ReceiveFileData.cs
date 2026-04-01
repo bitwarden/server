@@ -60,6 +60,11 @@ public class ReceiveFileData
     /// the expected tolerance and below the maximum supported
     /// file size.
     /// </summary>
-    public bool Validated { get; set; } = false;  // equivalent Send prop defaults to true
-                                                  // TODO: test both true and false default
+    public bool Validated { get; set; } = false;
+
+    /// <summary>
+    /// The file encryption key encapsulated with the Receive's public key.
+    /// The owner uses their private key to decapsulate this and decrypt the file.
+    /// </summary>
+    public string EncapsulatedFileEncryptionKey { get; set; } = string.Empty;
 }

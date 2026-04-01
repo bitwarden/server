@@ -1,11 +1,12 @@
-﻿using Bit.Api.Models.Response;
+﻿using System.Text.Json;
+using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Exceptions;
-using Bit.Core.Platform.Push;
 using Bit.Core.Services;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
 using Bit.Core.Tools.ReceiveFeatures.Queries.Interfaces;
 using Bit.Core.Tools.Repositories;
@@ -22,11 +23,7 @@ public class ReceivesController : Controller
     private readonly IReceiveRepository _receiveRepository;
     private readonly IReceiveAuthorizationService _receiveAuthorizationService;
     private readonly IReceiveFileStorageService _receiveFileStorageService;
-    private readonly IReceiveValidationService _receiveValidationService;
     private readonly IUserService _userService;
-    private readonly ILogger<ReceivesController> _logger;
-    private readonly IFeatureService _featureService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly ICreateReceiveCommand _createReceiveCommand;
     private readonly IUpdateReceiveCommand _updateReceiveCommand;
     private readonly IUploadReceiveFileCommand _uploadReceiveFileCommand;
@@ -37,11 +34,7 @@ public class ReceivesController : Controller
         IReceiveRepository receiveRepository,
         IReceiveAuthorizationService receiveAuthorizationService,
         IReceiveFileStorageService receiveFileStorageService,
-        IReceiveValidationService receiveValidationService,
         IUserService userService,
-        ILogger<ReceivesController> logger,
-        IFeatureService featureService,
-        IPushNotificationService pushNotificationService,
         ICreateReceiveCommand createReceiveCommand,
         IUpdateReceiveCommand updateReceiveCommand,
         IUploadReceiveFileCommand uploadReceiveFileCommand,
@@ -52,11 +45,7 @@ public class ReceivesController : Controller
         _receiveRepository = receiveRepository;
         _receiveAuthorizationService = receiveAuthorizationService;
         _receiveFileStorageService = receiveFileStorageService;
-        _receiveValidationService = receiveValidationService;
         _userService = userService;
-        _logger = logger;
-        _featureService = featureService;
-        _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _createReceiveCommand = createReceiveCommand;
         _updateReceiveCommand = updateReceiveCommand;
@@ -90,18 +79,74 @@ public class ReceivesController : Controller
         return new SharedReceiveResponseModel(receive);
     }
 
+    /// <summary>
+    /// Anonymous endpoint: request an upload URL for a file.
+    /// The caller must provide the Receive-Secret header and file metadata in the body.
+    /// </summary>
     [AllowAnonymous]
     [HttpPost("{id}/file")]
-    public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(Guid id)
+    public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(
+        Guid id, [FromBody] ReceiveFileUploadRequestModel model)
     {
         var receive = await GetReceiveWithSecretValidationAsync(id);
-        var url = await _uploadReceiveFileCommand.GetUploadUrlAsync(receive);
+
+        var (url, fileId) = await _uploadReceiveFileCommand.GetUploadUrlAsync(
+            receive, model.FileName, model.FileLength, model.EncapsulatedFileEncryptionKey);
+
         if (url == null)
         {
             throw new BadRequestException("Invalid request.");
         }
 
-        return new ReceiveFileUploadDataResponseModel(url, _receiveFileStorageService.FileUploadType);
+        return new ReceiveFileUploadDataResponseModel(url, fileId, _receiveFileStorageService.FileUploadType);
+    }
+
+    /// <summary>
+    /// Anonymous endpoint: confirm that a file upload completed successfully.
+    /// Called after the client uploads directly to the storage SAS URL.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("{id}/file/{fileId}/validate")]
+    public async Task PostFileValidation(Guid id, string fileId)
+    {
+        var receive = await GetReceiveWithSecretValidationAsync(id);
+
+        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
+        if (fileData?.Id != fileId)
+        {
+            throw new BadRequestException("Invalid file ID.");
+        }
+
+        if (fileData.Validated)
+        {
+            return; // already validated, idempotent
+        }
+
+        var valid = await _uploadReceiveFileCommand.ValidateFileAsync(receive);
+        if (!valid)
+        {
+            throw new BadRequestException("File validation failed. The uploaded file size did not match expectations.");
+        }
+    }
+
+    /// <summary>
+    /// Authenticated endpoint: get a download URL for a file attached to a Receive the user owns.
+    /// </summary>
+    [Authorize(Policies.Application)]
+    [HttpGet("{id}/file/{fileId}")]
+    public async Task<ReceiveFileDownloadDataResponseModel> GetFileDownloadUrl(string id, string fileId)
+    {
+        var receiveId = new Guid(id);
+        var receive = await _receiveOwnerQuery.Get(receiveId, User);
+
+        var fileData = JsonSerializer.Deserialize<ReceiveFileData>(receive.Data);
+        if (fileData?.Id != fileId || !fileData.Validated)
+        {
+            throw new NotFoundException();
+        }
+
+        var url = await _receiveFileStorageService.GetReceiveFileDownloadUrlAsync(receive, fileId);
+        return new ReceiveFileDownloadDataResponseModel(fileId, url);
     }
 
     private async Task<Core.Tools.Entities.Receive> GetReceiveWithSecretValidationAsync(Guid id)
