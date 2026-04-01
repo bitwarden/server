@@ -417,7 +417,8 @@ public class SubscriberServiceTests
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
                 o.EndBehavior == StripeConstants.SubscriptionScheduleEndBehavior.Cancel &&
                 o.Phases.Count == 1 &&
-                o.Phases[0].Items.Any(i => i.Price == "old-price")));
+                o.Phases[0].Items.Any(i => i.Price == "old-price") &&
+                o.Phases[0].Metadata == null));
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
             .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
@@ -488,13 +489,11 @@ public class SubscriberServiceTests
         await stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(scheduleId,
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
                 o.EndBehavior == StripeConstants.SubscriptionScheduleEndBehavior.Cancel &&
-                o.Phases.Count == 1));
+                o.Phases.Count == 1 &&
+                o.Phases[0].Metadata["cancellingUserId"] == userId.ToString()));
 
-        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
-            Arg.Is<SubscriptionUpdateOptions>(o =>
-                o.CancellationDetails.Comment == "Too pricey" &&
-                o.CancellationDetails.Feedback == "too_expensive" &&
-                o.Metadata["cancellingUserId"] == userId.ToString()));
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
     }
 
     [Theory, BitAutoData]

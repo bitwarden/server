@@ -297,19 +297,11 @@ public class SubscriberService(
                                 }).ToList(),
                                 Discounts = phase1.Discounts?.Select(d =>
                                     new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                                ProrationBehavior = ProrationBehavior.None
+                                ProrationBehavior = ProrationBehavior.None,
+                                Metadata = cancellingUserMetadata
                             }
                         ]
                     });
-
-                // Update the subscription with the cancellation details so that we can reference it when the schedule ends the subscription at the end of the period.
-                if (cancellationDetails != null)
-                {
-                    updateOptions.CancellationDetails = cancellationDetails;
-                    updateOptions.Metadata = cancellingUserMetadata;
-                    await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
-                }
-
                 return;
             }
         }
