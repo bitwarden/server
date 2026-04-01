@@ -32,6 +32,7 @@ public class ReceivesController : Controller
     private readonly IUploadReceiveFileCommand _uploadReceiveFileCommand;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IReceiveOwnerQuery _receiveOwnerQuery;
+    private readonly IGetReceiveFileDownloadQuery _getReceiveFileDownloadQuery;
 
     public ReceivesController(
         IReceiveRepository receiveRepository,
@@ -46,7 +47,8 @@ public class ReceivesController : Controller
         IUpdateReceiveCommand updateReceiveCommand,
         IUploadReceiveFileCommand uploadReceiveFileCommand,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
-        IReceiveOwnerQuery receiveOwnerQuery
+        IReceiveOwnerQuery receiveOwnerQuery,
+        IGetReceiveFileDownloadQuery getReceiveFileDownloadQuery
     )
     {
         _receiveRepository = receiveRepository;
@@ -62,6 +64,7 @@ public class ReceivesController : Controller
         _updateReceiveCommand = updateReceiveCommand;
         _uploadReceiveFileCommand = uploadReceiveFileCommand;
         _receiveOwnerQuery = receiveOwnerQuery;
+        _getReceiveFileDownloadQuery = getReceiveFileDownloadQuery;
     }
 
     [Authorize(Policies.Application)]
@@ -82,6 +85,14 @@ public class ReceivesController : Controller
         return new ListResponseModel<ReceiveResponseModel>(responses);
     }
 
+    [Authorize(Policies.Application)]
+    [HttpGet("{id}/file/{fileId}")]
+    public async Task<ReceiveFileDownloadDataResponseModel> GetFileDownloadData(Guid id, string fileId)
+    {
+        var url = await _getReceiveFileDownloadQuery.GetDownloadUrlAsync(id, fileId, User);
+        return new ReceiveFileDownloadDataResponseModel { Id = fileId, Url = url };
+    }
+
     [AllowAnonymous]
     [HttpGet("{id}/shared")]
     public async Task<SharedReceiveResponseModel> GetShared(Guid id)
@@ -92,10 +103,12 @@ public class ReceivesController : Controller
 
     [AllowAnonymous]
     [HttpPost("{id}/file")]
-    public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(Guid id)
+    public async Task<ReceiveFileUploadDataResponseModel> GetReceiveFileUploadUrl(
+        Guid id, [FromBody] ReceiveFileUploadRequestModel request)
     {
         var receive = await GetReceiveWithSecretValidationAsync(id);
-        var url = await _uploadReceiveFileCommand.GetUploadUrlAsync(receive);
+        var (url, fileId) = await _uploadReceiveFileCommand.GetUploadUrlAsync(
+            receive, request.FileName, request.EncapsulatedFileContentEncryptionKey);
         if (url == null)
         {
             throw new BadRequestException("Invalid request.");

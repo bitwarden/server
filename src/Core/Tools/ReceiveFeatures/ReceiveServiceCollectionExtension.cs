@@ -17,7 +17,7 @@ public static class ReceiveServiceCollectionExtension
         services.AddScoped<IUploadReceiveFileCommand, UploadReceiveFileCommand>();
         services.AddScoped<IReceiveAuthorizationService, ReceiveAuthorizationService>();
         services.AddScoped<IReceiveValidationService, ReceiveValidationService>();
-        services.AddScoped<IUpdateReceiveCommand, UpdateReceiveCommand>();
         services.AddScoped<IReceiveOwnerQuery, ReceiveOwnerQuery>();
+        services.AddScoped<IGetReceiveFileDownloadQuery, GetReceiveFileDownloadQuery>();
     }
 }

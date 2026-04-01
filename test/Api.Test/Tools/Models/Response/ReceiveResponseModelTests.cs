@@ -2,7 +2,6 @@
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Models.Data;
-using Bit.Core.Utilities;
 using Xunit;
 
 namespace Bit.Api.Test.Tools.Models.Response;
@@ -10,13 +9,14 @@ namespace Bit.Api.Test.Tools.Models.Response;
 public class ReceiveResponseModelTests
 {
     [Fact]
-    public void Constructor_UnpacksNameFromData()
+    public void Constructor_MapsNameFromEntity()
     {
-        var fileData = new ReceiveFileData("encrypted_name", "encrypted_file.txt")
+        var receiveData = new ReceiveData
         {
-            Id = "file_id_123",
-            Size = 2048,
-            Validated = true
+            Files = new List<ReceiveFileData>
+            {
+                new() { Id = "file_id_123", FileName = "encrypted_file.txt", Size = 2048, Validated = true }
+            }
         };
 
         var receive = new Receive
@@ -24,7 +24,7 @@ public class ReceiveResponseModelTests
             Id = Guid.NewGuid(),
             UserId = Guid.NewGuid(),
             Name = "encrypted_name",
-            Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull),
+            Data = JsonSerializer.Serialize(receiveData),
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
             ScekWrappedPublicKey = "encrypted_public_key",
@@ -37,13 +37,15 @@ public class ReceiveResponseModelTests
     }
 
     [Fact]
-    public void Constructor_PopulatesFileModel()
+    public void Constructor_PopulatesFilesArray()
     {
-        var fileData = new ReceiveFileData("encrypted_name", "encrypted_file.txt")
+        var receiveData = new ReceiveData
         {
-            Id = "file_id_123",
-            Size = 2048,
-            Validated = true
+            Files = new List<ReceiveFileData>
+            {
+                new() { Id = "file_id_123", FileName = "encrypted_file.txt", Size = 2048, Validated = true },
+                new() { Id = "file_id_456", FileName = "another_file.txt", Size = 4096, Validated = true }
+            }
         };
 
         var receive = new Receive
@@ -51,7 +53,7 @@ public class ReceiveResponseModelTests
             Id = Guid.NewGuid(),
             UserId = Guid.NewGuid(),
             Name = "encrypted_name",
-            Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull),
+            Data = JsonSerializer.Serialize(receiveData),
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
             ScekWrappedPublicKey = "encrypted_public_key",
@@ -60,16 +62,42 @@ public class ReceiveResponseModelTests
 
         var response = new ReceiveResponseModel(receive);
 
-        Assert.NotNull(response.File);
-        Assert.Equal("file_id_123", response.File.Id);
-        Assert.Equal("encrypted_file.txt", response.File.FileName);
-        Assert.Equal(2048, response.File.Size);
+        Assert.NotNull(response.Files);
+        var files = response.Files.ToList();
+        Assert.Equal(2, files.Count);
+        Assert.Equal("file_id_123", files[0].Id);
+        Assert.Equal("encrypted_file.txt", files[0].FileName);
+        Assert.Equal(2048, files[0].Size);
+        Assert.Equal("file_id_456", files[1].Id);
+    }
+
+    [Fact]
+    public void Constructor_EmptyFiles_ReturnsEmptyCollection()
+    {
+        var receiveData = new ReceiveData();
+
+        var receive = new Receive
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Name = "encrypted_name",
+            Data = JsonSerializer.Serialize(receiveData),
+            UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
+            UserKeyWrappedPrivateKey = "encrypted_private_key",
+            ScekWrappedPublicKey = "encrypted_public_key",
+            Secret = "test_secret",
+        };
+
+        var response = new ReceiveResponseModel(receive);
+
+        Assert.NotNull(response.Files);
+        Assert.Empty(response.Files);
     }
 
     [Fact]
     public void Constructor_MapsAllEntityProperties()
     {
-        var fileData = new ReceiveFileData("encrypted_name", "encrypted_file.txt");
+        var receiveData = new ReceiveData();
         var receiveId = Guid.NewGuid();
         var expirationDate = DateTime.UtcNow.AddDays(7);
 
@@ -77,7 +105,7 @@ public class ReceiveResponseModelTests
         {
             Id = receiveId,
             UserId = Guid.NewGuid(),
-            Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull),
+            Data = JsonSerializer.Serialize(receiveData),
             Name = "encrypted_name",
             UserKeyWrappedSharedContentEncryptionKey = "encrypted_scek",
             UserKeyWrappedPrivateKey = "encrypted_private_key",
@@ -97,5 +125,4 @@ public class ReceiveResponseModelTests
         Assert.Equal(5, response.UploadCount);
         Assert.Equal(expirationDate, response.ExpirationDate);
     }
-
 }
