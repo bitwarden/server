@@ -114,7 +114,7 @@ public class ReceivesController : Controller
             throw new BadRequestException("Invalid request.");
         }
 
-        return new ReceiveFileUploadDataResponseModel(url, _receiveFileStorageService.FileUploadType);
+        return new ReceiveFileUploadDataResponseModel(url, fileId, _receiveFileStorageService.FileUploadType);
     }
 
     [AllowAnonymous]
