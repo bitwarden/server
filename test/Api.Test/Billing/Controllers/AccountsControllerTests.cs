@@ -28,7 +28,6 @@ public class AccountsControllerTests : IDisposable
     private const string TestMilestone2CouponId = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount;
 
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
     private readonly IStripePaymentService _paymentService;
     private readonly ILicensingService _licensingService;
     private readonly GlobalSettings _globalSettings;
@@ -37,14 +36,13 @@ public class AccountsControllerTests : IDisposable
     public AccountsControllerTests()
     {
         _userService = Substitute.For<IUserService>();
-        _featureService = Substitute.For<IFeatureService>();
         _paymentService = Substitute.For<IStripePaymentService>();
         _licensingService = Substitute.For<ILicensingService>();
         _globalSettings = new GlobalSettings { SelfHosted = false };
 
         _sut = new AccountsController(
             _userService,
-            _featureService,
+            Substitute.For<IFeatureService>(),
             _licensingService,
             Substitute.For<IReinstateSubscriptionCommand>()
         );
@@ -57,7 +55,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task GetSubscriptionAsync_WhenFeatureFlagEnabled_IncludesDiscount(
+    public async Task GetSubscriptionAsync_IncludesDiscount(
         User user,
         SubscriptionInfo subscriptionInfo,
         UserLicense license)
@@ -78,7 +76,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -93,44 +90,6 @@ public class AccountsControllerTests : IDisposable
         Assert.NotNull(result.CustomerDiscount);
         Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(20m, result.CustomerDiscount.PercentOff);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task GetSubscriptionAsync_WhenFeatureFlagDisabled_ExcludesDiscount(
-        User user,
-        SubscriptionInfo subscriptionInfo,
-        UserLicense license)
-    {
-        // Arrange
-        subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount
-        {
-            Id = TestMilestone2CouponId,
-            Active = true,
-            PercentOff = 20m,
-            AmountOff = null,
-            AppliesTo = new List<string> { "product1" }
-        };
-
-        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
-        _sut.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
-        };
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(false);
-        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
-        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
-        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
-
-        user.Gateway = GatewayType.Stripe; // User has payment gateway
-
-        // Act
-        var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.CustomerDiscount); // Should be null when feature flag is disabled
     }
 
     [Theory]
@@ -156,7 +115,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -240,7 +198,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -291,7 +248,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -318,51 +274,6 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(2, result.CustomerDiscount.AppliesTo.Count());
         Assert.Contains("prod_premium", result.CustomerDiscount.AppliesTo);
         Assert.Contains("prod_families", result.CustomerDiscount.AppliesTo);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task GetSubscriptionAsync_FullPipeline_WithFeatureFlagToggle_ControlsVisibility(
-        User user,
-        UserLicense license)
-    {
-        // Arrange - Create Stripe Discount
-        var stripeDiscount = new Discount
-        {
-            Coupon = new Coupon
-            {
-                Id = TestMilestone2CouponId,
-                PercentOff = 20m
-            },
-            End = null
-        };
-
-        var billingDiscount = new SubscriptionInfo.BillingCustomerDiscount(stripeDiscount);
-        var subscriptionInfo = new SubscriptionInfo
-        {
-            CustomerDiscount = billingDiscount
-        };
-
-        var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
-        _sut.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
-        };
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
-        _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
-        _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
-        user.Gateway = GatewayType.Stripe;
-
-        // Act & Assert - Feature flag ENABLED
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        var resultWithFlag = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
-        Assert.NotNull(resultWithFlag.CustomerDiscount);
-
-        // Act & Assert - Feature flag DISABLED
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(false);
-        var resultWithoutFlag = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
-        Assert.Null(resultWithoutFlag.CustomerDiscount);
     }
 
     [Theory]
@@ -413,7 +324,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -423,7 +333,7 @@ public class AccountsControllerTests : IDisposable
         // This exercises the complete pipeline:
         // - Retrieves subscriptionInfo from paymentService (with discount from Stripe)
         // - Maps through SubscriptionInfo.BillingCustomerDiscount (already done above)
-        // - Filters in SubscriptionResponseModel constructor (based on feature flag, coupon ID, active status)
+        // - Filters in SubscriptionResponseModel constructor (based on coupon ID, active status)
         // - Returns via AccountsController
         var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
 
@@ -436,7 +346,6 @@ public class AccountsControllerTests : IDisposable
 
         // Verify SubscriptionInfo.BillingCustomerDiscount → SubscriptionResponseModel.BillingCustomerDiscount filtering
         // The filter should pass because:
-        // - includeMilestone2Discount = true (feature flag enabled)
         // - subscription.CustomerDiscount != null
         // - subscription.CustomerDiscount.Id == Milestone2SubscriptionDiscount
         // - subscription.CustomerDiscount.Active = true
@@ -508,7 +417,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -560,7 +468,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -614,7 +521,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -662,7 +568,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -731,7 +636,6 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _paymentService.GetSubscriptionAsync(user).Returns(subscriptionInfo);
         _userService.GenerateLicenseAsync(user, subscriptionInfo).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
@@ -764,9 +668,9 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task GetSubscriptionAsync_SelfHosted_WithDiscountFlagEnabled_NeverIncludesDiscount(User user)
+    public async Task GetSubscriptionAsync_SelfHosted_NeverIncludesDiscount(User user)
     {
-        // Arrange - Self-hosted user with discount flag enabled (should still return null)
+        // Arrange - Self-hosted user (should still return null)
         var selfHostedSettings = new GlobalSettings { SelfHosted = true };
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
         _sut.ControllerContext = new ControllerContext
@@ -774,12 +678,11 @@ public class AccountsControllerTests : IDisposable
             HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true); // Flag enabled
 
         // Act
         var result = await _sut.GetSubscriptionAsync(selfHostedSettings, _paymentService);
 
-        // Assert - Should never include discount for self-hosted, even with flag enabled
+        // Assert - Should never include discount for self-hosted
         Assert.NotNull(result);
         Assert.Null(result.CustomerDiscount);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
@@ -787,11 +690,11 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task GetSubscriptionAsync_NullGateway_WithDiscountFlagEnabled_NeverIncludesDiscount(
+    public async Task GetSubscriptionAsync_NullGateway_NeverIncludesDiscount(
         User user,
         UserLicense license)
     {
-        // Arrange - User with null gateway and discount flag enabled (should still return null)
+        // Arrange - User with null gateway (should still return null)
         user.Gateway = null; // No gateway configured
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity());
         _sut.ControllerContext = new ControllerContext
@@ -801,12 +704,11 @@ public class AccountsControllerTests : IDisposable
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         _userService.GenerateLicenseAsync(user).Returns(license);
         _licensingService.GetClaimsPrincipalFromLicense(license).Returns(new ClaimsPrincipal());
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true); // Flag enabled
 
         // Act
         var result = await _sut.GetSubscriptionAsync(_globalSettings, _paymentService);
 
-        // Assert - Should never include discount when no gateway, even with flag enabled
+        // Assert - Should never include discount when no gateway
         Assert.NotNull(result);
         Assert.Null(result.CustomerDiscount);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
