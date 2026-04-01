@@ -16,7 +16,7 @@ namespace Bit.Core.Test.Billing.Pricing;
 [SutProviderCustomize]
 public class PricingClientTests
 {
-    #region GetLookupKey Tests (via GetPlan)
+    #region GetPlan Lookup Key Tests
 
     [Fact]
     public async Task GetPlan_WithFamiliesAnnually2025_UsesFamilies2025LookupKey()
@@ -49,10 +49,6 @@ public class PricingClientTests
         Assert.Equal(PlanType.FamiliesAnnually2025, result.Type);
         mockHttp.VerifyNoOutstandingExpectation();
     }
-
-    #endregion
-
-    #region Additional GetPlan Lookup Key Tests
 
     [Fact]
     public async Task GetPlan_WithFamiliesAnnually2025_ReturnsFamiliesAnnually2025PlanType()
