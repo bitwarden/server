@@ -45,6 +45,13 @@ BEGIN
     WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
 
+    -- Delete user preferences
+    DELETE
+    FROM
+        [dbo].[UserPreferences]
+    WHERE
+        [UserId] IN (SELECT * FROM @ParsedIds)
+
     -- Delete folders
     DELETE
     FROM

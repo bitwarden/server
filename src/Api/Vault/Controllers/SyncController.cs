@@ -48,6 +48,7 @@ public class SyncController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly IUserPreferencesRepository _userPreferencesRepository;
 
     public SyncController(
         IUserService userService,
@@ -65,7 +66,8 @@ public class SyncController : Controller
         IApplicationCacheService applicationCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IUserPreferencesRepository userPreferencesRepository)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -83,6 +85,7 @@ public class SyncController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userAccountKeysQuery = userAccountKeysQuery;
+        _userPreferencesRepository = userPreferencesRepository;
     }
 
     [HttpGet("")]
@@ -136,9 +139,13 @@ public class SyncController : Controller
             userAccountKeys = await _userAccountKeysQuery.Run(user);
         }
 
+        var userPreferences = _featureService.IsEnabled(FeatureFlagKeys.SyncUserPreferences)
+            ? await _userPreferencesRepository.GetByUserIdAsync(user.Id)
+            : null;
+
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials, userPreferences);
         return response;
     }
 

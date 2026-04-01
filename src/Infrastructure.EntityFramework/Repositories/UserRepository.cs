@@ -426,6 +426,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => f.UserId == user.Id));
             dbContext.AuthRequests.RemoveRange(dbContext.AuthRequests.Where(s => s.UserId == user.Id));
             dbContext.Devices.RemoveRange(dbContext.Devices.Where(d => d.UserId == user.Id));
+            dbContext.UserPreferences.RemoveRange(dbContext.UserPreferences.Where(up => up.UserId == user.Id));
             var collectionUsers = from cu in dbContext.CollectionUsers
                                   join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
                                   where ou.UserId == user.Id
@@ -475,6 +476,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.Folders.Where(f => targetIds.Contains(f.UserId)).ExecuteDeleteAsync();
             await dbContext.AuthRequests.Where(a => targetIds.Contains(a.UserId)).ExecuteDeleteAsync();
             await dbContext.Devices.Where(d => targetIds.Contains(d.UserId)).ExecuteDeleteAsync();
+            await dbContext.UserPreferences.Where(up => targetIds.Contains(up.UserId)).ExecuteDeleteAsync();
             await dbContext.CollectionUsers
                 .Join(dbContext.OrganizationUsers,
                       cu => cu.OrganizationUserId,
