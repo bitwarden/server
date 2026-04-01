@@ -5,6 +5,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.ReceiveFeatures.Commands.Interfaces;
 using Bit.Core.Tools.ReceiveFeatures.Queries.Interfaces;
@@ -22,6 +23,7 @@ public class ReceivesController : Controller
     private readonly IReceiveRepository _receiveRepository;
     private readonly IReceiveAuthorizationService _receiveAuthorizationService;
     private readonly IReceiveFileStorageService _receiveFileStorageService;
+    private readonly IUserRepository _userRepository;
     private readonly IReceiveValidationService _receiveValidationService;
     private readonly IUserService _userService;
     private readonly ILogger<ReceivesController> _logger;
@@ -48,6 +50,7 @@ public class ReceivesController : Controller
         IUploadReceiveFileCommand uploadReceiveFileCommand,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IReceiveOwnerQuery receiveOwnerQuery,
+        IUserRepository userRepository,
         IGetReceiveFileDownloadQuery getReceiveFileDownloadQuery
     )
     {
@@ -65,6 +68,7 @@ public class ReceivesController : Controller
         _uploadReceiveFileCommand = uploadReceiveFileCommand;
         _receiveOwnerQuery = receiveOwnerQuery;
         _getReceiveFileDownloadQuery = getReceiveFileDownloadQuery;
+        _userRepository = userRepository;
     }
 
     [Authorize(Policies.Application)]
@@ -98,7 +102,8 @@ public class ReceivesController : Controller
     public async Task<SharedReceiveResponseModel> GetShared(Guid id)
     {
         var receive = await GetReceiveWithSecretValidationAsync(id);
-        return new SharedReceiveResponseModel(receive);
+        var user = await _userRepository.GetByIdAsync(receive.UserId) ?? throw new NotFoundException();
+        return new SharedReceiveResponseModel(receive, user.Email);
     }
 
     [AllowAnonymous]
