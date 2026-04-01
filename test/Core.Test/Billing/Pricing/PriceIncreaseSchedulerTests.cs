@@ -417,6 +417,271 @@ public class PriceIncreaseSchedulerTests
         await Assert.ThrowsAsync<StripeException>(() => sut.Release("cus_1", "sub_1"));
     }
 
+    [Fact]
+    public async Task ResolvePhase2Async_FeatureFlagOff_ReturnsNull()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(CreateSubscription("sub_1", "cus_1"));
+
+        Assert.Null(result);
+        await _pricingClient.DidNotReceiveWithAnyArgs().ListPremiumPlans();
+    }
+
+    [Fact]
+    public async Task ResolvePhase2Async_PremiumSubscription_ReturnsPhase2WithDiscount()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("premium-old-seat", 1));
+        subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(subscription);
+
+        Assert.NotNull(result);
+        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Single(result.Items);
+        Assert.Equal("premium-new-seat", result.Items[0].Price);
+        Assert.Equal(1, result.Items[0].Quantity);
+        Assert.NotNull(result.Discounts);
+        Assert.Single(result.Discounts);
+        Assert.Equal(CouponIDs.Milestone2SubscriptionDiscount, result.Discounts[0].Coupon);
+        Assert.Equal(ProrationBehavior.None, result.ProrationBehavior);
+    }
+
+    [Fact]
+    public async Task ResolvePhase2Async_PremiumSubscriptionWithStorage_IncludesStorageInPhase2()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("premium-old-seat", 1),
+            CreateSubscriptionItem("premium-old-storage", 3));
+        subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(subscription);
+
+        Assert.NotNull(result);
+        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Contains(result.Items, i => i.Price == "premium-new-seat" && i.Quantity == 1);
+        Assert.Contains(result.Items, i => i.Price == "premium-new-storage" && i.Quantity == 3);
+        Assert.NotNull(result.Discounts);
+        Assert.Single(result.Discounts);
+        Assert.Equal(CouponIDs.Milestone2SubscriptionDiscount, result.Discounts[0].Coupon);
+        Assert.Equal(ProrationBehavior.None, result.ProrationBehavior);
+    }
+
+    [Fact]
+    public async Task ResolvePhase2Async_Families2019Subscription_ReturnsPhase2WithMilestone3Discount()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        var currentPeriodEnd = DateTime.UtcNow.AddYears(1);
+        var orgMetadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", orgMetadata,
+            CreateSubscriptionItem(families2019.PasswordManager.StripePlanId, 1));
+        subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(subscription);
+
+        Assert.NotNull(result);
+        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Single(result.Items);
+        Assert.Equal(familiesTarget.PasswordManager.StripePlanId, result.Items[0].Price);
+        Assert.Equal(1, result.Items[0].Quantity);
+        Assert.NotNull(result.Discounts);
+        Assert.Single(result.Discounts);
+        Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.Discounts[0].Coupon);
+        Assert.Equal(ProrationBehavior.None, result.ProrationBehavior);
+    }
+
+    [Fact]
+    public async Task ResolvePhase2Async_Families2025Subscription_ReturnsPhase2WithoutDiscount()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        var currentPeriodEnd = DateTime.UtcNow.AddYears(1);
+        var orgMetadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", orgMetadata,
+            CreateSubscriptionItem(families2025.PasswordManager.StripePlanId, 1));
+        subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(subscription);
+
+        Assert.NotNull(result);
+        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Single(result.Items);
+        Assert.Equal(familiesTarget.PasswordManager.StripePlanId, result.Items[0].Price);
+        Assert.Equal(1, result.Items[0].Quantity);
+        Assert.Null(result.Discounts);
+        Assert.Equal(ProrationBehavior.None, result.ProrationBehavior);
+    }
+
+    [Fact]
+    public async Task ResolvePhase2Async_Families2019SubscriptionWithStorage_IncludesStorageInPhase2()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _pricingClient.ListPremiumPlans().Returns([]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        var currentPeriodEnd = DateTime.UtcNow.AddYears(1);
+        var orgMetadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", orgMetadata,
+            CreateSubscriptionItem(families2019.PasswordManager.StripePlanId, 1),
+            CreateSubscriptionItem(families2019.PasswordManager.StripeStoragePlanId, 2));
+        subscription.Items.Data[0].CurrentPeriodEnd = currentPeriodEnd;
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(subscription);
+
+        Assert.NotNull(result);
+        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Contains(result.Items, i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1);
+        Assert.Contains(result.Items, i => i.Price == familiesTarget.PasswordManager.StripeStoragePlanId && i.Quantity == 2);
+        Assert.NotNull(result.Discounts);
+        Assert.Single(result.Discounts);
+        Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.Discounts[0].Coupon);
+        Assert.Equal(ProrationBehavior.None, result.ProrationBehavior);
+    }
+
+    [Fact]
+    public async Task ResolvePhase2Async_ProviderSubscription_ReturnsNull()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var providerMetadata = new Dictionary<string, string> { { "providerId", Guid.NewGuid().ToString() } };
+        var subscription = CreateSubscription("sub_1", "cus_1", providerMetadata,
+            CreateSubscriptionItem("some-price-id", 1));
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(subscription);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ResolvePhase2Async_UnknownPlan_ReturnsNull()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        var oldPremium = new PremiumPlan
+        {
+            Name = "Premium (Old)",
+            Available = false,
+            Seat = new Purchasable { StripePriceId = "premium-old-seat", Price = 10, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-old-storage", Price = 4, Provided = 1 }
+        };
+
+        var newPremium = new PremiumPlan
+        {
+            Name = "Premium",
+            Available = true,
+            Seat = new Purchasable { StripePriceId = "premium-new-seat", Price = 15, Provided = 1 },
+            Storage = new Purchasable { StripePriceId = "premium-new-storage", Price = 4, Provided = 1 }
+        };
+
+        _pricingClient.ListPremiumPlans().Returns([oldPremium, newPremium]);
+
+        var families2019 = MockPlans.Get(PlanType.FamiliesAnnually2019);
+        var families2025 = MockPlans.Get(PlanType.FamiliesAnnually2025);
+        var familiesTarget = MockPlans.Get(PlanType.FamiliesAnnually);
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesTarget);
+
+        // Subscription with a price that doesn't match any known plan
+        var subscription = CreateSubscription("sub_1", "cus_1",
+            CreateSubscriptionItem("unknown-price-id", 1));
+
+        var sut = CreateSut();
+
+        var result = await sut.ResolvePhase2Async(subscription);
+
+        Assert.Null(result);
+    }
+
     private static Subscription CreateSubscription(string id, string customerId, params SubscriptionItem[] items) =>
         CreateSubscription(id, customerId, new Dictionary<string, string> { { "userId", Guid.NewGuid().ToString() } }, items);
 

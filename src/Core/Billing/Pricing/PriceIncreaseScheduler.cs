@@ -165,8 +165,13 @@ public class PriceIncreaseScheduler(
         }
     }
 
-    private async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription)
+    public async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription)
     {
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            return null;
+        }
+
         try
         {
             SubscriberId subscriberId = subscription;
