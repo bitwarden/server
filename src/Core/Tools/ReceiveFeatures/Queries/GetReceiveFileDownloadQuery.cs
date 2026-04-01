@@ -39,7 +39,7 @@ public class GetReceiveFileDownloadQuery : IGetReceiveFileDownloadQuery
 
         var receiveData = JsonSerializer.Deserialize<ReceiveData>(receive.Data);
         var file = receiveData?.Files.FirstOrDefault(f => f.Id == fileId);
-        if (file == null)
+        if (file == null || !file.Validated)
         {
             throw new NotFoundException();
         }
