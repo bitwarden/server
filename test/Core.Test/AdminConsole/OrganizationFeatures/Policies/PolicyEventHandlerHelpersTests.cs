@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
