@@ -3,13 +3,13 @@
 namespace Bit.SeederUtility.Commands;
 
 /// <summary>
-/// CLI argument model for the seed command.
+/// CLI argument model for the preset command.
 /// Supports loading presets from embedded resources.
 /// </summary>
-public class SeedArgs : IArgumentModel
+public class PresetArgs : IArgumentModel
 {
-    [Option("preset", Description = "Name of embedded preset to load")]
-    public string? Preset { get; set; }
+    [Option("name", Description = "Name of embedded preset to load")]
+    public string? Name { get; set; }
 
     [Option('l', "list", Description = "List all available presets and fixtures")]
     public bool List { get; set; }
@@ -30,9 +30,9 @@ public class SeedArgs : IArgumentModel
             return;
         }
 
-        if (string.IsNullOrEmpty(Preset))
+        if (string.IsNullOrEmpty(Name))
         {
-            throw new ArgumentException("--preset must be specified. Use --list to see available presets.");
+            throw new ArgumentException("--name must be specified. Use --list to see available presets.");
         }
 
         if (KdfIterations.HasValue && KdfIterations.Value < 5_000)

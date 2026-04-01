@@ -1,12 +1,15 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.Billing.Services;
 using Bit.Core.Settings;
 using Stripe;
+using Stripe.Checkout;
 
 namespace Bit.Billing.Services.Implementations;
 
 public class StripeEventService(
     GlobalSettings globalSettings,
-    IStripeFacade stripeFacade)
+    IStripeFacade stripeFacade,
+    IStripeAdapter stripeAdapter)
     : IStripeEventService
 {
     public async Task<Charge> GetCharge(Event stripeEvent, bool fresh = false, List<string>? expand = null)
@@ -82,6 +85,17 @@ public class StripeEventService(
         return await stripeFacade.GetSubscription(subscription.Id, new SubscriptionGetOptions { Expand = expand });
     }
 
+    public async Task<Session> GetCheckoutSession(Event stripeEvent, bool fresh = false, List<string>? expand = null)
+    {
+        var checkoutSession = Extract<Session>(stripeEvent);
+        if (!fresh)
+        {
+            return checkoutSession;
+        }
+
+        return await stripeAdapter.GetCheckoutSessionAsync(checkoutSession.Id, new SessionGetOptions { Expand = expand });
+    }
+
     public async Task<bool> ValidateCloudRegion(Event stripeEvent)
     {
         if (EventTypeAppliesToAllRegions(stripeEvent.Type))
@@ -116,6 +130,9 @@ public class StripeEventService(
 
             HandledStripeWebhook.SetupIntentSucceeded =>
                 (await GetSetupIntent(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+
+            HandledStripeWebhook.CheckoutSessionCompleted =>
+                    (await GetCheckoutSession(stripeEvent, true, customerExpansion)).Customer?.Metadata,
 
             _ => null
         };
