@@ -463,7 +463,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ResolvePhase2Async(subscription);
 
         Assert.NotNull(result);
-        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
         Assert.Single(result.Items);
         Assert.Equal("premium-new-seat", result.Items[0].Price);
         Assert.Equal(1, result.Items[0].Quantity);
@@ -507,7 +507,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ResolvePhase2Async(subscription);
 
         Assert.NotNull(result);
-        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
         Assert.Equal(2, result.Items.Count);
         Assert.Contains(result.Items, i => i.Price == "premium-new-seat" && i.Quantity == 1);
         Assert.Contains(result.Items, i => i.Price == "premium-new-storage" && i.Quantity == 3);
@@ -543,7 +543,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ResolvePhase2Async(subscription);
 
         Assert.NotNull(result);
-        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
         Assert.Single(result.Items);
         Assert.Equal(familiesTarget.PasswordManager.StripePlanId, result.Items[0].Price);
         Assert.Equal(1, result.Items[0].Quantity);
@@ -579,7 +579,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ResolvePhase2Async(subscription);
 
         Assert.NotNull(result);
-        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
         Assert.Single(result.Items);
         Assert.Equal(familiesTarget.PasswordManager.StripePlanId, result.Items[0].Price);
         Assert.Equal(1, result.Items[0].Quantity);
@@ -614,7 +614,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ResolvePhase2Async(subscription);
 
         Assert.NotNull(result);
-        Assert.Equal(currentPeriodEnd, result.StartDate);
+        Assert.Equal(currentPeriodEnd, (DateTime)result.StartDate);
         Assert.Equal(2, result.Items.Count);
         Assert.Contains(result.Items, i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1);
         Assert.Contains(result.Items, i => i.Price == familiesTarget.PasswordManager.StripeStoragePlanId && i.Quantity == 2);
