@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Payment.Clients;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.DiscountAudienceFilters;
 using Bit.Core.Billing.Services.Implementations;
@@ -17,6 +18,7 @@ public static class Registrations
         services.AddTransient<ICreateBitPayInvoiceForCreditCommand, CreateBitPayInvoiceForCreditCommand>();
         services.AddTransient<IUpdateBillingAddressCommand, UpdateBillingAddressCommand>();
         services.AddTransient<IUpdatePaymentMethodCommand, UpdatePaymentMethodCommand>();
+        services.AddTransient<ICreatePremiumCheckoutSessionCommand, CreatePremiumCheckoutSessionCommand>();
 
         // Discount services
         services.AddScoped<IDiscountAudienceFilter, AllUsersFilter>();

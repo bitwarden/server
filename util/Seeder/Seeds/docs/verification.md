@@ -8,7 +8,7 @@ The fastest way to verify a preset is to let Claude Code run the queries and com
 
 1. Seed the preset:
    ```bash
-   dotnet run -- seed --preset scale.md-balanced-sterling-cooper --mangle
+   dotnet run -- preset --name scale.md-balanced-sterling-cooper --mangle
    ```
 2. Paste the seeder output (with Org ID) into Claude Code and ask:
    > Run Q1-Q8 against Org ID {id} and compare results to the Sterling Cooper expected values in verification.md
@@ -321,7 +321,7 @@ FROM (
 ### 1. Power-Law Distribution
 
 ```bash
-dotnet run -- seed --preset validation.density-modeling-power-law-test --mangle
+dotnet run -- preset --name validation.density-modeling-power-law-test --mangle
 ```
 
 | Check             | Expected                                                                               |
@@ -335,7 +335,7 @@ dotnet run -- seed --preset validation.density-modeling-power-law-test --mangle
 ### 2. MegaGroup Distribution
 
 ```bash
-dotnet run -- seed --preset validation.density-modeling-mega-group-test --mangle
+dotnet run -- preset --name validation.density-modeling-mega-group-test --mangle
 ```
 
 | Check            | Expected                                                                 |
@@ -348,7 +348,7 @@ dotnet run -- seed --preset validation.density-modeling-mega-group-test --mangle
 ### 3. Empty Groups
 
 ```bash
-dotnet run -- seed --preset validation.density-modeling-empty-groups-test --mangle
+dotnet run -- preset --name validation.density-modeling-empty-groups-test --mangle
 ```
 
 | Check             | Expected                                                                |
@@ -360,7 +360,7 @@ dotnet run -- seed --preset validation.density-modeling-empty-groups-test --mang
 ### 4. No Density (Baseline)
 
 ```bash
-dotnet run -- seed --preset validation.density-modeling-no-density-test --mangle
+dotnet run -- preset --name validation.density-modeling-no-density-test --mangle
 ```
 
 | Check            | Expected                                                                                 |

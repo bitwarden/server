@@ -47,6 +47,23 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Create a Default API key for the organization (required for OAuth client_credentials).
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <returns>The builder for fluent chaining</returns>
+    public static RecipeBuilder AddOrganizationApiKey(this RecipeBuilder builder)
+    {
+        if (!builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Organization API key requires an organization. Call UseOrganization() or CreateOrganization() first.");
+        }
+
+        builder.AddStep(_ => new CreateOrganizationApiKeyStep());
+        return builder;
+    }
+
+    /// <summary>
     /// Add an organization owner user with admin privileges.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
@@ -55,6 +72,23 @@ public static class RecipeBuilderExtensions
     {
         builder.HasOwner = true;
         builder.AddStep(_ => new CreateOwnerStep());
+        return builder;
+    }
+
+    /// <summary>
+    /// Create a standalone individual user with no organization affiliation.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="email">User email address (domain is extracted for context)</param>
+    /// <param name="premium">Whether the account has premium status</param>
+    /// <param name="maxStorageGb">Optional max storage override in GB</param>
+    /// <returns>The builder for fluent chaining</returns>
+    public static RecipeBuilder CreateIndividualUser(
+        this RecipeBuilder builder, string email, bool premium, short maxStorageGb)
+    {
+        builder.HasIndividualUser = true;
+        builder.HasOwner = true;
+        builder.AddStep(_ => new CreateIndividualUserStep(email, premium, maxStorageGb));
         return builder;
     }
 
@@ -189,7 +223,7 @@ public static class RecipeBuilderExtensions
     /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
     public static RecipeBuilder AddFolders(this RecipeBuilder builder, DensityProfile? density = null)
     {
-        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
                 "Folders require users. Call UseRoster() or AddUsers() first.");
@@ -197,6 +231,26 @@ public static class RecipeBuilderExtensions
 
         builder.HasFolders = true;
         builder.AddStep(_ => new GenerateFoldersStep(density));
+        return builder;
+    }
+
+    /// <summary>
+    /// Create folders with explicit names for the current user.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="folderNames">List of folder display names (must be unique, case-insensitive)</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no users exist</exception>
+    public static RecipeBuilder AddNamedFolders(this RecipeBuilder builder, List<string> folderNames)
+    {
+        if (!builder.HasIndividualUser)
+        {
+            throw new InvalidOperationException(
+                "Named folders require an individual user. Call CreateIndividualUser() first.");
+        }
+
+        builder.HasNamedFolders = true;
+        builder.AddStep(_ => new CreateNamedFoldersStep(folderNames));
         return builder;
     }
 
@@ -216,7 +270,27 @@ public static class RecipeBuilderExtensions
         }
 
         builder.HasFixtureCiphers = true;
-        builder.AddStep(_ => new CreateCiphersStep(fixture, skipCollectionAssignment));
+        builder.AddStep(_ => CreateCiphersStep.ForOrganization(fixture, skipCollectionAssignment));
+        return builder;
+    }
+
+    /// <summary>
+    /// Use ciphers from embedded fixtures, encrypted with the individual user's symmetric key.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="fixture">Cipher fixture name without extension</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <exception cref="InvalidOperationException">Thrown when AddCiphers() was already called</exception>
+    public static RecipeBuilder UsePersonalVaultCiphers(this RecipeBuilder builder, string fixture)
+    {
+        if (builder.HasGeneratedCiphers)
+        {
+            throw new InvalidOperationException(
+                "Cannot call UsePersonalVaultCiphers() after AddCiphers(). Choose one cipher source.");
+        }
+
+        builder.HasFixtureCiphers = true;
+        builder.AddStep(_ => CreateCiphersStep.ForPersonalVault(fixture));
         return builder;
     }
 
@@ -289,10 +363,10 @@ public static class RecipeBuilderExtensions
     /// <exception cref="InvalidOperationException">Thrown when no roster users or fixture ciphers exist</exception>
     internal static RecipeBuilder CreateCipherFolders(this RecipeBuilder builder, List<SeedFolderAssignment> assignments)
     {
-        if (!builder.HasRosterUsers)
+        if (!builder.HasRosterUsers && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
-                "Folder assignments require roster users. Call UseRoster() first.");
+                "Folder assignments require users. Call UseRoster() or CreateIndividualUser() first.");
         }
 
         // HasFixtureCiphers is mutually exclusive with HasGeneratedCiphers (enforced by UseCiphers/AddCiphers)
@@ -315,10 +389,10 @@ public static class RecipeBuilderExtensions
     /// <exception cref="InvalidOperationException">Thrown when no roster users or fixture ciphers exist</exception>
     internal static RecipeBuilder CreateCipherFavorites(this RecipeBuilder builder, List<SeedFavoriteAssignment> assignments)
     {
-        if (!builder.HasRosterUsers)
+        if (!builder.HasRosterUsers && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
-                "Favorite assignments require roster users. Call UseRoster() first.");
+                "Favorite assignments require users. Call UseRoster() or CreateIndividualUser() first.");
         }
 
         // HasFixtureCiphers is mutually exclusive with HasGeneratedCiphers (enforced by UseCiphers/AddCiphers)
@@ -348,7 +422,7 @@ public static class RecipeBuilderExtensions
         Distribution<PasswordStrength>? pwDist = null,
         DensityProfile? density = null)
     {
-        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers)
+        if (!builder.HasRosterUsers && !builder.HasGeneratedUsers && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
                 "Personal ciphers require users. Call UseRoster() or AddUsers() first.");
@@ -367,10 +441,10 @@ public static class RecipeBuilderExtensions
     /// <exception cref="InvalidOperationException">Thrown when required steps missing or dependencies violated</exception>
     public static RecipeBuilder Validate(this RecipeBuilder builder)
     {
-        if (!builder.HasOrg)
+        if (!builder.HasOrg && !builder.HasIndividualUser)
         {
             throw new InvalidOperationException(
-                "Organization is required. Call UseOrganization() or CreateOrganization().");
+                "Organization or individual user is required. Call UseOrganization(), CreateOrganization(), or CreateIndividualUser().");
         }
 
         if (!builder.HasOwner && !builder.HasRosterOwner)
@@ -397,7 +471,7 @@ public static class RecipeBuilderExtensions
                 "Folders require a generator. Call WithGenerator() first.");
         }
 
-        if (builder.HasCipherFolderAssignment && !builder.HasFolders)
+        if (builder.HasCipherFolderAssignment && !builder.HasFolders && !builder.HasNamedFolders)
         {
             throw new InvalidOperationException(
                 "Cipher folder assignment requires folders. Set 'folders: true' or call AddFolders() first.");

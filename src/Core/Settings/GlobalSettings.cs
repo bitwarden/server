@@ -706,6 +706,8 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApiKey { get; set; }
         public int MaxNetworkRetries { get; set; } = 2;
+        public string PremiumCheckoutSuccessUrl { get; set; }
+        public string PremiumCheckoutCancelUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

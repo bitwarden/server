@@ -85,6 +85,7 @@ public static class UserServiceCollectionExtensions
                 StartTwoFactorWebAuthnRegistrationCommand>();
         services.AddScoped<IDeleteTwoFactorWebAuthnCredentialCommand, DeleteTwoFactorWebAuthnCredentialCommand>();
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
+        services.AddScoped<IResetUserTwoFactorCommand, ResetUserTwoFactorCommand>();
     }
 
     private static void AddSsoQueries(this IServiceCollection services)

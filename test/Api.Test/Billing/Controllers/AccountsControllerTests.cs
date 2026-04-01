@@ -1,9 +1,11 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Billing.Controllers;
 using Bit.Core;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -14,6 +16,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
+using OneOf.Types;
 using Stripe;
 using Xunit;
 
@@ -42,7 +45,8 @@ public class AccountsControllerTests : IDisposable
         _sut = new AccountsController(
             _userService,
             _featureService,
-            _licensingService
+            _licensingService,
+            Substitute.For<IReinstateSubscriptionCommand>()
         );
     }
 
@@ -806,5 +810,67 @@ public class AccountsControllerTests : IDisposable
         Assert.NotNull(result);
         Assert.Null(result.CustomerDiscount);
         await _paymentService.DidNotReceive().GetSubscriptionAsync(Arg.Any<User>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostReinstateAsync_WhenFlagEnabled_CallsReinstateCommand(User user)
+    {
+        // Arrange
+        var reinstateCommand = Substitute.For<IReinstateSubscriptionCommand>();
+        var featureService = Substitute.For<IFeatureService>();
+        var userService = Substitute.For<IUserService>();
+
+        featureService
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        reinstateCommand
+            .Run(user)
+            .Returns(new BillingCommandResult<None>(new None()));
+
+        var sut = new AccountsController(userService, featureService, Substitute.For<ILicensingService>(), reinstateCommand);
+        sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal() }
+        };
+
+        // Act
+        await sut.PostReinstateAsync();
+
+        // Assert
+        await reinstateCommand.Received(1).Run(user);
+        await userService.DidNotReceiveWithAnyArgs().ReinstatePremiumAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostReinstateAsync_WhenFlagDisabled_CallsLegacyUserService(User user)
+    {
+        // Arrange
+        var reinstateCommand = Substitute.For<IReinstateSubscriptionCommand>();
+        var featureService = Substitute.For<IFeatureService>();
+        var userService = Substitute.For<IUserService>();
+
+        featureService
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+
+        var sut = new AccountsController(userService, featureService, Substitute.For<ILicensingService>(), reinstateCommand);
+        sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal() }
+        };
+
+        // Act
+        await sut.PostReinstateAsync();
+
+        // Assert
+        await userService.Received(1).ReinstatePremiumAsync(user);
+        await reinstateCommand.DidNotReceiveWithAnyArgs().Run(default);
     }
 }

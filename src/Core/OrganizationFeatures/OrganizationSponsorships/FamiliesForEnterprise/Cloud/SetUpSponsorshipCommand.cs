@@ -21,6 +21,7 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
 
     public SetUpSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -28,7 +29,8 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         IStripePaymentService paymentService,
         IFeatureService featureService,
         IPricingClient pricingClient,
-        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
+        IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand,
+        IPriceIncreaseScheduler priceIncreaseScheduler)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -36,6 +38,7 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         _featureService = featureService;
         _pricingClient = pricingClient;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
+        _priceIncreaseScheduler = priceIncreaseScheduler;
     }
 
     public async Task SetUpSponsorshipAsync(OrganizationSponsorship sponsorship,
@@ -73,6 +76,14 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         if (sponsoredOrganizationProductTier != requiredSponsoredProductType)
         {
             throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
+        }
+
+        if (!string.IsNullOrEmpty(sponsoredOrganization.GatewaySubscriptionId)
+            && !string.IsNullOrEmpty(sponsoredOrganization.GatewayCustomerId))
+        {
+            await _priceIncreaseScheduler.Release(
+                sponsoredOrganization.GatewayCustomerId,
+                sponsoredOrganization.GatewaySubscriptionId);
         }
 
         if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))

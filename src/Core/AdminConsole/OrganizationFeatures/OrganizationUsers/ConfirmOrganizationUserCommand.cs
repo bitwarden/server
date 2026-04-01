@@ -2,14 +2,12 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -31,7 +29,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IPolicyService _policyService;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
@@ -48,7 +45,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
-        IPolicyService policyService,
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
@@ -64,7 +60,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
-        _policyService = policyService;
         _deviceRepository = deviceRepository;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
@@ -237,26 +232,14 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId, bool userTwoFactorEnabled)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        if (userTwoFactorEnabled)
         {
-            if (userTwoFactorEnabled)
-            {
-                // If the user has two-step login enabled, we skip checking the 2FA policy
-                return;
-            }
-
-            var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
-            {
-                throw new BadRequestException("User does not have two-step login enabled.");
-            }
-
+            // If the user has two-step login enabled, we skip checking the 2FA policy
             return;
         }
 
-        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
-            .Any(p => p.OrganizationId == organizationId);
-        if (orgRequiresTwoFactor && !userTwoFactorEnabled)
+        var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }

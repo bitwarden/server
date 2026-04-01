@@ -60,7 +60,7 @@ public class TwoFactorAuthenticationValidator(
         var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)).ToList();
         if (orgs.Count > 0)
         {
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+            var orgAbilities = await GetOrganizationAbilitiesAsync(orgs);
             var twoFactorOrgs = orgs.Where(o => OrgUsing2fa(orgAbilities, o.Id));
             if (twoFactorOrgs.Any())
             {
@@ -71,6 +71,13 @@ public class TwoFactorAuthenticationValidator(
         }
 
         return new Tuple<bool, Organization>(individualRequired || firstEnabledOrg != null, firstEnabledOrg);
+    }
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(List<CurrentContextOrganization> orgs)
+    {
+        var organizationIds = orgs.Select(organization => organization.Id).ToList();
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(organizationIds);
+        return orgAbilities;
     }
 
     public async Task<Dictionary<string, object>> BuildTwoFactorResultAsync(User user, Organization organization)

@@ -1,13 +1,11 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -26,7 +24,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPolicyService _policyService;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -40,7 +37,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     public AcceptOrgUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
-        IPolicyService policyService,
         IMailService mailService,
         IUserRepository userRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
@@ -53,7 +49,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _policyService = policyService;
         _mailService = mailService;
         _userRepository = userRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
@@ -226,31 +221,16 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        if (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
-            if (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
-            {
-                // If the user has two-step login enabled, we skip checking the 2FA policy
-                return;
-            }
-
-            var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
-            {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-            }
-
+            // If the user has two-step login enabled, we skip checking the 2FA policy
             return;
         }
 
-        if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+        var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
         {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId))
-            {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-            }
+            throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
         }
     }
 

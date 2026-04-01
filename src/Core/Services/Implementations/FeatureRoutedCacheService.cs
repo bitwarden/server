@@ -29,6 +29,7 @@ public class FeatureRoutedCacheService(
     {
         var allProviderAbilities = await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
         return providerIds
+            .Distinct()
             .Where(allProviderAbilities.ContainsKey)
             .ToDictionary(id => id, id => allProviderAbilities[id]);
     }
@@ -37,6 +38,7 @@ public class FeatureRoutedCacheService(
     {
         var allOrganizationAbilities = await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
         return orgIds
+            .Distinct()
             .Where(allOrganizationAbilities.ContainsKey)
             .ToDictionary(id => id, id => allOrganizationAbilities[id]);
     }

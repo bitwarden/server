@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -113,37 +112,7 @@ public class AcceptOrgUserCommandTests
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
-        // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-
-        // Organization they are trying to join requires 2FA
-        var twoFactorPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication,
-                OrganizationUserStatusType.Invited)
-            .Returns(Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
-                new List<OrganizationUserPolicyDetails> { twoFactorPolicy }));
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
-
-        Assert.Equal("You cannot join this organization until you enable two-step login on your user account.",
-            exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_UserWithout2FAJoining2FARequiredOrg_ThrowsBadRequest(
-        SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
-    {
-        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-
-        // Enable the PolicyRequirements feature flag for the new 2FA path
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
 
         // No SingleOrg policy
         sutProvider.GetDependency<IPolicyRequirementQuery>()
@@ -172,7 +141,7 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_UserWith2FAJoining2FARequiredOrg_Succeeds(
+    public async Task AcceptOrgUserAsync_UserWith2FAJoining2FARequiredOrg_Succeeds(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -210,7 +179,7 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserAsync_WithPolicyRequirementsEnabled_UserJoiningOrgWithout2FARequirement_Succeeds(
+    public async Task AcceptOrgUserAsync_UserJoiningOrgWithout2FARequirement_Succeeds(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -939,11 +908,6 @@ public class AcceptOrgUserCommandTests
             .GetManyByUserAsync(user.Id)
             .Returns([]);
 
-        // Org does not require 2FA
-        sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited)
-            .Returns([]);
-
         // Provide at least 1 admin to test email functionality
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)
@@ -958,6 +922,11 @@ public class AcceptOrgUserCommandTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new SingleOrganizationPolicyRequirement([]));
+
+        // No 2FA policy by default
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
 
         // Auto-confirm enforcement query returns valid by default (no restrictions)
         var request = new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user);

@@ -7,7 +7,7 @@ Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to 
 Test specific Bitwarden features. Fixture-based data for deterministic results.
 
 ```bash
-dotnet run -- seed --preset features.{name} --mangle
+dotnet run -- preset --name features.{name} --mangle
 ```
 
 | Preset            | Features Enabled                                   | Org Fixture      | Roster       | Ciphers   |
@@ -23,7 +23,7 @@ dotnet run -- seed --preset features.{name} --mangle
 Known users, groups, collections, and permissions you can point a client to.
 
 ```bash
-dotnet run -- seed --preset qa.{name} --mangle
+dotnet run -- preset --name qa.{name} --mangle
 ```
 
 | Preset                            | Org Fixture         | Roster                 | Ciphers                | Use Case                                    |
@@ -44,7 +44,7 @@ dotnet run -- seed --preset qa.{name} --mangle
 Production-calibrated presets with density modeling. Realistic relationship patterns (group membership, collection fan-out, permission distribution, cipher assignment) across 5 tiers.
 
 ```bash
-dotnet run -- seed --preset scale.{name} --mangle
+dotnet run -- preset --name scale.{name} --mangle
 ```
 
 | Preset                          | Tier | Archetype                   | Users  | Groups | Collections | Ciphers |
@@ -68,12 +68,29 @@ dotnet run -- seed --preset scale.{name} --mangle
 
 For per-preset expected values and verification queries, see [verification.md](verification.md).
 
+## Individual
+
+Individual user accounts with no organization. Useful for testing personal vault features.
+
+```bash
+dotnet run -- preset --name individual.{name} --mangle
+```
+
+| Preset        | Account Type | Folders                              | Ciphers                      | Assignments              |
+| ------------- | ------------ | ------------------------------------ | ---------------------------- | ------------------------ |
+| free          | Free         | —                                    | 0                            | —                        |
+| premium       | Premium (1GB)| —                                    | 0                            | —                        |
+
+`free` and `premium` create accounts with no vault data — useful for testing account setup flows. Cipher count is set to 0 (TBD).
+
+**Login emails:** `free` uses `freeuser@individual.example`; `premium` uses `premuser@individual.example`.
+
 ## Validation
 
 Algorithm verification for seeder development. Not for general use.
 
 ```bash
-dotnet run -- seed --preset validation.{name} --mangle
+dotnet run -- preset --name validation.{name} --mangle
 ```
 
 | Preset                             | Tests                                                         |

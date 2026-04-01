@@ -19,6 +19,9 @@ public class UpdateOrganizationSubscriptionCommandTests
 
     public UpdateOrganizationSubscriptionCommandTests()
     {
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
         _command = new UpdateOrganizationSubscriptionCommand(
             Substitute.For<ILogger<UpdateOrganizationSubscriptionCommand>>(),
             _stripeAdapter);
@@ -966,6 +969,170 @@ public class UpdateOrganizationSubscriptionCommandTests
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
+    [Fact]
+    public async Task Run_AddItem_WithSchedule_UpdatesBothPhases()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [("price_seats", 5)], [("price_seats_new", 5)]);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 3)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
+                opts.Phases.Count == 2 &&
+                opts.Phases[0].ProrationBehavior == ProrationBehavior.CreateProrations &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 3) &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_seats" && i.Quantity == 5) &&
+                opts.Phases[1].ProrationBehavior == ProrationBehavior.None &&
+                opts.Phases[1].Items.Any(i => i.Price == "price_storage" && i.Quantity == 3) &&
+                opts.Phases[1].Items.Any(i => i.Price == "price_seats_new" && i.Quantity == 5)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_UpdateItemQuantity_WithSchedule_UpdatesBothPhases()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5), ("price_storage", "si_2", 3)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(
+            subscription.Id,
+            [("price_seats", 5), ("price_storage", 3)],
+            [("price_seats_new", 5), ("price_storage", 3)]);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_storage", 7)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 7) &&
+                opts.Phases[1].Items.Any(i => i.Price == "price_storage" && i.Quantity == 7)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_UpdateItemQuantity_Zero_WithSchedule_RemovesFromBothPhases()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5), ("price_storage", "si_2", 3)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(
+            subscription.Id,
+            [("price_seats", 5), ("price_storage", 3)],
+            [("price_seats_new", 5), ("price_storage", 3)]);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_storage", 0)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items.All(i => i.Price != "price_storage") &&
+                opts.Phases[1].Items.All(i => i.Price != "price_storage")));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_WithSchedule_SkipsInvoiceProcessing()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(
+            collectionMethod: CollectionMethod.SendInvoice,
+            items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [("price_seats", 5)], [("price_seats_new", 5)]);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 1)],
+            ChargeImmediately = true
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeAdapter.DidNotReceive().GetInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceGetOptions>());
+        await _stripeAdapter.DidNotReceive().FinalizeInvoiceAsync(Arg.Any<string>(), Arg.Any<InvoiceFinalizeOptions>());
+        await _stripeAdapter.DidNotReceive().SendInvoiceAsync(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Run_AddItem_WithSinglePhaseSchedule_UpdatesOnlyPhase1()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [("price_seats", 5)]);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new AddItem("price_storage", 3)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.EndBehavior == SubscriptionScheduleEndBehavior.Cancel &&
+                opts.Phases.Count == 1 &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 3) &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_seats" && i.Quantity == 5)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
     private static Organization CreateOrganization() => new()
     {
         Id = Guid.NewGuid(),
@@ -1018,6 +1185,46 @@ public class UpdateOrganizationSubscriptionCommandTests
         _stripeAdapter
             .UpdateSubscriptionAsync(subscription.Id, Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
+    }
+
+    private static SubscriptionSchedule CreateMockSchedule(
+        string subscriptionId,
+        (string priceId, long quantity)[] phase1Items,
+        (string priceId, long quantity)[]? phase2Items = null)
+    {
+        var phases = new List<SubscriptionSchedulePhase>
+        {
+            new()
+            {
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddYears(1),
+                Items = phase1Items.Select(i =>
+                    new SubscriptionSchedulePhaseItem { PriceId = i.priceId, Quantity = i.quantity }).ToList(),
+                ProrationBehavior = ProrationBehavior.None
+            }
+        };
+
+        if (phase2Items != null)
+        {
+            phases.Add(new SubscriptionSchedulePhase
+            {
+                StartDate = DateTime.UtcNow.AddYears(1),
+                Items = phase2Items.Select(i =>
+                    new SubscriptionSchedulePhaseItem { PriceId = i.priceId, Quantity = i.quantity }).ToList(),
+                ProrationBehavior = ProrationBehavior.None
+            });
+        }
+
+        return new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscriptionId,
+            Status = SubscriptionScheduleStatus.Active,
+            EndBehavior = phase2Items != null
+                ? SubscriptionScheduleEndBehavior.Release
+                : SubscriptionScheduleEndBehavior.Cancel,
+            Phases = phases
+        };
     }
 
 }

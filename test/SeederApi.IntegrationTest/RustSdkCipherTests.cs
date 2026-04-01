@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.RustSDK;
 using Bit.Seeder.Attributes;
@@ -158,14 +159,20 @@ public sealed class RustSdkCipherTests
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var orgId = Guid.NewGuid();
 
-        var cipher = LoginCipherSeeder.Create(
-            orgKeys.Key,
-            name: "GitHub Account",
-            organizationId: orgId,
-            username: "developer@example.com",
-            password: "SecureP@ss123!",
-            uri: "https://github.com",
-            notes: "My development account");
+        var cipher = LoginCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Login,
+            Name = "GitHub Account",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId,
+            Notes = "My development account",
+            Login = new LoginViewDto
+            {
+                Username = "developer@example.com",
+                Password = "SecureP@ss123!",
+                Uris = [new LoginUriViewDto { Uri = "https://github.com" }]
+            }
+        });
 
         Assert.Equal(orgId, cipher.OrganizationId);
         Assert.Null(cipher.UserId);
@@ -195,17 +202,24 @@ public sealed class RustSdkCipherTests
     {
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
-        var cipher = LoginCipherSeeder.Create(
-            orgKeys.Key,
-            name: "API Service",
-            organizationId: Guid.NewGuid(),
-            username: "service@example.com",
-            password: "SvcP@ss!",
-            uri: "https://api.example.com",
-            fields: [
-                ("API Key", "sk_test_FAKE_abc123", 1),
-                ("Environment", "production", 0)
-            ]);
+        var cipher = LoginCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Login,
+            Name = "API Service",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = Guid.NewGuid(),
+            Login = new LoginViewDto
+            {
+                Username = "service@example.com",
+                Password = "SvcP@ss!",
+                Uris = [new LoginUriViewDto { Uri = "https://api.example.com" }]
+            },
+            Fields =
+            [
+                new FieldViewDto { Name = "API Key", Value = "sk_test_FAKE_abc123", Type = 1 },
+                new FieldViewDto { Name = "Environment", Value = "production", Type = 0 }
+            ]
+        });
 
         var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
         Assert.NotNull(loginData);
@@ -345,7 +359,15 @@ public sealed class RustSdkCipherTests
             Code = "456"
         };
 
-        var cipher = CardCipherSeeder.Create(orgKeys.Key, name: "Business Card", card: card, organizationId: orgId, notes: "Company expenses");
+        var cipher = CardCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Card,
+            Name = "Business Card",
+            Notes = "Company expenses",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId,
+            Card = card
+        });
 
         Assert.Equal(orgId, cipher.OrganizationId);
         Assert.Equal(Core.Vault.Enums.CipherType.Card, cipher.Type);
@@ -379,7 +401,14 @@ public sealed class RustSdkCipherTests
             PassportNumber = "X12345678"
         };
 
-        var cipher = IdentityCipherSeeder.Create(orgKeys.Key, name: "Dr. Alice Johnson", identity: identity, organizationId: orgId);
+        var cipher = IdentityCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Identity,
+            Name = "Dr. Alice Johnson",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId,
+            Identity = identity
+        });
 
         Assert.Equal(orgId, cipher.OrganizationId);
         Assert.Equal(Core.Vault.Enums.CipherType.Identity, cipher.Type);
@@ -402,11 +431,14 @@ public sealed class RustSdkCipherTests
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
         var orgId = Guid.NewGuid();
 
-        var cipher = SecureNoteCipherSeeder.Create(
-            orgKeys.Key,
-            name: "Production Secrets",
-            organizationId: orgId,
-            notes: "DATABASE_URL=postgres://user:FAKE_secret@db.example.com/prod");
+        var cipher = SecureNoteCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.SecureNote,
+            Name = "Production Secrets",
+            Notes = "DATABASE_URL=postgres://user:FAKE_secret@db.example.com/prod",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId
+        });
 
         Assert.Equal(orgId, cipher.OrganizationId);
         Assert.Equal(Core.Vault.Enums.CipherType.SecureNote, cipher.Type);
@@ -435,7 +467,14 @@ public sealed class RustSdkCipherTests
             Fingerprint = "SHA256:examplefingerprint123"
         };
 
-        var cipher = SshKeyCipherSeeder.Create(orgKeys.Key, name: "Production Deploy Key", sshKey: sshKey, organizationId: orgId);
+        var cipher = SshKeyCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.SSHKey,
+            Name = "Production Deploy Key",
+            EncryptionKey = orgKeys.Key,
+            OrganizationId = orgId,
+            SshKey = sshKey
+        });
 
         Assert.Equal(orgId, cipher.OrganizationId);
         Assert.Equal(Core.Vault.Enums.CipherType.SSHKey, cipher.Type);

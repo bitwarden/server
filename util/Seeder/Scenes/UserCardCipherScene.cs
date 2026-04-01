@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -46,7 +47,15 @@ public class UserCardCipherScene(IUserRepository userRepository, ICipherReposito
             ExpYear = request.ExpYear,
             Code = request.Code
         };
-        var cipher = CardCipherSeeder.Create(request.UserKeyB64, request.Name, card: card, userId: request.UserId, notes: request.Notes);
+        var cipher = CardCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.Card,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId,
+            Card = card
+        });
 
         await cipherRepository.CreateAsync(cipher);
 

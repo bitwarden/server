@@ -2,9 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "preset.schema.json",
   "title": "Bitwarden Seeder Preset",
-  "description": "Defines a complete seeding preset that composes organization, users, groups, collections, and ciphers.",
+  "description": "Defines a complete seeding preset for either an organization or an individual user account.",
   "type": "object",
   "additionalProperties": false,
+  "oneOf": [
+    { "required": ["organization"] },
+    { "required": ["user"] }
+  ],
   "properties": {
     "$schema": {
       "type": "string"
@@ -108,6 +112,12 @@
       "default": false,
       "description": "When true, generates folders for each user using a realistic distribution."
     },
+    "folderNames": {
+      "type": "array",
+      "description": "Named folders to create for an individual user. Referenced by folderAssignments.",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
     "ciphers": {
       "type": "object",
       "description": "Cipher configuration. Use 'fixture' for a named fixture, or 'count' for random generation.",
@@ -119,7 +129,7 @@
         },
         "count": {
           "type": "integer",
-          "minimum": 1,
+          "minimum": 0,
           "description": "Number of random ciphers to generate."
         },
         "assignFolders": {
@@ -448,6 +458,28 @@
               "description": "Named folder count distribution. Default: realistic."
             }
           }
+        }
+      }
+    },
+    "user": {
+      "type": "object",
+      "description": "Individual user account configuration. Mutually exclusive with 'organization'.",
+      "additionalProperties": false,
+      "required": ["email", "premium", "maxStorageGb"],
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address for the individual user account."
+        },
+        "premium": {
+          "type": "boolean",
+          "description": "Whether the user has a premium subscription."
+        },
+        "maxStorageGb": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Maximum storage in GB. Use 0 for no storage, 1-5 for premium users. Values above 5 are clamped to 5."
         }
       }
     }

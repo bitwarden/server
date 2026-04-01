@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -43,7 +44,19 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
             PublicKey = request.PublicKey,
             Fingerprint = request.Fingerprint
         };
-        var cipher = SshKeyCipherSeeder.Create(request.UserKeyB64, request.Name, userId: request.UserId, sshKey: sshKey, notes: request.Notes, reprompt: request.Reprompt);
+        var cipher = SshKeyCipherSeeder.Create(new CipherSeed
+        {
+            Type = CipherType.SSHKey,
+            Name = request.Name,
+            Notes = request.Notes,
+            EncryptionKey = request.UserKeyB64,
+            UserId = request.UserId,
+            SshKey = sshKey
+        });
+        if (request.Reprompt)
+        {
+            cipher.Reprompt = CipherRepromptType.Password;
+        }
 
         await cipherRepository.CreateAsync(cipher);
 

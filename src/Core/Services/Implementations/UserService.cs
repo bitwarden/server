@@ -10,11 +10,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
@@ -30,7 +31,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -54,11 +54,8 @@ public class UserService : UserManager<User>, IUserService
     private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators;
     private readonly ILicensingService _licenseService;
     private readonly IEventService _eventService;
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
     private readonly IPolicyQuery _policyQuery;
-    private readonly IPolicyService _policyService;
-    private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
@@ -71,6 +68,7 @@ public class UserService : UserManager<User>, IUserService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly ISubscriberService _subscriberService;
 
     public UserService(
         IUserRepository userRepository,
@@ -90,11 +88,8 @@ public class UserService : UserManager<User>, IUserService
         ILogger<UserManager<User>> logger,
         ILicensingService licenseService,
         IEventService eventService,
-        IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
         IPolicyQuery policyQuery,
-        IPolicyService policyService,
-        IFido2 fido2,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings,
         IAcceptOrgUserCommand acceptOrgUserCommand,
@@ -106,7 +101,8 @@ public class UserService : UserManager<User>, IUserService
         IDistributedCache distributedCache,
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
-        IHasPremiumAccessQuery hasPremiumAccessQuery)
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        ISubscriberService subscriberService)
         : base(
               store,
               optionsAccessor,
@@ -130,11 +126,8 @@ public class UserService : UserManager<User>, IUserService
         _passwordValidators = passwordValidators;
         _licenseService = licenseService;
         _eventService = eventService;
-        _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyQuery = policyQuery;
-        _policyService = policyService;
-        _fido2 = fido2;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _acceptOrgUserCommand = acceptOrgUserCommand;
@@ -147,6 +140,7 @@ public class UserService : UserManager<User>, IUserService
         _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _subscriberService = subscriberService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -271,9 +265,20 @@ public class UserService : UserManager<User>, IUserService
         {
             try
             {
-                await CancelPremiumAsync(user);
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    await _subscriberService.CancelSubscription(
+                        user,
+                        cancelImmediately: false,
+                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
+                }
+                else
+                {
+                    await CancelPremiumAsync(user);
+                }
             }
             catch (GatewayException) { }
+            catch (BillingException) { }
         }
 
         await _userRepository.DeleteAsync(user);
@@ -637,7 +642,7 @@ public class UserService : UserManager<User>, IUserService
         user.Key = key;
 
         await _userRepository.ReplaceAsync(user);
-        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
+        await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName(), resetMasterPassword: true, resetTwoFactor: false);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
         await _pushService.PushLogOutAsync(user.Id);
 
@@ -817,7 +822,7 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
         return secret;
     }
-
+    //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
     {
         var eop = endOfPeriod.GetValueOrDefault(true);
@@ -1058,51 +1063,38 @@ public class UserService : UserManager<User>, IUserService
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        if (!requirement.OrganizationsRequiringTwoFactor.Any())
         {
-            var requirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (!requirement.OrganizationsRequiringTwoFactor.Any())
-            {
-                Logger.LogInformation("No organizations requiring two factor for user {userId}.", user.Id);
-                return;
-            }
-
-            var organizationIds = requirement.OrganizationsRequiringTwoFactor.Select(o => o.OrganizationId).ToList();
-            var organizations = await _organizationRepository.GetManyByIdsAsync(organizationIds);
-            var organizationLookup = organizations.ToDictionary(org => org.Id);
-
-            var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor
-                .Where(o => organizationLookup.ContainsKey(o.OrganizationId))
-                .Select(async o =>
-                {
-                    var organization = organizationLookup[o.OrganizationId];
-                    await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                        new RevokeOrganizationUsersRequest(
-                            o.OrganizationId,
-                            [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
-                            new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                    await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-                }).ToArray();
-
-            await Task.WhenAll(revokeOrgUserTasks);
-
+            Logger.LogInformation("No organizations requiring two factor for user {userId}.", user.Id);
             return;
         }
 
-        var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+        var organizationIds = requirement.OrganizationsRequiringTwoFactor.Select(o => o.OrganizationId).ToList();
+        var organizations = await _organizationRepository.GetManyByIdsAsync(organizationIds);
+        var organizationLookup = organizations.ToDictionary(org => org.Id);
 
-        var legacyRevokeOrgUserTasks = twoFactorPolicies.Select(async p =>
-        {
-            var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                new RevokeOrganizationUsersRequest(
-                    p.OrganizationId,
-                    [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
-                    new SystemUser(EventSystemUser.TwoFactorDisabled)));
-            await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-        }).ToArray();
+        var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor
+            .Where(o => organizationLookup.ContainsKey(o.OrganizationId))
+            .Select(async o =>
+            {
+                var organization = organizationLookup[o.OrganizationId];
+                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                    new RevokeOrganizationUsersRequest(
+                        o.OrganizationId,
+                        [
+                            new OrganizationUserUserDetails
+                            {
+                                Id = o.OrganizationUserId,
+                                OrganizationId = o.OrganizationId
+                            }
+                        ],
+                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(),
+                    user.Email);
+            }).ToArray();
 
-        await Task.WhenAll(legacyRevokeOrgUserTasks);
+        await Task.WhenAll(revokeOrgUserTasks);
     }
 
     public async Task RotateApiKeyAsync(User user)

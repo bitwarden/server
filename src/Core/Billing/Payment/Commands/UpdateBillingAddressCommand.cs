@@ -5,6 +5,7 @@ using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -18,6 +19,7 @@ public interface IUpdateBillingAddressCommand
 }
 
 public class UpdateBillingAddressCommand(
+    IFeatureService featureService,
     ILogger<UpdateBillingAddressCommand> logger,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
@@ -136,6 +138,32 @@ public class UpdateBillingAddressCommand(
 
             if (subscription is { AutomaticTax.Enabled: false })
             {
+                if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                        new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+                    var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                        s.SubscriptionId == subscription.Id
+                        && s.Status == StripeConstants.SubscriptionScheduleStatus.Active);
+
+                    if (activeSchedule != null)
+                    {
+                        await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                            new SubscriptionScheduleUpdateOptions
+                            {
+                                DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
+                                {
+                                    AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
+                                    {
+                                        Enabled = true
+                                    }
+                                }
+                            });
+                        return;
+                    }
+                }
+
                 await stripeAdapter.UpdateSubscriptionAsync(subscriber.GatewaySubscriptionId,
                     new SubscriptionUpdateOptions
                     {

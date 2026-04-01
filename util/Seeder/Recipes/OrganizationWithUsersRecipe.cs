@@ -13,6 +13,15 @@ using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Seeder.Recipes;
 
+/// <summary>
+/// Lower-level recipe that seeds an organization and a flat list of member users directly.
+/// </summary>
+/// <remarks>
+/// This recipe bypasses the Pipeline architecture and is used exclusively by performance tests
+/// in <c>Api.IntegrationTest</c> to set up large, fast baseline datasets.
+/// It is not called by any CLI command — use <see cref="OrganizationRecipe"/> for preset-driven
+/// or options-driven organization seeding from the CLI.
+/// </remarks>
 public class OrganizationWithUsersRecipe(
     DatabaseContext db,
     IMapper mapper,
