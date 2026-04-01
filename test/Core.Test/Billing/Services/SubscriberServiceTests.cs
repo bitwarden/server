@@ -426,7 +426,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_WithSurvey_AlsoUpdatesSubscriptionMetadata(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_FlagOn_TwoPhaseSchedule_WithSurvey_AlsoUpdatesSubscriptionWithCancellationDetails(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
