@@ -108,13 +108,26 @@ public class ReceivesController : Controller
     {
         var receive = await GetReceiveWithSecretValidationAsync(id);
         var (url, fileId) = await _uploadReceiveFileCommand.GetUploadUrlAsync(
-            receive, request.FileName, request.EncapsulatedFileContentEncryptionKey);
+            receive, request.FileName, request.FileLength, request.EncapsulatedFileContentEncryptionKey);
         if (url == null)
         {
             throw new BadRequestException("Invalid request.");
         }
 
         return new ReceiveFileUploadDataResponseModel(url, _receiveFileStorageService.FileUploadType);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("{id}/file/{fileId}/validate")]
+    public async Task PostFileValidation(Guid id, string fileId)
+    {
+        var receive = await GetReceiveWithSecretValidationAsync(id);
+
+        var valid = await _uploadReceiveFileCommand.ValidateFileAsync(receive, fileId);
+        if (!valid)
+        {
+            throw new BadRequestException("File validation failed. The uploaded file size did not match expectations.");
+        }
     }
 
     private async Task<Core.Tools.Entities.Receive> GetReceiveWithSecretValidationAsync(Guid id)

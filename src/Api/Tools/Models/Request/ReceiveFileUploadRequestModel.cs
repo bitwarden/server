@@ -18,6 +18,13 @@ public class ReceiveFileUploadRequestModel
     public required string FileName { get; set; }
 
     /// <summary>
+    /// Expected file size in bytes.
+    /// </summary>
+    [Required]
+    [Range(1, long.MaxValue)]
+    public long FileLength { get; set; }
+
+    /// <summary>
     /// The per-file content encryption key, encapsulated (wrapped)
     /// with the Receive's public key.
     /// </summary>

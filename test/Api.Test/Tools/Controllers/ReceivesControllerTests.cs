@@ -200,7 +200,7 @@ public class ReceivesControllerTests
             .ReceiveCanBeAccessed(receive)
             .Returns(true);
         sutProvider.GetDependency<IUploadReceiveFileCommand>()
-            .GetUploadUrlAsync(receive, Arg.Any<string>(), Arg.Any<string>())
+            .GetUploadUrlAsync(receive, Arg.Any<string>(), Arg.Any<long>(), Arg.Any<string>())
             .Returns((expectedUrl, "generatedFileId"));
 
         var result = await sutProvider.Sut.GetReceiveFileUploadUrl(id, _uploadRequest);
