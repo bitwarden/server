@@ -106,7 +106,6 @@ public class CollectionsController : Controller
         // Filter collections to only return those where the user has Manage permission
         var manageableOrgCollections = allOrgCollections.Where(c => c.Manage).ToList();
 
-
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
             new CollectionAccessDetailsResponseModel(c)
         ));
