@@ -6,16 +6,17 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
 public class SetInitialPasswordData
 {
-    public required MasterPasswordAuthenticationData MasterPasswordAuthenticationData { get; set; }
-    public required MasterPasswordUnlockData MasterPasswordUnlockData { get; set; }
+    public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
+    public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }
+
     // Document this.
     public bool ValidatePassword { get; set; } = true;
     public bool RefreshStamp { get; set; } = true;
 
+    public string? MasterPasswordHint { get; set; } = null;
+
     public void ValidateDataForUser(User user)
     {
-        // TODO: Verify if
-
         // Validate that the user does not have a master password set.
         if (user.HasMasterPassword())
         {
@@ -34,6 +35,12 @@ public class SetInitialPasswordData
         if (user.MasterPasswordSalt != null)
         {
             throw new BadRequestException("User already has a master password set.");
+        }
+
+        // Is this correct?
+        if (user.UsesKeyConnector)
+        {
+            throw new BadRequestException("Cannot set an initial password of a user with Key Connector.");
         }
     }
 }

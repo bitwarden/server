@@ -72,6 +72,7 @@ public interface IUserService
     Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
+    [Obsolete("Migrating to the MasterPasswordService for updating a password hash.", true)]
     Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true);
     Task RotateApiKeyAsync(User user);

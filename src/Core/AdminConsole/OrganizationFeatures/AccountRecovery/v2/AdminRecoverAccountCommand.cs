@@ -15,7 +15,6 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Identity;
 using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
@@ -63,7 +62,7 @@ public class AdminRecoverAccountCommand(
             // Unwind this with PM-33141 to only use the new payload
             if (request.HasNewPayloads())
             {
-                var result = await HandleNewPayloadAsync(user, request);
+                var result = await HandlePayloadsWithUnlockAndAuthenticationDataAsync(user, request);
                 if (result.IsError)
                 {
                     return result;
@@ -71,7 +70,7 @@ public class AdminRecoverAccountCommand(
             }
             else
             {
-                var result = await HandleOldPayloadAsync(user, request);
+                var result = await HandlePayloadWithDeprecatedRawDataAsync(user, request);
                 if (result is { IsSuccess: false })
                 {
                     return result;
@@ -163,41 +162,39 @@ public class AdminRecoverAccountCommand(
         await Task.WhenAll(legacyRevokeOrgUserTasks);
     }
 
-    private async Task<CommandResult> HandleNewPayloadAsync(User user, RecoverAccountRequest request)
+    private async Task<CommandResult> HandlePayloadsWithUnlockAndAuthenticationDataAsync(User user, RecoverAccountRequest request)
     {
-        if (request.UnlockData is null || request.AuthenticationData is null)
-            throw new Exception("This should never happen! This is just fixing linting errors.");
-
-        IdentityResult result;
-        // Check if we are setting an initial password here
-        if (!user.HasMasterPassword())
-        {
-            result = await masterPasswordService.SetInitialMasterPasswordAsync(user, new SetInitialPasswordData
+        // We can recover an account for users who both have a master password and
+        // those who do not. TDE users can be account recovered which will not have
+        // an initial master password set.
+        var identityResultFromMutation = await masterPasswordService.OnlyMutateEitherUpdateExistingPasswordOrSetInitialPassword(
+            user,
+            new SetInitialPasswordData
             {
-                MasterPasswordUnlockData = request.UnlockData.ToData(),
-                MasterPasswordAuthenticationData = request.AuthenticationData.ToData(),
-            });
-        }
-        // If not then we are setting a master password
-        else
-        {
-            result = await masterPasswordService.UpdateExistingMasterPasswordAsync(user, new UpdateExistingPasswordData
+                MasterPasswordUnlock = request.UnlockData!.ToData(),
+                MasterPasswordAuthentication = request.AuthenticationData!.ToData(),
+            }, new UpdateExistingPasswordData
             {
-                MasterPasswordUnlockData = request.UnlockData.ToData(),
-                MasterPasswordAuthenticationData = request.AuthenticationData.ToData(),
+                MasterPasswordUnlock = request.UnlockData.ToData(),
+                MasterPasswordAuthentication = request.AuthenticationData.ToData(),
             });
-        }
 
-        if (!result.Succeeded)
+        if (!identityResultFromMutation.Succeeded)
         {
-            var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+            var errorMessage = string.Join(", ", identityResultFromMutation.Errors.Select(e => e.Description));
             return new PasswordUpdateFailedError(errorMessage);
         }
+
+        // When we are recovering an account we want to force a password reset on the user.
+        user.ForcePasswordReset = true;
+
+        await userRepository.ReplaceAsync(user);
 
         return new None();
     }
 
-    private async Task<CommandResult?> HandleOldPayloadAsync(User user, RecoverAccountRequest request)
+    [Obsolete("Come back and specify when this is to be removed.")]
+    private async Task<CommandResult?> HandlePayloadWithDeprecatedRawDataAsync(User user, RecoverAccountRequest request)
     {
         var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);
         if (!result.Succeeded)

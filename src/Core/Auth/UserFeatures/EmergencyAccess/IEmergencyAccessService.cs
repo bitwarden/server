@@ -3,6 +3,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
 
@@ -117,7 +118,17 @@ public interface IEmergencyAccessService
     /// <param name="newMasterPasswordHash">new password hash set by grantee user</param>
     /// <param name="key">new encrypted user key</param>
     /// <returns>void</returns>
-    Task PasswordAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key);
+    [Obsolete("Deprecated because we are switching to use unlock and authentication data types. To be removed in PM-33141")]
+    Task FinishRecoveryTakeoverAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key);
+    /// <summary>
+    /// Updates the grantor's password hash and updates the key for the EmergencyAccess entity using the
+    /// </summary>
+    /// <param name="emergencyAccessId">Emergency Access Id being acted on</param>
+    /// <param name="granteeUser">user making the request</param>
+    /// <param name="unlockData"></param>
+    /// <param name="authenticationData"></param>
+    /// <returns></returns>
+    Task FinishRecoveryTakeoverAsync(Guid emergencyAccessId, User granteeUser, MasterPasswordUnlockData unlockData, MasterPasswordAuthenticationData authenticationData);
     /// <summary>
     /// sends a reminder email that there is a pending request for recovery.
     /// </summary>

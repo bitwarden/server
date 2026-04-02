@@ -30,7 +30,7 @@ public class MasterPasswordServiceTests
             .Returns(expectedHash);
 
         // Act
-        await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf, salt);
+        await sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf, salt);
 
         // Assert
         Assert.Equal(expectedHash, user.MasterPassword);
@@ -53,7 +53,7 @@ public class MasterPasswordServiceTests
         var originalSalt = user.MasterPasswordSalt;
 
         // Act
-        await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf, null);
+        await sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf, null);
 
         // Assert
         Assert.Equal(originalSalt, user.MasterPasswordSalt);
@@ -69,7 +69,7 @@ public class MasterPasswordServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf));
+            sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf));
         Assert.Equal("User already has a master password set.", exception.Message);
     }
 
@@ -83,7 +83,7 @@ public class MasterPasswordServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf));
+            sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf));
         Assert.Equal("User already has a master password set.", exception.Message);
     }
 
@@ -97,7 +97,7 @@ public class MasterPasswordServiceTests
         user.Key = null;
 
         // Act
-        await sutProvider.Sut.SetInitialMasterPasswordAndSaveAsync(user, masterPasswordHash, key, kdf, salt);
+        await sutProvider.Sut.SetInitialMasterPasswordAndSaveUserAsync(user, masterPasswordHash, key, kdf, salt);
 
         // Assert: mutation was applied
         Assert.NotNull(user.MasterPassword);
@@ -132,7 +132,7 @@ public class MasterPasswordServiceTests
             .Returns(expectedHash);
 
         // Act
-        await sutProvider.Sut.UpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf, salt);
+        await sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf, salt);
 
         // Assert
         Assert.Equal(expectedHash, user.MasterPassword);
@@ -162,7 +162,7 @@ public class MasterPasswordServiceTests
         var originalSalt = user.MasterPasswordSalt;
 
         // Act
-        await sutProvider.Sut.UpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf, null);
+        await sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf, null);
 
         // Assert
         Assert.Equal(originalSalt, user.MasterPasswordSalt);
@@ -177,7 +177,7 @@ public class MasterPasswordServiceTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf));
+            sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf));
         Assert.Equal("User does not have an existing master password to update.", exception.Message);
     }
 
@@ -200,7 +200,7 @@ public class MasterPasswordServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            sutProvider.Sut.UpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, mismatchedKdf));
+            sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, mismatchedKdf));
     }
 
     [Theory, BitAutoData]

@@ -1,9 +1,7 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request;
@@ -13,7 +11,7 @@ public class EmergencyAccessInviteRequestModel
     [Required]
     [StrictEmailAddress]
     [StringLength(256)]
-    public string Email { get; set; }
+    public required string Email { get; set; }
     [Required]
     public EmergencyAccessType? Type { get; set; }
     [Required]
@@ -28,7 +26,7 @@ public class EmergencyAccessUpdateRequestModel
     [Required]
     [Range(1, short.MaxValue)]
     public int WaitTimeDays { get; set; }
-    public string KeyEncrypted { get; set; }
+    public required string KeyEncrypted { get; set; }
 
     public EmergencyAccess ToEmergencyAccess(EmergencyAccess existingEmergencyAccess)
     {
@@ -45,11 +43,17 @@ public class EmergencyAccessUpdateRequestModel
 
 public class EmergencyAccessPasswordRequestModel
 {
-    [Required]
     [StringLength(300)]
-    public string NewMasterPasswordHash { get; set; }
-    [Required]
-    public string Key { get; set; }
+    public string? NewMasterPasswordHash { get; set; }
+    public string? Key { get; set; }
+
+    public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
+    public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
+
+    public bool HasNewPayloads()
+    {
+        return UnlockData is not null && AuthenticationData is not null;
+    }
 }
 
 public class EmergencyAccessWithIdRequestModel : EmergencyAccessUpdateRequestModel

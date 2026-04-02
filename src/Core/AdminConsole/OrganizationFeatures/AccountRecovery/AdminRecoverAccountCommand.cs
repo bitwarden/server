@@ -13,7 +13,8 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 
-public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepository,
+public class AdminRecoverAccountCommand(
+    IOrganizationRepository organizationRepository,
     IPolicyQuery policyQuery,
     IUserRepository userRepository,
     IMailService mailService,
@@ -23,6 +24,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
     TimeProvider timeProvider,
     IMasterPasswordService masterPasswordService) : IAdminRecoverAccountCommand
 {
+    [Obsolete("Will be replaced with the below function once we transition the endpoint to fully using the unlock and authentication data. Removal will happen in ticket: <FIND TICKET PATRICK>")]
     public async Task<IdentityResult> RecoverAccountAsync(Guid orgId,
         OrganizationUser organizationUser, string newMasterPassword, string key)
     {
@@ -127,22 +129,22 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         // those who do not. TDE users can be recovered and will not have a password
         if (user.HasMasterPassword())
         {
-            mutationResult = await masterPasswordService.UpdateExistingMasterPasswordAsync(
+            mutationResult = await masterPasswordService.OnlyMutateUserUpdateExistingMasterPasswordAsync(
                 user,
                 new UpdateExistingPasswordData
                 {
-                    MasterPasswordUnlockData = unlockData,
-                    MasterPasswordAuthenticationData = authenticationData,
+                    MasterPasswordUnlock = unlockData,
+                    MasterPasswordAuthentication = authenticationData,
                 });
         }
         else
         {
-            mutationResult = await masterPasswordService.SetInitialMasterPasswordAsync(
+            mutationResult = await masterPasswordService.OnlyMutateUserSetInitialMasterPasswordAsync(
                 user,
                 new SetInitialPasswordData
                 {
-                    MasterPasswordUnlockData = unlockData,
-                    MasterPasswordAuthenticationData = authenticationData,
+                    MasterPasswordUnlock = unlockData,
+                    MasterPasswordAuthentication = authenticationData,
                 });
         }
 

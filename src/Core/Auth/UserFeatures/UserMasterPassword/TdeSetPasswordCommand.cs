@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,16 +13,19 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 public class TdeSetPasswordCommand : ITdeSetPasswordCommand
 {
     private readonly IUserRepository _userRepository;
+    private readonly IMasterPasswordService _masterPasswordService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IEventService _eventService;
 
     public TdeSetPasswordCommand(IUserRepository userRepository,
+        IMasterPasswordService masterPasswordService,
         IOrganizationUserRepository organizationUserRepository, IOrganizationRepository organizationRepository,
         IPasswordHasher<User> passwordHasher, IEventService eventService)
     {
         _userRepository = userRepository;
+        _masterPasswordService = masterPasswordService;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
         _passwordHasher = passwordHasher;
@@ -30,20 +34,13 @@ public class TdeSetPasswordCommand : ITdeSetPasswordCommand
 
     public async Task SetMasterPasswordAsync(User user, SetInitialMasterPasswordDataModel masterPasswordDataModel)
     {
-        if (user.Key != null)
-        {
-            throw new BadRequestException("User already has a master password set.");
-        }
-
+        // TDE scenario specific check
         if (user.PublicKey == null || user.PrivateKey == null)
         {
             throw new BadRequestException("TDE user account keys must be set before setting initial master password.");
         }
 
-        // Prevent a de-synced salt value from creating an un-decryptable unlock method
-        masterPasswordDataModel.MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
-        masterPasswordDataModel.MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
-
+        // Does this need to be here? Why is this here?
         var org = await _organizationRepository.GetByIdentifierAsync(masterPasswordDataModel.OrgSsoIdentifier);
         if (org == null)
         {
@@ -56,13 +53,14 @@ public class TdeSetPasswordCommand : ITdeSetPasswordCommand
             throw new BadRequestException("User not found within organization.");
         }
 
-        // Hash the provided user master password authentication hash on the server side
-        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
-            masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
+        var setMasterPasswordTask = _masterPasswordService.BuildTransactionForSetInitialMasterPasswordAsync(user,
+            new SetInitialPasswordData
+            {
+                MasterPasswordUnlock = masterPasswordDataModel.MasterPasswordUnlock,
+                MasterPasswordAuthentication = masterPasswordDataModel.MasterPasswordAuthentication,
+                MasterPasswordHint = masterPasswordDataModel.MasterPasswordHint,
+            });
 
-        var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,
-            masterPasswordDataModel.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
-            masterPasswordDataModel.MasterPasswordHint);
         await _userRepository.UpdateUserDataAsync([setMasterPasswordTask]);
 
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);

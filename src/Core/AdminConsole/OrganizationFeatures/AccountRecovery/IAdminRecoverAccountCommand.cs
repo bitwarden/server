@@ -20,7 +20,7 @@ public interface IAdminRecoverAccountCommand
     /// <returns>An IdentityResult indicating success or failure.</returns>
     /// <exception cref="BadRequestException">When organization settings, policy, or user state is invalid.</exception>
     /// <exception cref="NotFoundException">When the user does not exist.</exception>
-    [Obsolete("Will be replaced with the below function once we transition the endpoint to fully using the unlock and authentication data. Removal will happen in ")]
+    [Obsolete("Will be replaced with the below function once we transition the endpoint to fully using the unlock and authentication data. Removal will happen in ticket: <FIND TICKET PATRICK>")]
     Task<IdentityResult> RecoverAccountAsync(Guid orgId, OrganizationUser organizationUser,
         string newMasterPassword, string key);
 

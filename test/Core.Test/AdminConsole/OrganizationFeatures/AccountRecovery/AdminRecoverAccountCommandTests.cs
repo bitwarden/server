@@ -47,7 +47,7 @@ public class AdminRecoverAccountCommandTests
         // Assert
         Assert.True(result.Succeeded);
         sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .UpdateExistingMasterPasswordAsync(
+            .OnlyMutateUserUpdateExistingMasterPasswordAsync(
                 Arg.Is<User>(u => u.ForcePasswordReset),
                 newMasterPassword,
                 key,
@@ -57,7 +57,7 @@ public class AdminRecoverAccountCommandTests
                     k.Memory == user.KdfMemory &&
                     k.Parallelism == user.KdfParallelism));
         sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
-            .SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<KdfSettings>(), Arg.Any<string>());
+            .OnlyMutateUserSetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<KdfSettings>(), Arg.Any<string>());
         await AssertCommonSuccessSideEffectsAsync(sutProvider, user, organization, organizationUser);
     }
 
@@ -84,7 +84,7 @@ public class AdminRecoverAccountCommandTests
         // Assert
         Assert.True(result.Succeeded);
         sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .SetInitialMasterPasswordAsync(
+            .OnlyMutateUserSetInitialMasterPasswordAsync(
                 Arg.Is<User>(u => u.ForcePasswordReset),
                 newMasterPassword,
                 key,
@@ -94,7 +94,7 @@ public class AdminRecoverAccountCommandTests
                     k.Memory == user.KdfMemory &&
                     k.Parallelism == user.KdfParallelism));
         sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
-            .UpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<KdfSettings>(), Arg.Any<string>());
+            .OnlyMutateUserUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<KdfSettings>(), Arg.Any<string>());
         await AssertCommonSuccessSideEffectsAsync(sutProvider, user, organization, organizationUser);
     }
 
