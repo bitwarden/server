@@ -283,6 +283,9 @@ public static class FeatureFlagKeys
     public const string PM31948_OrgUserNotificationBanner = "pm-31948-org-user-notification-banner";
     public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
 
+    /* Secrets Manager Team */
+    public const string SecretsVersioning = "sm-1587-secrets-versioning";
+
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
