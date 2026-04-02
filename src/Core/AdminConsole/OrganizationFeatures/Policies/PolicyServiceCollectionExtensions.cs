@@ -39,6 +39,9 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyEventHandler>();
         services.AddScoped<IPolicyUpdateEvent, BlockClaimedDomainAccountCreationPolicyEventHandler>();
         services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, DisableSendSyncPolicyEvent>();
+        services.AddScoped<IPolicyUpdateEvent, SendOptionsSyncPolicyEvent>();
+        services.AddScoped<IPolicyUpdateEvent, SendControlsSyncPolicyEvent>();
         services.AddScoped<IPolicyUpdateEvent, OrganizationUserNotificationPolicyEventHandler>();
     }
 
@@ -46,6 +49,7 @@ public static class PolicyServiceCollectionExtensions
     {
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, DisableSendPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendOptionsPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendControlsPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, ResetPasswordPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, OrganizationDataOwnershipPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireSsoPolicyRequirementFactory>();

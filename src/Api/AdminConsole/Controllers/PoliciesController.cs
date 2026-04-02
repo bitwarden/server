@@ -68,11 +68,16 @@ public class PoliciesController : Controller
 
     [HttpGet("")]
     [Authorize<ManagePoliciesRequirement>]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetAll(Guid orgId)
+    public async Task<ListResponseModel<PolicyStatusResponseModel>> GetAll(string orgId)
     {
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
+        var orgIdGuid = new Guid(orgId);
+        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        {
+            throw new NotFoundException();
+        }
 
-        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
+        var policies = await _policyQuery.GetAllAsync(orgIdGuid);
+        return new ListResponseModel<PolicyStatusResponseModel>(policies.Select(p => new PolicyStatusResponseModel(p)));
     }
 
     [AllowAnonymous]
