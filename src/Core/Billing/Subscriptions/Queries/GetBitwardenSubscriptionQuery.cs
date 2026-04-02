@@ -109,7 +109,9 @@ public class GetBitwardenSubscriptionQuery(
 
         var (cartLevelDiscount, productLevelDiscounts) = GetStripeDiscounts(subscription);
 
-        var cartDiscount = cartLevelDiscount ?? await GetSchedulePhase2DiscountAsync(subscription);
+        var scheduleDiscount = cartLevelDiscount == null
+            ? await GetSchedulePhase2DiscountAsync(subscription)
+            : null;
 
         var availablePlan = plans.First(plan => plan.Available);
         var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
@@ -133,7 +135,7 @@ public class GetBitwardenSubscriptionQuery(
             TranslationKey = "premiumMembership",
             Quantity = passwordManagerSeatsItem.Quantity,
             Cost = seatCost,
-            Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem))
+            Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem)) ?? scheduleDiscount
         };
 
         var additionalStorage = additionalStorageItem != null
@@ -154,7 +156,7 @@ public class GetBitwardenSubscriptionQuery(
                 AdditionalStorage = additionalStorage
             },
             Cadence = PlanCadenceType.Annually,
-            Discount = cartDiscount,
+            Discount = cartLevelDiscount,
             EstimatedTax = estimatedTax
         };
     }
