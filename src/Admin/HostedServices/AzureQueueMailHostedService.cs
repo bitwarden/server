@@ -5,6 +5,7 @@ using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using Bit.Core.Models.Mail;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -16,6 +17,7 @@ public class AzureQueueMailHostedService : IHostedService
     private readonly ILogger<AzureQueueMailHostedService> _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IMailService _mailService;
+    private readonly IMailer _mailer;
     private CancellationTokenSource _cts;
     private Task _executingTask;
 
@@ -24,10 +26,12 @@ public class AzureQueueMailHostedService : IHostedService
     public AzureQueueMailHostedService(
         ILogger<AzureQueueMailHostedService> logger,
         IMailService mailService,
+        IMailer mailer,
         GlobalSettings globalSettings)
     {
         _logger = logger;
         _mailService = mailService;
+        _mailer = mailer;
         _globalSettings = globalSettings;
     }
 
@@ -72,13 +76,13 @@ public class AzureQueueMailHostedService : IHostedService
                     {
                         foreach (var mailQueueMessage in root.Deserialize<List<MailQueueMessage>>())
                         {
-                            await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
+                            await ProcessMailMessageAsync(mailQueueMessage);
                         }
                     }
                     else if (root.ValueKind == JsonValueKind.Object)
                     {
                         var mailQueueMessage = root.Deserialize<MailQueueMessage>();
-                        await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
+                        await ProcessMailMessageAsync(mailQueueMessage);
                     }
                 }
                 catch (Exception e)
@@ -100,5 +104,22 @@ public class AzureQueueMailHostedService : IHostedService
     private async Task<QueueMessage[]> RetrieveMessagesAsync()
     {
         return (await _mailQueueClient.ReceiveMessagesAsync(maxMessages: 32))?.Value ?? new QueueMessage[] { };
+    }
+
+    /// <summary>
+    /// Processes a single mail message, checking if it's an IMailer message or HandlebarsMailService message.
+    /// </summary>
+    private async Task ProcessMailMessageAsync(MailQueueMessage message)
+    {
+        if (message.IsMailerMessage)
+        {
+            // IMailer message - delegate to mailer to render view and send
+            await _mailer.SendEnqueuedMailerMessageAsync(message);
+        }
+        else
+        {
+            // Template-based message from HandlebarsMailService
+            await _mailService.SendEnqueuedMailMessageAsync(message);
+        }
     }
 }
