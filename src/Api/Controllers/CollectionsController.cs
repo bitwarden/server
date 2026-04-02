@@ -4,6 +4,7 @@
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -29,6 +30,7 @@ public class CollectionsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
+    private readonly IProviderService _providerService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -38,7 +40,9 @@ public class CollectionsController : Controller
         IUserService userService,
         IAuthorizationService authorizationService,
         ICurrentContext currentContext,
-        IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
+        IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
+        IProviderService providerService)
+
     {
         _collectionRepository = collectionRepository;
         _createCollectionCommand = createCollectionCommand;
@@ -48,6 +52,7 @@ public class CollectionsController : Controller
         _authorizationService = authorizationService;
         _currentContext = currentContext;
         _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
+        _providerService = providerService;
     }
 
     [HttpGet("{id}")]
@@ -84,6 +89,11 @@ public class CollectionsController : Controller
         var allOrgCollections = await _collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
             orgId, _currentContext.UserId.Value, true);
 
+        if (await _currentContext.ProviderUserForOrgAsync(orgId))
+        {
+            await _providerService.LogProviderAccessToOrganizationAsync(orgId);
+        }
+
         var readAllAuthorized =
             (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAllWithAccess(orgId))).Succeeded;
         if (readAllAuthorized)
@@ -95,6 +105,7 @@ public class CollectionsController : Controller
 
         // Filter collections to only return those where the user has Manage permission
         var manageableOrgCollections = allOrgCollections.Where(c => c.Manage).ToList();
+
 
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
             new CollectionAccessDetailsResponseModel(c)
