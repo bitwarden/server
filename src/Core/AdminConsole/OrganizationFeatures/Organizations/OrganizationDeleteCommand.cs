@@ -7,6 +7,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Vault.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
@@ -16,6 +17,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly ICipherService _cipherService;
     private readonly ISubscriberService _subscriberService;
     private readonly IFeatureService _featureService;
 
@@ -24,6 +26,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         IOrganizationRepository organizationRepository,
         IStripePaymentService paymentService,
         ISsoConfigRepository ssoConfigRepository,
+        ICipherService cipherService,
         ISubscriberService subscriberService,
         IFeatureService featureService)
     {
@@ -31,6 +34,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
+        _cipherService = cipherService;
         _subscriberService = subscriberService;
         _featureService = featureService;
     }
@@ -59,6 +63,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             catch (BillingException) { }
         }
 
+        await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
