@@ -29,8 +29,8 @@ public static class ServiceCollectionExtension
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         });
 
-        // The CreatePasswordUri handler wants similar headers as Icons to portray coming from a browser but
-        // needs to follow redirects to get the final URL.
+        // The ChangePasswordUri handler wants similar headers as Icons to portray coming from a browser.
+        // Redirects are handled manually with SSRF validation at each hop.
         services.AddHttpClient("ChangePasswordUri", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(20);
@@ -44,6 +44,7 @@ public static class ServiceCollectionExtension
             client.DefaultRequestHeaders.Add("Pragma", "no-cache");
         }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
+            AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         });
     }

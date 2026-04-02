@@ -1,12 +1,27 @@
-﻿namespace Bit.Icons.Services;
+﻿using System.Net;
+using Bit.Icons.Models;
+
+namespace Bit.Icons.Services;
 
 public class ChangePasswordUriService : IChangePasswordUriService
 {
-    private readonly HttpClient _httpClient;
+    private const int _maxRedirects = 2;
 
-    public ChangePasswordUriService(IHttpClientFactory httpClientFactory)
+    private static readonly HttpStatusCode[] _redirectStatusCodes =
+    [
+        HttpStatusCode.Redirect,
+        HttpStatusCode.MovedPermanently,
+        HttpStatusCode.RedirectKeepVerb,
+        HttpStatusCode.SeeOther
+    ];
+
+    private readonly HttpClient _httpClient;
+    private readonly IUriService _uriService;
+
+    public ChangePasswordUriService(IHttpClientFactory httpClientFactory, IUriService uriService)
     {
         _httpClient = httpClientFactory.CreateClient("ChangePasswordUri");
+        _uriService = uriService;
     }
 
     /// <summary>
@@ -23,7 +38,6 @@ public class ChangePasswordUriService : IChangePasswordUriService
 
         var hasReliableStatusCode = await HasReliableHttpStatusCode(domain);
         var wellKnownChangePasswordUrl = await GetWellKnownChangePasswordUrl(domain);
-
 
         if (hasReliableStatusCode && wellKnownChangePasswordUrl != null)
         {
@@ -49,10 +63,16 @@ public class ChangePasswordUriService : IChangePasswordUriService
                 Path = "/.well-known/resource-that-should-not-exist-whose-status-code-should-not-be-200"
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
+            var response = await SendSafeRequestAsync(url.Uri);
+            if (response == null)
+            {
+                return false;
+            }
 
-            var response = await _httpClient.SendAsync(request);
-            return !response.IsSuccessStatusCode;
+            using (response)
+            {
+                return !response.IsSuccessStatusCode;
+            }
         }
         catch
         {
@@ -76,14 +96,72 @@ public class ChangePasswordUriService : IChangePasswordUriService
                 Path = "/.well-known/change-password"
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Get, url.ToString());
+            var response = await SendSafeRequestAsync(url.Uri);
+            if (response == null)
+            {
+                return null;
+            }
 
-            var response = await _httpClient.SendAsync(request);
-            return response.IsSuccessStatusCode ? url.ToString() : null;
+            using (response)
+            {
+                return response.IsSuccessStatusCode ? url.ToString() : null;
+            }
         }
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Sends an HTTP GET request with SSRF protections: validates the target IP is not internal,
+    /// binds the request to the resolved IP to prevent DNS rebinding, and manually follows redirects
+    /// with validation at each hop.
+    /// </summary>
+    /// <returns>The HTTP response, or null if the URI fails SSRF validation.</returns>
+    private async Task<HttpResponseMessage?> SendSafeRequestAsync(Uri uri)
+    {
+        if (!_uriService.TryGetUri(uri, out var iconUri) || !iconUri!.IsValid)
+        {
+            return null;
+        }
+
+        return await SendWithRedirectsAsync(iconUri, 0);
+    }
+
+    private async Task<HttpResponseMessage?> SendWithRedirectsAsync(IconUri iconUri, int redirectCount)
+    {
+        HttpResponseMessage response;
+        try
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Get, iconUri.InnerUri);
+            message.Headers.Host = iconUri.Host;
+            response = await _httpClient.SendAsync(message);
+        }
+        catch
+        {
+            return null;
+        }
+
+        if (response.IsSuccessStatusCode || !_redirectStatusCodes.Contains(response.StatusCode))
+        {
+            return response;
+        }
+
+        // Handle redirect with SSRF validation
+        using (response)
+        {
+            if (redirectCount >= _maxRedirects || response.Headers.Location == null)
+            {
+                return null;
+            }
+
+            if (!_uriService.TryGetRedirect(response, iconUri, out var redirectIconUri) || !redirectIconUri!.IsValid)
+            {
+                return null;
+            }
+
+            return await SendWithRedirectsAsync(redirectIconUri, redirectCount + 1);
         }
     }
 }
