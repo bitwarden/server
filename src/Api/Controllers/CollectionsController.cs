@@ -42,7 +42,6 @@ public class CollectionsController : Controller
         ICurrentContext currentContext,
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
         IProviderService providerService)
-
     {
         _collectionRepository = collectionRepository;
         _createCollectionCommand = createCollectionCommand;
@@ -88,7 +87,6 @@ public class CollectionsController : Controller
     {
         var allOrgCollections = await _collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
             orgId, _currentContext.UserId.Value, true);
-
         if (await _currentContext.ProviderUserForOrgAsync(orgId))
         {
             await _providerService.LogProviderAccessToOrganizationAsync(orgId);
