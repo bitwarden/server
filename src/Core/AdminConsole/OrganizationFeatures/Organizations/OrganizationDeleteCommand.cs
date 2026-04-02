@@ -60,7 +60,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
                     await _paymentService.CancelSubscriptionAsync(organization, eop);
                 }
             }
-            catch (Exception exception)
+            catch (Exception exception) when (exception is GatewayException or BillingException)
             {
                 _logger.LogWarning(exception, "Failed to cancel subscription for organization {OrganizationId}", organization.Id);
             }

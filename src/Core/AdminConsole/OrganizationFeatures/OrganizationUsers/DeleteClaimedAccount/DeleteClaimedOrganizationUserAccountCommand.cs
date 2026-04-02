@@ -145,7 +145,7 @@ public class DeleteClaimedOrganizationUserAccountCommand(
                     await userService.CancelPremiumAsync(user);
                 }
             }
-            catch (Exception exception)
+            catch (Exception exception) when (exception is GatewayException or BillingException)
             {
                 logger.LogWarning(exception, "Failed to cancel premium subscription for {userId}.", user.Id);
             }
