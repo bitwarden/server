@@ -5,7 +5,6 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -133,6 +132,7 @@ public class DeleteClaimedOrganizationUserAccountCommand(
             {
                 if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
                 {
+                    // In cases where the subscription is not active, the cancellation will fail and be logged.
                     await subscriberService.CancelSubscription(
                         user,
                         cancelImmediately: false,
@@ -143,7 +143,7 @@ public class DeleteClaimedOrganizationUserAccountCommand(
                     await userService.CancelPremiumAsync(user);
                 }
             }
-            catch (GatewayException exception)
+            catch (Exception exception)
             {
                 logger.LogWarning(exception, "Failed to cancel premium subscription for {userId}.", user.Id);
             }
