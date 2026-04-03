@@ -7,6 +7,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -19,6 +20,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISubscriberService _subscriberService;
     private readonly IFeatureService _featureService;
+    private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<OrganizationDeleteCommand> _logger;
 
     public OrganizationDeleteCommand(
@@ -28,6 +30,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         ISsoConfigRepository ssoConfigRepository,
         ISubscriberService subscriberService,
         IFeatureService featureService,
+        ISendFileStorageService sendFileStorageService,
         ILogger<OrganizationDeleteCommand> logger)
     {
         _applicationCacheService = applicationCacheService;
@@ -36,6 +39,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         _ssoConfigRepository = ssoConfigRepository;
         _subscriberService = subscriberService;
         _featureService = featureService;
+        _sendFileStorageService = sendFileStorageService;
         _logger = logger;
     }
 
@@ -66,6 +70,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             }
         }
 
+        await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }

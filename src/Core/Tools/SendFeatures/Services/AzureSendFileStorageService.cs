@@ -66,11 +66,27 @@ public class AzureSendFileStorageService(
     public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
     {
         await InitAsync();
+        await DeleteBlobsByMetadataAsync("organizationId", organizationId.ToString());
     }
 
     public async Task DeleteFilesForUserAsync(Guid userId)
     {
         await InitAsync();
+        await DeleteBlobsByMetadataAsync("userId", userId.ToString());
+    }
+
+    private async Task DeleteBlobsByMetadataAsync(string metadataKey, string metadataValue)
+    {
+        await foreach (var blobItem in _sendFilesContainerClient!.GetBlobsAsync(BlobTraits.Metadata))
+        {
+            if (blobItem.Metadata != null &&
+                blobItem.Metadata.TryGetValue(metadataKey, out var value) &&
+                string.Equals(value, metadataValue, StringComparison.OrdinalIgnoreCase))
+            {
+                var blob = _sendFilesContainerClient.GetBlobClient(blobItem.Name);
+                await blob.DeleteIfExistsAsync();
+            }
+        }
     }
 
     public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)

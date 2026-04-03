@@ -30,6 +30,10 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
@@ -69,6 +73,8 @@ public class UserService : UserManager<User>, IUserService
     private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
+    private readonly ISendRepository _sendRepository;
+    private readonly ISendFileStorageService _sendFileStorageService;
 
     public UserService(
         IUserRepository userRepository,
@@ -102,7 +108,9 @@ public class UserService : UserManager<User>, IUserService
         IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        ISendRepository sendRepository,
+        ISendFileStorageService sendFileStorageService)
         : base(
               store,
               optionsAccessor,
@@ -141,6 +149,8 @@ public class UserService : UserManager<User>, IUserService
         _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _subscriberService = subscriberService;
+        _sendRepository = sendRepository;
+        _sendFileStorageService = sendFileStorageService;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -279,6 +289,16 @@ public class UserService : UserManager<User>, IUserService
             }
             catch (GatewayException) { }
             catch (BillingException) { }
+        }
+
+        var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
+        foreach (var send in sends.Where(s => s.Type == SendType.File))
+        {
+            var data = JsonSerializer.Deserialize<SendFileData>(send.Data);
+            if (data?.Id != null)
+            {
+                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+            }
         }
 
         await _userRepository.DeleteAsync(user);

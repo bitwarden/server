@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
 WITH RECOMPILE
 AS
@@ -150,6 +150,7 @@ BEGIN
         [dbo].[OrganizationReport]
     WHERE
         [OrganizationId] = @Id
+
     -- Delete Organization Owned Sends
     DELETE
     FROM
