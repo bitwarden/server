@@ -92,6 +92,16 @@ BEGIN
                 [HidePasswords] BIT '$.HidePasswords',
                 [Manage] BIT '$.Manage'
             ) OUC
+
+    -- Bump RevisionDate on all affected collections
+    UPDATE C
+    SET C.[RevisionDate] = GETUTCDATE()
+    FROM [dbo].[Collection] C
+    WHERE C.[Id] IN (
+        SELECT OUC.[CollectionId]
+        FROM OPENJSON(@collectionData)
+        WITH ([CollectionId] UNIQUEIDENTIFIER '$.CollectionId') OUC
+    )
 END
 go
 

@@ -46,6 +46,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 Manage = y.Manage
             });
             await dbContext.CollectionUsers.AddRangeAsync(collectionUsers);
+            // Bump RevisionDate on all affected collections
+            foreach (var c in availableCollections.Where(a => filteredCollections.Any(fc => fc.Id == a.Id)))
+            {
+                c.RevisionDate = organizationUser.RevisionDate;
+            }
             await dbContext.SaveChangesAsync();
         }
 
@@ -651,6 +656,20 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             // Remove all existing ones that are no longer requested
             var requestedCollectionIds = requestedCollections.Select(c => c.Id).ToList();
             dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedCollectionIds.Contains(cu.CollectionId)));
+
+            // Bump the revision date on all affected collections
+            var allAffectedCollectionIds = existingCollectionUsers.Select(cu => cu.CollectionId)
+                .Union(requestedCollections.Select(rc => rc.Id))
+                .Distinct()
+                .ToList();
+            var affectedCollections = await dbContext.Collections
+                .Where(c => allAffectedCollectionIds.Contains(c.Id))
+                .ToListAsync();
+            foreach (var c in affectedCollections)
+            {
+                c.RevisionDate = obj.RevisionDate;
+            }
+
             await dbContext.SaveChangesAsync();
         }
     }
@@ -941,6 +960,24 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             GroupId = group,
             OrganizationUserId = user.OrganizationUser.Id
         }));
+
+        // Bump RevisionDate on all affected collections
+        var affectedCollectionIds = organizationUserCollection
+            .SelectMany(x => x.Collections)
+            .Select(c => c.Id)
+            .Distinct()
+            .ToList();
+        if (affectedCollectionIds.Count > 0)
+        {
+            var affectedCollections = await dbContext.Collections
+                .Where(c => affectedCollectionIds.Contains(c.Id))
+                .ToListAsync();
+            var now = DateTime.UtcNow;
+            foreach (var c in affectedCollections)
+            {
+                c.RevisionDate = now;
+            }
+        }
 
         await dbContext.SaveChangesAsync();
     }

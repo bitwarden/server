@@ -25,6 +25,7 @@ public class OrganizationUserReplaceTests
         orgUser.Type = OrganizationUserType.Admin;
         orgUser.AccessSecretsManager = true;
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var originalCollectionRevisionDate = collection.RevisionDate;
 
         await organizationUserRepository.ReplaceAsync(orgUser, [
             new CollectionAccessSelection { Id = collection.Id, Manage = true }
@@ -39,6 +40,11 @@ public class OrganizationUserReplaceTests
         var collectionAccess = Assert.Single(actualCollections);
         Assert.Equal(collection.Id, collectionAccess.Id);
         Assert.True(collectionAccess.Manage);
+
+        // Collection revision date should be bumped
+        var (actualCollection, _) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
+        Assert.NotNull(actualCollection);
+        Assert.True(actualCollection.RevisionDate > originalCollectionRevisionDate);
     }
 
     /// <summary>
@@ -62,6 +68,7 @@ public class OrganizationUserReplaceTests
         orgUser.Type = OrganizationUserType.Admin;
         orgUser.AccessSecretsManager = true;
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var originalCollectionRevisionDate = collection.RevisionDate;
 
         await organizationUserRepository.ReplaceAsync(orgUser, [
             new CollectionAccessSelection { Id = collection.Id, Manage = true }
@@ -81,5 +88,10 @@ public class OrganizationUserReplaceTests
         var actualUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(actualUser);
         Assert.True(actualUser.AccountRevisionDate.CompareTo(user.AccountRevisionDate) > 0);
+
+        // Collection revision date should be bumped
+        var (actualCollection, _) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
+        Assert.NotNull(actualCollection);
+        Assert.True(actualCollection.RevisionDate > originalCollectionRevisionDate);
     }
 }
