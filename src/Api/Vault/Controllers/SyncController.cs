@@ -1,6 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
+﻿using Bit.Api.Platform.Sync;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -48,6 +46,7 @@ public class SyncController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
+    private readonly SyncMetrics _syncMetrics;
 
     public SyncController(
         IUserService userService,
@@ -65,7 +64,8 @@ public class SyncController : Controller
         IApplicationCacheService applicationCacheService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
-        IUserAccountKeysQuery userAccountKeysQuery)
+        IUserAccountKeysQuery userAccountKeysQuery,
+        SyncMetrics syncMetrics)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -83,6 +83,7 @@ public class SyncController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userAccountKeysQuery = userAccountKeysQuery;
+        _syncMetrics = syncMetrics;
     }
 
     [HttpGet("")]
@@ -108,8 +109,8 @@ public class SyncController : Controller
         var ciphers = FilterSSHKeys(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
-        IEnumerable<CollectionDetails> collections = null;
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
+        IEnumerable<CollectionDetails>? collections = null;
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersGroupDict = null;
         IEnumerable<Policy> policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
 
         if (hasEnabledOrgs)
@@ -129,12 +130,14 @@ public class SyncController : Controller
             ? await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id)
             : [];
 
-        UserAccountKeysData userAccountKeys = null;
+        UserAccountKeysData? userAccountKeys = null;
         // JIT TDE users and some broken/old users may not have a private key.
         if (!string.IsNullOrWhiteSpace(user.PrivateKey))
         {
             userAccountKeys = await _userAccountKeysQuery.Run(user);
         }
+
+        _syncMetrics.RecordSyncInfo(ciphers.Count);
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
