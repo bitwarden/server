@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Group_UpdateWithCollections]
+CREATE PROCEDURE [dbo].[Group_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),
@@ -11,6 +11,20 @@ BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[Group_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate
+
+    -- Bump RevisionDate on all affected collections
+    UPDATE C
+    SET C.[RevisionDate] = @RevisionDate
+    FROM [dbo].[Collection] C
+    WHERE C.[OrganizationId] = @OrganizationId
+    AND (
+        C.[Id] IN (SELECT [Id] FROM @Collections) -- New/updated assignments
+        OR C.[Id] IN (
+            SELECT CG.[CollectionId]
+            FROM [dbo].[CollectionGroup] CG
+            WHERE CG.[GroupId] = @Id -- Existing assignments (includes ones being removed)
+        )
+    )
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT
