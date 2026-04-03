@@ -125,9 +125,7 @@ public class SyncController : Controller
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
         var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
-        var webAuthnCredentials = _featureService.IsEnabled(FeatureFlagKeys.PM2035PasskeyUnlock)
-            ? await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id)
-            : [];
+        var webAuthnCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
 
         UserAccountKeysData userAccountKeys = null;
         // JIT TDE users and some broken/old users may not have a private key.
