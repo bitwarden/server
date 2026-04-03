@@ -299,7 +299,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             ClientId = config.ClientId,
             ClientSecret = config.ClientSecret,
             ResponseType = "code",
-            ResponseMode = "form_post",
+            ResponseMode = "query",
             SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
             SignOutScheme = IdentityServerConstants.SignoutScheme,
             SaveTokens = false, // reduce overall request size
