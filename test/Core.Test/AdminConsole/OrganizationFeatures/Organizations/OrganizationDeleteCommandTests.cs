@@ -4,6 +4,8 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -11,6 +13,7 @@ using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
@@ -49,5 +52,96 @@ public class OrganizationDeleteCommandTests
 
         await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_WhenFlagEnabled_CallsSubscriberService(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .CancelSubscription(organization, cancelImmediately: false);
+
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(default, default);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_WhenFlagDisabled_CallsLegacyPaymentService(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<IStripePaymentService>()
+            .Received(1)
+            .CancelSubscriptionAsync(organization, true);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscription(default, default, default);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_WhenFlagEnabled_HandlesBillingException(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+
+        var billingException = new BillingException();
+        sutProvider.GetDependency<ISubscriberService>()
+            .CancelSubscription(organization, cancelImmediately: false)
+            .ThrowsAsync(billingException);
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
+
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_WhenFlagDisabled_HandlesBillingException(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+
+        var billingException = new BillingException();
+        sutProvider.GetDependency<IStripePaymentService>()
+            .CancelSubscriptionAsync(organization, Arg.Any<bool>())
+            .ThrowsAsync(billingException);
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
     }
 }
