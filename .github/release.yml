@@ -8,10 +8,27 @@ changelog:
         - community-pr
     - title: ":shipit: Feature Development"
       labels:
-        - feature-flag
+        - t:feature
+        - t:feature-app
+        - t:feature-tool
+        - t:new-feature
+        - t:enhancement
+    - title: "❗ Breaking Changes"
+      labels:
+        - t:breaking-change
+    - title: "🐛 Bug fixes"
+      labels:
+        - t:bugfix
+    - title: "⚙️ Maintenance"
+      labels:
+        - t:tech-debt
+        - t:ci
+        - t:docs
+        - t:misc
     - title: "📦 Dependency Updates"
       labels:
-        - major-update
+        - major-updates
+        - t:deps
     - title: "🎨 Other"
       labels:
         - "*"
