@@ -50,7 +50,9 @@ public class CollectionRepositoryReplaceTests
         );
 
         // Act
+        var originalRevisionDate = collection.RevisionDate;
         collection.Name = "Updated Collection Name";
+        collection.RevisionDate = DateTime.UtcNow;
 
         await collectionRepository.ReplaceAsync(collection,
             [
@@ -74,6 +76,7 @@ public class CollectionRepositoryReplaceTests
 
         Assert.NotNull(actualCollection);
         Assert.Equal("Updated Collection Name", actualCollection.Name);
+        Assert.True(actualCollection.RevisionDate > originalRevisionDate);
 
         var groups = actualAccess.Groups.ToArray();
         Assert.Equal(2, groups.Length);

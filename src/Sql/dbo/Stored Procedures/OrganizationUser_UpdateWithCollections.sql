@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
+CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
@@ -18,6 +18,21 @@ BEGIN
     SET NOCOUNT ON
 
     EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager
+
+    -- Bump RevisionDate on all affected collections
+    UPDATE C
+    SET C.[RevisionDate] = @RevisionDate
+    FROM [dbo].[Collection] C
+    WHERE C.[OrganizationId] = @OrganizationId
+    AND (
+        C.[Id] IN (SELECT [Id] FROM @Collections) -- New/updated assignments
+        OR C.[Id] IN (
+            SELECT CU.[CollectionId]
+            FROM [dbo].[CollectionUser] CU
+            WHERE CU.[OrganizationUserId] = @Id -- Existing assignments (includes ones being removed)
+        )
+    )
+
     -- Update
     UPDATE
         [Target]
