@@ -342,6 +342,8 @@ public class SendsController : Controller
             throw new BadRequestException($"Max file size is {SendFileSettingHelper.MAX_FILE_SIZE_READABLE}.");
         }
 
+        var file = model.File ?? throw new BadRequestException("File metadata is required for file sends.");
+
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
@@ -351,7 +353,7 @@ public class SendsController : Controller
             throw new BadRequestException("Email verified Sends require a premium membership");
         }
 
-        var (send, data) = model.ToSend(userId, model.File.FileName, _sendAuthorizationService);
+        var (send, data) = model.ToSend(userId, file.FileName!, _sendAuthorizationService);
         var uploadUrl = await _nonAnonymousSendCommand.SaveFileSendAsync(send, data, model.FileLength.Value);
         return new SendFileUploadDataResponseModel
         {

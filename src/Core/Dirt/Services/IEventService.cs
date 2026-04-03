@@ -14,7 +14,14 @@ namespace Bit.Core.Services;
 
 public interface IEventService
 {
-    Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null);
+    /// <summary>
+    /// Logs a user event and creates organization-scoped copies for each org the user belongs to.
+    /// </summary>
+    /// <param name="includeAcceptedStatusOrgs">When true, also includes organizations where the user
+    /// has Accepted (not yet Confirmed) status. Use for flows where the user may not be fully confirmed
+    /// (e.g. device approval, TDE onboarding).
+    /// </param>
+    Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false);
     Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null);
     Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events);
     Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null);

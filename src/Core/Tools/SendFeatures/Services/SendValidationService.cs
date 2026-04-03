@@ -1,4 +1,5 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
+
 #nullable disable
 
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -14,7 +15,6 @@ namespace Bit.Core.Tools.Services;
 
 public class SendValidationService : ISendValidationService
 {
-
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUserService _userService;
@@ -47,16 +47,26 @@ public class SendValidationService : ISendValidationService
             return;
         }
 
-        var disableSendRequirement = await _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
+        // Once data migration has run, query only SendControls
+        // var sendControlsTask = _policyRequirementQuery.GetAsync<SendControlsPolicyRequirement>(userId.Value);
+        var disableSendTask = _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
+        var sendOptionsTask = _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
+
+        await Task.WhenAll(disableSendTask, sendOptionsTask);
+
+        // var sendControlsRequirement = sendControlsTask.Result;
+        var disableSendRequirement = disableSendTask.Result;
+        var sendOptionsRequirement = sendOptionsTask.Result;
+
         if (disableSendRequirement.DisableSend)
         {
             throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
         }
 
-        var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
         if (sendOptionsRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
         {
-            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+            throw new BadRequestException(
+                "Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
         }
     }
 
@@ -94,6 +104,7 @@ public class SendValidationService : ISendValidationService
                     var premiumPlan = await _pricingClient.GetAvailablePremiumPlan();
                     provided = (short)premiumPlan.Storage.Provided;
                 }
+
                 storageBytesRemaining = user.StorageBytesRemaining(provided);
             }
         }
