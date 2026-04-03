@@ -1,7 +1,10 @@
 -- Bump Collection.RevisionDate when collection access is modified via:
--- 1. Bulk collection access (BulkAddCollectionAccessCommand)
--- 2. Organization user update (UpdateOrganizationUserCommand)
--- 3. Group update (UpdateGroupCommand)
+-- 1. Bulk collection access (Collection_CreateOrUpdateAccessForMany)
+-- 2. Organization user create (OrganizationUser_CreateWithCollections)
+-- 3. Organization user update (OrganizationUser_UpdateWithCollections)
+-- 4. Bulk organization user create (OrganizationUser_CreateManyWithCollectionsAndGroups)
+-- 5. Group create (Group_CreateWithCollections)
+-- 6. Group update (Group_UpdateWithCollections)
 
 CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateOrUpdateAccessForMany]
 	@OrganizationId UNIQUEIDENTIFIER,
