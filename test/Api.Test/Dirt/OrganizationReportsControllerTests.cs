@@ -8,6 +8,7 @@ using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Services;
+using Bit.Core.Dirt.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
@@ -382,6 +383,277 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .DidNotReceive()
             .GetOrganizationReportAsync(Arg.Any<Guid>());
+    }
+
+    // DeleteOrganizationReportAsync
+
+    [Theory, BitAutoData]
+    public async Task DeleteOrganizationReportAsync_WithFile_DeletesDbThenStorage(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        report.OrganizationId = orgId;
+        report.SetReportFile(reportFile);
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        // Act
+        await sutProvider.Sut.DeleteOrganizationReportAsync(orgId, report.Id);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .Received(1)
+            .DeleteAsync(report);
+
+        await sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .Received(1)
+            .DeleteReportFilesAsync(report, "file-id");
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteOrganizationReportAsync_WithNoFile_DeletesDbOnly(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = orgId;
+        report.ReportFile = null;
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        // Act
+        await sutProvider.Sut.DeleteOrganizationReportAsync(orgId, report.Id);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .Received(1)
+            .DeleteAsync(report);
+
+        await sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .DidNotReceive()
+            .DeleteReportFilesAsync(Arg.Any<OrganizationReport>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteOrganizationReportAsync_ReportNotFound_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId)
+    {
+        // Arrange
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(reportId)
+            .Returns((OrganizationReport)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteOrganizationReportAsync(orgId, reportId));
+
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .DidNotReceive()
+            .DeleteAsync(Arg.Any<OrganizationReport>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteOrganizationReportAsync_OrgMismatch_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = Guid.NewGuid();
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.DeleteOrganizationReportAsync(orgId, report.Id));
+
+        Assert.Equal("Invalid report ID", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .DidNotReceive()
+            .DeleteAsync(Arg.Any<OrganizationReport>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteOrganizationReportAsync_WithoutAccess_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>()
+            .AccessReports(orgId)
+            .Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteOrganizationReportAsync(orgId, reportId));
+
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .DidNotReceive()
+            .DeleteAsync(Arg.Any<OrganizationReport>());
+    }
+
+    // RenewFileUploadUrlAsync
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_WithUnvalidatedFile_ReturnsRenewedUrl(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report,
+        string uploadUrl)
+    {
+        // Arrange
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        report.OrganizationId = orgId;
+        report.SetReportFile(reportFile);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .GetReportFileUploadUrlAsync(report, Arg.Any<ReportFile>())
+            .Returns(uploadUrl);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .FileUploadType
+            .Returns(FileUploadType.Azure);
+
+        // Act
+        var result = await sutProvider.Sut.RenewFileUploadUrlAsync(orgId, report.Id, "file-id");
+
+        // Assert
+        Assert.Equal(uploadUrl, result.ReportFileUploadUrl);
+        Assert.Equal(FileUploadType.Azure, result.FileUploadType);
+        Assert.NotNull(result.ReportResponse);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_ReportNotFound_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId)
+    {
+        // Arrange
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(reportId)
+            .Returns((OrganizationReport)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.RenewFileUploadUrlAsync(orgId, reportId, "file-id"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_OrgMismatch_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = Guid.NewGuid();
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RenewFileUploadUrlAsync(orgId, report.Id, "file-id"));
+
+        Assert.Equal("Invalid report ID", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_FileAlreadyValidated_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        report.OrganizationId = orgId;
+        report.SetReportFile(reportFile);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.RenewFileUploadUrlAsync(orgId, report.Id, "file-id"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_NoFileData_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        report.OrganizationId = orgId;
+        report.ReportFile = null;
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.RenewFileUploadUrlAsync(orgId, report.Id, "file-id"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_MismatchedFileId_ThrowsNotFoundException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = false };
+        report.OrganizationId = orgId;
+        report.SetReportFile(reportFile);
+
+        SetupV2Authorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.RenewFileUploadUrlAsync(orgId, report.Id, "wrong-file-id"));
     }
 
     // UpdateOrganizationReportAsync - V1 (flag off)

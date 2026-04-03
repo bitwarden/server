@@ -298,6 +298,99 @@ public class OrganizationReportsController : Controller
     }
 
     /// <summary>
+    /// Deletes an organization report and its associated file from storage.
+    /// Removes the database record first, then cleans up any stored files.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="reportId">The unique identifier of the report to delete.</param>
+    [HttpDelete("{organizationId}/{reportId}")]
+    public async Task DeleteOrganizationReportAsync(Guid organizationId, Guid reportId)
+    {
+        if (organizationId == Guid.Empty)
+        {
+            throw new BadRequestException("OrganizationId is required.");
+        }
+
+        if (reportId == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
+
+        var report = await _organizationReportRepo.GetByIdAsync(reportId);
+        if (report == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (report.OrganizationId != organizationId)
+        {
+            throw new BadRequestException("Invalid report ID");
+        }
+
+        var fileData = report.GetReportFile();
+
+        await _organizationReportRepo.DeleteAsync(report);
+
+        if (fileData != null && !string.IsNullOrEmpty(fileData.Id))
+        {
+            await _storageService.DeleteReportFilesAsync(report, fileData.Id);
+        }
+    }
+
+    /// <summary>
+    /// Renews the file upload URL for an organization report that has not yet been validated.
+    /// Returns a fresh presigned upload URL for the report file, allowing the client to retry
+    /// an upload after the original URL has expired. Requires the Access Intelligence V2 feature flag.
+    /// </summary>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="reportId">The unique identifier of the report with the pending file upload.</param>
+    /// <param name="reportFileId">The identifier of the report file entry to renew the upload URL for.</param>
+    /// <returns>An <see cref="OrganizationReportFileResponseModel"/> with the renewed upload URL.</returns>
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
+    [HttpGet("{organizationId}/{reportId}/file/renew")]
+    public async Task<OrganizationReportFileResponseModel> RenewFileUploadUrlAsync(
+        Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
+    {
+        if (organizationId == Guid.Empty)
+        {
+            throw new BadRequestException("OrganizationId is required.");
+        }
+
+        if (reportId == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
+
+        await AuthorizeAsync(organizationId);
+
+        var report = await _organizationReportRepo.GetByIdAsync(reportId);
+        if (report == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (report.OrganizationId != organizationId)
+        {
+            throw new BadRequestException("Invalid report ID");
+        }
+
+        var fileData = report.GetReportFile();
+        if (fileData == null || fileData.Id != reportFileId || fileData.Validated)
+        {
+            throw new NotFoundException();
+        }
+
+        return new OrganizationReportFileResponseModel
+        {
+            ReportFileUploadUrl = await _storageService.GetReportFileUploadUrlAsync(report, fileData),
+            ReportResponse = new OrganizationReportResponseModel(report),
+            FileUploadType = _storageService.FileUploadType
+        };
+    }
+
+    /// <summary>
     /// Handles Azure Event Grid webhook notifications for blob storage events.
     /// When a <c>Microsoft.Storage.BlobCreated</c> event is received, validates the uploaded
     /// report file against the corresponding organization report. Orphaned blobs (with no
