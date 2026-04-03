@@ -13,6 +13,8 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
+// Alias for readability
+
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
 [SutProviderCustomize]
@@ -27,9 +29,9 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
@@ -77,9 +79,9 @@ public class SetInitialMasterPasswordCommandV1Tests
         user.MasterPassword = null;
         string orgSsoIdentifier = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -95,9 +97,9 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
@@ -115,9 +117,9 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(Arg.Any<string>())
@@ -140,9 +142,9 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
@@ -170,9 +172,9 @@ public class SetInitialMasterPasswordCommandV1Tests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)

@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -141,4 +142,109 @@ public class UserTests
         var emailMetaDataEmail = Assert.Contains("Email", (IDictionary<string, object>)email.MetaData);
         Assert.Equal("test@email.com", emailMetaDataEmail);
     }
+
+    #region SetInitialMasterPasswordCrypto
+
+    [Fact]
+    public void SetInitialMasterPasswordCrypto_SetsAllFields()
+    {
+        var user = new User { Email = "test@example.com", MasterPassword = null };
+
+        user.SetInitialMasterPasswordCrypto(
+            serverSideHash: "hashed-password",
+            masterKeyWrappedUserKey: "wrapped-key",
+            salt: "explicit-salt",
+            kdfType: KdfType.Argon2id,
+            kdfIterations: 3,
+            kdfMemory: 64,
+            kdfParallelism: 4);
+
+        Assert.Equal("hashed-password", user.MasterPassword);
+        Assert.Equal("wrapped-key", user.Key);
+        Assert.Equal("explicit-salt", user.MasterPasswordSalt);
+        Assert.Equal(KdfType.Argon2id, user.Kdf);
+        Assert.Equal(3, user.KdfIterations);
+        Assert.Equal(64, user.KdfMemory);
+        Assert.Equal(4, user.KdfParallelism);
+    }
+
+    [Fact]
+    public void SetInitialMasterPasswordCrypto_UserAlreadyHasPassword_Throws()
+    {
+        var user = new User { MasterPassword = "existing-hash" };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            user.SetInitialMasterPasswordCrypto(
+                "new-hash", "wrapped-key", "salt",
+                KdfType.PBKDF2_SHA256, 600000, null, null));
+
+        Assert.Equal("User already has a master password.", exception.Message);
+    }
+
+    #endregion
+
+    #region UpdateMasterPasswordCrypto
+
+    [Fact]
+    public void UpdateMasterPasswordCrypto_SetsHashAndKey()
+    {
+        var user = new User
+        {
+            Email = "test@example.com",
+            MasterPassword = "old-hash",
+            Key = "old-key",
+            MasterPasswordSalt = "explicit-salt",
+        };
+
+        user.UpdateMasterPasswordCrypto("new-hash", "new-key", "explicit-salt");
+
+        Assert.Equal("new-hash", user.MasterPassword);
+        Assert.Equal("new-key", user.Key);
+    }
+
+    [Fact]
+    public void UpdateMasterPasswordCrypto_FallsBackToEmailSalt_WhenMasterPasswordSaltIsNull()
+    {
+        var user = new User
+        {
+            Email = "Test@Example.com",
+            MasterPassword = "old-hash",
+            Key = "old-key",
+            MasterPasswordSalt = null,
+        };
+
+        // GetMasterPasswordSalt() returns Email.ToLowerInvariant().Trim() when MasterPasswordSalt is null
+        user.UpdateMasterPasswordCrypto("new-hash", "new-key", "test@example.com");
+
+        Assert.Equal("new-hash", user.MasterPassword);
+        Assert.Equal("new-key", user.Key);
+    }
+
+    [Fact]
+    public void UpdateMasterPasswordCrypto_NoExistingPassword_Throws()
+    {
+        var user = new User { MasterPassword = null };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            user.UpdateMasterPasswordCrypto("new-hash", "new-key", "salt"));
+
+        Assert.Equal("User does not have a master password to update.", exception.Message);
+    }
+
+    [Fact]
+    public void UpdateMasterPasswordCrypto_SaltMismatch_Throws()
+    {
+        var user = new User
+        {
+            MasterPassword = "old-hash",
+            MasterPasswordSalt = "stored-salt",
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            user.UpdateMasterPasswordCrypto("new-hash", "new-key", "wrong-salt"));
+
+        Assert.Equal("Master password salt mismatch.", exception.Message);
+    }
+
+    #endregion
 }

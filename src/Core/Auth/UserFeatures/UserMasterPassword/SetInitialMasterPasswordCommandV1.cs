@@ -20,6 +20,7 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IMasterPasswordHasher _masterPasswordHasher;
 
 
     public SetInitialMasterPasswordCommandV1(
@@ -30,7 +31,8 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
         IEventService eventService,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        IMasterPasswordHasher masterPasswordHasher)
     {
         _logger = logger;
         _identityErrorDescriber = identityErrorDescriber;
@@ -40,6 +42,7 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
+        _masterPasswordHasher = masterPasswordHasher;
     }
 
     public async Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
@@ -56,14 +59,17 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
             return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
         }
 
-        var result = await _userService.UpdatePasswordHash(user, masterPassword, validatePassword: true, refreshStamp: false);
+        var (result, serverSideHash) = await _masterPasswordHasher.ValidateAndHashPasswordAsync(user, masterPassword);
         if (!result.Succeeded)
         {
             return result;
         }
 
+        // TODO: Once this endpoint receives salt/KDF from the client, pass client-supplied values.
+        user.SetInitialMasterPasswordCrypto(serverSideHash!, key,
+            user.GetMasterPasswordSalt(), user.Kdf, user.KdfIterations, user.KdfMemory, user.KdfParallelism);
+
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
 
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
