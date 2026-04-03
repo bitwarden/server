@@ -150,6 +150,7 @@ BEGIN
         [dbo].[OrganizationReport]
     WHERE
         [OrganizationId] = @Id
+
     -- Delete Organization Owned Sends
     DELETE
     FROM
