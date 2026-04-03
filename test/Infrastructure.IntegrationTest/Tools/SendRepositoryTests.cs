@@ -37,7 +37,6 @@ public class SendRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    // This test runs best on a fresh database and may fail on subsequent runs with other tests.
     public async Task GetByDeletionDateAsync_Works(ISendRepository sendRepository)
     {
         var deletionDate = DateTime.UtcNow.AddYears(-1);
@@ -61,7 +60,7 @@ public class SendRepositoryTests
         });
 
         var toDeleteSends = await sendRepository.GetManyByDeletionDateAsync(deletionDate);
-        var toDeleteSend = Assert.Single(toDeleteSends);
-        Assert.Equal(shouldDeleteSend.Id, toDeleteSend.Id);
+        Assert.Contains(toDeleteSends, s => s.Id == shouldDeleteSend.Id);
+        Assert.DoesNotContain(toDeleteSends, s => s.Id == shouldKeepSend.Id);
     }
 }
