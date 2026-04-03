@@ -11,6 +11,168 @@ public class DeviceRepositoryTests
 {
     [DatabaseTheory]
     [DatabaseData]
+    public async Task ReplaceAsync_WithNullLastActivityDate_PreservesExistingValue(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var device = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+        var afterBump = await sutRepository.GetByIdAsync(device.Id);
+        Assert.NotNull(afterBump!.LastActivityDate);
+
+        // Act — ReplaceAsync with LastActivityDate = null should not overwrite the bumped value
+        afterBump.LastActivityDate = null;
+        await sutRepository.ReplaceAsync(afterBump);
+
+        // Assert
+        var afterReplace = await sutRepository.GetByIdAsync(device.Id);
+        Assert.NotNull(afterReplace!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task ReplaceAsync_WithStaleLastActivityDate_PreservesNewerExistingValue(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var device = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+        var afterBump = await sutRepository.GetByIdAsync(device.Id);
+        var bumpedDate = afterBump!.LastActivityDate;
+        Assert.NotNull(bumpedDate);
+
+        // Act — ReplaceAsync with a stale (older) LastActivityDate should not overwrite the newer bumped value
+        afterBump.LastActivityDate = bumpedDate.Value.AddDays(-1);
+        await sutRepository.ReplaceAsync(afterBump);
+
+        // Assert
+        var afterReplace = await sutRepository.GetByIdAsync(device.Id);
+        Assert.Equal(bumpedDate, afterReplace!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync_SetsLastActivityDate(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var device = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        // Act
+        await sutRepository.BumpLastActivityDateByIdentifierAndUserIdAsync(device.Identifier, user.Id);
+
+        // Assert
+        var after = await sutRepository.GetByIdAsync(device.Id);
+        Assert.NotNull(after!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task BumpLastActivityDateByIdentifierAndUserIdAsync_DoesNotBumpOtherUsersDevice(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange — two users share the same device identifier
+        var userA = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User A",
+            Email = $"test_user_A+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var userB = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User B",
+            Email = $"test_user_B+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var sharedIdentifier = Guid.NewGuid().ToString();
+
+        var deviceA = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = userA.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = sharedIdentifier,
+        });
+
+        var deviceB = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = userB.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = sharedIdentifier,
+        });
+
+        var beforeB = (await sutRepository.GetByIdAsync(deviceB.Id))!.LastActivityDate;
+
+        // Act — bump only userA's device
+        await sutRepository.BumpLastActivityDateByIdentifierAndUserIdAsync(sharedIdentifier, userA.Id);
+
+        // Assert — userA's device is bumped, userB's is unchanged
+        var afterA = await sutRepository.GetByIdAsync(deviceA.Id);
+        var afterB = await sutRepository.GetByIdAsync(deviceB.Id);
+        Assert.NotNull(afterA!.LastActivityDate);
+        Assert.Equal(beforeB, afterB!.LastActivityDate);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_Works_ReturnsExpectedResults(
         IDeviceRepository sutRepository,
         IUserRepository userRepository,

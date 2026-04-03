@@ -33,7 +33,11 @@ public class DeviceAuthDetails : Device
         EncryptedUserKey = device.EncryptedUserKey;
         AuthRequestId = authRequestId;
         AuthRequestCreatedAt = authRequestCreationDate;
+        LastActivityDate = device.LastActivityDate;
     }
+
+    // TODO: Replace positional Dapper constructor with name-based mapping
+    // see https://bitwarden.atlassian.net/browse/PM-34130 
 
     /**
      * Constructor for dapper response.
@@ -54,6 +58,7 @@ public class DeviceAuthDetails : Device
         string encryptedPublicKey,
         string encryptedPrivateKey,
         bool active,
+        DateTime? lastActivityDate,
         Guid authRequestId,
         DateTime authRequestCreationDate)
     {
@@ -81,5 +86,6 @@ public class DeviceAuthDetails : Device
         AuthRequestId = authRequestId != Guid.Empty ? authRequestId : null;
         AuthRequestCreatedAt =
             authRequestCreationDate != DateTime.MinValue ? authRequestCreationDate : null;
+        LastActivityDate = lastActivityDate;
     }
 }
