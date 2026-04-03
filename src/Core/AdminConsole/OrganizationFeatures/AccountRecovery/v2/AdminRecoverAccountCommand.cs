@@ -7,6 +7,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -25,6 +27,7 @@ public class AdminRecoverAccountCommand(
     IEventService eventService,
     IPushNotificationService pushNotificationService,
     IUserService userService,
+    IMasterPasswordService masterPasswordService,
     IResetUserTwoFactorCommand resetUserTwoFactorCommand,
     IFeatureService featureService,
     IPolicyRequirementQuery policyRequirementQuery,
@@ -56,20 +59,23 @@ public class AdminRecoverAccountCommand(
         // Password reset
         if (request.ResetMasterPassword)
         {
-            var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);
-            if (!result.Succeeded)
+            // Unwind this with PM-33141 to only use the new payload
+            if (request.HasNewPayloads())
             {
-                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
-                return new PasswordUpdateFailedError(errorMessage);
+                var result = await HandlePayloadsWithUnlockAndAuthenticationDataAsync(user, request);
+                if (result.IsError)
+                {
+                    return result;
+                }
             }
-
-            var now = timeProvider.GetUtcNow().UtcDateTime;
-            user.RevisionDate = user.AccountRevisionDate = now;
-            user.LastPasswordChangeDate = now;
-            user.ForcePasswordReset = true;
-            user.Key = request.Key;
-
-            await userRepository.ReplaceAsync(user);
+            else
+            {
+                var result = await HandlePayloadWithDeprecatedRawDataAsync(user, request);
+                if (result is { IsSuccess: false })
+                {
+                    return result;
+                }
+            }
         }
 
         // 2FA reset
@@ -154,5 +160,56 @@ public class AdminRecoverAccountCommand(
         }).ToArray();
 
         await Task.WhenAll(legacyRevokeOrgUserTasks);
+    }
+
+    private async Task<CommandResult> HandlePayloadsWithUnlockAndAuthenticationDataAsync(User user, RecoverAccountRequest request)
+    {
+        // We can recover an account for users who both have a master password and
+        // those who do not. TDE users can be account recovered which will not have
+        // an initial master password set.
+        var identityResultFromMutation = await masterPasswordService.OnlyMutateEitherUpdateExistingPasswordOrSetInitialPassword(
+            user,
+            new SetInitialPasswordData
+            {
+                MasterPasswordUnlock = request.UnlockData!.ToData(),
+                MasterPasswordAuthentication = request.AuthenticationData!.ToData(),
+            }, new UpdateExistingPasswordData
+            {
+                MasterPasswordUnlock = request.UnlockData.ToData(),
+                MasterPasswordAuthentication = request.AuthenticationData.ToData(),
+            });
+
+        if (!identityResultFromMutation.Succeeded)
+        {
+            var errorMessage = string.Join(", ", identityResultFromMutation.Errors.Select(e => e.Description));
+            return new PasswordUpdateFailedError(errorMessage);
+        }
+
+        // When we are recovering an account we want to force a password reset on the user.
+        user.ForcePasswordReset = true;
+
+        await userRepository.ReplaceAsync(user);
+
+        return new None();
+    }
+
+    [Obsolete("Come back and specify when this is to be removed.")]
+    private async Task<CommandResult?> HandlePayloadWithDeprecatedRawDataAsync(User user, RecoverAccountRequest request)
+    {
+        var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);
+        if (!result.Succeeded)
+        {
+            var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+            return new PasswordUpdateFailedError(errorMessage);
+        }
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        user.RevisionDate = user.AccountRevisionDate = now;
+        user.LastPasswordChangeDate = now;
+        user.ForcePasswordReset = true;
+        user.Key = request.Key;
+
+        await userRepository.ReplaceAsync(user);
+        return null;
     }
 }

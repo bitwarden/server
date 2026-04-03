@@ -173,7 +173,16 @@ public class EmergencyAccessController : Controller
     public async Task Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
+
+        // Unwind this with PM-33141 to only use the new payload
+        if (model.HasNewPayloads())
+        {
+            await _emergencyAccessService.FinishRecoveryTakeoverAsync(id, user, model.UnlockData!.ToData(), model.AuthenticationData!.ToData());
+        }
+        else
+        {
+            await _emergencyAccessService.FinishRecoveryTakeoverAsync(id, user, model.NewMasterPasswordHash!, model.Key!);
+        }
     }
 
     [HttpPost("{id}/view")]
