@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -7,6 +8,9 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +24,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISubscriberService _subscriberService;
     private readonly IFeatureService _featureService;
+    private readonly ISendRepository _sendRepository;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<OrganizationDeleteCommand> _logger;
 
@@ -30,6 +35,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         ISsoConfigRepository ssoConfigRepository,
         ISubscriberService subscriberService,
         IFeatureService featureService,
+        ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService,
         ILogger<OrganizationDeleteCommand> logger)
     {
@@ -39,6 +45,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         _ssoConfigRepository = ssoConfigRepository;
         _subscriberService = subscriberService;
         _featureService = featureService;
+        _sendRepository = sendRepository;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
     }
@@ -70,7 +77,16 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             }
         }
 
-        await _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
+        var sends = await _sendRepository.GetManyByOrganizationIdAsync(organization.Id);
+        foreach (var send in sends.Where(s => s.Type == SendType.File))
+        {
+            var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
+            if (data?.Id != null)
+            {
+                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+            }
+        }
+
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }

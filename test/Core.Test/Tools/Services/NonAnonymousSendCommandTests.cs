@@ -1416,4 +1416,36 @@ public class NonAnonymousSendCommandTests
         // Assert
         Assert.True(result);
     }
+
+    [Fact]
+    public async Task DeleteSendAsync_FileSend_DeletesFileBeforeDbRecord()
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        var fileData = new SendFileData { Id = "file123", FileName = "test.txt", Size = 100 };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            UserId = Guid.NewGuid()
+        };
+
+        var callOrder = new List<string>();
+        _sendFileStorageService.DeleteFileAsync(send, fileData.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        _sendRepository.DeleteAsync(send)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        await _nonAnonymousSendCommand.DeleteSendAsync(send);
+
+        await _sendFileStorageService.Received(1).DeleteFileAsync(send, fileData.Id);
+        await _sendRepository.Received(1).DeleteAsync(send);
+        await _pushNotificationService.Received(1).PushSyncSendDeleteAsync(send);
+        Assert.Equal(new[] { "file", "db" }, callOrder);
+    }
 }

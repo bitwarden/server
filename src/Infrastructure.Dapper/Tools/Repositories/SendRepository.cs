@@ -53,6 +53,22 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     }
 
     /// <inheritdoc />
+    public async Task<ICollection<Send>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Send>(
+                $"[{Schema}].[Send_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            var sends = results.ToList();
+            UnprotectData(sends);
+            return sends;
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
     {
         using (var connection = new SqlConnection(ConnectionString))

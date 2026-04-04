@@ -72,6 +72,17 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var results = await dbContext.Sends.Where(s => s.OrganizationId == organizationId).ToListAsync();
+            return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+        }
+    }
+
+    /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
         IEnumerable<Core.Tools.Entities.Send> sends)
     {

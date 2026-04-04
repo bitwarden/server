@@ -25,6 +25,11 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -698,6 +703,63 @@ public class UserServiceTests
         await sutProvider.GetDependency<ISubscriberService>()
             .DidNotReceiveWithAnyArgs()
             .CancelSubscription(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithFileSends_DeletesFilesBeforeDbRecords(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        user.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        var fileData = new SendFileData { Id = "file1", FileName = "test.txt", Size = 100 };
+        var fileSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData)
+        };
+        var textSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Type = SendType.Text,
+            Data = "{}"
+        };
+
+        sutProvider.GetDependency<ISendRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<Send> { fileSend, textSend });
+
+        var callOrder = new List<string>();
+        sutProvider.GetDependency<ISendFileStorageService>()
+            .DeleteFileAsync(fileSend, fileData.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        sutProvider.GetDependency<IUserRepository>()
+            .DeleteAsync(user)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        var result = await sutProvider.Sut.DeleteAsync(user);
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<ISendFileStorageService>()
+            .Received(1).DeleteFileAsync(fileSend, fileData.Id);
+        Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 }
 

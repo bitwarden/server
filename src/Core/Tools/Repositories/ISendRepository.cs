@@ -24,6 +24,18 @@ public interface ISendRepository : IRepository<Send, Guid>
     Task<ICollection<Send>> GetManyByUserIdAsync(Guid userId);
 
     /// <summary>
+    /// Loads all <see cref="Send"/>s owned by an organization.
+    /// </summary>
+    /// <param name="organizationId">
+    /// Identifies the organization.
+    /// </param>
+    /// <returns>
+    /// A task that completes once the <see cref="Send"/>s have been loaded.
+    /// The task's result contains the loaded <see cref="Send"/>s.
+    /// </returns>
+    Task<ICollection<Send>> GetManyByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
     /// Loads <see cref="Send"/>s scheduled for deletion.
     /// </summary>
     /// <param name="deletionDateBefore">
