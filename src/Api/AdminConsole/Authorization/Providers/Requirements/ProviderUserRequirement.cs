@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Context;
 
-namespace Bit.Api.AdminConsole.Authorization.Requirements;
+namespace Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 
 /// <summary>
 /// Authorizes any provider member (ProviderAdmin or ServiceUser).

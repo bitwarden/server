@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.AdminConsole.Authorization;
+namespace Bit.Api.AdminConsole.Authorization.Providers;
 
 /// <summary>
 /// Handles any requirement that implements <see cref="IProviderRequirement"/>.

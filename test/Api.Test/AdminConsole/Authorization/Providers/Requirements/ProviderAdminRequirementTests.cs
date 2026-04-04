@@ -1,11 +1,11 @@
-﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+﻿using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Authorization.Requirements;
+namespace Bit.Api.Test.AdminConsole.Authorization.Providers.Requirements;
 
 [SutProviderCustomize]
 public class ProviderAdminRequirementTests

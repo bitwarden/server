@@ -1,4 +1,5 @@
-﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
+﻿using Bit.Api.AdminConsole.Authorization.Providers;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;

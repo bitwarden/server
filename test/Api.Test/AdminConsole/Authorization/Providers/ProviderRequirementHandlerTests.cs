@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Providers;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -9,7 +10,7 @@ using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Authorization;
+namespace Bit.Api.Test.AdminConsole.Authorization.Providers;
 
 [SutProviderCustomize]
 public class ProviderRequirementHandlerTests

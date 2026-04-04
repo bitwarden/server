@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 
-namespace Bit.Api.AdminConsole.Authorization.Requirements;
+namespace Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 
 /// <summary>
 /// Authorizes ProviderAdmin users only.

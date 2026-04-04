@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Context;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.AdminConsole.Authorization;
+namespace Bit.Api.AdminConsole.Authorization.Providers;
 
 /// <summary>
 /// A requirement that implements this interface will be handled by <see cref="ProviderRequirementHandler"/>,

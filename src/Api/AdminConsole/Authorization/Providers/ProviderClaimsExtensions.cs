@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Identity;
 
-namespace Bit.Api.AdminConsole.Authorization;
+namespace Bit.Api.AdminConsole.Authorization.Providers;
 
 public static class ProviderClaimsExtensions
 {

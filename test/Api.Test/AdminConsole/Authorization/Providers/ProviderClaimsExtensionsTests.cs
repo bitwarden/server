@@ -1,11 +1,11 @@
 ﻿using System.Security.Claims;
-using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Providers;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Identity;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Authorization;
+namespace Bit.Api.Test.AdminConsole.Authorization.Providers;
 
 public class ProviderClaimsExtensionsTests
 {

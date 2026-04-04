@@ -1,4 +1,4 @@
-﻿namespace Bit.Api.AdminConsole.Authorization.Requirements;
+﻿namespace Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 
 /// <summary>
 /// Authorizes users who can manage provider users (ProviderAdmin only).
