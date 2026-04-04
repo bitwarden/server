@@ -1,0 +1,43 @@
+﻿using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+
+namespace Bit.Api.AdminConsole.Authorization;
+
+/// <summary>
+/// Handles any requirement that implements <see cref="IProviderRequirement"/>.
+/// Retrieves the Provider ID from the route and then passes the provider claims to the requirement's AuthorizeAsync
+/// callback to determine whether the action is authorized.
+/// </summary>
+public class ProviderRequirementHandler(
+    IHttpContextAccessor httpContextAccessor,
+    IUserService userService)
+    : AuthorizationHandler<IProviderRequirement>
+{
+    public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
+
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IProviderRequirement requirement)
+    {
+        var httpContext = httpContextAccessor.HttpContext;
+        if (httpContext == null)
+        {
+            throw new InvalidOperationException(NoHttpContextError);
+        }
+
+        var providerId = httpContext.GetProviderId();
+
+        var userId = userService.GetProperUserId(httpContext.User);
+        if (userId == null)
+        {
+            return;
+        }
+
+        var providerClaims = httpContext.User.GetCurrentContextProvider(providerId);
+
+        var authorized = await requirement.AuthorizeAsync(providerClaims);
+
+        if (authorized)
+        {
+            context.Succeed(requirement);
+        }
+    }
+}
