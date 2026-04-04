@@ -94,8 +94,9 @@ public static class HttpContextExtensions
     {
         var routeValues = httpContext.GetRouteData().Values;
 
-        routeValues.TryGetValue("providerId", out var providerIdParam);
-        if (providerIdParam != null && Guid.TryParse(providerIdParam.ToString(), out var providerId))
+        if (routeValues.TryGetValue("providerId", out var providerIdParam) &&
+            providerIdParam != null &&
+            Guid.TryParse(providerIdParam.ToString(), out var providerId))
         {
             return providerId;
         }
