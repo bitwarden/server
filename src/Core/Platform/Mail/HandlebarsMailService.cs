@@ -1189,7 +1189,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"Emergency Access Contact Invite", emergencyAccess.Email);
         var model = new EmergencyAccessInvitedViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(name),
+            Name = CoreHelpers.SanitizeForEmail(name, false),
             Email = WebUtility.UrlEncode(emergencyAccess.Email),
             Id = emergencyAccess.Id.ToString(),
             Token = WebUtility.UrlEncode(token),
@@ -1220,7 +1220,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"You Have Been Confirmed as Emergency Access Contact", email);
         var model = new EmergencyAccessConfirmedViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(grantorName),
+            Name = CoreHelpers.SanitizeForEmail(grantorName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -1237,7 +1237,7 @@ public class HandlebarsMailService : IMailService
 
         var model = new EmergencyAccessRecoveryViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(initiatingName),
+            Name = CoreHelpers.SanitizeForEmail(initiatingName, false),
             Action = emergencyAccess.Type.ToString(),
             DaysLeft = emergencyAccess.WaitTimeDays - Convert.ToInt32((remainingTime).TotalDays),
         };
@@ -1251,7 +1251,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Emergency Access Approved", email);
         var model = new EmergencyAccessApprovedViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(approvingName),
+            Name = CoreHelpers.SanitizeForEmail(approvingName, false),
         };
         await AddMessageContentAsync(message, "Auth.EmergencyAccessApproved", model);
         message.Category = "EmergencyAccessApproved";
@@ -1263,7 +1263,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Emergency Access Rejected", email);
         var model = new EmergencyAccessRejectedViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(rejectingName),
+            Name = CoreHelpers.SanitizeForEmail(rejectingName, false),
         };
         await AddMessageContentAsync(message, "Auth.EmergencyAccessRejected", model);
         message.Category = "EmergencyAccessRejected";
@@ -1278,7 +1278,7 @@ public class HandlebarsMailService : IMailService
 
         var model = new EmergencyAccessRecoveryViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(initiatingName),
+            Name = CoreHelpers.SanitizeForEmail(initiatingName, false),
             Action = emergencyAccess.Type.ToString(),
             DaysLeft = emergencyAccess.WaitTimeDays - Convert.ToInt32((remainingTime).TotalDays),
         };
@@ -1292,7 +1292,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Emergency Access Granted", email);
         var model = new EmergencyAccessRecoveryTimedOutViewModel
         {
-            Name = CoreHelpers.SanitizeForEmail(initiatingName),
+            Name = CoreHelpers.SanitizeForEmail(initiatingName, false),
             Action = emergencyAccess.Type.ToString(),
         };
         await AddMessageContentAsync(message, "Auth.EmergencyAccessRecoveryTimedOut", model);
