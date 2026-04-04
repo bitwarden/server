@@ -8,6 +8,6 @@ namespace Bit.Api.AdminConsole.Authorization.Requirements;
 /// </summary>
 public class ProviderAdminRequirement : IProviderRequirement
 {
-    public Task<bool> AuthorizeAsync(CurrentContextProvider? providerClaims)
-        => Task.FromResult(providerClaims?.Type == ProviderUserType.ProviderAdmin);
+    public bool Authorize(CurrentContextProvider? providerClaims)
+        => providerClaims?.Type == ProviderUserType.ProviderAdmin;
 }

@@ -19,5 +19,5 @@ public interface IProviderRequirement : IAuthorizationRequirement
     /// This is null if they are not a member.
     /// </param>
     /// <returns>True if the requirement has been satisfied, otherwise false.</returns>
-    public Task<bool> AuthorizeAsync(CurrentContextProvider? providerClaims);
+    public bool Authorize(CurrentContextProvider? providerClaims);
 }

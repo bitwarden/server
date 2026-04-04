@@ -1,4 +1,4 @@
-﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Test.Common.AutoFixture;
@@ -11,32 +11,32 @@ namespace Bit.Api.Test.AdminConsole.Authorization.Requirements;
 public class ProviderUserRequirementTests
 {
     [Theory, BitAutoData]
-    public async Task AuthorizeAsync_WhenUserIsProviderAdmin_ThenRequestShouldBeAuthorized(
+    public void Authorize_WhenUserIsProviderAdmin_ThenRequestShouldBeAuthorized(
         SutProvider<ProviderUserRequirement> sutProvider)
     {
         var providerClaims = new CurrentContextProvider { Id = Guid.NewGuid(), Type = ProviderUserType.ProviderAdmin };
 
-        var actual = await sutProvider.Sut.AuthorizeAsync(providerClaims);
+        var actual = sutProvider.Sut.Authorize(providerClaims);
 
         Assert.True(actual);
     }
 
     [Theory, BitAutoData]
-    public async Task AuthorizeAsync_WhenUserIsServiceUser_ThenRequestShouldBeAuthorized(
+    public void Authorize_WhenUserIsServiceUser_ThenRequestShouldBeAuthorized(
         SutProvider<ProviderUserRequirement> sutProvider)
     {
         var providerClaims = new CurrentContextProvider { Id = Guid.NewGuid(), Type = ProviderUserType.ServiceUser };
 
-        var actual = await sutProvider.Sut.AuthorizeAsync(providerClaims);
+        var actual = sutProvider.Sut.Authorize(providerClaims);
 
         Assert.True(actual);
     }
 
     [Theory, BitAutoData]
-    public async Task AuthorizeAsync_WhenUserIsNotProviderMember_ThenRequestShouldBeDenied(
+    public void Authorize_WhenUserIsNotProviderMember_ThenRequestShouldBeDenied(
         SutProvider<ProviderUserRequirement> sutProvider)
     {
-        var actual = await sutProvider.Sut.AuthorizeAsync(null);
+        var actual = sutProvider.Sut.Authorize(null);
 
         Assert.False(actual);
     }

@@ -15,7 +15,7 @@ public class ProviderRequirementHandler(
 {
     public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IProviderRequirement requirement)
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, IProviderRequirement requirement)
     {
         var httpContext = httpContextAccessor.HttpContext;
         if (httpContext == null)
@@ -28,16 +28,16 @@ public class ProviderRequirementHandler(
         var userId = userService.GetProperUserId(httpContext.User);
         if (userId == null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var providerClaims = httpContext.User.GetCurrentContextProvider(providerId);
 
-        var authorized = await requirement.AuthorizeAsync(providerClaims);
-
-        if (authorized)
+        if (requirement.Authorize(providerClaims))
         {
             context.Succeed(requirement);
         }
+
+        return Task.CompletedTask;
     }
 }

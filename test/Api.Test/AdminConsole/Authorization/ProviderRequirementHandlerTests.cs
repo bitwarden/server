@@ -56,7 +56,7 @@ public class ProviderRequirementHandlerTests
         await sutProvider.Sut.HandleAsync(authContext);
 
         // Assert — requirement is not invoked and context has not succeeded
-        await testRequirement.DidNotReceive().AuthorizeAsync(Arg.Any<CurrentContextProvider?>());
+        testRequirement.DidNotReceive().Authorize(Arg.Any<CurrentContextProvider?>());
         Assert.False(authContext.HasSucceeded);
     }
 
@@ -68,14 +68,14 @@ public class ProviderRequirementHandlerTests
         ArrangeRouteAndUser(sutProvider, providerId.ToString(), userId);
 
         var testRequirement = Substitute.For<IProviderRequirement>();
-        testRequirement.AuthorizeAsync(null).ReturnsForAnyArgs(false);
+        testRequirement.Authorize(null).ReturnsForAnyArgs(false);
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
         // Act
         await sutProvider.Sut.HandleAsync(authContext);
 
         // Assert
-        await testRequirement.Received(1).AuthorizeAsync(null);
+        testRequirement.Received(1).Authorize(null);
         Assert.False(authContext.HasSucceeded);
     }
 
@@ -87,14 +87,14 @@ public class ProviderRequirementHandlerTests
         ArrangeRouteAndUser(sutProvider, providerId.ToString(), userId);
 
         var testRequirement = Substitute.For<IProviderRequirement>();
-        testRequirement.AuthorizeAsync(null).ReturnsForAnyArgs(true);
+        testRequirement.Authorize(null).ReturnsForAnyArgs(true);
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
         // Act
         await sutProvider.Sut.HandleAsync(authContext);
 
         // Assert
-        await testRequirement.Received(1).AuthorizeAsync(null);
+        testRequirement.Received(1).Authorize(null);
         Assert.True(authContext.HasSucceeded);
     }
 
