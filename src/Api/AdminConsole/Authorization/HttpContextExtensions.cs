@@ -7,10 +7,10 @@ namespace Bit.Api.AdminConsole.Authorization;
 public static class HttpContextExtensions
 {
     public const string NoOrgIdError =
-        "A route decorated with with '[Authorize<Requirement>]' must include a route value named 'orgId' or 'organizationId' either through the [Controller] attribute or through a '[Http*]' attribute.";
+        "A route decorated with with '[Authorize<IOrganizationRequirement>]' must include a route value named 'orgId' or 'organizationId' either through the [Controller] attribute or through a '[Http*]' attribute.";
 
     public const string NoProviderIdError =
-        "A route decorated with '[Authorize<Requirement>]' must include a route value named 'providerId' either through the [Controller] attribute or through a '[Http*]' attribute.";
+        "A route decorated with '[Authorize<IProviderRequirement>]' must include a route value named 'providerId' either through the [Controller] attribute or through a '[Http*]' attribute.";
 
     /// <summary>
     /// Returns the result of the callback, caching it in HttpContext.Features for the lifetime of the request.
