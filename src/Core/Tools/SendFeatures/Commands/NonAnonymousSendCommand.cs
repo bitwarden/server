@@ -137,12 +137,15 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     }
     public async Task DeleteSendAsync(Send send)
     {
-        await _sendRepository.DeleteAsync(send);
-        if (send.Type == Enums.SendType.File)
+        if (send.Type == Enums.SendType.File && send.Data != null)
         {
             var data = JsonSerializer.Deserialize<SendFileData>(send.Data);
-            await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+            if (data?.Id != null)
+            {
+                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+            }
         }
+        await _sendRepository.DeleteAsync(send);
         await _pushNotificationService.PushSyncSendDeleteAsync(send);
     }
 
