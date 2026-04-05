@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
 
       - name: Verify format
         run: dotnet format --verify-no-changes
@@ -124,10 +124,10 @@ jobs:
           fi
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
 
       - name: Set up Node
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
@@ -180,7 +180,7 @@ jobs:
 
       ########## Registries ##########
       - name: Log in to GHCR
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -267,7 +267,7 @@ jobs:
 
       - name: Install Cosign
         if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Sign image with Cosign
         if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
@@ -285,14 +285,14 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@7037fa011853d5a11690026fb85feee79f4c946c # v7.3.2
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
           output-format: sarif
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # v4.31.10
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
           sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
@@ -319,10 +319,10 @@ jobs:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
 
       - name: Log in to GHCR
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -442,7 +442,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
 
       - name: Print environment
         run: |
@@ -629,7 +629,7 @@ jobs:
         uses: bitwarden/gh-actions/azure-logout@main
 
       - name: Notify Slack on failure
-        uses: act10ns/slack@44541246747a30eb3102d87f7a4cc5471b0ffb7d # v2.1.0
+        uses: act10ns/slack@d96404edccc6d6467fc7f8134a420c851b1e9054 # v2.2.0
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}

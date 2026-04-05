@@ -203,7 +203,7 @@ jobs:
 
       - name: Notify Slack about creation of PR
         if: ${{ steps.commit.outputs.pr_needed == 'true' }}
-        uses: act10ns/slack@44541246747a30eb3102d87f7a4cc5471b0ffb7d # v2.1.0
+        uses: act10ns/slack@d96404edccc6d6467fc7f8134a420c851b1e9054 # v2.2.0
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
         with:
