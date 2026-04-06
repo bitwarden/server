@@ -77,16 +77,8 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             }
         }
 
-        var sends = await _sendRepository.GetManyByOrganizationIdAsync(organization.Id);
-        foreach (var send in sends.Where(s => s.Type == SendType.File))
-        {
-            var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
-            if (data?.Id != null)
-            {
-                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
-            }
-        }
 
+        await DeleteOrganizationOwnedSendsAsync(organization);
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
@@ -97,6 +89,19 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
             throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
+        }
+    }
+
+    private async Task DeleteOrganizationOwnedSendsAsync(Organization organization)
+    {
+        var sends = await _sendRepository.GetManyByOrganizationIdAsync(organization.Id);
+        foreach (var send in sends.Where(s => s.Type == SendType.File))
+        {
+            var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
+            if (data?.Id != null)
+            {
+                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+            }
         }
     }
 }
