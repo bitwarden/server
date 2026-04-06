@@ -712,10 +712,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns((Guid?)null);
@@ -736,10 +732,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(Guid.Empty);
@@ -761,10 +753,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);
@@ -794,10 +782,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);
@@ -829,10 +813,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);
@@ -864,10 +844,6 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns(userId);

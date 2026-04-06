@@ -807,7 +807,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("{id}/auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.AutomaticConfirmUsers)]
     public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)

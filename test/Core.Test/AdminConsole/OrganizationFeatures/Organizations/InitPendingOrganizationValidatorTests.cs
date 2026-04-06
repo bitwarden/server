@@ -218,10 +218,6 @@ public class InitPendingOrganizationValidatorTests
         var token = CreateValidToken(orgUser, sutProvider);
         SetValidOrganizationState(org);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         var policyDetails = new PolicyDetails
         {
             OrganizationId = org.Id,
