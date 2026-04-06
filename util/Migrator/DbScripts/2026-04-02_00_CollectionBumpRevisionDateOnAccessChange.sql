@@ -426,7 +426,8 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_CreateManyWithCollectionsAndGroups]
     @organizationUserData NVARCHAR(MAX),
     @collectionData NVARCHAR(MAX),
-    @groupData NVARCHAR(MAX)
+    @groupData NVARCHAR(MAX),
+    @RevisionDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -519,13 +520,16 @@ BEGIN
             ) OUC
 
     -- Bump RevisionDate on all affected collections
-    UPDATE C
-    SET C.[RevisionDate] = GETUTCDATE()
-    FROM [dbo].[Collection] C
-    WHERE C.[Id] IN (
-        SELECT OUC.[CollectionId]
-        FROM OPENJSON(@collectionData)
-        WITH ([CollectionId] UNIQUEIDENTIFIER '$.CollectionId') OUC
-    )
+    IF @RevisionDate IS NOT NULL
+    BEGIN
+        UPDATE C
+        SET C.[RevisionDate] = @RevisionDate
+        FROM [dbo].[Collection] C
+        WHERE C.[Id] IN (
+            SELECT OUC.[CollectionId]
+            FROM OPENJSON(@collectionData)
+            WITH ([CollectionId] UNIQUEIDENTIFIER '$.CollectionId') OUC
+        )
+    END
 END
 GO

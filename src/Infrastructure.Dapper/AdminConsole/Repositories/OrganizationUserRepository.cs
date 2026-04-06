@@ -672,7 +672,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                     {
                         GroupId = group,
                         OrganizationUserId = user.OrganizationUser.Id
-                    }))
+                    })),
+                RevisionDate = organizationUsersList.First().OrganizationUser.RevisionDate
             },
             commandType: CommandType.StoredProcedure);
     }
