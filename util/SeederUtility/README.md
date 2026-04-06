@@ -11,11 +11,13 @@ dotnet build
 dotnet run -- <command> [options]
 ```
 
-**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). The owner email is `owner@<domain>`.
+**Login Credentials:** All seeded users use password `asdfasdfasdf` by default (override with `--password`). For org presets the owner email is `owner@<domain>`; for individual presets the email comes from the preset's `user.email` field. For the `individual` command with `--first-name`/`--last-name`, the email is `{first}.{last}@individual.example`; without names, a random Faker identity is generated and mangling is auto-enabled.
 
 ## Commands
 
 ### `organization` - Seed an Organization
+
+Full control over the org shape via CLI flags — user count, domain, structure, region, density, and plan type. Reach for this when you need flexibility the preset catalog doesn't offer, including orgs with no vault data (every preset includes ciphers).
 
 ```bash
 # Users only — no vault data
@@ -51,25 +53,62 @@ dotnet run -- organization -n FreeOrg -d free.example -u 1 -c 10 -g 1 --plan-typ
 
 # Teams plan org
 dotnet run -- organization -n TeamsOrg -d teams.example -u 20 -c 200 -g 5 --plan-type teams-annually
+
+# Production-realistic KDF iterations (600k) for e2e auth testing
+dotnet run -- organization -n E2eOrg -d e2e.example -u 5 -c 25 --kdf-iterations 600000 --mangle
 ```
 
-### `seed` - Fixture-Based Seeding
+### `individual` - Seed an Individual User
+
+Full control over the user via CLI flags — subscription tier, identity, and optional vault data. Reach for this when you need a named user with a predictable email or a personal vault with generated items; the individual presets create bare accounts with no vault data.
+
+```bash
+# Named user — predictable email (john.doe@individual.example), no mangling needed
+dotnet run -- individual --subscription free --first-name John --last-name Doe
+
+# Premium named user with personal vault (~75 ciphers, 5 folders)
+dotnet run -- individual --subscription premium --first-name Jane --last-name Smith --vault
+
+# Random name — mangling auto-enabled (no names = random Faker identity)
+dotnet run -- individual --subscription premium --vault
+
+# With custom password
+dotnet run -- individual --subscription free --first-name John --last-name Doe --vault --password "MyTestPassword1"
+
+# Production-realistic KDF iterations for e2e auth testing
+dotnet run -- individual --subscription premium --first-name Test --last-name User --kdf-iterations 600000
+```
+
+### `preset` - Fixture-Based Seeding
+
+Loads a named configuration from the embedded catalog. Presets are curated JSON fixtures with specific users, groups, collections, and cipher relationships — the same data every time. Reach for this when you need a known, reproducible scenario rather than generated data.
 
 ```bash
 # List available presets and fixtures
-dotnet run -- seed --list
+dotnet run -- preset --list
 
 # Load the Dunder Mifflin preset (58 users, 14 groups, 15 collections, ciphers)
-dotnet run -- seed --preset dunder-mifflin-enterprise-full
+dotnet run -- preset --name qa.dunder-mifflin-enterprise-full
+
+# Zero Knowledge Labs — 429 users, named folders, favorites
+dotnet run -- preset --name qa.zero-knowledge-labs-enterprise --mangle
 
 # Load with ID mangling for test isolation
-dotnet run -- seed --preset dunder-mifflin-enterprise-full --mangle
+dotnet run -- preset --name qa.dunder-mifflin-enterprise-full --mangle
 
-dotnet run -- seed --preset stark-free-basic --mangle
+dotnet run -- preset --name qa.stark-free-basic --mangle
 
-# Large enterprise preset for performance testing
-dotnet run -- seed --preset large-enterprise
+# Scale preset for performance testing
+dotnet run -- preset --name scale.xs-central-perk --mangle
 
-dotnet run -- seed --preset dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
+dotnet run -- preset --name qa.dunder-mifflin-enterprise-full --password "MyTestPassword1" --mangle
+
+# Override KDF iterations for a preset (overrides preset's kdfIterations value)
+dotnet run -- preset --name qa.enterprise-basic --kdf-iterations 600000 --mangle
+
+# Seed a free individual user
+dotnet run -- preset --name individual.free --mangle
+
+# Seed a premium individual user
+dotnet run -- preset --name individual.premium --mangle
 ```
-

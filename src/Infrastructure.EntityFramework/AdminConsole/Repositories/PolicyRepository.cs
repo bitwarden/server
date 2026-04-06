@@ -234,4 +234,53 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
 
         return allResults.ToList();
     }
+
+    public async Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserIdAndPolicyTypeAsync(Guid userId, PolicyType policyType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Get user email for invited user matching
+        var userEmail = await dbContext.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.Email)
+            .FirstOrDefaultAsync();
+
+        // Get provider relationships
+        var providerOrganizationIds = await (from pu in dbContext.ProviderUsers
+                                             join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
+                                             where pu.UserId == userId
+                                             select po.OrganizationId)
+            .Distinct()
+            .ToListAsync();
+
+        var providerSet = new HashSet<Guid>(providerOrganizationIds);
+
+        // Get organization users (both confirmed/accepted and invited)
+        var orgUsersQuery = dbContext.OrganizationUsers
+            .Where(ou => (ou.Status != OrganizationUserStatusType.Invited && ou.UserId == userId) ||
+                         (ou.Status == OrganizationUserStatusType.Invited && ou.Email == userEmail && userEmail != null));
+
+        // Join with policies and organizations
+        var query = from policy in dbContext.Policies
+                    join orgUser in orgUsersQuery on policy.OrganizationId equals orgUser.OrganizationId
+                    join org in dbContext.Organizations on policy.OrganizationId equals org.Id
+                    where policy.Type == policyType
+                        && policy.Enabled
+                        && org.Enabled
+                        && org.UsePolicies
+                    select new PolicyDetails
+                    {
+                        OrganizationUserId = orgUser.Id,
+                        OrganizationId = policy.OrganizationId,
+                        PolicyType = policy.Type,
+                        PolicyData = policy.Data,
+                        OrganizationUserType = orgUser.Type,
+                        OrganizationUserStatus = orgUser.Status,
+                        OrganizationUserPermissionsData = orgUser.Permissions,
+                        IsProvider = providerSet.Contains(policy.OrganizationId)
+                    };
+
+        return await query.ToListAsync();
+    }
 }

@@ -7,6 +7,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
@@ -16,6 +17,7 @@ using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -46,7 +48,9 @@ public class OrganizationsController(
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
-    IPricingClient pricingClient)
+    IPricingClient pricingClient,
+    IFeatureService featureService,
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -118,13 +122,13 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade());
+        var userId = userService.GetProperUserId(User);
 
-        if (model.UseSecretsManager && success)
+        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade(), userId);
+
+        if (model.UseSecretsManager && success && userId.HasValue)
         {
-            var userId = userService.GetProperUserId(User).Value;
-
-            await TryGrantOwnerAccessToSecretsManagerAsync(id, userId);
+            await TryGrantOwnerAccessToSecretsManagerAsync(id, userId.Value);
         }
 
         return new PaymentResponseModel { Success = success, PaymentIntentClientSecret = paymentIntentClientSecret };
@@ -227,13 +231,13 @@ public class OrganizationsController(
         }
 
         await subscriberService.CancelSubscription(organization,
+            organization.IsExpired(),
             new OffboardingSurveyResponse
             {
                 UserId = currentContext.UserId!.Value,
                 Reason = request.Reason,
                 Feedback = request.Feedback
-            },
-            organization.IsExpired());
+            });
     }
 
     [HttpPost("{id:guid}/reinstate")]
@@ -245,7 +249,20 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await organizationService.ReinstateSubscriptionAsync(id);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var organization = await organizationRepository.GetByIdAsync(id);
+            if (organization == null)
+            {
+                throw new NotFoundException();
+            }
+
+            (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
+        }
+        else
+        {
+            await organizationService.ReinstateSubscriptionAsync(id);
+        }
     }
 
     /// <summary>

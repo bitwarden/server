@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
@@ -977,6 +978,30 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var entity = await view.Run(dbContext).SingleOrDefaultAsync(ou => ou.OrganizationId == organizationId && ou.UserId == userId);
             return entity;
         }
+    }
+
+    public Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(Core.Entities.OrganizationUser organizationUser)
+    {
+        return async (DbConnection connection, DbTransaction transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            dbContext.Database.SetDbConnection(connection);
+            await dbContext.Database.UseTransactionAsync(transaction);
+
+            var efOrganizationUser = await dbContext.OrganizationUsers.FindAsync(organizationUser.Id);
+            if (efOrganizationUser is null)
+            {
+                throw new InvalidOperationException($"OrganizationUser {organizationUser.Id} was not found during owner confirmation.");
+            }
+
+            efOrganizationUser.Status = organizationUser.Status;
+            efOrganizationUser.UserId = organizationUser.UserId;
+            efOrganizationUser.Key = organizationUser.Key;
+            efOrganizationUser.Email = organizationUser.Email;
+
+            await dbContext.SaveChangesAsync();
+        };
     }
 #nullable disable
 

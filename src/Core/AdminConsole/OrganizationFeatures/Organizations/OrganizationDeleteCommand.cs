@@ -2,10 +2,12 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
@@ -15,17 +17,26 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly ISubscriberService _subscriberService;
+    private readonly IFeatureService _featureService;
+    private readonly ILogger<OrganizationDeleteCommand> _logger;
 
     public OrganizationDeleteCommand(
         IApplicationCacheService applicationCacheService,
         IOrganizationRepository organizationRepository,
         IStripePaymentService paymentService,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        ISubscriberService subscriberService,
+        IFeatureService featureService,
+        ILogger<OrganizationDeleteCommand> logger)
     {
         _applicationCacheService = applicationCacheService;
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
+        _subscriberService = subscriberService;
+        _featureService = featureService;
+        _logger = logger;
     }
 
     public async Task DeleteAsync(Organization organization)
@@ -38,9 +49,21 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             {
                 var eop = !organization.ExpirationDate.HasValue ||
                           organization.ExpirationDate.Value >= DateTime.UtcNow;
-                await _paymentService.CancelSubscriptionAsync(organization, eop);
+
+                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+                {
+                    // In cases where the subscription is not active, the cancellation will fail and be logged.
+                    await _subscriberService.CancelSubscription(organization, cancelImmediately: !eop);
+                }
+                else
+                {
+                    await _paymentService.CancelSubscriptionAsync(organization, eop);
+                }
             }
-            catch (GatewayException) { }
+            catch (Exception exception) when (exception is GatewayException or BillingException)
+            {
+                _logger.LogWarning(exception, "Failed to cancel subscription for organization {OrganizationId}", organization.Id);
+            }
         }
 
         await _organizationRepository.DeleteAsync(organization);

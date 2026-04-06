@@ -191,7 +191,7 @@ internal static class Passwords
         PasswordStrength.Fair => Fair,
         PasswordStrength.Strong => Strong,
         PasswordStrength.VeryStrong => VeryStrong,
-        _ => Strong
+        _ => throw new ArgumentOutOfRangeException(nameof(strength), strength, null)
     };
 
     /// <summary>

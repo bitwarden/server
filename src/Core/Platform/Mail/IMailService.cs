@@ -69,10 +69,12 @@ public interface IMailService
     /// </summary>
     /// <param name="orgInvitesInfo">The information required to send the organization invites.</param>
     Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo);
+    Task SendUpdatedOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo);
     Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false);
     Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false);
+    Task SendUpdatedOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager = false);
     Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email);
     Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
@@ -110,7 +112,7 @@ public interface IMailService
     Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email);
     Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email);
     Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage);
-    Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName);
+    Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor);
     Task SendProviderSetupInviteEmailAsync(Provider provider, string token, string email);
     Task SendBusinessUnitConversionInviteAsync(Organization organization, string token, string email);
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);

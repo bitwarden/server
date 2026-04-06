@@ -78,7 +78,17 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendUpdatedOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager = false)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendUpdatedOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         return Task.FromResult(0);
     }
@@ -231,7 +241,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName)
+    public Task SendAdminResetPasswordEmailAsync(string email, string? userName, string orgName, bool resetMasterPassword, bool resetTwoFactor)
     {
         return Task.FromResult(0);
     }

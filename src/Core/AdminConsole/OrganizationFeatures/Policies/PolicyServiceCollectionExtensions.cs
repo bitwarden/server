@@ -43,6 +43,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyValidator, FreeFamiliesForEnterprisePolicyValidator>();
         services.AddScoped<IPolicyValidator, BlockClaimedDomainAccountCreationPolicyValidator>();
         services.AddScoped<IPolicyValidator, AutomaticUserConfirmationPolicyEventHandler>();
+        services.AddScoped<IPolicyValidator, OrganizationUserNotificationPolicyValidator>();
     }
 
     [Obsolete("Use AddPolicyUpdateEvents instead.")]
@@ -63,17 +64,21 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, UriMatchDefaultPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, BlockClaimedDomainAccountCreationPolicyValidator>();
         services.AddScoped<IPolicyUpdateEvent, AutomaticUserConfirmationPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, DisableSendSyncPolicyEvent>();
+        services.AddScoped<IPolicyUpdateEvent, SendOptionsSyncPolicyEvent>();
+        services.AddScoped<IPolicyUpdateEvent, SendControlsSyncPolicyEvent>();
+        services.AddScoped<IPolicyUpdateEvent, OrganizationUserNotificationPolicyValidator>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
     {
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, DisableSendPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendOptionsPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendControlsPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, ResetPasswordPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, OrganizationDataOwnershipPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireSsoPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, RequireTwoFactorPolicyRequirementFactory>();
-        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, MasterPasswordPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SingleOrganizationPolicyRequirementFactory>();
         services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, AutomaticUserConfirmationPolicyRequirementFactory>();
     }

@@ -342,6 +342,8 @@ public class SendsController : Controller
             throw new BadRequestException($"Max file size is {SendFileSettingHelper.MAX_FILE_SIZE_READABLE}.");
         }
 
+        var file = model.File ?? throw new BadRequestException("File metadata is required for file sends.");
+
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
@@ -351,7 +353,7 @@ public class SendsController : Controller
             throw new BadRequestException("Email verified Sends require a premium membership");
         }
 
-        var (send, data) = model.ToSend(userId, model.File.FileName, _sendAuthorizationService);
+        var (send, data) = model.ToSend(userId, file.FileName!, _sendAuthorizationService);
         var uploadUrl = await _nonAnonymousSendCommand.SaveFileSendAsync(send, data, model.FileLength.Value);
         return new SendFileUploadDataResponseModel
         {
@@ -393,15 +395,16 @@ public class SendsController : Controller
     [DisableFormValueModelBinding]
     public async Task PostFileForExistingSend(string id, string fileId)
     {
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         if (!Request?.ContentType?.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
         }
 
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
-        if (send == null)
+        if (send == null || send.UserId != userId)
         {
-            throw new BadRequestException("Could not locate send");
+            throw new NotFoundException();
         }
 
         await Request.GetFileAsync(async (stream) =>
@@ -452,8 +455,6 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        // This endpoint exists because PUT preserves existing Password/Emails when not provided.
-        // This allows clients to update other fields without re-submitting sensitive auth data.
         send.Password = null;
         send.Emails = null;
         send.AuthType = AuthType.None;

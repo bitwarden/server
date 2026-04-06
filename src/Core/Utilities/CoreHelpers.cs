@@ -647,6 +647,8 @@ public static class CoreHelpers
             origin == globalSettings.BaseServiceUri.Vault ||
             // Safari extension origin
             origin == "file://" ||
+            // Desktop application custom file protocol
+            origin == "bw-desktop-file://bundle" ||
             // Product website
             (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
     }
@@ -678,6 +680,11 @@ public static class CoreHelpers
     public static Dictionary<string, object> AdjustIdentityServerConfig(Dictionary<string, object> configDict,
         string publicServiceUri, string internalServiceUri)
     {
+        // Remove metadata for endpoints/features we don't support
+        configDict.Remove("revocation_endpoint_auth_methods_supported");
+        configDict.Remove("introspection_endpoint_auth_methods_supported");
+        configDict.Remove("backchannel_authentication_request_signing_alg_values_supported");
+
         var dictReplace = new Dictionary<string, object>();
         foreach (var item in configDict)
         {

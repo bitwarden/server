@@ -1,22 +1,22 @@
 name: Build
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize]
   push:
     branches:
       - "main"
       - "rc"
       - "hotfix-rc"
-  pull_request:
-    types: [opened, synchronize]
   workflow_call:
-    inputs: {}
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
+  _GHCR_REGISTRY: "ghcr.io/bitwarden"
   _GITHUB_PR_REPO_NAME: ${{ github.event.pull_request.head.repo.full_name }}
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -45,6 +45,7 @@ jobs:
     permissions:
       security-events: write
       id-token: write
+      packages: write
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -87,6 +88,10 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+          - project_name: SeederApi
+            base_path: ./util
+            platforms: linux/amd64,linux/arm64
+            dotnet: true
           - project_name: Setup
             base_path: ./util
             dotnet: true
@@ -101,7 +106,7 @@ jobs:
           echo "has_secrets=$has_secrets" >> "$GITHUB_OUTPUT"
 
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -173,7 +178,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-      ########## ACRs ##########
+      ########## Registries ##########
+      - name: Log in to GHCR
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Log in to Azure
         uses: bitwarden/gh-actions/azure-login@main
         with:
@@ -181,7 +193,7 @@ jobs:
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
-      - name: Log in to ACR - production subscription
+      - name: Log in to ACR
         run: az acr login -n bitwardenprod
 
       ########## Generate image tag and build Docker image ##########
@@ -214,6 +226,7 @@ jobs:
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> "$GITHUB_OUTPUT"
+          echo "platforms: ${{ matrix.platforms }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate image tags(s)
         id: image-tags
@@ -222,33 +235,42 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
-          TAGS="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
-          echo "primary_tag=$TAGS" >> "$GITHUB_OUTPUT"
+          GHCR_TAG="${_GHCR_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          TAGS="${GHCR_TAG},${ACR_TAG}"
+          echo "primary_tag=${GHCR_TAG}" >> "$GITHUB_OUTPUT"
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
             TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
+      - name: Set platforms
+        id: platforms
+        run: |
+          PLATFORMS="${{ matrix.platforms }}"
+          if [ -z "$PLATFORMS" ]; then
+            PLATFORMS="linux/amd64,linux/arm/v7,linux/arm64"
+          fi
+          echo "platforms=$PLATFORMS" >> "$GITHUB_OUTPUT"
+
       - name: Build Docker image
         id: build-artifacts
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: |
-            linux/amd64,
-            linux/arm/v7,
-            linux/arm64
+          platforms: ${{ steps.platforms.outputs.platforms }}
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
 
       - name: Install Cosign
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
         uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: Sign image with Cosign
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && env.is_publish_branch == 'true'
         env:
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
@@ -276,6 +298,9 @@ jobs:
           sha: ${{ contains(github.event_name, 'pull_request') && github.event.pull_request.head.sha || github.sha }}
           ref: ${{ contains(github.event_name, 'pull_request') && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
 
+      - name: Log out from GHCR
+        run: docker logout ghcr.io
+
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
 
@@ -288,7 +313,7 @@ jobs:
       actions: read
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
@@ -296,15 +321,12 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
 
-      - name: Log in to Azure
-        uses: bitwarden/gh-actions/azure-login@main
+      - name: Log in to GHCR
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-
-      - name: Log in to ACR - production subscription
-        run: az acr login -n "$_AZ_REGISTRY" --only-show-errors
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Make Docker stubs
         if: |
@@ -314,13 +336,13 @@ jobs:
           # Set proper setup image based on branch
           case "$GITHUB_REF" in
             "refs/heads/main")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:dev"
                 ;;
             "refs/heads/rc")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:rc"
                 ;;
             "refs/heads/hotfix-rc")
-                SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
+                SETUP_IMAGE="${_GHCR_REGISTRY}/setup:hotfix-rc"
                 ;;
           esac
 
@@ -348,8 +370,8 @@ jobs:
           cd docker-stub/US; zip -r ../../docker-stub-US.zip ./*; cd ../..
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip ./*; cd ../..
 
-      - name: Log out from Azure
-        uses: bitwarden/gh-actions/azure-logout@main
+      - name: Log out from GHCR
+        run: docker logout ghcr.io
 
       - name: Upload Docker stub US artifact
         if: |
@@ -414,7 +436,7 @@ jobs:
           - win-x64
     steps:
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
