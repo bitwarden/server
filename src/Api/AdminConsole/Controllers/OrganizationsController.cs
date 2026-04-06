@@ -407,17 +407,14 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.Type != OrganizationApiKeyType.Scim
-            && !await _userService.VerifySecretAsync(user, model.Secret))
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
             await Task.Delay(2000);
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
-        else
-        {
-            var response = new ApiKeyResponseModel(organizationApiKey);
-            return response;
-        }
+
+        var response = new ApiKeyResponseModel(organizationApiKey);
+        return response;
     }
 
     [HttpGet("{id}/api-key-information/{type?}")]
@@ -460,18 +457,15 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.Type != OrganizationApiKeyType.Scim
-            && !await _userService.VerifySecretAsync(user, model.Secret))
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
             await Task.Delay(2000);
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
-        else
-        {
-            await _rotateOrganizationApiKeyCommand.RotateApiKeyAsync(organizationApiKey);
-            var response = new ApiKeyResponseModel(organizationApiKey);
-            return response;
-        }
+
+        await _rotateOrganizationApiKeyCommand.RotateApiKeyAsync(organizationApiKey);
+        var response = new ApiKeyResponseModel(organizationApiKey);
+        return response;
     }
 
     private async Task<bool> HasApiKeyAccessAsync(Guid orgId, OrganizationApiKeyType? type)
