@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Group_UpdateWithCollections]
+﻿CREATE PROCEDURE [dbo].[Group_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),

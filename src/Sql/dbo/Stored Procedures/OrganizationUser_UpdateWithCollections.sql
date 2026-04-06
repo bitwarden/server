@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
+﻿CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
