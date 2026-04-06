@@ -20,18 +20,18 @@ BEGIN
     EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager
 
     -- Bump RevisionDate on all affected collections
+    ;WITH [AffectedCollectionsCTE] AS (
+        SELECT [Id] FROM @Collections
+        UNION
+        SELECT CU.[CollectionId]
+        FROM [dbo].[CollectionUser] CU
+        WHERE CU.[OrganizationUserId] = @Id
+    )
     UPDATE C
     SET C.[RevisionDate] = @RevisionDate
     FROM [dbo].[Collection] C
     WHERE C.[OrganizationId] = @OrganizationId
-    AND (
-        C.[Id] IN (SELECT [Id] FROM @Collections) -- New/updated assignments
-        OR C.[Id] IN (
-            SELECT CU.[CollectionId]
-            FROM [dbo].[CollectionUser] CU
-            WHERE CU.[OrganizationUserId] = @Id -- Existing assignments (includes ones being removed)
-        )
-    )
+    AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
 
     -- Update
     UPDATE

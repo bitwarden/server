@@ -13,18 +13,18 @@ BEGIN
     EXEC [dbo].[Group_Update] @Id, @OrganizationId, @Name, @ExternalId, @CreationDate, @RevisionDate
 
     -- Bump RevisionDate on all affected collections
+    ;WITH [AffectedCollectionsCTE] AS (
+        SELECT [Id] FROM @Collections
+        UNION
+        SELECT CG.[CollectionId]
+        FROM [dbo].[CollectionGroup] CG
+        WHERE CG.[GroupId] = @Id
+    )
     UPDATE C
     SET C.[RevisionDate] = @RevisionDate
     FROM [dbo].[Collection] C
     WHERE C.[OrganizationId] = @OrganizationId
-    AND (
-        C.[Id] IN (SELECT [Id] FROM @Collections) -- New/updated assignments
-        OR C.[Id] IN (
-            SELECT CG.[CollectionId]
-            FROM [dbo].[CollectionGroup] CG
-            WHERE CG.[GroupId] = @Id -- Existing assignments (includes ones being removed)
-        )
-    )
+    AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT
