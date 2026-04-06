@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Core.Settings;
 using Bit.SeederApi.Extensions;
+using Bit.SeederApi.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,6 +41,14 @@ public class Startup
         services.AddScenes();
         services.AddQueries();
 
+        services.Configure<SeederSettings>(Configuration.GetSection("seederSettings"));
+
+        services.AddAuthentication(BasicAuthenticationOptions.DefaultScheme)
+            .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(
+                BasicAuthenticationOptions.DefaultScheme, null);
+
+        services.AddAuthorization();
+
         services.AddControllers();
     }
 
@@ -66,6 +75,8 @@ public class Startup
         }
 
         app.UseRouting();
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
