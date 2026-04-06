@@ -109,7 +109,11 @@ BEGIN
         UPDATE C
         SET C.[RevisionDate] = @RevisionDate
         FROM [dbo].[Collection] C
-        WHERE C.[Id] IN (SELECT [CollectionId] FROM #CollectionUserData)
+        INNER JOIN [dbo].[OrganizationUser] OU
+            ON OU.[OrganizationId] = C.[OrganizationId]
+        INNER JOIN #CollectionUserData CUD
+            ON CUD.[CollectionId] = C.[Id]
+            AND CUD.[OrganizationUserId] = OU.[Id]
     END
 END
 go
