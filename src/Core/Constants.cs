@@ -164,6 +164,7 @@ public static class FeatureFlagKeys
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
+    public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
