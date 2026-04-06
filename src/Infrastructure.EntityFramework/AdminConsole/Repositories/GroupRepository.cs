@@ -39,7 +39,8 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
             });
             await dbContext.CollectionGroups.AddRangeAsync(collectionGroups);
             // Bump RevisionDate on all affected collections
-            foreach (var c in availableCollections.Where(a => filteredCollections.Any(fc => fc.Id == a.Id)))
+            var filteredCollectionIds = filteredCollections.Select(fc => fc.Id).ToHashSet();
+            foreach (var c in availableCollections.Where(a => filteredCollectionIds.Contains(a.Id)))
             {
                 c.RevisionDate = grp.RevisionDate;
             }
@@ -238,7 +239,8 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
                 .Distinct()
                 .ToList();
             var affectedCollections = await dbContext.Collections
-                .Where(c => allAffectedCollectionIds.Contains(c.Id))
+                .Where(c => c.OrganizationId == group.OrganizationId
+                    && allAffectedCollectionIds.Contains(c.Id))
                 .ToListAsync();
             foreach (var c in affectedCollections)
             {
