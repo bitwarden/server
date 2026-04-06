@@ -2,7 +2,10 @@
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -11,15 +14,18 @@ public class ValidateOrganizationReportFileCommand : IValidateOrganizationReport
     private readonly IOrganizationReportRepository _organizationReportRepo;
     private readonly IOrganizationReportStorageService _storageService;
     private readonly ILogger<ValidateOrganizationReportFileCommand> _logger;
+    private readonly IFusionCache _cache;
 
     public ValidateOrganizationReportFileCommand(
         IOrganizationReportRepository organizationReportRepo,
         IOrganizationReportStorageService storageService,
-        ILogger<ValidateOrganizationReportFileCommand> logger)
+        ILogger<ValidateOrganizationReportFileCommand> logger,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache)
     {
         _organizationReportRepo = organizationReportRepo;
         _storageService = storageService;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<bool> ValidateAsync(OrganizationReport report, string reportFileId)
@@ -45,6 +51,8 @@ public class ValidateOrganizationReportFileCommand : IValidateOrganizationReport
                 report.Id, length);
             await _storageService.DeleteReportFilesAsync(report, reportFileId);
             await _organizationReportRepo.DeleteAsync(report);
+            await _cache.RemoveByTagAsync(
+                OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(report.OrganizationId));
             return false;
         }
 
@@ -53,6 +61,8 @@ public class ValidateOrganizationReportFileCommand : IValidateOrganizationReport
         report.SetReportFile(fileData);
         report.RevisionDate = DateTime.UtcNow;
         await _organizationReportRepo.ReplaceAsync(report);
+        await _cache.RemoveByTagAsync(
+            OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(report.OrganizationId));
         return true;
     }
 }

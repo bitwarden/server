@@ -14,6 +14,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.Dirt.Controllers;
 
@@ -38,6 +39,7 @@ public class OrganizationReportsController : Controller
     private readonly IUpdateOrganizationReportV2Command _updateReportV2Command;
     private readonly IValidateOrganizationReportFileCommand _validateCommand;
     private readonly ILogger<OrganizationReportsController> _logger;
+    private readonly IFusionCache _cache;
 
     public OrganizationReportsController(
         ICurrentContext currentContext,
@@ -56,7 +58,8 @@ public class OrganizationReportsController : Controller
         IOrganizationReportRepository organizationReportRepo,
         IUpdateOrganizationReportV2Command updateReportV2Command,
         IValidateOrganizationReportFileCommand validateCommand,
-        ILogger<OrganizationReportsController> logger)
+        ILogger<OrganizationReportsController> logger,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache)
     {
         _currentContext = currentContext;
         _getOrganizationReportQuery = getOrganizationReportQuery;
@@ -75,6 +78,7 @@ public class OrganizationReportsController : Controller
         _updateReportV2Command = updateReportV2Command;
         _validateCommand = validateCommand;
         _logger = logger;
+        _cache = cache;
     }
 
     /// <summary>
@@ -133,7 +137,6 @@ public class OrganizationReportsController : Controller
     /// <summary>
     /// Gets the most recent organization report for the specified organization.
     /// Includes a presigned download URL for the report file if one has been validated.
-    /// If no file is associated, the response contains inline ReportData.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> for the most recent report.</returns>
@@ -156,15 +159,13 @@ public class OrganizationReportsController : Controller
 
         var response = new OrganizationReportResponseModel(latestReport);
 
-        var fileData = latestReport.GetReportFile();
-        if (fileData == null)
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
         {
-            return Ok(response);
-        }
-
-        if (fileData.Validated)
-        {
-            response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
+            var fileData = latestReport.GetReportFile();
+            if (fileData is { Validated: true })
+            {
+                response.ReportFileDownloadUrl = await _storageService.GetReportDataDownloadUrlAsync(latestReport, fileData);
+            }
         }
 
         return Ok(response);
@@ -174,7 +175,6 @@ public class OrganizationReportsController : Controller
     /// Gets a specific organization report by its report ID.
     /// Validates that the report belongs to the specified organization.
     /// Includes a presigned download URL for the report file if one has been validated.
-    /// If no file is associated, the response contains inline ReportData.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization.</param>
     /// <param name="reportId">The unique identifier of the report to retrieve.</param>
@@ -227,7 +227,6 @@ public class OrganizationReportsController : Controller
     /// <param name="request">The request model containing updated report data.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> with the updated report.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
-    [RequestSizeLimit(Constants.FileSize501mb)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
         Guid organizationId,
         Guid reportId,
@@ -332,6 +331,9 @@ public class OrganizationReportsController : Controller
         var fileData = report.GetReportFile();
 
         await _organizationReportRepo.DeleteAsync(report);
+
+        await _cache.RemoveByTagAsync(
+            OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId));
 
         if (fileData != null && !string.IsNullOrEmpty(fileData.Id))
         {
@@ -497,6 +499,10 @@ public class OrganizationReportsController : Controller
         var (valid, length) = await _storageService.ValidateFileAsync(report, fileData, minimum, maximum);
         if (!valid)
         {
+            await _storageService.DeleteReportFilesAsync(report, fileData.Id!);
+            await _organizationReportRepo.DeleteAsync(report);
+            await _cache.RemoveByTagAsync(
+                OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId));
             throw new BadRequestException("File received does not match expected constraints.");
         }
 
@@ -505,6 +511,8 @@ public class OrganizationReportsController : Controller
         report.SetReportFile(fileData);
         report.RevisionDate = DateTime.UtcNow;
         await _organizationReportRepo.ReplaceAsync(report);
+        await _cache.RemoveByTagAsync(
+            OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId));
     }
 
     /// <summary>

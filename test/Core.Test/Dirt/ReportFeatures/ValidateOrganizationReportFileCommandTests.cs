@@ -3,10 +3,12 @@ using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Test.Dirt.ReportFeatures;
 
@@ -71,6 +73,11 @@ public class ValidateOrganizationReportFileCommandTests
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive()
             .DeleteAsync(Arg.Any<OrganizationReport>());
+
+        await sutProvider.GetDependency<IFusionCache>()
+            .Received(1)
+            .RemoveByTagAsync(
+                OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId));
     }
 
     [Theory]
@@ -105,6 +112,11 @@ public class ValidateOrganizationReportFileCommandTests
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive()
             .ReplaceAsync(Arg.Any<OrganizationReport>());
+
+        await sutProvider.GetDependency<IFusionCache>()
+            .Received(1)
+            .RemoveByTagAsync(
+                OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId));
     }
 
     [Theory]
@@ -139,6 +151,10 @@ public class ValidateOrganizationReportFileCommandTests
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive()
             .ReplaceAsync(Arg.Any<OrganizationReport>());
+
+        await sutProvider.GetDependency<IFusionCache>()
+            .DidNotReceive()
+            .RemoveByTagAsync(Arg.Any<string>());
     }
 
     [Theory]

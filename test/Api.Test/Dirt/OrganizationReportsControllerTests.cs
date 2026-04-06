@@ -13,11 +13,13 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.Test.Dirt;
 
@@ -39,6 +41,10 @@ public class OrganizationReportControllerTests
         expectedReport.SetReportFile(reportFile);
 
         SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2)
+            .Returns(true);
 
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetLatestOrganizationReportAsync(orgId)
@@ -415,6 +421,11 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<IOrganizationReportStorageService>()
             .Received(1)
             .DeleteReportFilesAsync(report, "file-id");
+
+        await sutProvider.GetDependency<IFusionCache>()
+            .Received(1)
+            .RemoveByTagAsync(
+                OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(orgId));
     }
 
     [Theory, BitAutoData]
@@ -444,6 +455,11 @@ public class OrganizationReportControllerTests
         await sutProvider.GetDependency<IOrganizationReportStorageService>()
             .DidNotReceive()
             .DeleteReportFilesAsync(Arg.Any<OrganizationReport>(), Arg.Any<string>());
+
+        await sutProvider.GetDependency<IFusionCache>()
+            .Received(1)
+            .RemoveByTagAsync(
+                OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(orgId));
     }
 
     [Theory, BitAutoData]
