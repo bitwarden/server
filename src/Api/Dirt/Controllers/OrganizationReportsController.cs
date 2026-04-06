@@ -337,7 +337,16 @@ public class OrganizationReportsController : Controller
 
         if (fileData != null && !string.IsNullOrEmpty(fileData.Id))
         {
-            await _storageService.DeleteReportFilesAsync(report, fileData.Id);
+            try
+            {
+                await _storageService.DeleteReportFilesAsync(report, fileData.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to delete storage files for report {ReportId}, file {FileId}. Manual cleanup may be required.",
+                    reportId, fileData.Id);
+            }
         }
     }
 
@@ -363,6 +372,11 @@ public class OrganizationReportsController : Controller
         if (reportId == Guid.Empty)
         {
             throw new BadRequestException("ReportId is required.");
+        }
+
+        if (string.IsNullOrEmpty(reportFileId))
+        {
+            throw new BadRequestException("ReportFileId is required.");
         }
 
         await AuthorizeAsync(organizationId);

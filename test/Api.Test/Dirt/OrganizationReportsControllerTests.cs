@@ -17,7 +17,9 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -670,6 +672,76 @@ public class OrganizationReportControllerTests
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.RenewFileUploadUrlAsync(orgId, report.Id, "wrong-file-id"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_NullReportFileId_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId)
+    {
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RenewFileUploadUrlAsync(orgId, reportId, null));
+
+        Assert.Equal("ReportFileId is required.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RenewFileUploadUrlAsync_EmptyReportFileId_ThrowsBadRequestException(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        Guid reportId)
+    {
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RenewFileUploadUrlAsync(orgId, reportId, string.Empty));
+
+        Assert.Equal("ReportFileId is required.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteOrganizationReportAsync_StorageFailure_StillCompletesWithoutThrowing(
+        SutProvider<OrganizationReportsController> sutProvider,
+        Guid orgId,
+        OrganizationReport report)
+    {
+        // Arrange
+        var reportFile = new ReportFile { Id = "file-id", FileName = "report.json", Size = 1024, Validated = true };
+        report.OrganizationId = orgId;
+        report.SetReportFile(reportFile);
+
+        SetupAuthorization(sutProvider, orgId);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetByIdAsync(report.Id)
+            .Returns(report);
+
+        sutProvider.GetDependency<IOrganizationReportStorageService>()
+            .DeleteReportFilesAsync(report, "file-id")
+            .ThrowsAsync(new Exception("Azure storage unavailable"));
+
+        // Act — should not throw despite storage failure
+        await sutProvider.Sut.DeleteOrganizationReportAsync(orgId, report.Id);
+
+        // Assert — DB delete and cache invalidation still happened
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .Received(1)
+            .DeleteAsync(report);
+
+        await sutProvider.GetDependency<IFusionCache>()
+            .Received(1)
+            .RemoveByTagAsync(
+                OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(orgId));
+
+        sutProvider.GetDependency<ILogger<OrganizationReportsController>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Any<object>(),
+                Arg.Any<Exception>(),
+                Arg.Any<Func<object, Exception?, string>>());
     }
 
     // UpdateOrganizationReportAsync - V1 (flag off)
