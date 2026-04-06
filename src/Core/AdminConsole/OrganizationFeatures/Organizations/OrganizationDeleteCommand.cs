@@ -78,7 +78,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         }
 
 
-        await DeleteOrganizationOwnedSendsAsync(organization);
+        await DeleteOrganizationOwnedSendFilesAsync(organization);
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
@@ -92,7 +92,9 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         }
     }
 
-    private async Task DeleteOrganizationOwnedSendsAsync(Organization organization)
+    // Only deletes Send Files
+    // Send objects are deleted via the call to _organizationRepository.DeleteAsync()
+    private async Task DeleteOrganizationOwnedSendFilesAsync(Organization organization)
     {
         var sends = await _sendRepository.GetManyByOrganizationIdAsync(organization.Id);
         foreach (var send in sends.Where(s => s.Type == SendType.File))

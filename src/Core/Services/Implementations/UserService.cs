@@ -291,15 +291,7 @@ public class UserService : UserManager<User>, IUserService
             catch (BillingException) { }
         }
 
-        var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
-        foreach (var send in sends.Where(s => s.Type == SendType.File))
-        {
-            var data = JsonSerializer.Deserialize<SendFileData>(send.Data);
-            if (data?.Id != null)
-            {
-                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
-            }
-        }
+        await DeleteSendFilesForUserAsync(user);
 
         await _userRepository.DeleteAsync(user);
         await _pushService.PushLogOutAsync(user.Id);
@@ -1204,6 +1196,21 @@ public class UserService : UserManager<User>, IUserService
         else
         {
             await _mailService.SendWelcomeEmailAsync(user);
+        }
+    }
+
+    // Only deletes Send Files
+    // Send objects are deleted via the call to _userRepository.DeleteAsync()
+    private async Task DeleteSendFilesForUserAsync(User user)
+    {
+        var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
+        foreach (var send in sends.Where(s => s.Type == SendType.File))
+        {
+            var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
+            if (data?.Id != null)
+            {
+                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+            }
         }
     }
 }
