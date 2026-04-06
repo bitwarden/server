@@ -311,7 +311,7 @@ public class ImportCiphersAsyncCommandTests
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId));
 
-        Assert.Contains("organization members or managed service providers", exception.Message);
+        Assert.Contains("organization members or authorized providers", exception.Message);
     }
 
     [Theory, BitAutoData]
