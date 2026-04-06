@@ -22,6 +22,15 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId);
 
     /// <summary>
+    /// Gets all policies for a user across organizations where the user is in the Confirmed or Accepted status.
+    /// </summary>
+    /// <remarks>
+    /// WARNING: do not use this to enforce policies against a user! It returns raw data and does not take into account
+    /// various business rules. Use <see cref="IPolicyRequirementQuery"/> instead.
+    /// </remarks>
+    Task<ICollection<Policy>> GetManyConfirmedAndAcceptedByUserAsync(Guid userId);
+
+    /// <summary>
     /// Retrieves <see cref="OrganizationPolicyDetails"/> of the specified <paramref name="policyType"/>
     /// for users in the given organization and for any other organizations those users belong to.
     /// </summary>
