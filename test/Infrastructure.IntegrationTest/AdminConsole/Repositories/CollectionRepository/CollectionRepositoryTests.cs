@@ -623,7 +623,6 @@ public class CollectionRepositoryTests
         var group = await groupRepository.CreateTestGroupAsync(organization);
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
 
-        var originalRevisionDate = collection.RevisionDate;
         var revisionDate = DateTime.UtcNow.AddMinutes(10);
 
         await collectionRepository.CreateOrUpdateAccessForManyAsync(
@@ -636,8 +635,7 @@ public class CollectionRepositoryTests
 
         var (actualCollection, actualAccess) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
         Assert.NotNull(actualCollection);
-        Assert.True(actualCollection.RevisionDate > originalRevisionDate);
-        Assert.Equal(revisionDate, actualCollection.RevisionDate, TimeSpan.FromSeconds(1));
+        Assert.Equal(revisionDate, actualCollection.RevisionDate, TimeSpan.FromMilliseconds(10));
 
         var userAccess = Assert.Single(actualAccess.Users);
         Assert.Equal(orgUser.Id, userAccess.Id);

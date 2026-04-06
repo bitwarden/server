@@ -19,13 +19,13 @@ public class OrganizationUserReplaceTests
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
-        var originalCollectionRevisionDate = collection.RevisionDate;
 
         var orgUser = await organizationUserRepository.CreateTestOrganizationUserInviteAsync(organization);
 
         // Act: update the user, including collection access so we test this overloaded method
         orgUser.Type = OrganizationUserType.Admin;
         orgUser.AccessSecretsManager = true;
+        orgUser.RevisionDate = DateTime.UtcNow.AddMinutes(10);
 
         await organizationUserRepository.ReplaceAsync(orgUser, [
             new CollectionAccessSelection { Id = collection.Id, Manage = true }
@@ -41,10 +41,10 @@ public class OrganizationUserReplaceTests
         Assert.Equal(collection.Id, collectionAccess.Id);
         Assert.True(collectionAccess.Manage);
 
-        // Collection revision date should be bumped
+        // Collection revision date should match the orgUser's RevisionDate
         var (actualCollection, _) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
         Assert.NotNull(actualCollection);
-        Assert.True(actualCollection.RevisionDate > originalCollectionRevisionDate);
+        Assert.Equal(orgUser.RevisionDate, actualCollection.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
 
     /// <summary>
@@ -60,7 +60,6 @@ public class OrganizationUserReplaceTests
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
-        var originalCollectionRevisionDate = collection.RevisionDate;
 
         var user = await userRepository.CreateTestUserAsync();
         // OrganizationUser is linked with the User in the Confirmed status
@@ -69,6 +68,7 @@ public class OrganizationUserReplaceTests
         // Act: update the user, including collection access so we test this overloaded method
         orgUser.Type = OrganizationUserType.Admin;
         orgUser.AccessSecretsManager = true;
+        orgUser.RevisionDate = DateTime.UtcNow.AddMinutes(10);
 
         await organizationUserRepository.ReplaceAsync(orgUser, [
             new CollectionAccessSelection { Id = collection.Id, Manage = true }
@@ -89,9 +89,9 @@ public class OrganizationUserReplaceTests
         Assert.NotNull(actualUser);
         Assert.True(actualUser.AccountRevisionDate.CompareTo(user.AccountRevisionDate) > 0);
 
-        // Collection revision date should be bumped
+        // Collection revision date should match the orgUser's RevisionDate
         var (actualCollection, _) = await collectionRepository.GetByIdWithAccessAsync(collection.Id);
         Assert.NotNull(actualCollection);
-        Assert.True(actualCollection.RevisionDate > originalCollectionRevisionDate);
+        Assert.Equal(orgUser.RevisionDate, actualCollection.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
 }

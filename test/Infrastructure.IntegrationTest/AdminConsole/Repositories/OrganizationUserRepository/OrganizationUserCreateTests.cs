@@ -18,7 +18,6 @@ public class OrganizationUserCreateTests
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
-        var originalCollectionRevisionDate = collection.RevisionDate;
 
         var orgUser = new OrganizationUser
         {
@@ -26,6 +25,7 @@ public class OrganizationUserCreateTests
             UserId = null,
             Status = OrganizationUserStatusType.Invited,
             Type = OrganizationUserType.User,
+            RevisionDate = DateTime.UtcNow.AddMinutes(10),
         };
 
         await organizationUserRepository.CreateAsync(orgUser, [
@@ -34,7 +34,7 @@ public class OrganizationUserCreateTests
 
         await AssertOrgUserAndCollectionRevisionDate(
             organizationUserRepository, collectionRepository,
-            orgUser, collection.Id, originalCollectionRevisionDate);
+            orgUser, collection.Id, orgUser.RevisionDate);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -45,7 +45,6 @@ public class OrganizationUserCreateTests
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
-        var originalCollectionRevisionDate = collection.RevisionDate;
 
         var orgUser = new OrganizationUser
         {
@@ -56,7 +55,7 @@ public class OrganizationUserCreateTests
             Status = OrganizationUserStatusType.Invited,
             Type = OrganizationUserType.User,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow.AddMinutes(10),
         };
 
         await organizationUserRepository.CreateManyAsync([
@@ -70,7 +69,7 @@ public class OrganizationUserCreateTests
 
         await AssertOrgUserAndCollectionRevisionDate(
             organizationUserRepository, collectionRepository,
-            orgUser, collection.Id, originalCollectionRevisionDate);
+            orgUser, collection.Id, orgUser.RevisionDate);
     }
 
     private static async Task AssertOrgUserAndCollectionRevisionDate(
@@ -78,7 +77,7 @@ public class OrganizationUserCreateTests
         ICollectionRepository collectionRepository,
         OrganizationUser expectedOrgUser,
         Guid collectionId,
-        DateTime originalCollectionRevisionDate)
+        DateTime expectedCollectionRevisionDate)
     {
         var (actualOrgUser, actualCollections) = await organizationUserRepository.GetByIdWithCollectionsAsync(expectedOrgUser.Id);
         Assert.NotNull(actualOrgUser);
@@ -93,6 +92,6 @@ public class OrganizationUserCreateTests
 
         var (actualCollection, _) = await collectionRepository.GetByIdWithAccessAsync(collectionId);
         Assert.NotNull(actualCollection);
-        Assert.True(actualCollection.RevisionDate > originalCollectionRevisionDate);
+        Assert.Equal(expectedCollectionRevisionDate, actualCollection.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
 }

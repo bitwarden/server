@@ -17,10 +17,8 @@ public class GroupRepositoryTests
         var org = await organizationRepository.CreateTestOrganizationAsync();
         var collection1 = await collectionRepository.CreateTestCollectionAsync(org);
         var collection2 = await collectionRepository.CreateTestCollectionAsync(org);
-        var originalRevisionDate1 = collection1.RevisionDate;
-        var originalRevisionDate2 = collection2.RevisionDate;
 
-        var group = new Group { OrganizationId = org.Id, Name = "New Group" };
+        var group = new Group { OrganizationId = org.Id, Name = "New Group", RevisionDate = DateTime.UtcNow.AddMinutes(10) };
         await groupRepository.CreateAsync(group, [
             new CollectionAccessSelection { Id = collection1.Id, Manage = true, HidePasswords = false, ReadOnly = false },
             new CollectionAccessSelection { Id = collection2.Id, Manage = false, HidePasswords = true, ReadOnly = true },
@@ -37,8 +35,8 @@ public class GroupRepositoryTests
         var (actualCollection2, _) = await collectionRepository.GetByIdWithAccessAsync(collection2.Id);
         Assert.NotNull(actualCollection1);
         Assert.NotNull(actualCollection2);
-        Assert.True(actualCollection1.RevisionDate > originalRevisionDate1);
-        Assert.True(actualCollection2.RevisionDate > originalRevisionDate2);
+        Assert.Equal(group.RevisionDate, actualCollection1.RevisionDate, TimeSpan.FromMilliseconds(10));
+        Assert.Equal(group.RevisionDate, actualCollection2.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
 
     [DatabaseTheory, DatabaseData]
@@ -53,12 +51,9 @@ public class GroupRepositoryTests
         var collection1 = await collectionRepository.CreateTestCollectionAsync(org);
         var collection2 = await collectionRepository.CreateTestCollectionAsync(org);
 
-        var originalRevisionDate1 = collection1.RevisionDate;
-        var originalRevisionDate2 = collection2.RevisionDate;
-
         // Act
         group.Name = "Updated Group Name";
-        group.RevisionDate = DateTime.UtcNow;
+        group.RevisionDate = DateTime.UtcNow.AddMinutes(10);
         await groupRepository.ReplaceAsync(group, [
             new CollectionAccessSelection { Id = collection1.Id, Manage = true, HidePasswords = false, ReadOnly = false },
             new CollectionAccessSelection { Id = collection2.Id, Manage = false, HidePasswords = true, ReadOnly = true },
@@ -77,8 +72,8 @@ public class GroupRepositoryTests
         var (actualCollection2, _) = await collectionRepository.GetByIdWithAccessAsync(collection2.Id);
         Assert.NotNull(actualCollection1);
         Assert.NotNull(actualCollection2);
-        Assert.True(actualCollection1.RevisionDate > originalRevisionDate1);
-        Assert.True(actualCollection2.RevisionDate > originalRevisionDate2);
+        Assert.Equal(group.RevisionDate, actualCollection1.RevisionDate, TimeSpan.FromMilliseconds(10));
+        Assert.Equal(group.RevisionDate, actualCollection2.RevisionDate, TimeSpan.FromMilliseconds(10));
     }
 
     [DatabaseTheory, DatabaseData]
