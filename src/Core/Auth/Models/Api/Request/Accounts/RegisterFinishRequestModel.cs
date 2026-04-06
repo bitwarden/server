@@ -72,8 +72,7 @@ public class RegisterFinishRequestModel : IValidatableObject
             // KdfMemory and KdfParallelism are optional (only used for Argon2id)
             KdfMemory = MasterPasswordUnlock?.Kdf.Memory ?? KdfMemory,
             KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
-            // PM-28827 To be added when MasterPasswordSalt is added to the user column
-            // MasterPasswordSalt = MasterPasswordUnlock?.Salt ?? Email.ToLower().Trim(),
+            MasterPasswordSalt = MasterPasswordUnlock?.Salt,
             Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
         };
 

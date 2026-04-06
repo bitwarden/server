@@ -42,6 +42,9 @@ public class OrganizationLicense : ILicense
     /// 1. Use the claims-based system instead of adding properties here
     /// 2. Add new claims to the license token
     /// 3. Validate claims in the <see cref="CanUse"/> and <see cref="VerifyData"/> methods
+    /// 4. In <see cref="VerifyData"/>, wrap new claim comparisons in a conditional
+    ///    HasClaim check so that licenses generated before the claim existed still
+    ///    validate successfully (introduced after PM-33980)
     /// </para>
     /// <para>
     /// This constructor is maintained only for backward compatibility with existing licenses.
@@ -156,6 +159,7 @@ public class OrganizationLicense : ILicense
     public bool UseAdminSponsoredFamilies { get; set; }
     public bool UseAutomaticUserConfirmation { get; set; }
     public bool UseDisableSmAdsForUsers { get; set; }
+    public bool UseMyItems { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -232,7 +236,8 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UseOrganizationDomains)) &&
                     !p.Name.Equals(nameof(UseAutomaticUserConfirmation)) &&
                     !p.Name.Equals(nameof(UseDisableSmAdsForUsers)) &&
-                    !p.Name.Equals(nameof(UsePhishingBlocker)))
+                    !p.Name.Equals(nameof(UsePhishingBlocker)) &&
+                    !p.Name.Equals(nameof(UseMyItems)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -428,6 +433,7 @@ public class OrganizationLicense : ILicense
         var useOrganizationDomains = claimsPrincipal.GetValue<bool>(nameof(UseOrganizationDomains));
         var useAutomaticUserConfirmation = claimsPrincipal.GetValue<bool>(nameof(UseAutomaticUserConfirmation));
         var useDisableSmAdsForUsers = claimsPrincipal.GetValue<bool>(nameof(UseDisableSmAdsForUsers));
+        var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
 
@@ -435,6 +441,11 @@ public class OrganizationLicense : ILicense
             ? organization.PlanType is PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2025
             : organization.PlanType == claimedPlanType;
 
+        // IMPORTANT: UseMyItems is the first claim to require a conditional HasClaim
+        // check because self-hosted instances may hold license files generated before
+        // this claim existed, where GetValue<T> returns the type's default (false),
+        // causing a mismatch that disables the org. Future claims MUST follow this
+        // same pattern. See PM-33980.
         return issued <= DateTime.UtcNow &&
                expires >= DateTime.UtcNow &&
                installationId == globalSettings.Installation.Id &&
@@ -465,7 +476,9 @@ public class OrganizationLicense : ILicense
                useAdminSponsoredFamilies == organization.UseAdminSponsoredFamilies &&
                useOrganizationDomains == organization.UseOrganizationDomains &&
                useAutomaticUserConfirmation == organization.UseAutomaticUserConfirmation &&
-               useDisableSmAdsForUsers == organization.UseDisableSmAdsForUsers;
+               useDisableSmAdsForUsers == organization.UseDisableSmAdsForUsers &&
+               (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseMyItems))
+                   || useMyItems == organization.UseMyItems);
 
     }
 

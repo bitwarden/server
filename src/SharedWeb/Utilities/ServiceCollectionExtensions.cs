@@ -23,6 +23,8 @@ using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Auth.UserFeatures.PasswordValidation;
+using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
@@ -170,7 +172,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddKeyManagementServices();
         services.AddNotificationCenterServices();
         services.AddPlatformServices();
@@ -292,19 +294,16 @@ public static class ServiceCollectionExtensions
         services.AddOptionality();
         services.AddTokenizers();
 
-        services.AddSingleton<IVNextInMemoryApplicationCacheService, VNextInMemoryApplicationCacheService>();
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, ServiceBusApplicationCacheMessaging>();
         }
         else
         {
             services.AddSingleton<IVCurrentInMemoryApplicationCacheService, InMemoryApplicationCacheService>();
-            services.AddSingleton<IApplicationCacheServiceBusMessaging, NoOpApplicationCacheMessaging>();
         }
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
@@ -373,6 +372,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
         services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
+        services.AddTransient<IBusinessUnitConverter, NoopBusinessUnitConverter>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
@@ -594,10 +594,24 @@ public static class ServiceCollectionExtensions
                 }
             }
         }
-        if (options.KnownProxies.Count > 1)
+
+        if (!string.IsNullOrWhiteSpace(globalSettings.KnownNetworks))
+        {
+            var proxyNetworks = globalSettings.KnownNetworks.Split(',');
+            foreach (var proxyNetwork in proxyNetworks)
+            {
+                if (Microsoft.AspNetCore.HttpOverrides.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                {
+                    options.KnownNetworks.Add(ipn);
+                }
+            }
+        }
+
+        if (options.KnownProxies.Count > 1 || options.KnownNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }
+
         app.UseForwardedHeaders(options);
     }
 

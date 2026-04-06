@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+﻿using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Billing.Constants;
 
@@ -51,14 +51,24 @@ public static class StripeConstants
         public const string PaymentMethodMicroDepositVerificationAttemptsExceeded = "payment_method_microdeposit_verification_attempts_exceeded";
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
+        public const string ResourceMissing = "resource_missing";
         public const string TaxIdInvalid = "tax_id_invalid";
 
-        public static string[] Get() =>
-            typeof(ErrorCodes)
-                .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                .Where(fi => fi is { IsLiteral: true, IsInitOnly: false } && fi.FieldType == typeof(string))
-                .Select(fi => (string)fi.GetValue(null)!)
-                .ToArray();
+        public static string[] InputErrors() =>
+        [
+            CustomerTaxLocationInvalid,
+            InvoiceUpcomingNone,
+            PaymentMethodMicroDepositVerificationAttemptsExceeded,
+            PaymentMethodMicroDepositVerificationDescriptorCodeMismatch,
+            PaymentMethodMicroDepositVerificationTimeout,
+            TaxIdInvalid
+        ];
+    }
+
+    public static class Intervals
+    {
+        public const string Month = "month";
+        public const string Year = "year";
     }
 
     public static class InvoiceStatus
@@ -80,11 +90,14 @@ public static class StripeConstants
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
         public const string StorageReconciled2025 = "storage_reconciled_2025";
+        public const string OriginatingPlatform = "originatingPlatform";
+        public const string OriginatingAppVersion = "originatingAppVersion";
     }
 
     public static class PaymentBehavior
     {
         public const string DefaultIncomplete = "default_incomplete";
+        public const string PendingIfIncomplete = "pending_if_incomplete";
     }
 
     public static class PaymentMethodTypes
@@ -104,6 +117,23 @@ public static class StripeConstants
         public const string AlwaysInvoice = "always_invoice";
         public const string CreateProrations = "create_prorations";
         public const string None = "none";
+    }
+
+    public static class SubscriptionScheduleEndBehavior
+    {
+        public const string Cancel = "cancel";
+        public const string None = "none";
+        public const string Release = "release";
+        public const string Renew = "renew";
+    }
+
+    public static class SubscriptionScheduleStatus
+    {
+        public const string Active = "active";
+        public const string Canceled = "canceled";
+        public const string Completed = "completed";
+        public const string NotStarted = "not_started";
+        public const string Released = "released";
     }
 
     public static class SubscriptionStatus
@@ -158,4 +188,50 @@ public static class StripeConstants
         public const string Cancel = "cancel";
         public const string Pause = "pause";
     }
+    /// <summary>
+    /// Product Ids in Stripe that are used to identify password manager products in subscriptions
+    /// These should be kept up to date with the products created in Stripe dashboard.
+    /// </summary>
+    public static class ProductIDs
+    {
+        public const string Premium = "prod_BUqgYr48VzDuCg";
+        public const string Families = "prod_HgOroKDcpTzJgn";
+
+        /// <summary>
+        /// Gets the product tier for a given Stripe product ID.
+        /// </summary>
+        /// <param name="productId">The Stripe product ID.</param>
+        /// <returns>The corresponding <see cref="DiscountTierType"/>, or <see langword="null"/> if not found.</returns>
+        public static DiscountTierType? GetProductTier(string productId) => productId switch
+        {
+            Premium => DiscountTierType.Premium,
+            Families => DiscountTierType.Families,
+            _ => null
+        };
+    }
+
+    public static class CheckoutSession
+    {
+        public static class Modes
+        {
+            public const string Subscription = "subscription";
+            public const string Payment = "payment";
+            public const string Setup = "setup";
+        }
+
+        // https://docs.stripe.com/api/checkout/sessions/create#create_checkout_session-customer_update-address
+        // Determines whether the customer's address should be updated during checkout session or not.
+        public static class CustomerUpdateAddressOptions
+        {
+            public const string Auto = "auto";
+            public const string Never = "never";
+        }
+
+        public static class Platforms
+        {
+            public const string Ios = "ios";
+            public const string Android = "android";
+        }
+    }
+
 }

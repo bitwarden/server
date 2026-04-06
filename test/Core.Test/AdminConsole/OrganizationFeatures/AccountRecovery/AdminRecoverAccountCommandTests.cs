@@ -150,6 +150,15 @@ public class AdminRecoverAccountCommandTests
         };
         yield return [emptyResetPasswordKey, organization];
 
+        var whitespaceResetPasswordKey = new OrganizationUser
+        {
+            Status = OrganizationUserStatusType.Confirmed,
+            OrganizationId = organization.Id,
+            ResetPasswordKey = " ",
+            UserId = Guid.NewGuid(),
+        };
+        yield return [whitespaceResetPasswordKey, organization];
+
         var nullUserId = new OrganizationUser
         {
             Status = OrganizationUserStatusType.Confirmed,
@@ -282,7 +291,9 @@ public class AdminRecoverAccountCommandTests
         await sutProvider.GetDependency<IMailService>().Received(1).SendAdminResetPasswordEmailAsync(
             Arg.Is(user.Email),
             Arg.Is(user.Name),
-            Arg.Is(organization.DisplayName()));
+            Arg.Is(organization.DisplayName()),
+            Arg.Is(true),
+            Arg.Is(false));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(
             Arg.Is(organizationUser),

@@ -14,6 +14,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -28,6 +29,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
@@ -42,6 +44,7 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
@@ -82,6 +85,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
+    private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -113,6 +117,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
+        AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
@@ -148,6 +153,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
+        _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
     }
 
@@ -302,7 +308,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("{organizationUserId}/accept-init")]
-    public async Task AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
+    public async Task<IResult> AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -310,9 +316,20 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new UnauthorizedAccessException();
         }
 
-        await _initPendingOrganizationCommand.InitPendingOrganizationAsync(user, orgId, organizationUserId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName, model.Token);
-        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
-        await _confirmOrganizationUserCommand.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id);
+        var request = new InitPendingOrganizationRequest
+        {
+            User = user,
+            OrganizationId = orgId,
+            OrganizationUserId = organizationUserId,
+            OrganizationKeys = model.Keys.ToPublicKeyEncryptionKeyPairData(),
+            CollectionName = model.CollectionName,
+            EmailToken = model.Token,
+            EncryptedOrganizationSymmetricKey = model.Key
+        };
+
+        var result = await _initPendingOrganizationCommand.InitPendingOrganizationAsync(request);
+
+        return Handle(result);
     }
 
     [HttpPost("{organizationUserId}/accept")]
@@ -334,7 +351,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ? (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id)).AutoEnrollEnabled(orgId)
         : await ShouldHandleResetPasswordAsync(orgId);
 
-        if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+        if (useMasterPasswordPolicy && !OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey))
         {
             throw new BadRequestException("Master Password reset is required, but not provided.");
         }
@@ -487,7 +504,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgId);
         var isTdeEnrollment = ssoConfig != null && ssoConfig.Enabled && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption;
-        if (!isTdeEnrollment && !string.IsNullOrWhiteSpace(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
+        if (!isTdeEnrollment && OrganizationUser.IsValidResetPasswordKey(model.ResetPasswordKey) && !await _userService.VerifySecretAsync(user, model.MasterPasswordHash))
         {
             throw new BadRequestException("Incorrect password");
         }
@@ -504,9 +521,17 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
 #nullable enable
+    /// <summary>
+    /// Backward compat alias — remove after clients migrate to recover-account.
+    /// </summary>
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+        => PutRecoverAccount(orgId, id, model);
+
+    [HttpPut("{id}/recover-account")]
+    [Authorize<ManageAccountRecoveryRequirement>]
+    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
@@ -524,7 +549,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
+        {
+            var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+            return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
+        }
+
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+            orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
         if (result.Succeeded)
         {
             return TypedResults.Ok();
@@ -693,6 +725,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore")]
     [Authorize<ManageUsersRequirement>]
+    [Obsolete("This endpoint is deprecated. Use _vNext endpoint instead. This will be removed in a future release.")]
     public async Task RestoreAsync(Guid orgId, Guid id)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, null));
@@ -701,7 +734,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPut("{id}/restore/vnext")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.DefaultUserCollectionRestore)]
     public async Task RestoreAsync_vNext(Guid orgId, Guid id, [FromBody] OrganizationUserRestoreRequest request)
     {
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, request.DefaultUserCollectionName));

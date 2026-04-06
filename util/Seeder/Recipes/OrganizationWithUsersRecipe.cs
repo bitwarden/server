@@ -13,6 +13,15 @@ using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Seeder.Recipes;
 
+/// <summary>
+/// Lower-level recipe that seeds an organization and a flat list of member users directly.
+/// </summary>
+/// <remarks>
+/// This recipe bypasses the Pipeline architecture and is used exclusively by performance tests
+/// in <c>Api.IntegrationTest</c> to set up large, fast baseline datasets.
+/// It is not called by any CLI command — use <see cref="OrganizationRecipe"/> for preset-driven
+/// or options-driven organization seeding from the CLI.
+/// </remarks>
 public class OrganizationWithUsersRecipe(
     DatabaseContext db,
     IMapper mapper,
@@ -29,7 +38,7 @@ public class OrganizationWithUsersRecipe(
             name, domain, seats, manglerService, orgKeys.PublicKey, orgKeys.PrivateKey);
 
         // Create owner with SDK-generated keys
-        var ownerUser = UserSeeder.Create($"owner@{domain}", passwordHasher, manglerService);
+        var (ownerUser, _) = UserSeeder.Create($"owner@{domain}", passwordHasher, manglerService);
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(ownerUser.PublicKey!, orgKeys.Key);
         var ownerOrgUser = organization.CreateOrganizationUserWithKey(
             ownerUser, OrganizationUserType.Owner, OrganizationUserStatusType.Confirmed, ownerOrgKey);
@@ -38,7 +47,7 @@ public class OrganizationWithUsersRecipe(
         var additionalOrgUsers = new List<OrganizationUser>();
         for (var i = 0; i < users; i++)
         {
-            var additionalUser = UserSeeder.Create($"user{i}@{domain}", passwordHasher, manglerService);
+            var (additionalUser, _) = UserSeeder.Create($"user{i}@{domain}", passwordHasher, manglerService);
             additionalUsers.Add(additionalUser);
 
             // Generate org key for confirmed/revoked users

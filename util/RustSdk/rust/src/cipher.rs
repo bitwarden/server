@@ -1,123 +1,21 @@
-//! Cipher encryption and decryption functions for the Seeder.
+//! Field-level encryption functions for the Seeder.
 //!
-//! This module provides FFI functions for encrypting and decrypting Bitwarden ciphers
-//! using the Rust SDK's cryptographic primitives.
+//! This module provides FFI functions for encrypting and decrypting individual string
+//! values and JSON fields using AES-256-CBC-HMAC-SHA256 via bitwarden_crypto.
+//! No dependency on bitwarden_vault types — the caller drives which fields to encrypt.
 
 use std::ffi::{c_char, CStr, CString};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 
-use bitwarden_core::key_management::KeyIds;
 use bitwarden_crypto::{
-    BitwardenLegacyKeyBytes, CompositeEncryptable, Decryptable, KeyEncryptable, KeyStore,
-    SymmetricCryptoKey,
+    BitwardenLegacyKeyBytes, EncString, KeyDecryptable, KeyEncryptable, SymmetricCryptoKey,
 };
-use bitwarden_vault::{Cipher, CipherView};
 
 /// Create an error JSON response and return it as a C string pointer.
 fn error_response(message: &str) -> *const c_char {
     let error_json = serde_json::json!({ "error": message }).to_string();
     CString::new(error_json).unwrap().into_raw()
-}
-
-/// Encrypt a CipherView with a symmetric key, returning an encrypted Cipher as JSON.
-///
-/// # Arguments
-/// * `cipher_view_json` - JSON string representing a CipherView (camelCase format)
-/// * `symmetric_key_b64` - Base64-encoded symmetric key (64 bytes for AES-256-CBC-HMAC-SHA256)
-///
-/// # Returns
-/// JSON string representing the encrypted Cipher
-///
-/// # Safety
-/// Both pointers must be valid null-terminated strings.
-#[no_mangle]
-pub unsafe extern "C" fn encrypt_cipher(
-    cipher_view_json: *const c_char,
-    symmetric_key_b64: *const c_char,
-) -> *const c_char {
-    let Ok(cipher_view_json) = CStr::from_ptr(cipher_view_json).to_str() else {
-        return error_response("Invalid UTF-8 in cipher_view_json");
-    };
-
-    let Ok(key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
-        return error_response("Invalid UTF-8 in symmetric_key_b64");
-    };
-
-    let Ok(cipher_view): Result<CipherView, _> = serde_json::from_str(cipher_view_json) else {
-        return error_response("Failed to parse CipherView JSON");
-    };
-
-    let Ok(key_bytes) = STANDARD.decode(key_b64) else {
-        return error_response("Failed to decode base64 key");
-    };
-
-    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
-        return error_response("Failed to create symmetric key: invalid key format or length");
-    };
-
-    let store: KeyStore<KeyIds> = KeyStore::default();
-    let mut ctx = store.context_mut();
-    let key_id = ctx.add_local_symmetric_key(key);
-
-    let Ok(cipher) = cipher_view.encrypt_composite(&mut ctx, key_id) else {
-        return error_response("Failed to encrypt cipher: encryption operation failed");
-    };
-
-    match serde_json::to_string(&cipher) {
-        Ok(json) => CString::new(json).unwrap().into_raw(),
-        Err(_) => error_response("Failed to serialize encrypted cipher"),
-    }
-}
-
-/// Decrypt an encrypted Cipher with a symmetric key, returning a CipherView as JSON.
-///
-/// # Arguments
-/// * `cipher_json` - JSON string representing an encrypted Cipher
-/// * `symmetric_key_b64` - Base64-encoded symmetric key (64 bytes for AES-256-CBC-HMAC-SHA256)
-///
-/// # Returns
-/// JSON string representing the decrypted CipherView
-///
-/// # Safety
-/// Both pointers must be valid null-terminated strings.
-#[no_mangle]
-pub unsafe extern "C" fn decrypt_cipher(
-    cipher_json: *const c_char,
-    symmetric_key_b64: *const c_char,
-) -> *const c_char {
-    let Ok(cipher_json) = CStr::from_ptr(cipher_json).to_str() else {
-        return error_response("Invalid UTF-8 in cipher_json");
-    };
-
-    let Ok(key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
-        return error_response("Invalid UTF-8 in symmetric_key_b64");
-    };
-
-    let Ok(cipher): Result<Cipher, _> = serde_json::from_str(cipher_json) else {
-        return error_response("Failed to parse Cipher JSON");
-    };
-
-    let Ok(key_bytes) = STANDARD.decode(key_b64) else {
-        return error_response("Failed to decode base64 key");
-    };
-
-    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
-        return error_response("Failed to create symmetric key: invalid key format or length");
-    };
-
-    let store: KeyStore<KeyIds> = KeyStore::default();
-    let mut ctx = store.context_mut();
-    let key_id = ctx.add_local_symmetric_key(key);
-
-    let Ok(cipher_view): Result<CipherView, _> = cipher.decrypt(&mut ctx, key_id) else {
-        return error_response("Failed to decrypt cipher: decryption operation failed");
-    };
-
-    match serde_json::to_string(&cipher_view) {
-        Ok(json) => CString::new(json).unwrap().into_raw(),
-        Err(_) => error_response("Failed to serialize decrypted cipher"),
-    }
 }
 
 /// Encrypt a plaintext string with a symmetric key, returning an EncString.
@@ -148,7 +46,9 @@ pub unsafe extern "C" fn encrypt_string(
         return error_response("Failed to decode base64 key");
     };
 
-    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
+    let Ok(key) =
+        SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice()))
+    else {
         return error_response("Failed to create symmetric key: invalid key format or length");
     };
 
@@ -159,245 +59,338 @@ pub unsafe extern "C" fn encrypt_string(
     CString::new(encrypted.to_string()).unwrap().into_raw()
 }
 
+/// Decrypt an EncString with a symmetric key, returning the plaintext.
+///
+/// # Arguments
+/// * `enc_string` - EncString in format "2.{iv}|{data}|{mac}"
+/// * `symmetric_key_b64` - Base64-encoded symmetric key (64 bytes for AES-256-CBC-HMAC-SHA256)
+///
+/// # Returns
+/// The decrypted plaintext string
+///
+/// # Safety
+/// Both pointers must be valid null-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn decrypt_string(
+    enc_string: *const c_char,
+    symmetric_key_b64: *const c_char,
+) -> *const c_char {
+    let Ok(enc_str) = CStr::from_ptr(enc_string).to_str() else {
+        return error_response("Invalid UTF-8 in enc_string");
+    };
+
+    let Ok(key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
+        return error_response("Invalid UTF-8 in symmetric_key_b64");
+    };
+
+    let Ok(parsed): Result<EncString, _> = enc_str.parse() else {
+        return error_response("Failed to parse EncString");
+    };
+
+    let Ok(key_bytes) = STANDARD.decode(key_b64) else {
+        return error_response("Failed to decode base64 key");
+    };
+
+    let Ok(key) =
+        SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice()))
+    else {
+        return error_response("Failed to create symmetric key: invalid key format or length");
+    };
+
+    let Ok(plaintext): Result<String, _> = parsed.decrypt_with_key(&key) else {
+        return error_response("Failed to decrypt string");
+    };
+
+    CString::new(plaintext).unwrap().into_raw()
+}
+
+/// Encrypt specified fields in a JSON object, returning the modified JSON.
+///
+/// Takes a JSON object, a JSON array of dot-notation field paths (with `[*]` for
+/// array elements), and a symmetric key. Walks the JSON tree and encrypts string
+/// values at matching paths. Non-string values and unmatched paths are left unchanged.
+///
+/// # Arguments
+/// * `json` - JSON object string
+/// * `field_paths_json` - JSON array of path strings, e.g. `["name","login.username","login.uris[*].uri"]`
+/// * `symmetric_key_b64` - Base64-encoded symmetric key
+///
+/// # Returns
+/// Modified JSON with matching string fields encrypted as EncStrings
+///
+/// # Safety
+/// All pointers must be valid null-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn encrypt_fields(
+    json: *const c_char,
+    field_paths_json: *const c_char,
+    symmetric_key_b64: *const c_char,
+) -> *const c_char {
+    let Ok(json_str) = CStr::from_ptr(json).to_str() else {
+        return error_response("Invalid UTF-8 in json");
+    };
+
+    let Ok(paths_str) = CStr::from_ptr(field_paths_json).to_str() else {
+        return error_response("Invalid UTF-8 in field_paths_json");
+    };
+
+    let Ok(key_b64) = CStr::from_ptr(symmetric_key_b64).to_str() else {
+        return error_response("Invalid UTF-8 in symmetric_key_b64");
+    };
+
+    let Ok(mut value): Result<serde_json::Value, _> = serde_json::from_str(json_str) else {
+        return error_response("Failed to parse JSON");
+    };
+
+    let Ok(paths): Result<Vec<String>, _> = serde_json::from_str(paths_str) else {
+        return error_response("Failed to parse field paths JSON");
+    };
+
+    let Ok(key_bytes) = STANDARD.decode(key_b64) else {
+        return error_response("Failed to decode base64 key");
+    };
+
+    let Ok(key) =
+        SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice()))
+    else {
+        return error_response("Failed to create symmetric key: invalid key format or length");
+    };
+
+    for path in &paths {
+        if let Err(msg) = encrypt_at_path(&mut value, path, &key) {
+            return error_response(&msg);
+        }
+    }
+
+    match serde_json::to_string(&value) {
+        Ok(result) => CString::new(result).unwrap().into_raw(),
+        Err(_) => error_response("Failed to serialize result JSON"),
+    }
+}
+
+/// Walks a JSON value tree and encrypts string values at the given dot-path.
+/// Supports `[*]` segments for iterating array elements.
+fn encrypt_at_path(
+    value: &mut serde_json::Value,
+    path: &str,
+    key: &SymmetricCryptoKey,
+) -> Result<(), String> {
+    let segments: Vec<&str> = path.split('.').collect();
+    encrypt_segments(value, &segments, key)
+}
+
+fn encrypt_segments(
+    value: &mut serde_json::Value,
+    segments: &[&str],
+    key: &SymmetricCryptoKey,
+) -> Result<(), String> {
+    if segments.is_empty() {
+        return Ok(());
+    }
+
+    let segment = segments[0];
+    let rest = &segments[1..];
+
+    // Handle array wildcard: "uris[*]" means iterate all elements of the "uris" array
+    if let Some(field_name) = segment.strip_suffix("[*]") {
+        let Some(arr) = value.get_mut(field_name).and_then(|v| v.as_array_mut()) else {
+            return Ok(()); // Field missing or not an array — skip
+        };
+
+        for element in arr.iter_mut() {
+            encrypt_segments(element, rest, key)?;
+        }
+
+        return Ok(());
+    }
+
+    // Last segment — encrypt the value if it's a string
+    if rest.is_empty() {
+        if let Some(s) = value.get(segment).and_then(|v| v.as_str()) {
+            let encrypted = s
+                .to_string()
+                .encrypt_with_key(key)
+                .map_err(|_| format!("Failed to encrypt field '{segment}'"))?;
+            value[segment] = serde_json::Value::String(encrypted.to_string());
+        }
+        // null or missing — leave unchanged
+        return Ok(());
+    }
+
+    // Intermediate segment — recurse into nested object
+    let Some(nested) = value.get_mut(segment) else {
+        return Ok(()); // Field missing — skip
+    };
+
+    encrypt_segments(nested, rest, key)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{free_c_string, generate_organization_keys};
-    use bitwarden_vault::{CipherType, LoginView};
+    use crate::free_c_string;
 
-    fn create_test_cipher_view() -> CipherView {
-        CipherView {
-            id: None,
-            organization_id: None,
-            folder_id: None,
-            collection_ids: vec![],
-            key: None,
-            name: "Test Login".to_string(),
-            notes: Some("Secret notes".to_string()),
-            r#type: CipherType::Login,
-            login: Some(LoginView {
-                username: Some("testuser@example.com".to_string()),
-                password: Some("SuperSecretP@ssw0rd!".to_string()),
-                password_revision_date: None,
-                uris: None,
-                totp: None,
-                autofill_on_page_load: None,
-                fido2_credentials: None,
-            }),
-            identity: None,
-            card: None,
-            secure_note: None,
-            ssh_key: None,
-            favorite: false,
-            reprompt: bitwarden_vault::CipherRepromptType::None,
-            organization_use_totp: false,
-            edit: true,
-            permissions: None,
-            view_password: true,
-            local_data: None,
-            attachments: None,
-            fields: None,
-            password_history: None,
-            creation_date: "2025-01-01T00:00:00Z".parse().unwrap(),
-            deleted_date: None,
-            revision_date: "2025-01-01T00:00:00Z".parse().unwrap(),
-            archived_date: None,
-        }
-    }
-
-    fn call_encrypt_cipher(cipher_json: &str, key_b64: &str) -> String {
-        let cipher_cstr = CString::new(cipher_json).unwrap();
-        let key_cstr = CString::new(key_b64).unwrap();
-
-        let result_ptr = unsafe { encrypt_cipher(cipher_cstr.as_ptr(), key_cstr.as_ptr()) };
-        let result_cstr = unsafe { CStr::from_ptr(result_ptr) };
-        let result = result_cstr.to_str().unwrap().to_owned();
-        unsafe { free_c_string(result_ptr as *mut c_char) };
-
-        result
-    }
-
-    fn make_test_key_b64() -> String {
+    fn make_test_key() -> SymmetricCryptoKey {
         SymmetricCryptoKey::make_aes256_cbc_hmac_key()
-            .to_base64()
-            .into()
     }
 
-    #[test]
-    fn encrypt_cipher_produces_encrypted_fields() {
-        let key_b64 = make_test_key_b64();
-        let cipher_view = create_test_cipher_view();
-        let cipher_json = serde_json::to_string(&cipher_view).unwrap();
-
-        let encrypted_json = call_encrypt_cipher(&cipher_json, &key_b64);
-
-        assert!(
-            !encrypted_json.contains("\"error\""),
-            "Got error: {}",
-            encrypted_json
-        );
-
-        let encrypted_cipher: Cipher =
-            serde_json::from_str(&encrypted_json).expect("Failed to parse encrypted cipher JSON");
-
-        let encrypted_name = encrypted_cipher.name.to_string();
-        assert!(
-            encrypted_name.starts_with("2."),
-            "Name should be encrypted: {}",
-            encrypted_name
-        );
-
-        let login = encrypted_cipher.login.expect("Login should be present");
-        if let Some(username) = &login.username {
-            assert!(
-                username.to_string().starts_with("2."),
-                "Username should be encrypted"
-            );
-        }
-        if let Some(password) = &login.password {
-            assert!(
-                password.to_string().starts_with("2."),
-                "Password should be encrypted"
-            );
-        }
-    }
-
-    #[test]
-    fn encrypt_cipher_works_with_generated_org_key() {
-        let org_keys_ptr = unsafe { generate_organization_keys() };
-        let org_keys_cstr = unsafe { CStr::from_ptr(org_keys_ptr) };
-        let org_keys_json = org_keys_cstr.to_str().unwrap().to_owned();
-        unsafe { free_c_string(org_keys_ptr as *mut c_char) };
-
-        let org_keys: serde_json::Value = serde_json::from_str(&org_keys_json).unwrap();
-        let org_key_b64 = org_keys["key"].as_str().unwrap();
-
-        let cipher_view = create_test_cipher_view();
-        let cipher_json = serde_json::to_string(&cipher_view).unwrap();
-
-        let encrypted_json = call_encrypt_cipher(&cipher_json, org_key_b64);
-
-        assert!(
-            !encrypted_json.contains("\"error\""),
-            "Got error: {}",
-            encrypted_json
-        );
-
-        let encrypted_cipher: Cipher = serde_json::from_str(&encrypted_json).unwrap();
-        assert!(encrypted_cipher.name.to_string().starts_with("2."));
-    }
-
-    #[test]
-    fn encrypt_cipher_rejects_invalid_json() {
-        let key_b64 = make_test_key_b64();
-
-        let error_json = call_encrypt_cipher("{ this is not valid json }", &key_b64);
-
-        assert!(
-            error_json.contains("\"error\""),
-            "Should return error for invalid JSON"
-        );
-        assert!(error_json.contains("Failed to parse CipherView JSON"));
-    }
-
-    #[test]
-    fn encrypt_cipher_rejects_invalid_base64_key() {
-        let cipher_view = create_test_cipher_view();
-        let cipher_json = serde_json::to_string(&cipher_view).unwrap();
-
-        let error_json = call_encrypt_cipher(&cipher_json, "not-valid-base64!!!");
-
-        assert!(
-            error_json.contains("\"error\""),
-            "Should return error for invalid base64"
-        );
-        assert!(error_json.contains("Failed to decode base64 key"));
-    }
-
-    #[test]
-    fn encrypt_cipher_rejects_wrong_key_length() {
-        let cipher_view = create_test_cipher_view();
-        let cipher_json = serde_json::to_string(&cipher_view).unwrap();
-        let short_key_b64 = STANDARD.encode(b"too short");
-
-        let error_json = call_encrypt_cipher(&cipher_json, &short_key_b64);
-
-        assert!(
-            error_json.contains("\"error\""),
-            "Should return error for wrong key length"
-        );
-        assert!(error_json.contains("invalid key format or length"));
-    }
-
-    fn call_decrypt_cipher(cipher_json: &str, key_b64: &str) -> String {
-        let cipher_cstr = CString::new(cipher_json).unwrap();
-        let key_cstr = CString::new(key_b64).unwrap();
-
-        let result_ptr = unsafe { decrypt_cipher(cipher_cstr.as_ptr(), key_cstr.as_ptr()) };
-        let result_cstr = unsafe { CStr::from_ptr(result_ptr) };
-        let result = result_cstr.to_str().unwrap().to_owned();
-        unsafe { free_c_string(result_ptr as *mut c_char) };
-
+    fn call_ffi_string(
+        func: unsafe extern "C" fn(*const c_char, *const c_char) -> *const c_char,
+        a: &str,
+        b: &str,
+    ) -> String {
+        let a_cstr = CString::new(a).unwrap();
+        let b_cstr = CString::new(b).unwrap();
+        let ptr = unsafe { func(a_cstr.as_ptr(), b_cstr.as_ptr()) };
+        let result = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
+        unsafe { free_c_string(ptr as *mut c_char) };
         result
     }
 
     #[test]
-    fn encrypt_decrypt_roundtrip_preserves_plaintext() {
-        let key_b64 = make_test_key_b64();
-        let original_view = create_test_cipher_view();
-        let original_json = serde_json::to_string(&original_view).unwrap();
+    fn encrypt_string_decrypt_string_roundtrip() {
+        let key = make_test_key();
+        let key_b64: String = key.to_base64().into();
 
-        let encrypted_json = call_encrypt_cipher(&original_json, &key_b64);
+        let encrypted = call_ffi_string(encrypt_string, "hello world", &key_b64);
         assert!(
-            !encrypted_json.contains("\"error\""),
-            "Encryption failed: {}",
-            encrypted_json
+            encrypted.starts_with("2."),
+            "Expected EncString, got: {encrypted}"
         );
 
-        let decrypted_json = call_decrypt_cipher(&encrypted_json, &key_b64);
-        assert!(
-            !decrypted_json.contains("\"error\""),
-            "Decryption failed: {}",
-            decrypted_json
-        );
-
-        let decrypted_view: CipherView = serde_json::from_str(&decrypted_json)
-            .expect("Failed to parse decrypted CipherView");
-
-        assert_eq!(decrypted_view.name, original_view.name);
-        assert_eq!(decrypted_view.notes, original_view.notes);
-
-        let original_login = original_view.login.expect("Original should have login");
-        let decrypted_login = decrypted_view.login.expect("Decrypted should have login");
-
-        assert_eq!(decrypted_login.username, original_login.username);
-        assert_eq!(decrypted_login.password, original_login.password);
+        let decrypted = call_ffi_string(decrypt_string, &encrypted, &key_b64);
+        assert_eq!(decrypted, "hello world");
     }
 
     #[test]
-    fn decrypt_cipher_rejects_wrong_key() {
-        let encrypt_key = make_test_key_b64();
-        let wrong_key = make_test_key_b64();
+    fn encrypt_at_path_encrypts_top_level_string() {
+        let key = make_test_key();
+        let mut value: serde_json::Value = serde_json::json!({"name": "Test", "type": 1});
 
-        let original_view = create_test_cipher_view();
-        let original_json = serde_json::to_string(&original_view).unwrap();
+        encrypt_at_path(&mut value, "name", &key).unwrap();
 
-        let encrypted_json = call_encrypt_cipher(&original_json, &encrypt_key);
-        assert!(!encrypted_json.contains("\"error\""));
+        let name = value["name"].as_str().unwrap();
+        assert!(name.starts_with("2."), "Expected encrypted, got: {name}");
+        assert_ne!(name, "Test");
+    }
 
-        let decrypted_json = call_decrypt_cipher(&encrypted_json, &wrong_key);
+    #[test]
+    fn encrypt_at_path_encrypts_nested_field() {
+        let key = make_test_key();
+        let mut value: serde_json::Value = serde_json::json!({
+            "login": {"username": "user@test.com", "password": "secret"}
+        });
 
-        // Decryption with wrong key should fail or produce garbage
-        // The SDK may return an error or the MAC validation will fail
-        let result: Result<CipherView, _> = serde_json::from_str(&decrypted_json);
-        if !decrypted_json.contains("\"error\"") {
-            // If no error, the decrypted data should not match original
-            if let Ok(view) = result {
-                assert_ne!(
-                    view.name, original_view.name,
-                    "Decryption with wrong key should not produce original plaintext"
-                );
+        encrypt_at_path(&mut value, "login.username", &key).unwrap();
+
+        let username = value["login"]["username"].as_str().unwrap();
+        assert!(
+            username.starts_with("2."),
+            "Expected encrypted, got: {username}"
+        );
+
+        // password should be unchanged
+        assert_eq!(value["login"]["password"].as_str().unwrap(), "secret");
+    }
+
+    #[test]
+    fn encrypt_at_path_encrypts_array_wildcard() {
+        let key = make_test_key();
+        let mut value: serde_json::Value = serde_json::json!({
+            "login": {
+                "uris": [
+                    {"uri": "https://example.com", "match": 0},
+                    {"uri": "https://test.com", "match": 1}
+                ]
             }
+        });
+
+        encrypt_at_path(&mut value, "login.uris[*].uri", &key).unwrap();
+
+        let uris = value["login"]["uris"].as_array().unwrap();
+        for uri_obj in uris {
+            let uri = uri_obj["uri"].as_str().unwrap();
+            assert!(uri.starts_with("2."), "Expected encrypted URI, got: {uri}");
         }
+        // match should be unchanged
+        assert_eq!(uris[0]["match"].as_i64().unwrap(), 0);
+    }
+
+    #[test]
+    fn encrypt_fields_ffi_encrypts_specified_paths() {
+        let key = make_test_key();
+        let key_b64: String = key.to_base64().into();
+
+        let input_json = serde_json::json!({
+            "name": "Test Login",
+            "type": 1,
+            "login": {"username": "user@test.com", "password": "secret"}
+        })
+        .to_string();
+
+        let paths_json = r#"["name","login.username","login.password"]"#;
+
+        let json_cstr = CString::new(input_json).unwrap();
+        let paths_cstr = CString::new(paths_json).unwrap();
+        let key_cstr = CString::new(key_b64.as_str()).unwrap();
+
+        let ptr =
+            unsafe { encrypt_fields(json_cstr.as_ptr(), paths_cstr.as_ptr(), key_cstr.as_ptr()) };
+        let result = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
+        unsafe { free_c_string(ptr as *mut c_char) };
+
+        assert!(!result.contains("\"error\""), "Got error: {result}");
+
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        let name = parsed["name"].as_str().unwrap();
+        assert!(
+            name.starts_with("2."),
+            "name should be encrypted, got: {name}"
+        );
+
+        let username = parsed["login"]["username"].as_str().unwrap();
+        assert!(
+            username.starts_with("2."),
+            "username should be encrypted, got: {username}"
+        );
+
+        // type should be unchanged
+        assert_eq!(parsed["type"].as_i64().unwrap(), 1);
+    }
+
+    #[test]
+    fn decrypt_string_with_wrong_key_fails() {
+        let key1 = make_test_key();
+        let key2 = make_test_key();
+        let key1_b64: String = key1.to_base64().into();
+        let key2_b64: String = key2.to_base64().into();
+
+        let encrypted = call_ffi_string(encrypt_string, "secret", &key1_b64);
+        let result = call_ffi_string(decrypt_string, &encrypted, &key2_b64);
+
+        assert!(
+            result.contains("\"error\""),
+            "Should fail with wrong key, got: {result}"
+        );
+    }
+
+    #[test]
+    fn encrypt_at_path_skips_null_values() {
+        let key = make_test_key();
+        let mut value: serde_json::Value = serde_json::json!({"name": null, "type": 1});
+
+        encrypt_at_path(&mut value, "name", &key).unwrap();
+
+        assert!(value["name"].is_null(), "Null should remain null");
+    }
+
+    #[test]
+    fn encrypt_at_path_skips_missing_fields() {
+        let key = make_test_key();
+        let mut value: serde_json::Value = serde_json::json!({"type": 1});
+
+        // Should not error on missing "name"
+        encrypt_at_path(&mut value, "name", &key).unwrap();
+        encrypt_at_path(&mut value, "login.username", &key).unwrap();
     }
 }

@@ -1,40 +1,46 @@
-﻿using AutoMapper;
-using Bit.Core.Entities;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Seeder.Recipes;
-using Bit.Seeder.Services;
+﻿using Bit.Seeder.Recipes;
 using Bit.SeederUtility.Configuration;
+using Bit.SeederUtility.Helpers;
 using CommandDotNet;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SeederUtility.Commands;
 
-[Command("organization", Description = "Seed an organization and organization users")]
+[Command("organization", Description = "Seed an organization with users and optional vault data (ciphers, collections, groups)")]
 public class OrganizationCommand
 {
     [DefaultCommand]
-    public void Execute(
-        [Option('n', "Name", Description = "Name of organization")]
-        string name,
-        [Option('u', "users", Description = "Number of users to generate")]
-        int users,
-        [Option('d', "domain", Description = "Email domain for users")]
-        string domain
-    )
+    public void Execute(OrganizationArgs args)
     {
-        var services = new ServiceCollection();
-        ServiceCollectionExtension.ConfigureServices(services);
-        var serviceProvider = services.BuildServiceProvider();
+        try
+        {
+            args.Validate();
 
-        using var scope = serviceProvider.CreateScope();
-        var scopedServices = scope.ServiceProvider;
-        var db = scopedServices.GetRequiredService<DatabaseContext>();
+            using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+            var recipe = new OrganizationRecipe(deps.ToDependencies());
 
-        var mapper = scopedServices.GetRequiredService<IMapper>();
-        var passwordHasher = scopedServices.GetRequiredService<IPasswordHasher<User>>();
-        var manglerService = scopedServices.GetRequiredService<IManglerService>();
-        var recipe = new OrganizationWithUsersRecipe(db, mapper, passwordHasher, manglerService);
-        recipe.Seed(name: name, domain: domain, users: users);
+            var result = recipe.Seed(args.ToOptions());
+
+            ConsoleOutput.PrintRow("Organization", result.OrganizationId);
+            if (result.OwnerEmail is not null)
+            {
+                ConsoleOutput.PrintRow("Owner", result.OwnerEmail);
+            }
+            ConsoleOutput.PrintRow("Password", result.Password);
+            if (result.ApiKey is not null)
+            {
+                ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
+            }
+            ConsoleOutput.PrintCountRow("Users", result.UsersCount);
+            ConsoleOutput.PrintCountRow("Groups", result.GroupsCount);
+            ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
+            ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
+
+            ConsoleOutput.PrintMangleMap(deps);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            Environment.Exit(1);
+        }
     }
 }

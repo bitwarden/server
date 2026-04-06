@@ -1,12 +1,15 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.Billing.Services;
 using Bit.Core.Settings;
 using Stripe;
+using Stripe.Checkout;
 
 namespace Bit.Billing.Services.Implementations;
 
 public class StripeEventService(
     GlobalSettings globalSettings,
-    IStripeFacade stripeFacade)
+    IStripeFacade stripeFacade,
+    IStripeAdapter stripeAdapter)
     : IStripeEventService
 {
     public async Task<Charge> GetCharge(Event stripeEvent, bool fresh = false, List<string>? expand = null)
@@ -82,8 +85,24 @@ public class StripeEventService(
         return await stripeFacade.GetSubscription(subscription.Id, new SubscriptionGetOptions { Expand = expand });
     }
 
+    public async Task<Session> GetCheckoutSession(Event stripeEvent, bool fresh = false, List<string>? expand = null)
+    {
+        var checkoutSession = Extract<Session>(stripeEvent);
+        if (!fresh)
+        {
+            return checkoutSession;
+        }
+
+        return await stripeAdapter.GetCheckoutSessionAsync(checkoutSession.Id, new SessionGetOptions { Expand = expand });
+    }
+
     public async Task<bool> ValidateCloudRegion(Event stripeEvent)
     {
+        if (EventTypeAppliesToAllRegions(stripeEvent.Type))
+        {
+            return true;
+        }
+
         var serverRegion = globalSettings.BaseServiceUri.CloudRegion;
 
         var customerExpansion = new List<string> { "customer" };
@@ -112,6 +131,9 @@ public class StripeEventService(
             HandledStripeWebhook.SetupIntentSucceeded =>
                 (await GetSetupIntent(stripeEvent, true, customerExpansion)).Customer?.Metadata,
 
+            HandledStripeWebhook.CheckoutSessionCompleted =>
+                    (await GetCheckoutSession(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+
             _ => null
         };
 
@@ -138,6 +160,16 @@ public class StripeEventService(
             return customer?.Metadata;
         }
     }
+
+    /// <summary>
+    /// Returns true for event types that should be processed by all cloud regions.
+    /// </summary>
+    private static bool EventTypeAppliesToAllRegions(string eventType) => eventType switch
+    {
+        // Business rules say that coupons are allowed to be imported into multiple regions, so coupon deleted events are not region-segmented
+        HandledStripeWebhook.CouponDeleted => true,
+        _ => false
+    };
 
     private static T Extract<T>(Event stripeEvent)
         => stripeEvent.Data.Object is not T type

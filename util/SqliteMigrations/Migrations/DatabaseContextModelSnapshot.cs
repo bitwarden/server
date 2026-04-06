@@ -236,6 +236,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseMyItems")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseOrganizationDomains")
                         .HasColumnType("INTEGER");
 
@@ -1135,6 +1138,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ReportFile")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
@@ -1984,6 +1990,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("MasterPasswordHint")
                         .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MasterPasswordSalt")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<short?>("MaxStorageGb")

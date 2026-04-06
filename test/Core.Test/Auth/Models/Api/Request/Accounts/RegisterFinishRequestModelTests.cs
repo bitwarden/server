@@ -181,6 +181,37 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(userSymmetricKey, result.Key);
         Assert.Equal(userAsymmetricKeys.PublicKey, result.PublicKey);
         Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, result.PrivateKey);
+        Assert.Null(result.MasterPasswordSalt);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ToUser_WithMasterPasswordUnlock_MapsSalt(string email, string masterPasswordHint,
+        KeysRequestModel userAsymmetricKeys)
+    {
+        // Arrange
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHint = masterPasswordHint,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = new KdfRequestModel
+                {
+                    KdfType = KdfType.PBKDF2_SHA256,
+                    Iterations = AuthConstants.PBKDF2_ITERATIONS.Default
+                },
+                MasterKeyWrappedUserKey = "wrapped-key",
+                Salt = "explicit-salt-value"
+            }
+        };
+
+        // Act
+        var resultUser = model.ToUser();
+
+        // Assert
+        Assert.Equal("explicit-salt-value", resultUser.MasterPasswordSalt);
     }
 
     [Fact]

@@ -40,7 +40,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         if (organizationUser == null ||
             organizationUser.Status != OrganizationUserStatusType.Confirmed ||
             organizationUser.OrganizationId != orgId ||
-            string.IsNullOrEmpty(organizationUser.ResetPasswordKey) ||
+            !organizationUser.IsEnrolledInAccountRecovery() ||
             !organizationUser.UserId.HasValue)
         {
             throw new BadRequestException("Organization User not valid");
@@ -69,7 +69,7 @@ public class AdminRecoverAccountCommand(IOrganizationRepository organizationRepo
         user.Key = key;
 
         await userRepository.ReplaceAsync(user);
-        await mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
+        await mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName(), true, false);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminResetPassword);
         await pushNotificationService.PushLogOutAsync(user.Id);
 

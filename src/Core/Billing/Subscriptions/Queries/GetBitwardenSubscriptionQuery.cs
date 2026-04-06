@@ -46,16 +46,12 @@ public class GetBitwardenSubscriptionQuery(
             return null;
         }
 
-        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+        var subscription = await FetchSubscriptionAsync(user);
+
+        if (subscription == null)
         {
-            Expand =
-            [
-                "customer.discount.coupon.applies_to",
-                "discounts.coupon.applies_to",
-                "items.data.price.product",
-                "test_clock"
-            ]
-        });
+            return null;
+        }
 
         var cart = await GetPremiumCartAsync(subscription);
 
@@ -113,6 +109,10 @@ public class GetBitwardenSubscriptionQuery(
 
         var (cartLevelDiscount, productLevelDiscounts) = GetStripeDiscounts(subscription);
 
+        var (scheduleDiscount, scheduleCouponId) = cartLevelDiscount == null
+            ? await GetSchedulePhase2DiscountAsync(subscription)
+            : (null, (string?)null);
+
         var availablePlan = plans.First(plan => plan.Available);
         var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
 
@@ -127,7 +127,7 @@ public class GetBitwardenSubscriptionQuery(
         else
         {
             seatCost = availablePlan.Seat.Price;
-            estimatedTax = await EstimatePremiumTaxAsync(subscription, plans, availablePlan);
+            estimatedTax = await EstimatePremiumTaxAsync(subscription, plans, availablePlan, scheduleCouponId);
         }
 
         var passwordManagerSeats = new CartItem
@@ -135,7 +135,7 @@ public class GetBitwardenSubscriptionQuery(
             TranslationKey = "premiumMembership",
             Quantity = passwordManagerSeatsItem.Quantity,
             Cost = seatCost,
-            Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem))
+            Discount = productLevelDiscounts.FirstOrDefault(discount => discount.AppliesTo(passwordManagerSeatsItem)) ?? scheduleDiscount
         };
 
         var additionalStorage = additionalStorageItem != null
@@ -166,7 +166,8 @@ public class GetBitwardenSubscriptionQuery(
     private async Task<decimal> EstimatePremiumTaxAsync(
         Subscription subscription,
         List<PremiumPlan>? plans = null,
-        PremiumPlan? availablePlan = null)
+        PremiumPlan? availablePlan = null,
+        string? couponId = null)
     {
         try
         {
@@ -195,6 +196,11 @@ public class GetBitwardenSubscriptionQuery(
                         };
                     }).ToList()
                 };
+
+                if (couponId != null)
+                {
+                    options.Discounts = [new InvoiceDiscountOptions { Coupon = couponId }];
+                }
             }
             else
             {
@@ -246,6 +252,71 @@ public class GetBitwardenSubscriptionQuery(
         }
 
         return (cartLevel.FirstOrDefault(), productLevel);
+    }
+
+    private async Task<(BitwardenDiscount? Discount, string? CouponId)> GetSchedulePhase2DiscountAsync(Subscription subscription)
+    {
+        if (string.IsNullOrEmpty(subscription.ScheduleId))
+        {
+            return (null, null);
+        }
+
+        try
+        {
+            var schedule = await stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
+                new SubscriptionScheduleGetOptions
+                {
+                    Expand = ["phases.discounts.coupon"]
+                });
+
+            if (schedule.Status != SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return (null, null);
+            }
+
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                logger.LogInformation(
+                    "Schedule phase 2 for subscription schedule ({ScheduleID}) has already started, skipping discount display",
+                    subscription.ScheduleId);
+                return (null, null);
+            }
+
+            var discount = phase2.Discounts?.FirstOrDefault();
+            return (discount?.Coupon, discount?.CouponId);
+        }
+        catch (StripeException stripeException)
+        {
+            logger.LogError(stripeException,
+                "Failed to retrieve subscription schedule ({ScheduleID}) for discount resolution",
+                subscription.ScheduleId);
+            return (null, null);
+        }
+    }
+
+    private async Task<Subscription?> FetchSubscriptionAsync(User user)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+            {
+                Expand =
+                [
+                    "customer.discount.coupon.applies_to",
+                    "discounts.coupon.applies_to",
+                    "items.data.price.product",
+                    "test_clock"
+                ]
+            });
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscription ({SubscriptionID}) for User ({UserID}) was not found", user.GatewaySubscriptionId, user.Id);
+            return null;
+        }
     }
 
     #endregion

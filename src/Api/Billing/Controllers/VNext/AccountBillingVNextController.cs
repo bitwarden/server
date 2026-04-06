@@ -2,14 +2,18 @@
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
+using Bit.Api.Billing.Models.Responses.Portal;
 using Bit.Core;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Portal.Commands;
 using Bit.Core.Billing.Premium.Commands;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
+using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,8 +25,12 @@ namespace Bit.Api.Billing.Controllers.VNext;
 [Route("account/billing/vnext")]
 [SelfHosted(NotSelfHostedOnly = true)]
 public class AccountBillingVNextController(
+    ICreateBillingPortalSessionCommand createBillingPortalSessionCommand,
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
+    ICreatePremiumCheckoutSessionCommand createPremiumCheckoutSessionCommand,
     ICreatePremiumCloudHostedSubscriptionCommand createPremiumCloudHostedSubscriptionCommand,
+    ICurrentContext currentContext,
+    IGetApplicableDiscountsQuery getApplicableDiscountsQuery,
     IGetBitwardenSubscriptionQuery getBitwardenSubscriptionQuery,
     IGetCreditQuery getCreditQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
@@ -39,6 +47,22 @@ public class AccountBillingVNextController(
     {
         var credit = await getCreditQuery.Run(user);
         return TypedResults.Ok(credit);
+    }
+
+    [HttpPost("premium/checkout")]
+    [InjectUser]
+    public async Task<IResult> CreatePremiumCheckoutSessionAsync(
+        [BindNever] User user,
+        [FromBody] CreatePremiumCheckoutSessionRequest request)
+    {
+        var appVersion = currentContext.ClientVersion?.ToString();
+        if (string.IsNullOrWhiteSpace(appVersion))
+        {
+            return Error.BadRequest("Client version is required.");
+        }
+
+        var result = await createPremiumCheckoutSessionCommand.Run(user, appVersion, request.Platform);
+        return Handle(result);
     }
 
     [HttpPost("credit/bitpay")]
@@ -80,9 +104,8 @@ public class AccountBillingVNextController(
         [BindNever] User user,
         [FromBody] PremiumCloudHostedSubscriptionRequest request)
     {
-        var (paymentMethod, billingAddress, additionalStorageGb) = request.ToDomain();
-        var result = await createPremiumCloudHostedSubscriptionCommand.Run(
-            user, paymentMethod, billingAddress, additionalStorageGb);
+        var subscriptionPurchase = request.ToDomain();
+        var result = await createPremiumCloudHostedSubscriptionCommand.Run(user, subscriptionPurchase);
         return Handle(result);
     }
 
@@ -132,8 +155,34 @@ public class AccountBillingVNextController(
         [BindNever] User user,
         [FromBody] UpgradePremiumToOrganizationRequest request)
     {
-        var (organizationName, key, planType, billingAddress) = request.ToDomain();
-        var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, planType, billingAddress);
+        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = request.ToDomain();
+        var result = await upgradePremiumToOrganizationCommand.Run(user, organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress);
         return Handle(result);
     }
+
+    [HttpGet("discounts")]
+    [RequireFeature(FeatureFlagKeys.PM29108_EnablePersonalDiscounts)]
+    [InjectUser]
+    public async Task<IResult> GetApplicableDiscountsAsync(
+        [BindNever] User user)
+    {
+        var result = await getApplicableDiscountsQuery.Run(user);
+        return Handle(result);
+    }
+
+    [HttpPost("portal-session")]
+    [InjectUser]
+    public async Task<IResult> CreatePortalSessionAsync([BindNever] User user)
+    {
+        if (DeviceTypes.ToClientType(currentContext.DeviceType) != ClientType.Mobile)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var returnUrl = "bitwarden://premium-upgrade-callback";
+
+        var result = await createBillingPortalSessionCommand.Run(user, returnUrl);
+        return Handle(result.Map(url => new PortalSessionResponse { Url = url }));
+    }
+
 }
