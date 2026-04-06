@@ -53,6 +53,20 @@ public class SubscriptionInfo
         }
 
         /// <summary>
+        /// Creates a BillingCustomerDiscount from a Stripe Coupon object.
+        /// Unlike <see cref="BillingCustomerDiscount(Discount)"/>, this constructor does not have
+        /// access to a Discount wrapper, so Active is unconditionally set to true.
+        /// </summary>
+        public BillingCustomerDiscount(Coupon coupon)
+        {
+            Id = coupon.Id;
+            Active = true;
+            PercentOff = coupon.PercentOff;
+            AmountOff = ConvertFromStripeMinorUnits(coupon.AmountOff);
+            AppliesTo = coupon.AppliesTo?.Products;
+        }
+
+        /// <summary>
         /// The Stripe coupon ID (e.g., "cm3nHfO1").
         /// Note: Only specific coupon IDs are displayed in the UI based on feature flag configuration,
         /// though Stripe may apply additional discounts that are not shown.
@@ -60,8 +74,8 @@ public class SubscriptionInfo
         public string? Id { get; set; }
 
         /// <summary>
-        /// True only for perpetual/recurring discounts (End == null).
-        /// False for any discount with an expiration date, even if not yet expired.
+        /// When constructed from a Discount, true only for perpetual discounts (End == null).
+        /// When constructed from a Coupon directly, always true (no end-date information available).
         /// Product decision for Milestone 2: only show perpetual discounts in UI.
         /// </summary>
         public bool Active { get; set; }
