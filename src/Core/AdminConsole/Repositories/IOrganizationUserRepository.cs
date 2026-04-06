@@ -46,6 +46,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync_vNext(Guid organizationId, bool includeGroups = false, bool includeSharedCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null);
+    Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAndAcceptedDetailsByUserAsync(Guid userId);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
         OrganizationUserStatusType? status = null);
     Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);

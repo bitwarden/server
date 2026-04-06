@@ -344,6 +344,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAndAcceptedDetailsByUserAsync(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
+                "[dbo].[OrganizationUserOrganizationDetails_ReadConfirmedAndAcceptedByUserId]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId,
         Guid organizationId, OrganizationUserStatusType? status = null)
     {

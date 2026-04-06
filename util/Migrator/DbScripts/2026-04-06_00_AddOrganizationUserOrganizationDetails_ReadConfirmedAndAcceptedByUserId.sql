@@ -1,0 +1,20 @@
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadConfirmedAndAcceptedByUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadConfirmedAndAcceptedByUserId]
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadConfirmedAndAcceptedByUserId]
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[OrganizationUserOrganizationDetailsView]
+    WHERE
+        [UserId] = @UserId
+        AND [Status] IN (1, 2) -- Accepted = 1, Confirmed = 2
+END
