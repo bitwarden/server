@@ -70,20 +70,13 @@ BEGIN
                 [GroupId] UNIQUEIDENTIFIER '$.GroupId'
             ) OUG
 
-    INSERT INTO [dbo].[CollectionUser]
-    (
-        [CollectionId],
-        [OrganizationUserId],
-        [ReadOnly],
-        [HidePasswords],
-        [Manage]
-    )
     SELECT
         OUC.[CollectionId],
         OUC.[OrganizationUserId],
         OUC.[ReadOnly],
         OUC.[HidePasswords],
         OUC.[Manage]
+    INTO #CollectionUserData
     FROM
         OPENJSON(@collectionData)
             WITH(
@@ -94,17 +87,29 @@ BEGIN
                 [Manage] BIT '$.Manage'
             ) OUC
 
+    INSERT INTO [dbo].[CollectionUser]
+    (
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    )
+    SELECT
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    FROM #CollectionUserData
+
     -- Bump RevisionDate on all affected collections
     IF @RevisionDate IS NOT NULL
     BEGIN
         UPDATE C
         SET C.[RevisionDate] = @RevisionDate
         FROM [dbo].[Collection] C
-        WHERE C.[Id] IN (
-            SELECT OUC.[CollectionId]
-            FROM OPENJSON(@collectionData)
-            WITH ([CollectionId] UNIQUEIDENTIFIER '$.CollectionId') OUC
-        )
+        WHERE C.[Id] IN (SELECT [CollectionId] FROM #CollectionUserData)
     END
 END
 go
