@@ -27,9 +27,9 @@ public class BulkUpdateOrganizationSubscriptionsCommand(
         {
             if (useUpdateOrganizationSubscriptionCommand)
             {
-                var changeSet = OrganizationSubscriptionChangeSet.UpdatePasswordManagerSeats(
-                    subscriptionUpdate.Plan!,
-                    subscriptionUpdate.Seats);
+                var changeSet = OrganizationSubscriptionChangeSet.Builder(subscriptionUpdate.Plan!)
+                    .UpdatePasswordManagerSeats(subscriptionUpdate.Seats)
+                    .Build();
 
                 var result =
                     await updateOrganizationSubscriptionCommand.Run(subscriptionUpdate.Organization, changeSet);

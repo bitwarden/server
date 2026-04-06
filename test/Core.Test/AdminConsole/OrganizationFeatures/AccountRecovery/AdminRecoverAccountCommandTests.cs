@@ -291,7 +291,9 @@ public class AdminRecoverAccountCommandTests
         await sutProvider.GetDependency<IMailService>().Received(1).SendAdminResetPasswordEmailAsync(
             Arg.Is(user.Email),
             Arg.Is(user.Name),
-            Arg.Is(organization.DisplayName()));
+            Arg.Is(organization.DisplayName()),
+            Arg.Is(true),
+            Arg.Is(false));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(
             Arg.Is(organizationUser),

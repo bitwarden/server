@@ -131,6 +131,19 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
+    public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<OrganizationAbility>(
+                "[dbo].[Organization_ReadAbilityById]",
+                new { Id = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.SingleOrDefault();
+        }
+    }
+
     public async Task<Organization?> GetByLicenseKeyAsync(string licenseKey)
     {
         using (var connection = new SqlConnection(ConnectionString))

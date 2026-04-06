@@ -205,6 +205,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
         KdfIterations = orgUser.KdfIterations;
         KdfMemory = orgUser.KdfMemory;
         KdfParallelism = orgUser.KdfParallelism;
+        MasterPasswordSalt = orgUser.MasterPasswordSalt;
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
     }
@@ -214,6 +215,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
+    public string MasterPasswordSalt { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
 }
