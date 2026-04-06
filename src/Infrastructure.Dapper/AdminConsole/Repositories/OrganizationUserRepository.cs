@@ -673,6 +673,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                         GroupId = group,
                         OrganizationUserId = user.OrganizationUser.Id
                     })),
+                // Use the same RevisionDate as the created OrganizationUsers
                 RevisionDate = organizationUsersList.First().OrganizationUser.RevisionDate
             },
             commandType: CommandType.StoredProcedure);

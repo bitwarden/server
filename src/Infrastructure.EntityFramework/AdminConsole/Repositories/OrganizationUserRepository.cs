@@ -972,10 +972,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var affectedCollections = await dbContext.Collections
                 .Where(c => affectedCollectionIds.Contains(c.Id))
                 .ToListAsync();
-            var now = DateTime.UtcNow;
+            // Use the same RevisionDate as the created OrganizationUsers
+            var revisionDate = organizationUserCollection.First().OrganizationUser.RevisionDate;
             foreach (var c in affectedCollections)
             {
-                c.RevisionDate = now;
+                c.RevisionDate = revisionDate;
             }
         }
 
