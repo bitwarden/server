@@ -44,6 +44,7 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
@@ -84,6 +85,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IInitPendingOrganizationCommand _initPendingOrganizationCommand;
     private readonly V1_RevokeOrganizationUserCommand _revokeOrganizationUserCommand;
     private readonly IAdminRecoverAccountCommand _adminRecoverAccountCommand;
+    private readonly AccountRecoveryV2.IAdminRecoverAccountCommand _adminRecoverAccountCommandV2;
     private readonly ISelfRevokeOrganizationUserCommand _selfRevokeOrganizationUserCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -115,6 +117,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
+        AccountRecoveryV2.IAdminRecoverAccountCommand adminRecoverAccountCommandV2,
         IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand)
@@ -150,6 +153,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _initPendingOrganizationCommand = initPendingOrganizationCommand;
         _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
         _adminRecoverAccountCommand = adminRecoverAccountCommand;
+        _adminRecoverAccountCommandV2 = adminRecoverAccountCommandV2;
         _selfRevokeOrganizationUserCommand = selfRevokeOrganizationUserCommand;
     }
 
@@ -517,9 +521,17 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
 #nullable enable
+    /// <summary>
+    /// Backward compat alias — remove after clients migrate to recover-account.
+    /// </summary>
     [HttpPut("{id}/reset-password")]
     [Authorize<ManageAccountRecoveryRequirement>]
-    public async Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+    public Task<IResult> PutResetPassword(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
+        => PutRecoverAccount(orgId, id, model);
+
+    [HttpPut("{id}/recover-account")]
+    [Authorize<ManageAccountRecoveryRequirement>]
+    public async Task<IResult> PutRecoverAccount(Guid orgId, Guid id, [FromBody] OrganizationUserResetPasswordRequestModel model)
     {
         var targetOrganizationUser = await _organizationUserRepository.GetByIdAsync(id);
         if (targetOrganizationUser == null || targetOrganizationUser.OrganizationId != orgId)
@@ -537,7 +549,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return TypedResults.BadRequest(new ErrorResponseModel(failureReason));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(orgId, targetOrganizationUser, model.NewMasterPasswordHash, model.Key);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AdminResetTwoFactor))
+        {
+            var commandRequest = model.ToCommandRequest(orgId, targetOrganizationUser);
+            return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
+        }
+
+        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(
+            orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
         if (result.Succeeded)
         {
             return TypedResults.Ok();

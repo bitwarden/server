@@ -160,7 +160,9 @@ public static class FeatureFlagKeys
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
     public const string AutomaticConfirmUsers = "pm-19934-auto-confirm-organization-users";
     public const string ScimRevokeV2 = "pm-32394-scim-revoke-put-v2";
+    public const string BulkReinviteUI = "pm-28416-bulk-reinvite-ux-improvements";
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
+    public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
 
     /* Architecture */
@@ -179,6 +181,7 @@ public static class FeatureFlagKeys
     public const string ChangeEmailNewAuthenticationApis = "pm-30811-change-email-new-authentication-apis";
     public const string PM31088_MasterPasswordServiceEmitSalt = "pm-31088-master-password-service-emit-salt";
     public const string PM32413_MultiClientPasswordManagement = "pm-32413-multi-client-password-management";
+    public const string PM34210_DesktopAddDevices = "pm-34210-desktop-add-devices";
 
     /* Autofill Team */
     public const string SSHAgentV2 = "ssh-agent-v2";
@@ -195,7 +198,7 @@ public static class FeatureFlagKeys
     public const string PM24032_NewNavigationPremiumUpgradeButton = "pm-24032-new-navigation-premium-upgrade-button";
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
-    public const string PM23341_Milestone_2 = "pm-23341-milestone-2";
+
     public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
     public const string PM28265_EnableReconcileAdditionalStorageJob = "pm-28265-enable-reconcile-additional-storage-job";
     public const string PM28265_ReconcileAdditionalStorageJobEnableLiveMode = "pm-28265-reconcile-additional-storage-job-enable-live-mode";
@@ -245,6 +248,7 @@ public static class FeatureFlagKeys
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
     public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
+    public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
 
     /* Tools Team */
     /// <summary>
@@ -261,6 +265,8 @@ public static class FeatureFlagKeys
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
+
+    public const string PM28190CipherSharingOpsToSdk = "pm-28190-cipher-sharing-ops-to-sdk";
     public const string PhishingDetection = "phishing-detection";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
@@ -277,6 +283,7 @@ public static class FeatureFlagKeys
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
     public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
     public const string PM31948_OrgUserNotificationBanner = "pm-31948-org-user-notification-banner";
+    public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
 
     /* Innovation Team */
     public const string ArchiveVaultItems = "pm-19148-innovation-archive";
@@ -287,6 +294,7 @@ public static class FeatureFlagKeys
     public const string EventDiagnosticLogging = "pm-27666-siem-event-log-debugging";
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
+    public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
