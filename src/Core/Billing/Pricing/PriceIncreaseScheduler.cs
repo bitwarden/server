@@ -235,9 +235,19 @@ public class PriceIncreaseScheduler(
             });
         }
 
+        var startDate = subscription.GetCurrentPeriodEnd();
+        if (startDate == null)
+        {
+            logger.LogError(
+                "Could not determine current period end for subscription ({SubscriptionId}), skipping schedule creation",
+                subscription.Id);
+            return null;
+        }
+
         return new SubscriptionSchedulePhaseOptions
         {
-            StartDate = subscription.GetCurrentPeriodEnd(),
+            StartDate = startDate,
+            EndDate = startDate.Value.AddYears(1),
             Items = items,
             Discounts = [new() { Coupon = CouponIDs.Milestone2SubscriptionDiscount }],
             ProrationBehavior = ProrationBehavior.None
@@ -288,9 +298,19 @@ public class PriceIncreaseScheduler(
             }
             : null;
 
+        var startDate = subscription.GetCurrentPeriodEnd();
+        if (startDate == null)
+        {
+            logger.LogError(
+                "Could not determine current period end for subscription ({SubscriptionId}), skipping schedule creation",
+                subscription.Id);
+            return null;
+        }
+
         return new SubscriptionSchedulePhaseOptions
         {
-            StartDate = subscription.GetCurrentPeriodEnd(),
+            StartDate = startDate,
+            EndDate = startDate.Value.AddYears(1),
             Items = items,
             Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None

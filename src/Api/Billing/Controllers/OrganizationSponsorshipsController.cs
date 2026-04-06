@@ -42,6 +42,7 @@ public class OrganizationSponsorshipsController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyQuery _policyQuery;
     private readonly IFeatureService _featureService;
+    private readonly ILogger<OrganizationSponsorshipsController> _logger;
 
     public OrganizationSponsorshipsController(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -58,7 +59,8 @@ public class OrganizationSponsorshipsController : Controller
         IUserService userService,
         ICurrentContext currentContext,
         IPolicyQuery policyQuery,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ILogger<OrganizationSponsorshipsController> logger)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -75,6 +77,7 @@ public class OrganizationSponsorshipsController : Controller
         _currentContext = currentContext;
         _policyQuery = policyQuery;
         _featureService = featureService;
+        _logger = logger;
     }
 
     [Authorize("Application")]
@@ -156,15 +159,34 @@ public class OrganizationSponsorshipsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
     {
+        _logger.LogInformation(
+            "Sponsorship redemption started: SponsoredOrganizationId={SponsoredOrganizationId}, PlanSponsorshipType={PlanSponsorshipType}, TokenLength={TokenLength}",
+            model.SponsoredOrganizationId,
+            model.PlanSponsorshipType,
+            sponsorshipToken?.Length ?? 0);
+
         var (valid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
 
         if (!valid)
         {
+            _logger.LogWarning(
+                "Sponsorship redemption failed: invalid token. SponsoredOrganizationId={SponsoredOrganizationId}, SponsorshipId={SponsorshipId}",
+                model.SponsoredOrganizationId,
+                sponsorship?.Id);
             throw new BadRequestException("Failed to parse sponsorship token.");
         }
 
+        _logger.LogInformation(
+            "Sponsorship token validated: SponsorshipId={SponsorshipId}, SponsoringOrganizationId={SponsoringOrganizationId}",
+            sponsorship.Id,
+            sponsorship.SponsoringOrganizationId);
+
         if (!await _currentContext.OrganizationOwner(model.SponsoredOrganizationId))
         {
+            _logger.LogWarning(
+                "Sponsorship redemption failed: user is not org owner. SponsoredOrganizationId={SponsoredOrganizationId}, SponsorshipId={SponsorshipId}",
+                model.SponsoredOrganizationId,
+                sponsorship.Id);
             throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
         }
 
@@ -173,12 +195,21 @@ public class OrganizationSponsorshipsController : Controller
 
         if (freeFamiliesSponsorshipPolicy.Enabled)
         {
+            _logger.LogWarning(
+                "Sponsorship redemption failed: Free Families sponsorship has been disabled by org admin policy. SponsoredOrganizationId={SponsoredOrganizationId}, SponsorshipId={SponsorshipId}",
+                model.SponsoredOrganizationId,
+                sponsorship.Id);
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
         }
 
         await _setUpSponsorshipCommand.SetUpSponsorshipAsync(
             sponsorship,
             await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId));
+
+        _logger.LogInformation(
+            "Sponsorship redemption succeeded: SponsorshipId={SponsorshipId}, SponsoredOrganizationId={SponsoredOrganizationId}",
+            sponsorship.Id,
+            model.SponsoredOrganizationId);
     }
 
     [Authorize("Installation")]

@@ -102,6 +102,7 @@ public class PriceIncreaseSchedulerTests
                 o.Phases.Count == 2 &&
                 o.Phases[1].Items.Any(i => i.Price == "premium-new-seat" && i.Quantity == 1) &&
                 o.Phases[1].Discounts.Any(d => d.Coupon == CouponIDs.Milestone2SubscriptionDiscount) &&
+                o.Phases[1].EndDate != null &&
                 o.EndBehavior == SubscriptionScheduleEndBehavior.Release));
     }
 
@@ -188,6 +189,7 @@ public class PriceIncreaseSchedulerTests
                 o.Phases.Count == 2 &&
                 o.Phases[1].Items.Any(i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1) &&
                 o.Phases[1].Discounts.Any(d => d.Coupon == CouponIDs.Milestone3SubscriptionDiscount) &&
+                o.Phases[1].EndDate != null &&
                 o.EndBehavior == SubscriptionScheduleEndBehavior.Release));
     }
 
@@ -228,6 +230,7 @@ public class PriceIncreaseSchedulerTests
                 o.Phases.Count == 2 &&
                 o.Phases[1].Items.Any(i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1) &&
                 o.Phases[1].Discounts == null &&
+                o.Phases[1].EndDate != null &&
                 o.EndBehavior == SubscriptionScheduleEndBehavior.Release));
     }
 
@@ -471,6 +474,7 @@ public class PriceIncreaseSchedulerTests
         Assert.Single(result.Discounts);
         Assert.Equal(CouponIDs.Milestone2SubscriptionDiscount, result.Discounts[0].Coupon);
         Assert.Equal(ProrationBehavior.None, result.ProrationBehavior);
+        Assert.Equal(currentPeriodEnd.AddYears(1), (DateTime)result.EndDate);
     }
 
     [Fact]
@@ -698,7 +702,8 @@ public class PriceIncreaseSchedulerTests
         new()
         {
             Price = new Price { Id = priceId },
-            Quantity = quantity
+            Quantity = quantity,
+            CurrentPeriodEnd = DateTime.UtcNow.AddYears(1)
         };
 
     private static SubscriptionSchedule CreateSchedule(string id, string subscriptionId, string status) =>

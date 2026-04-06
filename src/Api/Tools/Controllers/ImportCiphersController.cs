@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Api.Tools.Models.Request.Accounts;
+﻿using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
@@ -56,7 +53,7 @@ public class ImportCiphersController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
         var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId, false)).ToList();
         await _importCiphersCommand.ImportIntoIndividualVaultAsync(folders, ciphers, model.FolderRelationships, userId);
@@ -84,7 +81,7 @@ public class ImportCiphersController : Controller
             throw new BadRequestException("Not enough privileges to import into this organization.");
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
         await _importCiphersCommand.ImportIntoOrganizationalVaultAsync(collections, ciphers, model.CollectionRelationships, userId);
     }

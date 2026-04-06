@@ -15,4 +15,16 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
             serviceCollection.AddHttpContextAccessor();
         });
     }
+
+    public void ConfigureAuth(string username, string password)
+    {
+        UpdateConfiguration(builder =>
+        {
+            builder.AddInMemoryCollection(new Dictionary<string, string>
+            {
+                { "seederSettings:Username", username},
+                { "seederSettings:Password", password}
+            });
+        });
+    }
 }

@@ -110,7 +110,7 @@ public class SendsControllerTests : IDisposable
         var expected = "You cannot have a Send with a deletion date that far " +
                        "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
                        "and try again.";
-        var request = new SendRequestModel() { DeletionDate = now.AddDays(32) };
+        var request = new SendRequestModel() { Key = "test_key", DeletionDate = now.AddDays(32) };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
         Assert.Equal(expected, exception.Message);
