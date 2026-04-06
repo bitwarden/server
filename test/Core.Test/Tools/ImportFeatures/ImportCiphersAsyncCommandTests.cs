@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
@@ -246,6 +247,11 @@ public class ImportCiphersAsyncCommandTests
             .GetByOrganizationAsync(organization.Id, importingUserId)
             .Returns((OrganizationUser)null);
 
+        // Importing user is a provider user for this organization
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(organization.Id)
+            .Returns(true);
+
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection>());
@@ -260,6 +266,52 @@ public class ImportCiphersAsyncCommandTests
             Arg.Is<IEnumerable<CollectionUser>>(cus => !cus.Any()));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoOrganizationalVaultAsync_WithNullImportingOrgUser_AndNotProvider_ThrowsUnauthorizedAccess(
+        Organization organization,
+        Guid importingUserId,
+        List<Collection> collections,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        organization.MaxCollections = null;
+
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        // Importing user is NOT an org member
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns((OrganizationUser)null);
+
+        // Importing user is NOT a provider user for this organization
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(organization.Id)
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId));
+
+        Assert.Contains("organization members or managed service providers", exception.Message);
     }
 
     [Theory, BitAutoData]
