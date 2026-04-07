@@ -893,12 +893,15 @@ public class AcceptOrgUserCommandTests
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new RequireTwoFactorPolicyRequirement([]));
 
-        // Auto-confirm enforcement query returns valid by default (no restrictions)
-        var request = new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user);
+        // No AutoConfirm policy by default
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
+        // Auto-confirm enforcement query returns valid by default (no restrictions)
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
-            .IsCompliantAsync(request)
-            .Returns(Valid(request));
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(org.Id, [orgUser], user)));
     }
 
     private string CreateToken(OrganizationUser orgUser)

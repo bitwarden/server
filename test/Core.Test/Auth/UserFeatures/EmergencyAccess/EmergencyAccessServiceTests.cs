@@ -79,6 +79,9 @@ public class EmergencyAccessServiceTests
         EmergencyAccessType accessType, SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var result = await sutProvider.Sut.InviteAsync(invitingUser, email, accessType, waitTime);
 
@@ -482,6 +485,10 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
 

@@ -12,7 +12,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -190,9 +189,9 @@ public class InitPendingOrganizationValidatorTests
         var token = CreateValidToken(orgUser, sutProvider);
         SetValidOrganizationState(org);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Any<string>())
-            .Returns(false);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
@@ -252,9 +251,9 @@ public class InitPendingOrganizationValidatorTests
         var token = CreateValidToken(orgUser, sutProvider);
         SetValidOrganizationState(org);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Any<string>())
-            .Returns(false);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
@@ -436,9 +435,9 @@ public class InitPendingOrganizationValidatorTests
         User user,
         SutProvider<InitPendingOrganizationValidator> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(Arg.Any<string>())
-            .Returns(false);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)

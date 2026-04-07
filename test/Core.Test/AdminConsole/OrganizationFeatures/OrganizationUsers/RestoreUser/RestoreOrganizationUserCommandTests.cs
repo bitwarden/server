@@ -1070,6 +1070,15 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        // Setup default empty AutomaticUserConfirmationPolicyRequirement (no auto-confirm restrictions)
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(targetOrganizationUser.OrganizationId, [], null!)));
     }
 
     private static void SetupOrganizationDataOwnershipPolicy(
