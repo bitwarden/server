@@ -10,7 +10,6 @@ using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -32,7 +31,7 @@ public class PoliciesController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IVNextSavePolicyCommand _vNextSavePolicyCommand;
+    private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IPolicyQuery _policyQuery;
 
     public PoliciesController(IPolicyRepository policyRepository,
@@ -41,7 +40,7 @@ public class PoliciesController : Controller
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
         IOrganizationRepository organizationRepository,
-        IVNextSavePolicyCommand vNextSavePolicyCommand,
+        ISavePolicyCommand savePolicyCommand,
         IPolicyQuery policyQuery)
     {
         _policyRepository = policyRepository;
@@ -50,7 +49,7 @@ public class PoliciesController : Controller
         _organizationRepository = organizationRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
-        _vNextSavePolicyCommand = vNextSavePolicyCommand;
+        _savePolicyCommand = savePolicyCommand;
         _policyQuery = policyQuery;
     }
 
@@ -146,7 +145,7 @@ public class PoliciesController : Controller
     {
         var savePolicyRequest = await model.ToSavePolicyModelAsync(orgId, type, _currentContext);
 
-        var policy = await _vNextSavePolicyCommand.SaveAsync(savePolicyRequest);
+        var policy = await _savePolicyCommand.SaveAsync(savePolicyRequest);
 
         return new PolicyResponseModel(policy);
     }
