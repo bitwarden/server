@@ -175,9 +175,7 @@ public class UpdatePremiumStorageCommand(
                     Items = BuildPhaseItemsWithStorage(phase1.Items, storagePriceId, additionalStorageGb),
                     Discounts = phase1.Discounts?.Select(d =>
                         new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                    ProrationBehavior = usingPayPal
-                        ? ProrationBehavior.CreateProrations
-                        : ProrationBehavior.AlwaysInvoice
+                    ProrationBehavior = phase1.ProrationBehavior
                 }
             };
 
@@ -199,7 +197,10 @@ public class UpdatePremiumStorageCommand(
                 new SubscriptionScheduleUpdateOptions
                 {
                     EndBehavior = activeSchedule.EndBehavior,
-                    Phases = phases
+                    Phases = phases,
+                    ProrationBehavior = usingPayPal
+                        ? ProrationBehavior.CreateProrations
+                        : ProrationBehavior.AlwaysInvoice
                 });
         }
         else
