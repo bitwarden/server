@@ -274,7 +274,18 @@ public class GetBitwardenSubscriptionQuery(
                 return (null, null);
             }
 
-            var discount = schedule.Phases[1].Discounts?.FirstOrDefault();
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                logger.LogInformation(
+                    "Schedule phase 2 for subscription schedule ({ScheduleID}) has already started, skipping discount display",
+                    subscription.ScheduleId);
+                return (null, null);
+            }
+
+            var discount = phase2.Discounts?.FirstOrDefault();
             return (discount?.Coupon, discount?.CouponId);
         }
         catch (StripeException stripeException)
