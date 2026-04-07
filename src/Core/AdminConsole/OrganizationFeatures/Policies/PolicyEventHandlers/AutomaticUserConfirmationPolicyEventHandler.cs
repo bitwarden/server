@@ -1,0 +1,65 @@
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
+using Bit.Core.Repositories;
+
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
+
+/// <summary>
+/// Represents an event handler for the Automatic User Confirmation policy.
+///
+/// This class validates that the following conditions are met:
+/// <ul>
+///     <li>The Single organization policy is enabled</li>
+///     <li>All organization users are compliant with the Single organization policy</li>
+///     <li>No provider users exist</li>
+/// </ul>
+/// </summary>
+public class AutomaticUserConfirmationPolicyEventHandler(
+    IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator,
+    IOrganizationUserRepository organizationUserRepository,
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
+    : IPolicyValidationEvent, IEnforceDependentPoliciesEvent, IOnPolicyPreUpdateEvent
+{
+    public PolicyType Type => PolicyType.AutomaticUserConfirmation;
+
+    public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
+
+    public async Task<string> ValidateAsync(SavePolicyModel savePolicyModel, Policy? currentPolicy)
+    {
+        var policyUpdate = savePolicyModel.PolicyUpdate;
+
+        var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
+        var policyAlreadyEnabled = currentPolicy is { Enabled: true };
+        if (isNotEnablingPolicy || policyAlreadyEnabled)
+        {
+            return string.Empty;
+        }
+
+        return (await validator.IsOrganizationCompliantAsync(
+            new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId)))
+            .Match(
+                error => error.Message,
+                _ => string.Empty);
+    }
+
+    public async Task ExecutePreUpsertSideEffectAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
+    {
+        var policyUpdate = policyRequest.PolicyUpdate;
+
+        var isNotEnablingPolicy = policyUpdate is not { Enabled: true };
+        var policyAlreadyEnabled = currentPolicy is { Enabled: true };
+        if (isNotEnablingPolicy || policyAlreadyEnabled)
+        {
+            return;
+        }
+
+        var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(policyUpdate.OrganizationId, null);
+        var orgUserIds = orgUsers.Where(w => w.UserId != null).Select(s => s.UserId!.Value).ToList();
+
+        await deleteEmergencyAccessCommand.DeleteAllByUserIdsAsync(orgUserIds);
+    }
+}

@@ -7,7 +7,10 @@ namespace Bit.Api.AdminConsole.Authorization;
 public static class HttpContextExtensions
 {
     public const string NoOrgIdError =
-        "A route decorated with with '[Authorize<Requirement>]' must include a route value named 'orgId' or 'organizationId' either through the [Controller] attribute or through a '[Http*]' attribute.";
+        "A route decorated with with '[Authorize<IOrganizationRequirement>]' must include a route value named 'orgId' or 'organizationId' either through the [Controller] attribute or through a '[Http*]' attribute.";
+
+    public const string NoProviderIdError =
+        "A route decorated with '[Authorize<IProviderRequirement>]' must include a route value named 'providerId' either through the [Controller] attribute or through a '[Http*]' attribute.";
 
     /// <summary>
     /// Returns the result of the callback, caching it in HttpContext.Features for the lifetime of the request.
@@ -81,5 +84,23 @@ public static class HttpContextExtensions
         }
 
         throw new InvalidOperationException(NoOrgIdError);
+    }
+
+    /// <summary>
+    /// Parses the {providerId} route parameter into a Guid, or throws if it is not present or is not a valid Guid.
+    /// </summary>
+    /// <exception cref="InvalidOperationException"></exception>
+    public static Guid GetProviderId(this HttpContext httpContext)
+    {
+        var routeValues = httpContext.GetRouteData().Values;
+
+        if (routeValues.TryGetValue("providerId", out var providerIdParam) &&
+            providerIdParam != null &&
+            Guid.TryParse(providerIdParam.ToString(), out var providerId))
+        {
+            return providerId;
+        }
+
+        throw new InvalidOperationException(NoProviderIdError);
     }
 }
