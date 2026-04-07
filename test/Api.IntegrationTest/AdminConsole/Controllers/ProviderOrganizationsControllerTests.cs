@@ -21,6 +21,7 @@ public class ProviderOrganizationsControllerTests : IClassFixture<ApiApplication
     private readonly LoginHelper _loginHelper;
 
     private string _providerAdminEmail = null!;
+    private string _serviceUserEmail = null!;
     private string _otherUserEmail = null!;
     private Provider _provider = null!;
     private Organization _org = null!;
@@ -38,6 +39,9 @@ public class ProviderOrganizationsControllerTests : IClassFixture<ApiApplication
         _providerAdminEmail = $"{Guid.NewGuid()}@test.com";
         await _factory.LoginWithNewAccount(_providerAdminEmail);
 
+        _serviceUserEmail = $"{Guid.NewGuid()}@test.com";
+        await _factory.LoginWithNewAccount(_serviceUserEmail);
+
         _otherUserEmail = $"{Guid.NewGuid()}@test.com";
         await _factory.LoginWithNewAccount(_otherUserEmail);
 
@@ -48,6 +52,7 @@ public class ProviderOrganizationsControllerTests : IClassFixture<ApiApplication
         var providerUserRepository = _factory.GetService<IProviderUserRepository>();
 
         var providerAdmin = await userRepository.GetByEmailAsync(_providerAdminEmail);
+        var serviceUser = await userRepository.GetByEmailAsync(_serviceUserEmail);
         var otherUser = await userRepository.GetByEmailAsync(_otherUserEmail);
 
         _provider = await providerRepository.CreateAsync(new Provider
@@ -64,6 +69,15 @@ public class ProviderOrganizationsControllerTests : IClassFixture<ApiApplication
             ProviderId = _provider.Id,
             UserId = providerAdmin!.Id,
             Type = ProviderUserType.ProviderAdmin,
+            Status = ProviderUserStatusType.Confirmed,
+            Key = Guid.NewGuid().ToString()
+        });
+
+        await providerUserRepository.CreateAsync(new ProviderUser
+        {
+            ProviderId = _provider.Id,
+            UserId = serviceUser!.Id,
+            Type = ProviderUserType.ServiceUser,
             Status = ProviderUserStatusType.Confirmed,
             Key = Guid.NewGuid().ToString()
         });
@@ -154,5 +168,60 @@ public class ProviderOrganizationsControllerTests : IClassFixture<ApiApplication
         var providerOrganization = await providerOrganizationRepository.GetByOrganizationId(_org.Id);
         Assert.NotNull(providerOrganization);
         Assert.Equal(_provider.Id, providerOrganization.ProviderId);
+    }
+
+    // GET /providers/{providerId}/organizations — ProviderUserRequirement
+    // Both ProviderAdmin and ServiceUser should be allowed; non-members should be rejected.
+
+    [Fact]
+    public async Task Get_Unauthenticated_ReturnsUnauthorized()
+    {
+        var response = await _client.GetAsync($"providers/{_provider.Id}/organizations");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_AsNonMember_ReturnsForbidden()
+    {
+        await _loginHelper.LoginAsync(_otherUserEmail);
+        var response = await _client.GetAsync($"providers/{_provider.Id}/organizations");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_AsServiceUser_ReturnsOk()
+    {
+        await _loginHelper.LoginAsync(_serviceUserEmail);
+        var response = await _client.GetAsync($"providers/{_provider.Id}/organizations");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_AsProviderAdmin_ReturnsOk()
+    {
+        await _loginHelper.LoginAsync(_providerAdminEmail);
+        var response = await _client.GetAsync($"providers/{_provider.Id}/organizations");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    // POST /providers/{providerId}/organizations/add — ProviderAdminRequirement
+    // Only ProviderAdmin should be allowed; ServiceUser should be rejected.
+
+    [Fact]
+    public async Task Add_AsNonMember_ReturnsForbidden()
+    {
+        await _loginHelper.LoginAsync(_otherUserEmail);
+        var model = new ProviderOrganizationAddRequestModel { OrganizationId = _org.Id, Key = "key" };
+        var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/organizations/add", model);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Add_AsServiceUser_ReturnsForbidden()
+    {
+        await _loginHelper.LoginAsync(_serviceUserEmail);
+        var model = new ProviderOrganizationAddRequestModel { OrganizationId = _org.Id, Key = "key" };
+        var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/organizations/add", model);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

@@ -175,7 +175,7 @@ public class ProviderClientsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Fact]
-    public async Task AddExistingOrganizationAsync_ServiceUser_ReturnsUnauthorized()
+    public async Task AddExistingOrganizationAsync_AsServiceUser_ReturnsForbidden()
     {
         await _loginHelper.LoginAsync(_serviceUserEmail);
 
@@ -183,7 +183,7 @@ public class ProviderClientsControllerTests : IClassFixture<ApiApplicationFactor
 
         var response = await _client.PostAsJsonAsync($"providers/{_provider.Id}/clients/existing", request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
@@ -226,5 +226,39 @@ public class ProviderClientsControllerTests : IClassFixture<ApiApplicationFactor
             Arg.Is<Provider>(p => p.Id == _provider.Id),
             Arg.Is<Organization>(o => o.Id == _addableOrg.Id),
             "key");
+    }
+
+    // GET /providers/{providerId}/clients/addable — ProviderUserRequirement
+    // Both ProviderAdmin and ServiceUser should be allowed; non-members should be rejected.
+
+    [Fact]
+    public async Task GetAddableOrganizations_Unauthenticated_ReturnsUnauthorized()
+    {
+        var response = await _client.GetAsync($"providers/{_provider.Id}/clients/addable");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAddableOrganizations_AsNonMember_ReturnsForbidden()
+    {
+        await _loginHelper.LoginAsync(_otherUserEmail);
+        var response = await _client.GetAsync($"providers/{_provider.Id}/clients/addable");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAddableOrganizations_AsServiceUser_ReturnsOk()
+    {
+        await _loginHelper.LoginAsync(_serviceUserEmail);
+        var response = await _client.GetAsync($"providers/{_provider.Id}/clients/addable");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAddableOrganizations_AsProviderAdmin_ReturnsOk()
+    {
+        await _loginHelper.LoginAsync(_providerAdminEmail);
+        var response = await _client.GetAsync($"providers/{_provider.Id}/clients/addable");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

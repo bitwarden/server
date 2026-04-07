@@ -1,6 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Core.AdminConsole.Repositories;
@@ -12,11 +14,13 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("providers/{providerId:guid}/clients")]
+[Authorize("Application")]
 public class ProviderClientsController(
     ICurrentContext currentContext,
     ILogger<BaseProviderController> logger,
@@ -31,6 +35,7 @@ public class ProviderClientsController(
 
     [HttpPost]
     [SelfHosted(NotSelfHostedOnly = true)]
+    [Authorize<ProviderAdminRequirement>]
     public async Task<IResult> CreateAsync(
         [FromRoute] Guid providerId,
         [FromBody] CreateClientOrganizationRequestBody requestBody)
@@ -88,6 +93,7 @@ public class ProviderClientsController(
 
     [HttpPut("{providerOrganizationId:guid}")]
     [SelfHosted(NotSelfHostedOnly = true)]
+    [Authorize<ProviderUserRequirement>]
     public async Task<IResult> UpdateAsync(
         [FromRoute] Guid providerId,
         [FromRoute] Guid providerOrganizationId,
@@ -143,6 +149,7 @@ public class ProviderClientsController(
 
     [HttpGet("addable")]
     [SelfHosted(NotSelfHostedOnly = true)]
+    [Authorize<ProviderUserRequirement>]
     public async Task<IResult> GetAddableOrganizationsAsync([FromRoute] Guid providerId)
     {
         var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
@@ -167,6 +174,7 @@ public class ProviderClientsController(
 
     [HttpPost("existing")]
     [SelfHosted(NotSelfHostedOnly = true)]
+    [Authorize<ProviderAdminRequirement>]
     public async Task<IResult> AddExistingOrganizationAsync(
         [FromRoute] Guid providerId,
         [FromBody] AddExistingOrganizationRequestBody requestBody)
