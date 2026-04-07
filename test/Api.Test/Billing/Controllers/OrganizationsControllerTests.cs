@@ -11,6 +11,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
@@ -28,6 +29,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using OneOf.Types;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 

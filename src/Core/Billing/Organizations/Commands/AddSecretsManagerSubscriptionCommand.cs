@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
@@ -6,6 +7,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using StaticStorePlan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 
@@ -26,12 +28,48 @@ public class AddSecretsManagerSubscriptionCommand(
         int additionalSmSeats,
         int additionalServiceAccounts)
     {
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+        ValidateOrganization(organization, plan, provider);
+        ValidateSecretsManagerPlan(plan, additionalSmSeats, additionalServiceAccounts, organization);
+
+        if (plan.ProductTier != ProductTierType.Free)
+        {
+            var changes = new List<OrganizationSubscriptionChange>();
+
+            if (additionalSmSeats > 0)
+            {
+                changes.Add(new AddItem(plan.SecretsManager.StripeSeatPlanId, additionalSmSeats));
+            }
+
+            if (additionalServiceAccounts > 0)
+            {
+                changes.Add(new AddItem(plan.SecretsManager.StripeServiceAccountPlanId, additionalServiceAccounts));
+            }
+
+            if (changes.Count > 0)
+            {
+                var changeSet = new OrganizationSubscriptionChangeSet { Changes = changes, ChargeImmediately = true };
+                var result = await updateOrganizationSubscriptionCommand.Run(organization, changeSet);
+                result.GetValueOrThrow();
+            }
+        }
+
+        organization.SmSeats = plan.SecretsManager.BaseSeats + additionalSmSeats;
+        organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
+        organization.UseSecretsManager = true;
+        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+
+        // TODO: call ReferenceEventService - see AC-1481
+    }
+
+    private static void ValidateOrganization(Organization organization, StaticStorePlan plan, Provider? provider)
+    {
         if (organization.UseSecretsManager)
         {
             throw new BadRequestException("Organization already uses Secrets Manager.");
         }
-
-        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {
@@ -51,12 +89,18 @@ public class AddSecretsManagerSubscriptionCommand(
             }
         }
 
-        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
         if (provider is { Type: ProviderType.Msp })
         {
             throw new BadRequestException("Organizations with a Managed Service Provider do not support Secrets Manager.");
         }
+    }
 
+    private static void ValidateSecretsManagerPlan(
+        StaticStorePlan plan,
+        int additionalSmSeats,
+        int additionalServiceAccounts,
+        Organization organization)
+    {
         if (additionalSmSeats < 0)
         {
             throw new BadRequestException("You can't subtract Secrets Manager seats!");
@@ -96,38 +140,5 @@ public class AddSecretsManagerSubscriptionCommand(
             throw new BadRequestException(
                 $"Selected plan allows a maximum of {plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
         }
-
-        if (plan.ProductTier != ProductTierType.Free)
-        {
-            var changes = new List<OrganizationSubscriptionChange>();
-
-            if (additionalSmSeats > 0)
-            {
-                changes.Add(new AddItem(plan.SecretsManager.StripeSeatPlanId, additionalSmSeats));
-            }
-
-            if (additionalServiceAccounts > 0)
-            {
-                changes.Add(new AddItem(plan.SecretsManager.StripeServiceAccountPlanId, additionalServiceAccounts));
-            }
-
-            if (changes.Count > 0)
-            {
-                // ChargeImmediately = true is intentional: the old StripePaymentService.AddSecretsManagerToSubscription
-                // passed invoiceNow = true to FinalizeSubscriptionChangeAsync, which maps to AlwaysInvoice proration.
-                // UpdateOrganizationSubscriptionCommand maps ChargeImmediately = true → AlwaysInvoice identically.
-                // Omitting it (defaulting to false) would silently switch to CreateProrations — a billing regression.
-                var changeSet = new OrganizationSubscriptionChangeSet { Changes = changes, ChargeImmediately = true };
-                var result = await updateOrganizationSubscriptionCommand.Run(organization, changeSet);
-                result.GetValueOrThrow();
-            }
-        }
-
-        organization.SmSeats = plan.SecretsManager.BaseSeats + additionalSmSeats;
-        organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
-        organization.UseSecretsManager = true;
-        await organizationService.ReplaceAndUpdateCacheAsync(organization);
-
-        // TODO: call ReferenceEventService - see AC-1481
     }
 }
