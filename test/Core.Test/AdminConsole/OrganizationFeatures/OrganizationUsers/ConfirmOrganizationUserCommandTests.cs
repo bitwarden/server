@@ -972,6 +972,14 @@ public class ConfirmOrganizationUserCommandTests
             .Returns(new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails]));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(orgUser.UserId!.Value)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [orgUser], user)));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(orgUser.UserId!.Value)
             .Returns(new SingleOrganizationPolicyRequirement([]));
 
@@ -1020,6 +1028,14 @@ public class ConfirmOrganizationUserCommandTests
             ]);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(orgUser.UserId!.Value)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [orgUser], user)));
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(orgUser.UserId!.Value)
             .Returns(new SingleOrganizationPolicyRequirement([]));
 
@@ -1064,6 +1080,14 @@ public class ConfirmOrganizationUserCommandTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { orgUser1, orgUser2 });
         sutProvider.GetDependency<IUserRepository>().GetManyAsync(default).ReturnsForAnyArgs(new[] { user1, user2 });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(x => Valid(x.Arg<AutomaticUserConfirmationPolicyEnforcementRequest>()));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(Arg.Any<Guid>())
@@ -1132,6 +1156,14 @@ public class ConfirmOrganizationUserCommandTests
                 (orgUser1.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails1])),
                 (orgUser2.UserId!.Value, new OrganizationDataOwnershipPolicyRequirement(OrganizationDataOwnershipState.Enabled, [policyDetails2]))
             ]);
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+            .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
+            .Returns(x => Valid(x.Arg<AutomaticUserConfirmationPolicyEnforcementRequest>()));
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<SingleOrganizationPolicyRequirement>(Arg.Any<Guid>())

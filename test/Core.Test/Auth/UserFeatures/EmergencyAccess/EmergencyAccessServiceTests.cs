@@ -333,6 +333,10 @@ public class EmergencyAccessServiceTests
                 return true;
             });
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
 
@@ -359,6 +363,10 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));

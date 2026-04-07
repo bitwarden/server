@@ -1079,6 +1079,13 @@ public class RestoreOrganizationUserCommandTests
         sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(targetOrganizationUser.OrganizationId, [], null!)));
+
+        // Setup default user lookup — required when Email is null (previously-confirmed users reach
+        // CheckPoliciesBeforeRestoreAsync, which calls userRepository.GetByIdAsync and uses user.Id).
+        // Tests that need a specific User object override this after calling RestoreUser_Setup.
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(Arg.Any<Guid>())
+            .Returns(callInfo => new User { Id = callInfo.ArgAt<Guid>(0), Email = "test@example.com" });
     }
 
     private static void SetupOrganizationDataOwnershipPolicy(
