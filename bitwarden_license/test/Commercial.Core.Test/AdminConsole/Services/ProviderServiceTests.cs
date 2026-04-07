@@ -1,6 +1,5 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -133,10 +132,6 @@ public class ProviderServiceTests
 
         var subscription = new Subscription { Id = "subscription_id" };
         providerBillingService.SetupSubscription(provider).Returns(subscription);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
 
         var policyDetails = new List<PolicyDetails> { new() { OrganizationId = Guid.NewGuid(), IsProvider = false } };
         var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(policyDetails);
@@ -660,10 +655,6 @@ public class ProviderServiceTests
         providerUser.Email = user.Email;
         var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         var policyDetails = new List<PolicyDetails>
         {
             new() { OrganizationId = Guid.NewGuid(), IsProvider = false }
@@ -703,10 +694,6 @@ public class ProviderServiceTests
         providerUser.Email = user.Email;
         var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         var policyRequirement = new AutomaticUserConfirmationPolicyRequirement([]);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
@@ -719,47 +706,6 @@ public class ProviderServiceTests
         Assert.Null(pu.Email);
         Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
         Assert.Equal(user.Id, pu.UserId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AcceptUserAsync_WithAutoConfirmDisabled_Success(
-        [ProviderUser(ProviderUserStatusType.Invited)] ProviderUser providerUser,
-        User user,
-        SutProvider<ProviderService> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetByIdAsync(providerUser.Id)
-            .Returns(providerUser);
-
-        var protector = DataProtectionProvider
-            .Create("ApplicationName")
-            .CreateProtector("ProviderServiceDataProtector");
-
-        sutProvider.GetDependency<IDataProtectionProvider>()
-            .CreateProtector("ProviderServiceDataProtector")
-            .Returns(protector);
-        sutProvider.Create();
-
-        providerUser.Email = user.Email;
-        var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(false);
-
-        // Act
-        var pu = await sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token);
-
-        // Assert
-        Assert.Null(pu.Email);
-        Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
-        Assert.Equal(user.Id, pu.UserId);
-
-        // Verify that policy check was never called when feature flag is disabled
-        await sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .DidNotReceive()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
     }
 
     [Theory, BitAutoData]
@@ -823,10 +769,6 @@ public class ProviderServiceTests
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         var policyDetails = new List<PolicyDetails>
         {
             new() { OrganizationId = Guid.NewGuid(), IsProvider = false }
@@ -864,10 +806,6 @@ public class ProviderServiceTests
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
-
         var policyRequirement = new AutomaticUserConfirmationPolicyRequirement(new List<PolicyDetails>());
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(u1.Id)
@@ -885,45 +823,6 @@ public class ProviderServiceTests
         // Verify user was confirmed
         await providerUserRepository.Received(1).ReplaceAsync(Arg.Is<ProviderUser>(pu =>
             pu.Status == ProviderUserStatusType.Confirmed));
-    }
-
-    [Theory, BitAutoData]
-    public async Task ConfirmUsersAsync_WithAutoConfirmDisabled_Success(
-        [ProviderUser(ProviderUserStatusType.Accepted)] ProviderUser pu1, User u1,
-        Provider provider, User confirmingUser, SutProvider<ProviderService> sutProvider)
-    {
-        // Arrange
-        pu1.ProviderId = provider.Id;
-        pu1.UserId = u1.Id;
-        var providerUsers = new[] { pu1 };
-
-        var providerUserRepository = sutProvider.GetDependency<IProviderUserRepository>();
-        providerUserRepository.GetManyAsync([]).ReturnsForAnyArgs(providerUsers);
-
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-        sutProvider.GetDependency<IUserRepository>().GetManyAsync([]).ReturnsForAnyArgs([u1]);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(false);
-
-        var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
-
-        // Act
-        var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, confirmingUser.Id);
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal("", result[0].Item2);
-
-        // Verify user was confirmed
-        await providerUserRepository.Received(1).ReplaceAsync(Arg.Is<ProviderUser>(pu =>
-            pu.Status == ProviderUserStatusType.Confirmed));
-
-        // Verify that policy check was never called when feature flag is disabled
-        await sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .DidNotReceive()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
