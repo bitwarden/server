@@ -28,12 +28,17 @@ public class DeviceAuthDetails : Device
         }
 
         Id = device.Id;
+        UserId = device.UserId;
         Name = device.Name;
         Type = device.Type;
         Identifier = device.Identifier;
+        PushToken = device.PushToken;
         CreationDate = device.CreationDate;
-        EncryptedPublicKey = device.EncryptedPublicKey;
+        RevisionDate = device.RevisionDate;
         EncryptedUserKey = device.EncryptedUserKey;
+        EncryptedPublicKey = device.EncryptedPublicKey;
+        EncryptedPrivateKey = device.EncryptedPrivateKey;
+        Active = device.Active;
         AuthRequestId = authRequestId;
         AuthRequestCreationDate = authRequestCreationDate;
     }
