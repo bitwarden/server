@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Api.Tools.Utilities;
 using Bit.Core.Models.Api;
 using Bit.Core.Tools.Entities;
@@ -39,7 +36,7 @@ public class SendResponseModel : ResponseModel
         AccessId = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
         Type = send.Type;
         AuthType = send.AuthType ?? SendUtilities.InferAuthType(send);
-        Key = send.Key;
+        Key = send.Key!;
         MaxAccessCount = send.MaxAccessCount;
         AccessCount = send.AccessCount;
         RevisionDate = send.RevisionDate;
@@ -54,12 +51,20 @@ public class SendResponseModel : ResponseModel
         switch (send.Type)
         {
             case SendType.File:
-                var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
+                var fileData =
+                    JsonSerializer.Deserialize<SendFileData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send file data.");
                 sendData = fileData;
                 File = new SendFileModel(fileData);
                 break;
             case SendType.Text:
-                var textData = JsonSerializer.Deserialize<SendTextData>(send.Data);
+                var textData =
+                    JsonSerializer.Deserialize<SendTextData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send text data.");
                 sendData = textData;
                 Text = new SendTextModel(textData);
                 break;
@@ -108,18 +113,18 @@ public class SendResponseModel : ResponseModel
     /// This field contains a base64-encoded byte array. The array contains
     /// the E2E-encrypted  encrypted content.
     /// </remarks>
-    public string Notes { get; set; }
+    public string? Notes { get; set; }
 
     /// <summary>
     /// Contains file metadata uploaded with the send.
     /// The file content is uploaded separately.
     /// </summary>
-    public SendFileModel File { get; set; }
+    public SendFileModel? File { get; set; }
 
     /// <summary>
     /// Contains text data uploaded with the send.
     /// </summary>
-    public SendTextModel Text { get; set; }
+    public SendTextModel? Text { get; set; }
 
     /// <summary>
     /// A base64-encoded byte array containing the Send's encryption key.
@@ -146,13 +151,13 @@ public class SendResponseModel : ResponseModel
     /// Base64-encoded byte array of a password hash that grants access to the send.
     /// Mutually exclusive with <see cref="Emails"/>.
     /// </summary>
-    public string Password { get; set; }
+    public string? Password { get; set; }
 
     /// <summary>
     /// Comma-separated list of emails that may access the send using OTP
     /// authentication. Mutually exclusive with <see cref="Password"/>.
     /// </summary>
-    public string Emails { get; set; }
+    public string? Emails { get; set; }
 
     /// <summary>
     /// When <see langword="true"/>, send access is disabled.

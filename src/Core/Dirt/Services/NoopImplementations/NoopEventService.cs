@@ -117,7 +117,7 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null)
+    public Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null, bool includeAcceptedStatusOrgs = false)
     {
         return Task.FromResult(0);
     }

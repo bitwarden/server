@@ -1,33 +1,25 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 
 namespace Bit.Core.Tools.Services;
 
-public class LocalSendStorageService : ISendFileStorageService
+public class LocalSendStorageService(
+    GlobalSettings globalSettings) : ISendFileStorageService
 {
-    private readonly string _baseDirPath;
-    private readonly string _baseSendUrl;
-
+    private readonly string _baseDirPath = globalSettings.Send.BaseDirectory;
+    private readonly string _baseSendUrl = globalSettings.Send.BaseUrl;
     private string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
     private string FilePath(Send send, string fileID) => $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
     public FileUploadType FileUploadType => FileUploadType.Direct;
-
-    public LocalSendStorageService(
-        GlobalSettings globalSettings)
-    {
-        _baseDirPath = globalSettings.Send.BaseDirectory;
-        _baseSendUrl = globalSettings.Send.BaseUrl;
-    }
 
     public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
     {
         await InitAsync();
         var path = FilePath(send, fileId);
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        // Path.GetDirectoryName will return null for a root path C:\\ or /
+        // This is not possible based upon path construction using send & fileId and so ! operator can be used
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using (var fs = File.Create(path))
         {
             stream.Seek(0, SeekOrigin.Begin);
@@ -40,7 +32,9 @@ public class LocalSendStorageService : ISendFileStorageService
         await InitAsync();
         var path = FilePath(send, fileId);
         DeleteFileIfExists(path);
-        DeleteDirectoryIfExistsAndEmpty(Path.GetDirectoryName(path));
+        // Path.GetDirectoryName will return null for a root path C:\\ or /
+        // This is not possible based upon path construction using send & fileId and so ! operator can be used
+        DeleteDirectoryIfExistsAndEmpty(Path.GetDirectoryName(path)!);
     }
 
     public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
