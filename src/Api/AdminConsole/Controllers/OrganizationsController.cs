@@ -169,6 +169,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
+        // Todo: Cannot use PolicyRequirements until PM-34092 is complete
         var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
         if (!resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
         {

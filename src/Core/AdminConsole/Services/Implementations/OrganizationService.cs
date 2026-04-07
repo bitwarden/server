@@ -850,6 +850,7 @@ public class OrganizationService : IOrganizationService
         }
 
         // Make sure the organization has the policy enabled
+        // Todo: Cannot use PolicyRequirements until PM-34092 is complete
         var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
         if (!resetPasswordPolicy.Enabled)
         {
