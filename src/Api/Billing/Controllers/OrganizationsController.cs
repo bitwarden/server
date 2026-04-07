@@ -193,8 +193,8 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        (await addSecretsManagerSubscriptionCommand.Run(organization, model.AdditionalSmSeats,
-            model.AdditionalServiceAccounts)).GetValueOrThrow();
+        await addSecretsManagerSubscriptionCommand.RunAsync(organization, model.AdditionalSmSeats,
+            model.AdditionalServiceAccounts);
 
         var userId = userService.GetProperUserId(User).Value;
 

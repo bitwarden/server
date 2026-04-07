@@ -11,7 +11,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
@@ -29,7 +28,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
-using OneOf.Types;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
@@ -249,18 +247,13 @@ public class OrganizationsControllerTests : IDisposable
         _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
             .Returns(organizationUserOrganizationDetails);
 
-        BillingCommandResult<None> success = new None();
-        _addSecretsManagerSubscriptionCommand
-            .Run(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts)
-            .Returns(success);
-
         var response = await _sut.PostSubscribeSecretsManagerAsync(organizationId, model);
 
         Assert.Equal(response.Id, organizationUserOrganizationDetails.OrganizationId);
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
         await _addSecretsManagerSubscriptionCommand.Received(1)
-            .Run(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
+            .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.Received(1).ReplaceAsync(Arg.Is<OrganizationUser>(orgUser =>
             orgUser.Id == organizationUser.Id && orgUser.AccessSecretsManager == true));
     }
@@ -293,18 +286,13 @@ public class OrganizationsControllerTests : IDisposable
         _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
             .Returns(organizationUserOrganizationDetails);
 
-        BillingCommandResult<None> success = new None();
-        _addSecretsManagerSubscriptionCommand
-            .Run(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts)
-            .Returns(success);
-
         var response = await _sut.PostSubscribeSecretsManagerAsync(organizationId, model);
 
         Assert.Equal(response.Id, organizationUserOrganizationDetails.OrganizationId);
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
         await _addSecretsManagerSubscriptionCommand.Received(1)
-            .Run(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
+            .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
     }
 

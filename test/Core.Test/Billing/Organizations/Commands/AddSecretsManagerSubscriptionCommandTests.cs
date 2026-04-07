@@ -2,15 +2,16 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Test.Billing.Mocks.Plans;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -30,7 +31,6 @@ public class AddSecretsManagerSubscriptionCommandTests
     public AddSecretsManagerSubscriptionCommandTests()
     {
         _command = new AddSecretsManagerSubscriptionCommand(
-            Substitute.For<ILogger<AddSecretsManagerSubscriptionCommand>>(),
             _organizationService,
             _providerRepository,
             _pricingClient,
@@ -38,70 +38,60 @@ public class AddSecretsManagerSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_ReturnsBadRequest_WhenOrganizationAlreadyHasSecretsManager()
+    public async Task RunAsync_ThrowsBadRequest_WhenOrganizationAlreadyHasSecretsManager()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
 
-        var result = await _command.Run(organization, 5, 10);
-
-        Assert.True(result.IsT1);
-        Assert.Contains("Organization already uses Secrets Manager", result.AsT1.Response);
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            _command.RunAsync(organization, 5, 10));
     }
 
     [Fact]
-    public async Task Run_ReturnsBadRequest_WhenPlanDoesNotSupportSecretsManager()
+    public async Task RunAsync_ThrowsBadRequest_WhenPlanDoesNotSupportSecretsManager()
     {
         var organization = CreateOrganization(PlanType.FamiliesAnnually);
         var plan = MockPlans.Get(PlanType.FamiliesAnnually); // Families plan has no SecretsManager
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
 
-        var result = await _command.Run(organization, 0, 0);
-
-        Assert.True(result.IsT1);
-        Assert.Contains("Invalid Secrets Manager plan selected", result.AsT1.Response);
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            _command.RunAsync(organization, 0, 0));
     }
 
     [Fact]
-    public async Task Run_ReturnsBadRequest_WhenNoPaymentMethodAndNonFreePlan()
+    public async Task RunAsync_ThrowsBadRequest_WhenNoPaymentMethodAndNonFreePlan()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually, gatewayCustomerId: null);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.EnterpriseAnnually));
 
-        var result = await _command.Run(organization, 5, 10);
-
-        Assert.True(result.IsT1);
-        Assert.Contains("No payment method found", result.AsT1.Response);
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            _command.RunAsync(organization, 5, 10));
     }
 
     [Fact]
-    public async Task Run_ReturnsBadRequest_WhenNoSubscriptionAndNonFreePlan()
+    public async Task RunAsync_ThrowsBadRequest_WhenNoSubscriptionAndNonFreePlan()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually, gatewaySubscriptionId: null);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.EnterpriseAnnually));
 
-        var result = await _command.Run(organization, 5, 10);
-
-        Assert.True(result.IsT1);
-        Assert.Contains("No subscription found", result.AsT1.Response);
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            _command.RunAsync(organization, 5, 10));
     }
 
     [Fact]
-    public async Task Run_ReturnsBadRequest_WhenOrganizationIsManagedByMSP()
+    public async Task RunAsync_ThrowsBadRequest_WhenOrganizationIsManagedByMSP()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.EnterpriseAnnually));
         _providerRepository.GetByOrganizationIdAsync(organization.Id)
             .Returns(new Provider { Type = ProviderType.Msp });
 
-        var result = await _command.Run(organization, 5, 10);
-
-        Assert.True(result.IsT1);
-        Assert.Contains("Managed Service Provider", result.AsT1.Response);
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            _command.RunAsync(organization, 5, 10));
     }
 
     [Fact]
-    public async Task Run_DoesNotReturnBadRequest_WhenPlanIsDisabled()
+    public async Task RunAsync_DoesNotThrow_WhenPlanIsDisabled()
     {
         // A disabled plan must not block an existing subscriber from adding SM.
         // The old command delegated to ValidateSecretsManagerPlan which internally called
@@ -112,20 +102,18 @@ public class AddSecretsManagerSubscriptionCommandTests
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(disabledPlan);
         SetupSubscriptionCommandSuccess();
 
-        var result = await _command.Run(organization, 5, 10);
-
-        Assert.True(result.IsT0);
+        await _command.RunAsync(organization, 5, 10);
     }
 
     [Fact]
-    public async Task Run_CallsUpdateSubscriptionCommand_WithCorrectChangeSet_WhenNonFreePlan()
+    public async Task RunAsync_CallsUpdateSubscriptionCommand_WithCorrectChangeSet_WhenNonFreePlan()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
         var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
         SetupSubscriptionCommandSuccess();
 
-        await _command.Run(organization, additionalSmSeats: 5, additionalServiceAccounts: 10);
+        await _command.RunAsync(organization, additionalSmSeats: 5, additionalServiceAccounts: 10);
 
         await _updateOrganizationSubscriptionCommand.Received(1).Run(
             organization,
@@ -137,20 +125,19 @@ public class AddSecretsManagerSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task Run_SkipsUpdateSubscriptionCommand_WhenFreePlan()
+    public async Task RunAsync_SkipsUpdateSubscriptionCommand_WhenFreePlan()
     {
         var organization = CreateOrganization(PlanType.Free, gatewayCustomerId: null, gatewaySubscriptionId: null, seats: 2);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.Free));
 
-        var result = await _command.Run(organization, additionalSmSeats: 0, additionalServiceAccounts: 0);
+        await _command.RunAsync(organization, additionalSmSeats: 0, additionalServiceAccounts: 0);
 
-        Assert.True(result.IsT0);
         await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
             .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
     }
 
     [Fact]
-    public async Task Run_SkipsUpdateSubscriptionCommand_WhenBothAdditionsAreZero_NonFreePlan()
+    public async Task RunAsync_SkipsUpdateSubscriptionCommand_WhenBothAdditionsAreZero_NonFreePlan()
     {
         // Uses a custom plan with SM BaseSeats > 0 so that 0 additional seats passes the
         // "you have no SM seats" validation and we reach the empty-change-set guard.
@@ -158,15 +145,14 @@ public class AddSecretsManagerSubscriptionCommandTests
         var plan = new EnterprisePlanWithSmBaseSeats();
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
 
-        var result = await _command.Run(organization, additionalSmSeats: 0, additionalServiceAccounts: 0);
+        await _command.RunAsync(organization, additionalSmSeats: 0, additionalServiceAccounts: 0);
 
-        Assert.True(result.IsT0);
         await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
             .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
     }
 
     [Fact]
-    public async Task Run_ReturnsBadRequest_WhenUpdateSubscriptionCommandFails()
+    public async Task RunAsync_ThrowsBillingException_WhenUpdateSubscriptionCommandFails()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.EnterpriseAnnually));
@@ -176,24 +162,22 @@ public class AddSecretsManagerSubscriptionCommandTests
             .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>())
             .Returns(failure);
 
-        var result = await _command.Run(organization, additionalSmSeats: 5, additionalServiceAccounts: 10);
+        await Assert.ThrowsAsync<BillingException>(() =>
+            _command.RunAsync(organization, additionalSmSeats: 5, additionalServiceAccounts: 10));
 
-        Assert.True(result.IsT1);
-        Assert.Equal("Stripe failure", result.AsT1.Response);
         await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 
     [Fact]
-    public async Task Run_UpdatesOrganizationAndCache_OnSuccess()
+    public async Task RunAsync_UpdatesOrganizationAndCache_OnSuccess()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
         var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
         SetupSubscriptionCommandSuccess();
 
-        var result = await _command.Run(organization, additionalSmSeats: 5, additionalServiceAccounts: 10);
+        await _command.RunAsync(organization, additionalSmSeats: 5, additionalServiceAccounts: 10);
 
-        Assert.True(result.IsT0);
         Assert.Equal(plan.SecretsManager.BaseSeats + 5, organization.SmSeats);
         Assert.Equal(plan.SecretsManager.BaseServiceAccount + 10, organization.SmServiceAccounts);
         Assert.True(organization.UseSecretsManager);
