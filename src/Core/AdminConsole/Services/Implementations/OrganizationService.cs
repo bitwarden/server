@@ -1,14 +1,16 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -45,6 +47,7 @@ public class OrganizationService : IOrganizationService
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
+    private readonly IPolicyQuery _policyQuery;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
@@ -57,7 +60,6 @@ public class OrganizationService : IOrganizationService
     private readonly IFeatureService _featureService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
@@ -70,6 +72,7 @@ public class OrganizationService : IOrganizationService
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
+        IPolicyQuery policyQuery,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
         ICurrentContext currentContext,
@@ -82,7 +85,6 @@ public class OrganizationService : IOrganizationService
         IFeatureService featureService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
-        IPolicyRequirementQuery policyRequirementQuery,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
         IStripeAdapter stripeAdapter, IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
     {
@@ -93,6 +95,7 @@ public class OrganizationService : IOrganizationService
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
+        _policyQuery = policyQuery;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
@@ -105,7 +108,6 @@ public class OrganizationService : IOrganizationService
         _featureService = featureService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
-        _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
         _stripeAdapter = stripeAdapter;
         _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
@@ -847,20 +849,24 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Organization does not allow password reset enrollment.");
         }
 
-        var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(
-            userId);
-
         // Make sure the organization has the policy enabled
-        if (!resetPasswordPolicyRequirement.IsEnabled(organizationId))
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
         {
             throw new BadRequestException("Organization does not have the password reset policy enabled.");
         }
 
         // Block the user from withdrawal if auto enrollment is enabled
-        if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
+        if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
         {
-            throw new BadRequestException(
-                "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
+                JsonHelpers.IgnoreCase);
+
+            if (data?.AutoEnrollEnabled ?? false)
+            {
+                throw new BadRequestException(
+                    "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+            }
         }
 
         orgUser.ResetPasswordKey = resetPasswordKey;
