@@ -1,10 +1,8 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Models.Data;
+﻿using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
-public class UpdateExistingPasswordData
+public class SetInitialOrChangeExistingPasswordData
 {
     public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }
@@ -25,27 +23,21 @@ public class UpdateExistingPasswordData
 
     public string? MasterPasswordHint { get; set; } = null;
 
-    public void ValidateDataForUser(User user)
+    public SetInitialPasswordData ToSetInitialData() => new()
     {
-        // Validate that the user has a master password already, if not then they shouldn't be updating they should
-        // be setting initial.
-        if (!user.HasMasterPassword())
-        {
-            throw new BadRequestException("User does not have an existing master password to update.");
-        }
+        MasterPasswordAuthentication = MasterPasswordAuthentication,
+        MasterPasswordUnlock = MasterPasswordUnlock,
+        ValidatePassword = ValidatePassword,
+        RefreshStamp = RefreshStamp,
+        MasterPasswordHint = MasterPasswordHint
+    };
 
-        // Is this correct?
-        if (user.UsesKeyConnector)
-        {
-            throw new BadRequestException("Cannot update password of a user with Key Connector.");
-        }
-
-        // Validate KDF is unchanged for user
-        MasterPasswordAuthentication.Kdf.ValidateUnchangedForUser(user);
-        MasterPasswordUnlock.Kdf.ValidateUnchangedForUser(user);
-
-        // Validate Salt is unchanged for user
-        MasterPasswordAuthentication.ValidateSaltUnchangedForUser(user);
-        MasterPasswordUnlock.ValidateSaltUnchangedForUser(user);
-    }
+    public UpdateExistingPasswordData ToUpdateExistingData() => new()
+    {
+        MasterPasswordAuthentication = MasterPasswordAuthentication,
+        MasterPasswordUnlock = MasterPasswordUnlock,
+        ValidatePassword = ValidatePassword,
+        RefreshStamp = RefreshStamp,
+        MasterPasswordHint = MasterPasswordHint
+    };
 }

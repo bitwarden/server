@@ -169,14 +169,10 @@ public class AdminRecoverAccountCommand(
         // an initial master password set.
         var identityResultFromMutation = await masterPasswordService.OnlyMutateEitherUpdateExistingPasswordOrSetInitialPassword(
             user,
-            new SetInitialPasswordData
+            new SetInitialOrChangeExistingPasswordData
             {
                 MasterPasswordUnlock = request.UnlockData!.ToData(),
                 MasterPasswordAuthentication = request.AuthenticationData!.ToData(),
-            }, new UpdateExistingPasswordData
-            {
-                MasterPasswordUnlock = request.UnlockData.ToData(),
-                MasterPasswordAuthentication = request.AuthenticationData.ToData(),
             });
 
         if (!identityResultFromMutation.Succeeded)
@@ -193,7 +189,7 @@ public class AdminRecoverAccountCommand(
         return new None();
     }
 
-    [Obsolete("Come back and specify when this is to be removed.")]
+    [Obsolete("To be removed in PM-33141")]
     private async Task<CommandResult?> HandlePayloadWithDeprecatedRawDataAsync(User user, RecoverAccountRequest request)
     {
         var result = await userService.UpdatePasswordHash(user, request.NewMasterPasswordHash!);

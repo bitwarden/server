@@ -427,11 +427,7 @@ public class EmergencyAccessService : IEmergencyAccessService
 
         await _masterPasswordService.OnlyMutateEitherUpdateExistingPasswordOrSetInitialPassword(
             user: grantor,
-            new SetInitialPasswordData
-            {
-                MasterPasswordUnlock = unlockData,
-                MasterPasswordAuthentication = authenticationData,
-            }, new UpdateExistingPasswordData
+            new SetInitialOrChangeExistingPasswordData
             {
                 MasterPasswordUnlock = unlockData,
                 MasterPasswordAuthentication = authenticationData,

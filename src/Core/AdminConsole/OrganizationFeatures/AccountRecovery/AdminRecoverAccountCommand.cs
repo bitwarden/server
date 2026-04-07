@@ -24,7 +24,7 @@ public class AdminRecoverAccountCommand(
     TimeProvider timeProvider,
     IMasterPasswordService masterPasswordService) : IAdminRecoverAccountCommand
 {
-    [Obsolete("Will be replaced with the below function once we transition the endpoint to fully using the unlock and authentication data. Removal will happen in ticket: <FIND TICKET PATRICK>")]
+    [Obsolete("Will be replaced with the below function once we transition the endpoint to fully using the unlock and authentication data. To be removed in PM-33141")]
     public async Task<IdentityResult> RecoverAccountAsync(Guid orgId,
         OrganizationUser organizationUser, string newMasterPassword, string key)
     {

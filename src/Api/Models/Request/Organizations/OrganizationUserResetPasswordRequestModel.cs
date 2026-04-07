@@ -5,7 +5,7 @@ using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Models.Request.Organizations;
 
-public class OrganizationUserResetPasswordRequestModel
+public class OrganizationUserResetPasswordRequestModel : IValidatableObject
 {
     public bool ResetMasterPassword { get; set; }
     public bool ResetTwoFactor { get; set; }
@@ -29,9 +29,16 @@ public class OrganizationUserResetPasswordRequestModel
         AuthenticationData = AuthenticationData,
     };
 
-    public void Validate()
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        // Validate that if the unlock and authentication data are present, the NewMasterPasswordHash
-        // and Key are not present. It should be either or.
+        var hasNewPayloads = UnlockData is not null && AuthenticationData is not null;
+        var hasLegacyPayloads = NewMasterPasswordHash is not null || Key is not null;
+
+        if (hasNewPayloads && hasLegacyPayloads)
+        {
+            yield return new ValidationResult(
+                "Cannot provide both new payloads (UnlockData/AuthenticationData) and legacy payloads (NewMasterPasswordHash/Key).",
+                [nameof(UnlockData), nameof(AuthenticationData), nameof(NewMasterPasswordHash), nameof(Key)]);
+        }
     }
 }
