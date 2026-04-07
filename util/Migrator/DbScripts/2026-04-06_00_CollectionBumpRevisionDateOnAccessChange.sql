@@ -121,10 +121,14 @@ BEGIN
     IF @RevisionDate IS NOT NULL
     BEGIN
 		-- Bump the revision date on all affected collections
-        UPDATE C
-        SET C.[RevisionDate] = @RevisionDate
-        FROM [dbo].[Collection] C
-        INNER JOIN @CollectionIds CI ON C.[Id] = CI.[Id]
+        UPDATE
+            C
+        SET
+            C.[RevisionDate] = @RevisionDate
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            @CollectionIds CI ON C.[Id] = CI.[Id]
     END
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @CollectionIds, @OrganizationId
@@ -154,17 +158,29 @@ BEGIN
 
     -- Bump RevisionDate on all affected collections
     ;WITH [AffectedCollectionsCTE] AS (
-        SELECT [Id] FROM @Collections
+        SELECT
+            [Id]
+        FROM
+            @Collections
+
         UNION
-        SELECT CU.[CollectionId]
-        FROM [dbo].[CollectionUser] CU
-        WHERE CU.[OrganizationUserId] = @Id
+
+        SELECT
+            CU.[CollectionId]
+        FROM
+            [dbo].[CollectionUser] CU
+        WHERE
+            CU.[OrganizationUserId] = @Id
     )
-    UPDATE C
-    SET C.[RevisionDate] = @RevisionDate
-    FROM [dbo].[Collection] C
-    WHERE C.[OrganizationId] = @OrganizationId
-    AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
+    UPDATE
+        C
+    SET
+        C.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
 
     -- Update
     UPDATE
@@ -252,17 +268,29 @@ BEGIN
 
     -- Bump RevisionDate on all affected collections
     ;WITH [AffectedCollectionsCTE] AS (
-        SELECT [Id] FROM @Collections
+        SELECT
+            [Id]
+        FROM
+            @Collections
+
         UNION
-        SELECT CG.[CollectionId]
-        FROM [dbo].[CollectionGroup] CG
-        WHERE CG.[GroupId] = @Id
+
+        SELECT
+            CG.[CollectionId]
+        FROM
+            [dbo].[CollectionGroup] CG
+        WHERE
+            CG.[GroupId] = @Id
     )
-    UPDATE C
-    SET C.[RevisionDate] = @RevisionDate
-    FROM [dbo].[Collection] C
-    WHERE C.[OrganizationId] = @OrganizationId
-    AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
+    UPDATE
+        C
+    SET
+        C.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT
@@ -363,11 +391,15 @@ BEGIN
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 
     -- Bump RevisionDate on all affected collections
-    UPDATE C
-    SET C.[RevisionDate] = @RevisionDate
-    FROM [dbo].[Collection] C
-    WHERE C.[OrganizationId] = @OrganizationId
-    AND C.[Id] IN (SELECT [Id] FROM @Collections) -- New assignments
+    UPDATE
+        C
+    SET
+        C.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Id] IN (SELECT [Id] FROM @Collections)
 END
 GO
 
@@ -413,11 +445,15 @@ BEGIN
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 
     -- Bump RevisionDate on all affected collections
-    UPDATE C
-    SET C.[RevisionDate] = @RevisionDate
-    FROM [dbo].[Collection] C
-    WHERE C.[OrganizationId] = @OrganizationId
-    AND C.[Id] IN (SELECT [Id] FROM @Collections) -- New assignments
+    UPDATE
+        C
+    SET
+        C.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Id] IN (SELECT [Id] FROM @Collections)
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
 END
@@ -531,14 +567,14 @@ BEGIN
     -- Bump RevisionDate on all affected collections
     IF @RevisionDate IS NOT NULL
     BEGIN
-        UPDATE C
-        SET C.[RevisionDate] = @RevisionDate
-        FROM [dbo].[Collection] C
-        INNER JOIN [dbo].[OrganizationUser] OU
-            ON OU.[OrganizationId] = C.[OrganizationId]
-        INNER JOIN #CollectionUserData CUD
-            ON CUD.[CollectionId] = C.[Id]
-            AND CUD.[OrganizationUserId] = OU.[Id]
+        UPDATE
+            C
+        SET
+            C.[RevisionDate] = @RevisionDate
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            #CollectionUserData CUD ON CUD.[CollectionId] = C.[Id]
     END
 END
 GO

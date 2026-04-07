@@ -21,17 +21,29 @@ BEGIN
 
     -- Bump RevisionDate on all affected collections
     ;WITH [AffectedCollectionsCTE] AS (
-        SELECT [Id] FROM @Collections
+        SELECT
+            [Id]
+        FROM
+            @Collections
+
         UNION
-        SELECT CU.[CollectionId]
-        FROM [dbo].[CollectionUser] CU
-        WHERE CU.[OrganizationUserId] = @Id
+
+        SELECT
+            CU.[CollectionId]
+        FROM
+            [dbo].[CollectionUser] CU
+        WHERE
+            CU.[OrganizationUserId] = @Id
     )
-    UPDATE C
-    SET C.[RevisionDate] = @RevisionDate
-    FROM [dbo].[Collection] C
-    WHERE C.[OrganizationId] = @OrganizationId
-    AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
+    UPDATE
+        C
+    SET
+        C.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
 
     -- Update
     UPDATE

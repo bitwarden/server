@@ -14,17 +14,29 @@ BEGIN
 
     -- Bump RevisionDate on all affected collections
     ;WITH [AffectedCollectionsCTE] AS (
-        SELECT [Id] FROM @Collections
+        SELECT
+            [Id]
+        FROM
+            @Collections
+
         UNION
-        SELECT CG.[CollectionId]
-        FROM [dbo].[CollectionGroup] CG
-        WHERE CG.[GroupId] = @Id
+
+        SELECT
+            CG.[CollectionId]
+        FROM
+            [dbo].[CollectionGroup] CG
+        WHERE
+            CG.[GroupId] = @Id
     )
-    UPDATE C
-    SET C.[RevisionDate] = @RevisionDate
-    FROM [dbo].[Collection] C
-    WHERE C.[OrganizationId] = @OrganizationId
-    AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
+    UPDATE
+        C
+    SET
+        C.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[Collection] C
+    WHERE
+        C.[OrganizationId] = @OrganizationId
+        AND C.[Id] IN (SELECT [Id] FROM [AffectedCollectionsCTE])
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT

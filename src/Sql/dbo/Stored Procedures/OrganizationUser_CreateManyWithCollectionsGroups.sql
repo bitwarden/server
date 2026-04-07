@@ -106,14 +106,14 @@ BEGIN
     -- Bump RevisionDate on all affected collections
     IF @RevisionDate IS NOT NULL
     BEGIN
-        UPDATE C
-        SET C.[RevisionDate] = @RevisionDate
-        FROM [dbo].[Collection] C
-        INNER JOIN [dbo].[OrganizationUser] OU
-            ON OU.[OrganizationId] = C.[OrganizationId]
-        INNER JOIN #CollectionUserData CUD
-            ON CUD.[CollectionId] = C.[Id]
-            AND CUD.[OrganizationUserId] = OU.[Id]
+        UPDATE
+            C
+        SET
+            C.[RevisionDate] = @RevisionDate
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            #CollectionUserData CUD ON CUD.[CollectionId] = C.[Id]
     END
 END
 go
