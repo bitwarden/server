@@ -2,16 +2,13 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -30,7 +27,6 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
-    private IFeatureService _featureService = null!;
 
     private Organization _pendingOrganization = null!;
     private User _invitedUser = null!;
@@ -40,10 +36,8 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
     public OrganizationUsersControllerAcceptInitTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
-        _factory.SubstituteService<IFeatureService>(_ => { });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
-        _featureService = _factory.GetService<IFeatureService>();
     }
 
     public async Task InitializeAsync()
@@ -94,14 +88,10 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         return Task.CompletedTask;
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AcceptInit_WithValidData_InitializesOrganizationAndConfirmsUser(bool featureFlagEnabled)
+    [Fact]
+    public async Task AcceptInit_WithValidData_InitializesOrganizationAndConfirmsUser()
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
-
         await _loginHelper.LoginAsync(_invitedUserEmail);
 
         var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
@@ -124,8 +114,7 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
             acceptInitRequest);
 
         // Assert
-        var expectedStatusCode = featureFlagEnabled ? HttpStatusCode.NoContent : HttpStatusCode.OK;
-        Assert.Equal(expectedStatusCode, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         // Verify organization was initialized
         var organizationRepository = _factory.GetService<IOrganizationRepository>();
@@ -169,14 +158,10 @@ public class OrganizationUsersControllerAcceptInitTests : IClassFixture<ApiAppli
         Assert.False(collectionAccess.First().HidePasswords);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task AcceptInit_WithoutAuthentication_ReturnsUnauthorized(bool featureFlagEnabled)
+    [Fact]
+    public async Task AcceptInit_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.RefactorOrgAcceptInit).Returns(featureFlagEnabled);
-
         // Don't log in
         var token = GenerateInviteToken(_invitedOrgUser, _invitedUser.Email);
 

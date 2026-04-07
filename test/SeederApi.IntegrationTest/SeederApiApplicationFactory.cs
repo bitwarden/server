@@ -28,4 +28,16 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
             services.Remove(jobService);
         });
     }
+
+    public void ConfigureAuth(string username, string password)
+    {
+        UpdateConfiguration(builder =>
+        {
+            builder.AddInMemoryCollection(new Dictionary<string, string>
+            {
+                { "seederSettings:Username", username},
+                { "seederSettings:Password", password}
+            });
+        });
+    }
 }

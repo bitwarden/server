@@ -3,10 +3,12 @@ using Bit.SeederApi.Execution;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Queries.Interfaces;
 using Bit.SeederApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.SeederApi.Controllers;
 
+[Authorize]
 [Route("seed")]
 public class SeedController(
     ILogger<SeedController> logger,

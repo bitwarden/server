@@ -125,12 +125,14 @@ public class AccountsControllerTests : IDisposable
     public async Task PostPasswordPrelogin_WhenUserExists_ReturnsNewFieldsAlignedWithLegacy_Argon2()
     {
         var email = "user@example.com";
+        var storedSalt = "stored-master-password-salt";
         var userKdfInfo = new UserKdfInformation
         {
             Kdf = KdfType.Argon2id,
             KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
             KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default
+            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            MasterPasswordSalt = storedSalt
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
 
@@ -149,8 +151,24 @@ public class AccountsControllerTests : IDisposable
         Assert.Equal(response.KdfMemory, response.KdfSettings!.Memory);
         Assert.Equal(response.KdfParallelism, response.KdfSettings!.Parallelism);
 
-        // Salt is set to the input email during migration
-        Assert.Equal(email, response.Salt);
+        // Salt comes from the stored MasterPasswordSalt on the user record, not the request email
+        Assert.Equal(storedSalt, response.Salt);
+    }
+
+    [Fact]
+    public async Task PostPasswordPrelogin_WhenUserExists_WithNullMasterPasswordSalt_ReturnsNullSalt()
+    {
+        var userKdfInfo = new UserKdfInformation
+        {
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            MasterPasswordSalt = null
+        };
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
+
+        var response = await _sut.PostPasswordPrelogin(new PasswordPreloginRequestModel { Email = "user@example.com" });
+
+        Assert.Null(response.Salt);
     }
 
     [Fact]
@@ -278,7 +296,7 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagEnabled_PassesFromMarketingToCommandAsync(
+    public async Task PostRegisterSendEmailVerification_PassesFromMarketingToCommandAsync(
         string email, string name, bool receiveMarketingEmails)
     {
         // Arrange
@@ -291,38 +309,12 @@ public class AccountsControllerTests : IDisposable
             FromMarketing = fromMarketing,
         };
 
-        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(true);
-
         // Act
         await _sut.PostRegisterSendVerificationEmail(model);
 
         // Assert
         await _sendVerificationEmailForRegistrationCommand.Received(1)
             .Run(email, name, receiveMarketingEmails, fromMarketing);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WhenFeatureFlagDisabled_PassesNullFromMarketingToCommandAsync(
-        string email, string name, bool receiveMarketingEmails)
-    {
-        // Arrange
-        var model = new RegisterSendVerificationEmailRequestModel
-        {
-            Email = email,
-            Name = name,
-            ReceiveMarketingEmails = receiveMarketingEmails,
-            FromMarketing = MarketingInitiativeConstants.Premium, // model includes FromMarketing: "premium"
-        };
-
-        _featureService.IsEnabled(FeatureFlagKeys.MarketingInitiatedPremiumFlow).Returns(false);
-
-        // Act
-        await _sut.PostRegisterSendVerificationEmail(model);
-
-        // Assert
-        await _sendVerificationEmailForRegistrationCommand.Received(1)
-            .Run(email, name, receiveMarketingEmails, null); // fromMarketing gets ignored and null gets passed
     }
 
     [Theory, BitAutoData]

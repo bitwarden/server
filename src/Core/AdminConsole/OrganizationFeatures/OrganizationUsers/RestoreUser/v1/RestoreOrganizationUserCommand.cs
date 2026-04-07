@@ -2,12 +2,10 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -28,7 +26,6 @@ public class RestoreOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IPolicyService policyService,
     IUserRepository userRepository,
     IOrganizationService organizationService,
     IFeatureService featureService,
@@ -373,14 +370,7 @@ public class RestoreOrganizationUserCommand(
 
     private async Task<bool> IsTwoFactorRequiredForOrganizationAsync(Guid userId, Guid organizationId)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
-            return requirement.IsTwoFactorRequiredForOrganization(organizationId);
-        }
-
-        var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
-        return invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId);
+        var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
+        return requirement.IsTwoFactorRequiredForOrganization(organizationId);
     }
 }

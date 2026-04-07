@@ -209,13 +209,13 @@ jobs:
           if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
             SANITIZED_REPO_NAME=$(echo "$_GITHUB_PR_REPO_NAME" | sed "s/[^a-zA-Z0-9]/-/g") # Sanitize repo name to alphanumeric only
             IMAGE_TAG=$SANITIZED_REPO_NAME-$IMAGE_TAG # Add repo name to the tag
-            IMAGE_TAG=${IMAGE_TAG:0:128}  # Limit to 128 characters, as that's the max length for Docker image tags
           fi
 
           if [[ "$IMAGE_TAG" == "main" ]]; then
             IMAGE_TAG=dev
           fi
-
+          
+          IMAGE_TAG=${IMAGE_TAG:0:128} # Limit image tags to 128 chars
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
 
@@ -257,7 +257,7 @@ jobs:
 
       - name: Build Docker image
         id: build-artifacts
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile

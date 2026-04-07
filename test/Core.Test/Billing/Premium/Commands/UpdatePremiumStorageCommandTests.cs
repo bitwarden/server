@@ -35,6 +35,9 @@ public class UpdatePremiumStorageCommandTests
         };
         _pricingClient.ListPremiumPlans().Returns([premiumPlan]);
 
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
         _command = new UpdatePremiumStorageCommand(
             _braintreeService,
             _stripeAdapter,
@@ -542,5 +545,261 @@ public class UpdatePremiumStorageCommandTests
         await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), finalizedInvoice);
 
         await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_IncreaseStorage_WithSchedule_UpdatesBothPhases(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.ProrationBehavior == "always_invoice" &&
+                opts.Phases.Count == 2 &&
+                opts.Phases[0].ProrationBehavior == "none" &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9) &&
+                opts.Phases[1].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 10));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_AddStorageFromZero_WithSchedule_AddsToBothPhases(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 1;
+        user.Storage = 500L * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123");
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: false);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 5);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 5) &&
+                opts.Phases[1].Items.Any(i => i.Price == "price_storage" && i.Quantity == 5)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 6));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_RemoveStorage_WithSchedule_RemovesFromBothPhases(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 10;
+        user.Storage = 500L * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 9);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 9);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 0);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items.All(i => i.Price != "price_storage") &&
+                opts.Phases[1].Items.All(i => i.Price != "price_storage")));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithSchedule_PreservesExistingItems(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_premium" && i.Quantity == 1) &&
+                opts.Phases[1].Items.Any(i => i.Price == "price_premium_new" && i.Quantity == 1) &&
+                opts.Phases[1].Discounts != null && opts.Phases[1].Discounts.Any(d => d.Coupon == "coupon_123")));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_IncreaseStorage_WithSchedule_PayPal_UsesProrationsAndBraintree(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4, isPayPal: true);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var draftInvoice = new Invoice { Id = "in_draft" };
+        _stripeAdapter.CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>()).Returns(draftInvoice);
+
+        var finalizedInvoice = new Invoice
+        {
+            Id = "in_finalized",
+            Customer = new Customer { Id = "cus_123" }
+        };
+        _stripeAdapter.FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>()).Returns(finalizedInvoice);
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.ProrationBehavior == "create_prorations" &&
+                opts.Phases[0].ProrationBehavior == "none" &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9) &&
+                opts.Phases[1].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _stripeAdapter.Received(1).CreateInvoiceAsync(Arg.Any<InvoiceCreateOptions>());
+        await _stripeAdapter.Received(1).FinalizeInvoiceAsync("in_draft", Arg.Any<InvoiceFinalizeOptions>());
+        await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), finalizedInvoice);
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 10));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_IncreaseStorage_WithSinglePhaseSchedule_UpdatesOnlyPhase1(User user)
+    {
+        user.Premium = true;
+        user.MaxStorageGb = 5;
+        user.Storage = 2L * 1024 * 1024 * 1024;
+        user.GatewaySubscriptionId = "sub_123";
+
+        var subscription = CreateMockSubscription("sub_123", 4);
+        _stripeAdapter.GetSubscriptionAsync("sub_123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+
+        var schedule = CreateMockSchedule("sub_123", hasStorage: true, storageQuantity: 4, singlePhase: true);
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(user, 9);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.EndBehavior == SubscriptionScheduleEndBehavior.Cancel &&
+                opts.Phases.Count == 1 &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9) &&
+                opts.Phases[0].Items.Any(i => i.Price == "price_premium" && i.Quantity == 1)));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        await _userService.Received(1).SaveUserAsync(Arg.Is<User>(u => u.MaxStorageGb == 10));
+    }
+
+    private static SubscriptionSchedule CreateMockSchedule(
+        string subscriptionId,
+        bool hasStorage,
+        int storageQuantity = 0,
+        bool singlePhase = false)
+    {
+        var phase1Items = new List<SubscriptionSchedulePhaseItem>
+        {
+            new() { PriceId = "price_premium", Quantity = 1 }
+        };
+
+        if (hasStorage)
+        {
+            phase1Items.Add(new SubscriptionSchedulePhaseItem { PriceId = "price_storage", Quantity = storageQuantity });
+        }
+
+        var phases = new List<SubscriptionSchedulePhase>
+        {
+            new()
+            {
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddYears(1),
+                Items = phase1Items,
+                ProrationBehavior = ProrationBehavior.None
+            }
+        };
+
+        if (!singlePhase)
+        {
+            var phase2Items = new List<SubscriptionSchedulePhaseItem>
+            {
+                new() { PriceId = "price_premium_new", Quantity = 1 }
+            };
+
+            if (hasStorage)
+            {
+                phase2Items.Add(new SubscriptionSchedulePhaseItem { PriceId = "price_storage", Quantity = storageQuantity });
+            }
+
+            phases.Add(new SubscriptionSchedulePhase
+            {
+                StartDate = DateTime.UtcNow.AddYears(1),
+                Items = phase2Items,
+                Discounts =
+                [
+                    new SubscriptionSchedulePhaseDiscount { CouponId = "coupon_123" }
+                ],
+                ProrationBehavior = ProrationBehavior.None
+            });
+        }
+
+        return new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscriptionId,
+            Status = SubscriptionScheduleStatus.Active,
+            EndBehavior = singlePhase
+                ? SubscriptionScheduleEndBehavior.Cancel
+                : SubscriptionScheduleEndBehavior.Release,
+            Phases = phases
+        };
     }
 }

@@ -46,7 +46,9 @@ pub unsafe extern "C" fn encrypt_string(
         return error_response("Failed to decode base64 key");
     };
 
-    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
+    let Ok(key) =
+        SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice()))
+    else {
         return error_response("Failed to create symmetric key: invalid key format or length");
     };
 
@@ -89,7 +91,9 @@ pub unsafe extern "C" fn decrypt_string(
         return error_response("Failed to decode base64 key");
     };
 
-    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
+    let Ok(key) =
+        SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice()))
+    else {
         return error_response("Failed to create symmetric key: invalid key format or length");
     };
 
@@ -146,7 +150,9 @@ pub unsafe extern "C" fn encrypt_fields(
         return error_response("Failed to decode base64 key");
     };
 
-    let Ok(key) = SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice())) else {
+    let Ok(key) =
+        SymmetricCryptoKey::try_from(&BitwardenLegacyKeyBytes::from(key_bytes.as_slice()))
+    else {
         return error_response("Failed to create symmetric key: invalid key format or length");
     };
 
@@ -228,7 +234,11 @@ mod tests {
         SymmetricCryptoKey::make_aes256_cbc_hmac_key()
     }
 
-    fn call_ffi_string(func: unsafe extern "C" fn(*const c_char, *const c_char) -> *const c_char, a: &str, b: &str) -> String {
+    fn call_ffi_string(
+        func: unsafe extern "C" fn(*const c_char, *const c_char) -> *const c_char,
+        a: &str,
+        b: &str,
+    ) -> String {
         let a_cstr = CString::new(a).unwrap();
         let b_cstr = CString::new(b).unwrap();
         let ptr = unsafe { func(a_cstr.as_ptr(), b_cstr.as_ptr()) };
@@ -243,7 +253,10 @@ mod tests {
         let key_b64: String = key.to_base64().into();
 
         let encrypted = call_ffi_string(encrypt_string, "hello world", &key_b64);
-        assert!(encrypted.starts_with("2."), "Expected EncString, got: {encrypted}");
+        assert!(
+            encrypted.starts_with("2."),
+            "Expected EncString, got: {encrypted}"
+        );
 
         let decrypted = call_ffi_string(decrypt_string, &encrypted, &key_b64);
         assert_eq!(decrypted, "hello world");
@@ -271,7 +284,10 @@ mod tests {
         encrypt_at_path(&mut value, "login.username", &key).unwrap();
 
         let username = value["login"]["username"].as_str().unwrap();
-        assert!(username.starts_with("2."), "Expected encrypted, got: {username}");
+        assert!(
+            username.starts_with("2."),
+            "Expected encrypted, got: {username}"
+        );
 
         // password should be unchanged
         assert_eq!(value["login"]["password"].as_str().unwrap(), "secret");
@@ -309,7 +325,8 @@ mod tests {
             "name": "Test Login",
             "type": 1,
             "login": {"username": "user@test.com", "password": "secret"}
-        }).to_string();
+        })
+        .to_string();
 
         let paths_json = r#"["name","login.username","login.password"]"#;
 
@@ -317,9 +334,8 @@ mod tests {
         let paths_cstr = CString::new(paths_json).unwrap();
         let key_cstr = CString::new(key_b64.as_str()).unwrap();
 
-        let ptr = unsafe {
-            encrypt_fields(json_cstr.as_ptr(), paths_cstr.as_ptr(), key_cstr.as_ptr())
-        };
+        let ptr =
+            unsafe { encrypt_fields(json_cstr.as_ptr(), paths_cstr.as_ptr(), key_cstr.as_ptr()) };
         let result = unsafe { CStr::from_ptr(ptr) }.to_str().unwrap().to_owned();
         unsafe { free_c_string(ptr as *mut c_char) };
 
@@ -327,10 +343,16 @@ mod tests {
 
         let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
         let name = parsed["name"].as_str().unwrap();
-        assert!(name.starts_with("2."), "name should be encrypted, got: {name}");
+        assert!(
+            name.starts_with("2."),
+            "name should be encrypted, got: {name}"
+        );
 
         let username = parsed["login"]["username"].as_str().unwrap();
-        assert!(username.starts_with("2."), "username should be encrypted, got: {username}");
+        assert!(
+            username.starts_with("2."),
+            "username should be encrypted, got: {username}"
+        );
 
         // type should be unchanged
         assert_eq!(parsed["type"].as_i64().unwrap(), 1);
@@ -346,7 +368,10 @@ mod tests {
         let encrypted = call_ffi_string(encrypt_string, "secret", &key1_b64);
         let result = call_ffi_string(decrypt_string, &encrypted, &key2_b64);
 
-        assert!(result.contains("\"error\""), "Should fail with wrong key, got: {result}");
+        assert!(
+            result.contains("\"error\""),
+            "Should fail with wrong key, got: {result}"
+        );
     }
 
     #[test]
