@@ -661,6 +661,8 @@ public class StripePaymentService : IStripePaymentService
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
+        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo);
+
         var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(subscription);
 
         if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
@@ -700,6 +702,74 @@ public class StripePaymentService : IStripePaymentService
         }
 
         return subscriptionInfo;
+    }
+
+    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo)
+    {
+        if (string.IsNullOrEmpty(subscription.ScheduleId))
+        {
+            return;
+        }
+
+        try
+        {
+            var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
+                new SubscriptionScheduleGetOptions
+                {
+                    Expand = ["phases.discounts.coupon", "phases.items.price"]
+                });
+
+            if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return;
+            }
+
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                return;
+            }
+
+            // Override line item amounts with Phase 2 prices
+            if (phase2.Items != null && subscriptionInfo.Subscription?.Items != null)
+            {
+                var items = subscriptionInfo.Subscription.Items.ToList();
+                foreach (var phase2Item in phase2.Items)
+                {
+                    if (phase2Item.Price is not { UnitAmount: not null, ProductId: not null })
+                    {
+                        continue;
+                    }
+
+                    var matchingItem = items.FirstOrDefault(i => i.ProductId == phase2Item.Price.ProductId);
+                    if (matchingItem != null)
+                    {
+                        matchingItem.Amount = phase2Item.Price.UnitAmount.Value / 100M;
+                    }
+                }
+
+                subscriptionInfo.Subscription.Items = items;
+            }
+
+            // Override discount with Phase 2 discount
+            var phase2Discount = phase2.Discounts?.FirstOrDefault();
+            if (phase2Discount?.Coupon != null)
+            {
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+            }
+        }
+        catch (StripeException ex)
+        {
+            // Fallback: user sees current Phase 1 prices instead of Phase 2 prices.
+            // Accepted tradeoff: showing current data is better than failing the page.
+            _logger.LogWarning(ex,
+                "Failed to retrieve subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), Phase 2 data resolution. Error Code: {ErrorCode}",
+                subscription.ScheduleId,
+                subscription.Id,
+                ex.StripeError?.Code);
+        }
     }
 
     public async Task<string> AddSecretsManagerToSubscription(
