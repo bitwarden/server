@@ -414,10 +414,6 @@ public class UserService : UserManager<User>, IUserService
         user.Key = key;
         user.Email = newEmail;
         user.EmailVerified = true;
-
-        // We need this to backfill the salt for now to keep the email and salt always in sync.
-        user.MasterPasswordSalt = newEmail;
-
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastEmailChangeDate = now;
         await _userRepository.ReplaceAsync(user);
