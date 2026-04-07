@@ -993,9 +993,10 @@ public class UpdateOrganizationSubscriptionCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             schedule.Id,
             Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.ProrationBehavior == ProrationBehavior.CreateProrations &&
                 opts.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
                 opts.Phases.Count == 2 &&
-                opts.Phases[0].ProrationBehavior == ProrationBehavior.CreateProrations &&
+                opts.Phases[0].ProrationBehavior == ProrationBehavior.None &&
                 opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 3) &&
                 opts.Phases[0].Items.Any(i => i.Price == "price_seats" && i.Quantity == 5) &&
                 opts.Phases[1].ProrationBehavior == ProrationBehavior.None &&

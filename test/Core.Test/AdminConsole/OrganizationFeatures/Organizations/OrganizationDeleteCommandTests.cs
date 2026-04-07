@@ -16,6 +16,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -28,15 +29,18 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
 public class OrganizationDeleteCommandTests
 {
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_Success(Organization organization, SutProvider<OrganizationDeleteCommand> sutProvider)
+    public async Task Delete_Success(Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.DeleteAsync(organization);
 
-        await organizationRepository.Received().DeleteAsync(organization);
-        await applicationCacheService.Received().DeleteOrganizationAbilityAsync(organization.Id);
+        await cipherService.Received(1).DeleteAttachmentsForOrganizationAsync(organization.Id);
+        await organizationRepository.Received(1).DeleteAsync(organization);
+        await applicationCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]

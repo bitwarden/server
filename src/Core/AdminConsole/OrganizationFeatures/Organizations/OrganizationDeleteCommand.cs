@@ -12,6 +12,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Bit.Core.Vault.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -22,6 +23,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly ICipherService _cipherService;
     private readonly ISubscriberService _subscriberService;
     private readonly IFeatureService _featureService;
     private readonly ISendRepository _sendRepository;
@@ -33,6 +35,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         IOrganizationRepository organizationRepository,
         IStripePaymentService paymentService,
         ISsoConfigRepository ssoConfigRepository,
+        ICipherService cipherService,
         ISubscriberService subscriberService,
         IFeatureService featureService,
         ISendRepository sendRepository,
@@ -43,6 +46,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         _organizationRepository = organizationRepository;
         _paymentService = paymentService;
         _ssoConfigRepository = ssoConfigRepository;
+        _cipherService = cipherService;
         _subscriberService = subscriberService;
         _featureService = featureService;
         _sendRepository = sendRepository;
@@ -79,6 +83,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 
 
         await DeleteOrganizationOwnedSendFilesAsync(organization);
+        await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
         await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
