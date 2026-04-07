@@ -652,6 +652,10 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await using var connection = new SqlConnection(_marsConnectionString);
 
         var organizationUsersList = organizationUserCollection.ToList();
+        if (organizationUsersList.Count == 0)
+        {
+            return;
+        }
 
         await connection.ExecuteAsync(
             $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",

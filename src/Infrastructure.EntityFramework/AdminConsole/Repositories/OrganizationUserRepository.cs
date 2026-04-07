@@ -944,6 +944,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
     {
+        if (!organizationUserCollection.Any())
+        {
+            return;
+        }
+
         using var scope = ServiceScopeFactory.CreateScope();
 
         await using var dbContext = GetDatabaseContext(scope);
