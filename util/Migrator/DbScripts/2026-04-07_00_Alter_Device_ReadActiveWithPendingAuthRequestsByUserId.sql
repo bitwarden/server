@@ -1,4 +1,9 @@
-CREATE PROCEDURE [dbo].[Device_ReadActiveWithPendingAuthRequestsByUserId]
+-- PM-34130: Replace SELECT D.* with an explicit column list.
+-- Previously, Dapper mapped results by column position into a 14-parameter constructor.
+-- A column addition, removal, or reorder in DeviceView would silently assign wrong values
+-- with no compile or runtime error. Explicit columns enable name-based mapping via property
+-- setters, eliminating the positional dependency and restoring EDD backwards compatibility.
+CREATE OR ALTER PROCEDURE [dbo].[Device_ReadActiveWithPendingAuthRequestsByUserId]
     @UserId UNIQUEIDENTIFIER,
     @ExpirationMinutes INT
 AS
@@ -38,3 +43,4 @@ BEGIN
         D.[UserId] = @UserId -- Include only devices for this user
         AND D.[Active] = 1; -- Include only active devices
 END;
+GO
