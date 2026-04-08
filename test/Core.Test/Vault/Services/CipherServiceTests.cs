@@ -2361,6 +2361,50 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateCipherAttachmentFile_ValidFile_LogsAttachmentCreatedEvent(
+        SutProvider<CipherService> sutProvider, Cipher cipher)
+    {
+        var attachmentData = new CipherAttachment.MetaData
+        {
+            AttachmentId = "test-attachment",
+            Size = 100,
+            FileName = "test.txt",
+        };
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .ValidateFileAsync(cipher, attachmentData, Arg.Any<long>())
+            .Returns((true, (long?)100));
+
+        var result = await sutProvider.Sut.ValidateCipherAttachmentFile(cipher, attachmentData);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogCipherEventAsync(cipher, EventType.Cipher_AttachmentCreated);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateCipherAttachmentFile_InvalidFile_DoesNotLogEvent(
+        SutProvider<CipherService> sutProvider, CipherDetails cipher)
+    {
+        var attachmentData = new CipherAttachment.MetaData
+        {
+            AttachmentId = "test-attachment",
+            Size = 100,
+            FileName = "test.txt",
+        };
+
+        sutProvider.GetDependency<IAttachmentStorageService>()
+            .ValidateFileAsync(cipher, attachmentData, Arg.Any<long>())
+            .Returns((false, (long?)null));
+
+        var result = await sutProvider.Sut.ValidateCipherAttachmentFile(cipher, attachmentData);
+
+        Assert.False(result);
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogCipherEventAsync(cipher, EventType.Cipher_AttachmentCreated);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetAttachmentDownloadDataAsync_NullCipher_ThrowsNotFoundException(
     string attachmentId, SutProvider<CipherService> sutProvider)
     {
