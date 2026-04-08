@@ -7,7 +7,7 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationInviteLinkRepositoryTests
 {
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateAsync_Works(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -26,7 +26,7 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.Equal(link.EncryptedOrgKey, result.EncryptedOrgKey);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateAsync_DuplicateOrganizationId_Throws(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -38,7 +38,7 @@ public class OrganizationInviteLinkRepositoryTests
             () => repository.CreateTestOrganizationInviteLinkAsync(organization, "second"));
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task CreateAsync_DuplicateCode_Throws(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -69,7 +69,7 @@ public class OrganizationInviteLinkRepositoryTests
         }));
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByCodeAsync_ReturnsLink(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -85,7 +85,7 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.Equal(link.EncryptedOrgKey, result.EncryptedOrgKey);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByCodeAsync_NonExistentCode_ReturnsNull(
         IOrganizationInviteLinkRepository repository)
     {
@@ -94,7 +94,7 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.Null(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByOrganizationIdAsync_ReturnsLink(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -110,7 +110,7 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.Equal(link.EncryptedOrgKey, result.EncryptedOrgKey);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task GetByOrganizationIdAsync_NonExistentOrg_ReturnsNull(
         IOrganizationInviteLinkRepository repository)
     {
@@ -119,7 +119,7 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.Null(result);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task ReplaceAsync_UpdatesAllowedDomains(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -139,7 +139,7 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.Equal("updated-encrypted-org-key", result.EncryptedOrgKey);
     }
 
-    [DatabaseTheory, DatabaseData]
+    [Theory, DatabaseData]
     public async Task DeleteAsync_RemovesLink(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
