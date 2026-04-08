@@ -54,27 +54,28 @@ public class AddSecretsManagerSubscriptionCommandTests
         var plan = MockPlans.Get(PlanType.FamiliesAnnually); // Families plan has no SecretsManager
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _command.RunAsync(organization, 0, 0));
+        Assert.Contains("does not support Secrets Manager", exception.Message);
     }
 
     [Fact]
-    public async Task RunAsync_ThrowsBadRequest_WhenNoPaymentMethodAndNonFreePlan()
+    public async Task RunAsync_ThrowsConflict_WhenNoPaymentMethodAndNonFreePlan()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually, gatewayCustomerId: null);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.EnterpriseAnnually));
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
+        await Assert.ThrowsAsync<ConflictException>(() =>
             _command.RunAsync(organization, 5, 10));
     }
 
     [Fact]
-    public async Task RunAsync_ThrowsBadRequest_WhenNoSubscriptionAndNonFreePlan()
+    public async Task RunAsync_ThrowsConflict_WhenNoSubscriptionAndNonFreePlan()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually, gatewaySubscriptionId: null);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.EnterpriseAnnually));
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
+        await Assert.ThrowsAsync<ConflictException>(() =>
             _command.RunAsync(organization, 5, 10));
     }
 
@@ -98,19 +99,18 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _command.RunAsync(organization, additionalSmSeats: -1, additionalServiceAccounts: 0));
-        Assert.Contains("subtract Secrets Manager seats", exception.Message);
+        Assert.Contains("cannot add Secrets Manager with a negative number of seats", exception.Message);
     }
 
     [Fact]
     public async Task RunAsync_ThrowsBadRequest_WhenTotalSmSeatsIsZero()
     {
-        // Enterprise plan has BaseSeats = 0; adding 0 extra means 0 total seats.
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.EnterpriseAnnually));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _command.RunAsync(organization, additionalSmSeats: 0, additionalServiceAccounts: 0));
-        Assert.Contains("do not have any Secrets Manager seats", exception.Message);
+        Assert.Contains("At least one Secrets Manager seat is required.", exception.Message);
     }
 
     [Fact]
@@ -138,10 +138,9 @@ public class AddSecretsManagerSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_ThrowsBadRequest_WhenSmSeatsExceedPasswordManagerBaseSeats_TeamsStarterPlan()
+    public async Task RunAsync_ThrowsBadRequest_WhenSmSeatsExceedOrgSeats_TeamsStarterPlan()
     {
-        // TeamsStarter: additionalSmSeats must not exceed plan.PasswordManager.BaseSeats (= 10).
-        var organization = CreateOrganization(PlanType.TeamsStarter);
+        var organization = CreateOrganization(PlanType.TeamsStarter, seats: 10);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(PlanType.TeamsStarter));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -152,8 +151,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     [Fact]
     public async Task RunAsync_UpdatesOrganization_WhenTeamsStarterPlan_AndSeatsWithinLimit()
     {
-        // Covers the false branch of the TeamsStarter seats-vs-PM check (additionalSmSeats <= BaseSeats).
-        var organization = CreateOrganization(PlanType.TeamsStarter);
+        var organization = CreateOrganization(PlanType.TeamsStarter, seats: 10);
         var plan = MockPlans.Get(PlanType.TeamsStarter);
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
         SetupSubscriptionCommandSuccess();
@@ -174,7 +172,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _command.RunAsync(organization, additionalSmSeats: 5, additionalServiceAccounts: -1));
-        Assert.Contains("subtract Machine Accounts", exception.Message);
+        Assert.Contains("cannot add Secrets Manager with a negative number of Machine Accounts", exception.Message);
     }
 
     [Fact]
@@ -248,21 +246,6 @@ public class AddSecretsManagerSubscriptionCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_SkipsUpdateSubscriptionCommand_WhenBothAdditionsAreZero_NonFreePlan()
-    {
-        // Uses a custom plan with SM BaseSeats > 0 so that 0 additional seats passes the
-        // "you have no SM seats" validation and we reach the empty-change-set guard.
-        var organization = CreateOrganization(PlanType.EnterpriseAnnually);
-        var plan = new EnterprisePlanWithSmBaseSeats();
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
-
-        await _command.RunAsync(organization, additionalSmSeats: 0, additionalServiceAccounts: 0);
-
-        await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
-            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
-    }
-
-    [Fact]
     public async Task RunAsync_CallsUpdateSubscriptionCommand_WithOnlySeatChange_WhenServiceAccountsAreZero()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
@@ -278,26 +261,6 @@ public class AddSecretsManagerSubscriptionCommandTests
                 cs.Changes.Count == 1 &&
                 cs.ChargeImmediately &&
                 cs.Changes.Any(c => c.IsT0 && c.AsT0.PriceId == plan.SecretsManager.StripeSeatPlanId && c.AsT0.Quantity == 5)));
-    }
-
-    [Fact]
-    public async Task RunAsync_CallsUpdateSubscriptionCommand_WithOnlyServiceAccountChange_WhenSeatsAreZero()
-    {
-        // Uses EnterprisePlanWithSmBaseSeats (BaseSeats = 5) so 0 additional seats passes
-        // the "you have no SM seats" validation.
-        var organization = CreateOrganization(PlanType.EnterpriseAnnually);
-        var plan = new EnterprisePlanWithSmBaseSeats();
-        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
-        SetupSubscriptionCommandSuccess();
-
-        await _command.RunAsync(organization, additionalSmSeats: 0, additionalServiceAccounts: 10);
-
-        await _updateOrganizationSubscriptionCommand.Received(1).Run(
-            organization,
-            Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
-                cs.Changes.Count == 1 &&
-                cs.ChargeImmediately &&
-                cs.Changes.Any(c => c.IsT0 && c.AsT0.PriceId == plan.SecretsManager.StripeServiceAccountPlanId && c.AsT0.Quantity == 10)));
     }
 
     [Fact]
@@ -400,35 +363,4 @@ public class AddSecretsManagerSubscriptionCommandTests
         }
     }
 
-    /// <summary>
-    /// A non-free plan with SM BaseSeats > 0 to exercise the empty-change-set guard:
-    /// when both additionalSmSeats and additionalServiceAccounts are 0, we must not
-    /// call <see cref="IUpdateOrganizationSubscriptionCommand.Run"/> with an empty set.
-    /// </summary>
-    private sealed record EnterprisePlanWithSmBaseSeats : StaticStorePlan
-    {
-        public EnterprisePlanWithSmBaseSeats()
-        {
-            Type = PlanType.EnterpriseAnnually;
-            ProductTier = ProductTierType.Enterprise;
-            Name = "Enterprise (Annually)";
-            NameLocalizationKey = "planNameEnterprise";
-            DescriptionLocalizationKey = "planDescEnterprise";
-            PasswordManager = new PasswordManagerPlanFeatures
-            {
-                BaseSeats = 10,
-                HasAdditionalSeatsOption = true,
-                StripeSeatPlanId = "2023-enterprise-org-seat-annually"
-            };
-            SecretsManager = new SecretsManagerPlanFeatures
-            {
-                BaseSeats = 5,
-                BaseServiceAccount = 50,
-                HasAdditionalSeatsOption = true,
-                HasAdditionalServiceAccountOption = true,
-                StripeSeatPlanId = "secrets-manager-enterprise-seat-annually",
-                StripeServiceAccountPlanId = "secrets-manager-service-account-annually"
-            };
-        }
-    }
 }
