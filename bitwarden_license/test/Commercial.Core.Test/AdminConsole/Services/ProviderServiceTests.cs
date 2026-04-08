@@ -629,6 +629,10 @@ public class ProviderServiceTests
         providerUser.Email = user.Email;
         var token = protector.Protect($"ProviderUserInvite {providerUser.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
         var pu = await sutProvider.Sut.AcceptUserAsync(providerUser.Id, user, token);
         Assert.Null(pu.Email);
         Assert.Equal(ProviderUserStatusType.Accepted, pu.Status);
@@ -749,6 +753,10 @@ public class ProviderServiceTests
         providerRepository.GetByIdAsync(provider.Id).Returns(provider);
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         userRepository.GetManyAsync(default).ReturnsForAnyArgs(new[] { u1, u2, u3 });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(u2.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var dict = providerUsers.ToDictionary(pu => pu.Id, _ => "key");
         var result = await sutProvider.Sut.ConfirmUsersAsync(pu1.ProviderId, dict, user.Id);
