@@ -165,6 +165,7 @@ public static class FeatureFlagKeys
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
+    public const string CollectionUserCollectionGroupAuthorizationHandlers = "pm-12473-collection-user-collection-group-authorization-handlers";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
