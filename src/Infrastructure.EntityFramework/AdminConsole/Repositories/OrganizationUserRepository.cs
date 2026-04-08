@@ -573,7 +573,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAndAcceptedDetailsByUserAsync(Guid userId)
+    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAcceptedDetailsByUserAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

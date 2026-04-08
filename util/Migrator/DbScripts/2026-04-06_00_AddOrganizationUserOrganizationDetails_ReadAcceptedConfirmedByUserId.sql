@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadConfirmedAndAcceptedByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadAcceptedConfirmedByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -10,5 +10,6 @@ BEGIN
         [dbo].[OrganizationUserOrganizationDetailsView]
     WHERE
         [UserId] = @UserId
-        AND [Status] IN (1, 2) -- Accepted = 1, Confirmed = 2
+        AND [Status] IN (1,2) -- 1 = Accepted, 2 = Confirmed
 END
+GO

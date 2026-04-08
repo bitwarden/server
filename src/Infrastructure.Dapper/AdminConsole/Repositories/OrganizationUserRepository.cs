@@ -344,12 +344,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAndAcceptedDetailsByUserAsync(Guid userId)
+    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAcceptedDetailsByUserAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
-                "[dbo].[OrganizationUserOrganizationDetails_ReadConfirmedAndAcceptedByUserId]",
+                "[dbo].[OrganizationUserOrganizationDetails_ReadAcceptedConfirmedByUserId]",
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 

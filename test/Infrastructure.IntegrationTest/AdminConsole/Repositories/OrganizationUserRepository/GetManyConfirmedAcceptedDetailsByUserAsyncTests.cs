@@ -1,10 +1,10 @@
-﻿using Bit.Core.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.OrganizationUserRepository;
 
-public class GetManyConfirmedAndAcceptedDetailsByUserAsyncTests
+public class GetManyConfirmedAcceptedDetailsByUserAsyncTests
 {
     [Theory, DatabaseData]
     public async Task ReturnsDetails_WhenUserIsConfirmed(
@@ -18,7 +18,7 @@ public class GetManyConfirmedAndAcceptedDetailsByUserAsyncTests
         await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, user);
 
         // Act
-        var results = await organizationUserRepository.GetManyConfirmedAndAcceptedDetailsByUserAsync(user.Id);
+        var results = await organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         // Assert
         Assert.Single(results);
@@ -44,7 +44,7 @@ public class GetManyConfirmedAndAcceptedDetailsByUserAsyncTests
         await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(organization, user);
 
         // Act
-        var results = await organizationUserRepository.GetManyConfirmedAndAcceptedDetailsByUserAsync(user.Id);
+        var results = await organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         // Assert
         Assert.Single(results);
@@ -74,7 +74,7 @@ public class GetManyConfirmedAndAcceptedDetailsByUserAsyncTests
         await organizationUserRepository.CreateAcceptedTestOrganizationUserAsync(acceptedOrg, user);
 
         // Act
-        var results = await organizationUserRepository.GetManyConfirmedAndAcceptedDetailsByUserAsync(user.Id);
+        var results = await organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -99,7 +99,7 @@ public class GetManyConfirmedAndAcceptedDetailsByUserAsyncTests
         await organizationUserRepository.CreateTestOrganizationUserInviteAsync(organization);
 
         // Act
-        var results = await organizationUserRepository.GetManyConfirmedAndAcceptedDetailsByUserAsync(user.Id);
+        var results = await organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         // Assert
         Assert.DoesNotContain(results, r => r.OrganizationId == organization.Id);
@@ -121,7 +121,7 @@ public class GetManyConfirmedAndAcceptedDetailsByUserAsyncTests
         await organizationUserRepository.CreateRevokedTestOrganizationUserAsync(organization, user);
 
         // Act
-        var results = await organizationUserRepository.GetManyConfirmedAndAcceptedDetailsByUserAsync(user.Id);
+        var results = await organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         // Assert
         Assert.DoesNotContain(results, r => r.OrganizationId == organization.Id);
@@ -145,7 +145,7 @@ public class GetManyConfirmedAndAcceptedDetailsByUserAsyncTests
         await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(organization, otherUser);
 
         // Act
-        var results = await organizationUserRepository.GetManyConfirmedAndAcceptedDetailsByUserAsync(targetUser.Id);
+        var results = await organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(targetUser.Id);
 
         // Assert
         Assert.DoesNotContain(results, r => r.OrganizationId == organization.Id);
