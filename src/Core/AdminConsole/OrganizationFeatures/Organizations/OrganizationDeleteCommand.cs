@@ -81,7 +81,6 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             }
         }
 
-
         await DeleteOrganizationOwnedSendFilesAsync(organization);
         await _cipherService.DeleteAttachmentsForOrganizationAsync(organization.Id);
         await _organizationRepository.DeleteAsync(organization);
@@ -97,8 +96,11 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         }
     }
 
-    // Only deletes Send Files
-    // Send objects are deleted via the call to _organizationRepository.DeleteAsync()
+    /// <summary>
+    /// Deletes Send files from storage. Send objects are deleted via
+    /// <see cref="IOrganizationRepository.DeleteAsync"/>.
+    /// </summary>
+    /// <param name="organization">The organization whose Send files will be deleted.</param>
     private async Task DeleteOrganizationOwnedSendFilesAsync(Organization organization)
     {
         var sends = await _sendRepository.GetManyByOrganizationIdAsync(organization.Id);
