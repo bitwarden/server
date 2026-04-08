@@ -145,6 +145,15 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         };
     }
 
+    public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.ExecuteAsync(
+            $"[{Schema}].[Send_SetDisabledByIds]",
+            new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled },
+            commandType: CommandType.StoredProcedure);
+    }
+
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
     {
         if (send == null)

@@ -42,4 +42,11 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// <param name="sends">A list of sends with updated data</param>
     UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
         IEnumerable<Send> sends);
+
+    /// <summary>
+    /// Updates the 'Disabled' field for Sends by IDs in bulk
+    /// </summary>
+    /// <param name="ids">A list of Send IDs to update</param>
+    /// <param name="disabled">The value to set the 'Disabled' field to</param>
+    Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled);
 }
