@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Security.Claims;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
@@ -1199,17 +1200,27 @@ public class UserService : UserManager<User>, IUserService
         }
     }
 
-    // Only deletes Send Files
-    // Send objects are deleted via the call to _userRepository.DeleteAsync()
+    /// <summary>
+    /// Deletes Send files from storage. Send objects are deleted via
+    /// IOrganizationRepository.DeleteAsync.
+    /// </summary>
+    /// <param name="user">The user whose Send files will be deleted.</param>
     private async Task DeleteSendFilesForUserAsync(User user)
     {
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
         foreach (var send in sends.Where(s => s.Type == SendType.File))
         {
-            var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
-            if (data?.Id != null)
+            try
             {
-                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+                var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
+                if (data?.Id != null)
+                {
+                    await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+                }
+            }
+            catch (JsonException ex)
+            {
+                Logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
             }
         }
     }

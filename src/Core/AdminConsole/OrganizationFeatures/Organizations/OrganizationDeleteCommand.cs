@@ -98,7 +98,7 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
 
     /// <summary>
     /// Deletes Send files from storage. Send objects are deleted via
-    /// <see cref="IOrganizationRepository.DeleteAsync"/>.
+    /// IOrganizationRepository.DeleteAsync.
     /// </summary>
     /// <param name="organization">The organization whose Send files will be deleted.</param>
     private async Task DeleteOrganizationOwnedSendFilesAsync(Organization organization)
@@ -106,10 +106,17 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
         var sends = await _sendRepository.GetManyByOrganizationIdAsync(organization.Id);
         foreach (var send in sends.Where(s => s.Type == SendType.File))
         {
-            var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
-            if (data?.Id != null)
+            try
             {
-                await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+                var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
+                if (data?.Id != null)
+                {
+                    await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
             }
         }
     }
