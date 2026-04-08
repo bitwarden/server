@@ -99,7 +99,7 @@ public class AddSecretsManagerSubscriptionCommand(
     {
         if (additionalSmSeats < 0)
         {
-            throw new BadRequestException("You can't add Secrets Manager with a negative number of seats.");
+            throw new BadRequestException("You cannot add Secrets Manager with a negative number of seats.");
         }
 
         // All paid SM plans have BaseSeats = 0, so at least one additional seat is required.
