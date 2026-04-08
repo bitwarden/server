@@ -29,7 +29,7 @@ public class GetManyConfirmedAndAcceptedByUserAsyncTests
         });
 
         // Act
-        var results = await policyRepository.GetManyConfirmedAndAcceptedByUserAsync(user.Id);
+        var results = await policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
 
         // Assert
         Assert.Contains(results, p => p.Id == policy.Id);
@@ -58,7 +58,7 @@ public class GetManyConfirmedAndAcceptedByUserAsyncTests
         });
 
         // Act
-        var results = await policyRepository.GetManyConfirmedAndAcceptedByUserAsync(user.Id);
+        var results = await policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
 
         // Assert
         Assert.Contains(results, p => p.Id == policy.Id);
@@ -97,7 +97,7 @@ public class GetManyConfirmedAndAcceptedByUserAsyncTests
         });
 
         // Act
-        var results = await policyRepository.GetManyConfirmedAndAcceptedByUserAsync(user.Id);
+        var results = await policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
 
         // Assert
         Assert.Contains(results, p => p.Id == confirmedPolicy.Id);
@@ -135,7 +135,7 @@ public class GetManyConfirmedAndAcceptedByUserAsyncTests
         });
 
         // Act
-        var results = await policyRepository.GetManyConfirmedAndAcceptedByUserAsync(user.Id);
+        var results = await policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
 
         // Assert
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
@@ -164,7 +164,7 @@ public class GetManyConfirmedAndAcceptedByUserAsyncTests
         });
 
         // Act
-        var results = await policyRepository.GetManyConfirmedAndAcceptedByUserAsync(user.Id);
+        var results = await policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
 
         // Assert
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
@@ -195,7 +195,7 @@ public class GetManyConfirmedAndAcceptedByUserAsyncTests
         });
 
         // Act
-        var results = await policyRepository.GetManyConfirmedAndAcceptedByUserAsync(targetUser.Id);
+        var results = await policyRepository.GetManyConfirmedAcceptedByUserIdAsync(targetUser.Id);
 
         // Assert
         Assert.DoesNotContain(results, p => p.Id == policy.Id);
