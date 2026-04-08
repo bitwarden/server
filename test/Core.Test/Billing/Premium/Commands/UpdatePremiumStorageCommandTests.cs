@@ -569,8 +569,9 @@ public class UpdatePremiumStorageCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             schedule.Id,
             Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.ProrationBehavior == "always_invoice" &&
                 opts.Phases.Count == 2 &&
-                opts.Phases[0].ProrationBehavior == "always_invoice" &&
+                opts.Phases[0].ProrationBehavior == "none" &&
                 opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9) &&
                 opts.Phases[1].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9)));
 
@@ -696,7 +697,8 @@ public class UpdatePremiumStorageCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             schedule.Id,
             Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
-                opts.Phases[0].ProrationBehavior == "create_prorations" &&
+                opts.ProrationBehavior == "create_prorations" &&
+                opts.Phases[0].ProrationBehavior == "none" &&
                 opts.Phases[0].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9) &&
                 opts.Phases[1].Items.Any(i => i.Price == "price_storage" && i.Quantity == 9)));
 

@@ -164,7 +164,7 @@ public static class FeatureFlagKeys
     public const string RefactorOrgAcceptInit = "pm-33082-refactor-org-accept-init";
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
-    public const string OrganizationInviteLinks = "pm-32497-organization-invite-links";
+    public const string GenerateInviteLink = "pm-32497-generate-invite-link";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -262,6 +262,7 @@ public static class FeatureFlagKeys
     public const string SendUIRefresh = "pm-28175-send-ui-refresh";
     public const string SendEmailOTP = "pm-19051-send-email-verification";
     public const string SendControls = "pm-31885-send-controls";
+    public const string SdkSendsApi = "pm-30110-sdk-sends-api";
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
