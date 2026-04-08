@@ -243,6 +243,7 @@ public static class FeatureFlagKeys
     public const string CxpExportMobile = "cxp-export-mobile";
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
     public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
+    public const string MobileCardScanner = "pm-34171-card-scanner";
 
     /* Platform Team */
     public const string WebPush = "web-push";
