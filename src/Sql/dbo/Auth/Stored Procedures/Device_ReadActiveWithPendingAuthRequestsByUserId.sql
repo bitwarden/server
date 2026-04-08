@@ -20,7 +20,8 @@ BEGIN
         D.[Active],
         AR.[Id] AS [AuthRequestId],
         AR.[CreationDate] AS [AuthRequestCreationDate]
-    FROM [dbo].[DeviceView] D
+    FROM
+        [dbo].[DeviceView] D
     LEFT OUTER JOIN (
         SELECT
             [Id],
@@ -28,8 +29,10 @@ BEGIN
             [RequestDeviceIdentifier],
             [Approved],
             ROW_NUMBER() OVER (PARTITION BY [RequestDeviceIdentifier] ORDER BY [CreationDate] DESC) AS rn
-        FROM [dbo].[AuthRequestView]
-        WHERE [Type] IN (0,1)  -- AuthenticateAndUnlock and Unlock types only
+        FROM
+            [dbo].[AuthRequestView]
+        WHERE
+            [Type] IN (0,1)  -- AuthenticateAndUnlock and Unlock types only
             AND [CreationDate] >= DATEADD(MINUTE, -@ExpirationMinutes, GETUTCDATE()) -- Ensure the request hasn't expired
             AND [UserId] = @UserId -- Requests for this user only
     ) AR -- This join will get the most recent request per device, regardless of approval status
