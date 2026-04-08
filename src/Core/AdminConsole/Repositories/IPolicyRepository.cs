@@ -11,7 +11,7 @@ namespace Bit.Core.AdminConsole.Repositories;
 public interface IPolicyRepository : IRepository<Policy, Guid>
 {
     /// <summary>
-    /// Gets all policies of a given type for an organization.
+    /// Gets all policies of a given type for an organization where the user is in the Confirmed status.
     /// </summary>
     /// <remarks>
     /// WARNING: do not use this to enforce policies against a user! It returns raw data and does not take into account
@@ -19,6 +19,10 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// </remarks>
     Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
     Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
+    /// Gets all policies for a user across organizations where the user is in the Confirmed status.
+    /// </summary>
     Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId);
 
     /// <summary>
