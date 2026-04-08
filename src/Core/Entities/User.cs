@@ -119,6 +119,59 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return MasterPasswordSalt ?? Email.ToLowerInvariant().Trim();
     }
 
+    /// <summary>
+    /// Sets the crypto-critical fields for a user who does not yet have a master password.
+    /// Caller is responsible for: revision dates, SecurityStamp, MasterPasswordHint,
+    /// ForcePasswordReset, and persistence.
+    /// </summary>
+    public void SetInitialMasterPasswordCrypto(
+        string serverSideHash,
+        string masterKeyWrappedUserKey,
+        string salt,
+        KdfType kdfType,
+        int kdfIterations,
+        int? kdfMemory,
+        int? kdfParallelism)
+    {
+        if (MasterPassword != null)
+        {
+            throw new InvalidOperationException("User already has a master password.");
+        }
+
+        MasterPassword = serverSideHash;
+        Key = masterKeyWrappedUserKey;
+        MasterPasswordSalt = salt;
+        Kdf = kdfType;
+        KdfIterations = kdfIterations;
+        KdfMemory = kdfMemory;
+        KdfParallelism = kdfParallelism;
+    }
+
+    /// <summary>
+    /// Updates the password hash and wrapped user key for a user who already has a master password.
+    /// Validates that the salt has not changed (caller must pass current salt for verification).
+    /// Caller is responsible for: revision dates, SecurityStamp, MasterPasswordHint,
+    /// ForcePasswordReset, and persistence.
+    /// </summary>
+    public void UpdateMasterPasswordCrypto(
+        string serverSideHash,
+        string masterKeyWrappedUserKey,
+        string salt)
+    {
+        if (MasterPassword == null)
+        {
+            throw new InvalidOperationException("User does not have a master password to update.");
+        }
+
+        if (salt != GetMasterPasswordSalt())
+        {
+            throw new InvalidOperationException("Master password salt mismatch.");
+        }
+
+        MasterPassword = serverSideHash;
+        Key = masterKeyWrappedUserKey;
+    }
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

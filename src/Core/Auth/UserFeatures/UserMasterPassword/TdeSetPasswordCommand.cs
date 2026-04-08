@@ -5,7 +5,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
@@ -14,17 +13,17 @@ public class TdeSetPasswordCommand : ITdeSetPasswordCommand
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IMasterPasswordHasher _masterPasswordHasher;
     private readonly IEventService _eventService;
 
     public TdeSetPasswordCommand(IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository, IOrganizationRepository organizationRepository,
-        IPasswordHasher<User> passwordHasher, IEventService eventService)
+        IMasterPasswordHasher masterPasswordHasher, IEventService eventService)
     {
         _userRepository = userRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _passwordHasher = passwordHasher;
+        _masterPasswordHasher = masterPasswordHasher;
         _eventService = eventService;
     }
 
@@ -57,7 +56,7 @@ public class TdeSetPasswordCommand : ITdeSetPasswordCommand
         }
 
         // Hash the provided user master password authentication hash on the server side
-        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
+        var serverSideHashedMasterPasswordAuthenticationHash = _masterPasswordHasher.HashPassword(user,
             masterPasswordDataModel.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
 
         var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,

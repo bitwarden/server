@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -265,6 +266,8 @@ public class AdminRecoverAccountCommandTests
     {
         user.Id = organizationUser.UserId!.Value;
         user.UsesKeyConnector = false;
+        // UpdateMasterPasswordCrypto requires an existing master password
+        user.MasterPassword ??= "existing-hash";
         sutProvider.GetDependency<IUserService>()
             .GetUserByIdAsync(user.Id)
             .Returns(user);
@@ -272,9 +275,9 @@ public class AdminRecoverAccountCommandTests
 
     private static void SetupSuccessfulPasswordUpdate(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string newMasterPassword)
     {
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(user, newMasterPassword)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(user, newMasterPassword)
+            .Returns((IdentityResult.Success, "server-side-hash"));
     }
 
     private static async Task AssertSuccessAsync(SutProvider<AdminRecoverAccountCommand> sutProvider, User user, string key,
@@ -283,6 +286,7 @@ public class AdminRecoverAccountCommandTests
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<User>(u =>
                 u.Id == user.Id &&
+                u.MasterPassword == "server-side-hash" &&
                 u.Key == key &&
                 u.ForcePasswordReset == true &&
                 u.RevisionDate == u.AccountRevisionDate &&

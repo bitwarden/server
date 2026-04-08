@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -37,6 +38,7 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IMasterPasswordHasher _masterPasswordHasher;
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -51,7 +53,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IFeatureService featureService,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IMasterPasswordHasher masterPasswordHasher)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -66,6 +69,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
+        _masterPasswordHasher = masterPasswordHasher;
     }
 
     public async Task<Entities.EmergencyAccess> InviteAsync(User grantorUser, string emergencyContactEmail, EmergencyAccessType accessType, int waitTime)
@@ -378,10 +382,25 @@ public class EmergencyAccessService : IEmergencyAccessService
 
         var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
 
-        await _userService.UpdatePasswordHash(grantor, newMasterPasswordHash);
+        var serverSideHash = _masterPasswordHasher.HashPassword(grantor, newMasterPasswordHash);
+
+        if (grantor.HasMasterPassword())
+        {
+            // TODO: Once this endpoint receives salt from the client, pass the client-supplied salt
+            // instead of grantor.GetMasterPasswordSalt() to enable real salt verification.
+            grantor.UpdateMasterPasswordCrypto(serverSideHash, key, grantor.GetMasterPasswordSalt());
+        }
+        else
+        {
+            // TDE grantor without a master password
+            // TODO: Once this endpoint receives salt/KDF from the client, pass client-supplied values.
+            grantor.SetInitialMasterPasswordCrypto(serverSideHash, key,
+                grantor.GetMasterPasswordSalt(), grantor.Kdf, grantor.KdfIterations, grantor.KdfMemory, grantor.KdfParallelism);
+        }
+
+        grantor.SecurityStamp = Guid.NewGuid().ToString();
         grantor.RevisionDate = DateTime.UtcNow;
         grantor.LastPasswordChangeDate = grantor.RevisionDate;
-        grantor.Key = key;
         // Disable TwoFactor providers since they will otherwise block logins
         grantor.SetTwoFactorProviders([]);
         // Disable New Device Verification since it will otherwise block logins

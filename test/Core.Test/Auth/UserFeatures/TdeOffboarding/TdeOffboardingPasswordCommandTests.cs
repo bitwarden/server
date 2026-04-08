@@ -6,12 +6,13 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
+
+// Alias for readability
 
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
@@ -26,9 +27,9 @@ public class TdeOffboardingPasswordTests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>())
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         orgUserDetails.UseSso = true;
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -62,9 +63,9 @@ public class TdeOffboardingPasswordTests
         // Arrange
         user.MasterPassword = null;
 
-        sutProvider.GetDependency<IUserService>()
-            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(IdentityResult.Success);
+        sutProvider.GetDependency<IMasterPasswordHasher>()
+            .ValidateAndHashPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
+            .Returns((IdentityResult.Success, "server-side-hash"));
 
         orgUserDetails.UseSso = true;
         sutProvider.GetDependency<IOrganizationUserRepository>()
