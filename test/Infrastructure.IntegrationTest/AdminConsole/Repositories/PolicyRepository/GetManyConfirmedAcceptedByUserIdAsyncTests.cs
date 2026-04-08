@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.PolicyRepository;
 
-public class GetManyConfirmedAndAcceptedByUserAsyncTests
+public class GetManyConfirmedAcceptedByUserIdAsyncTests
 {
     [Theory, DatabaseData]
     public async Task ReturnsPolicies_WhenUserIsConfirmed(

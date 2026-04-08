@@ -32,7 +32,7 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// WARNING: do not use this to enforce policies against a user! It returns raw data and does not take into account
     /// various business rules. Use <see cref="IPolicyRequirementQuery"/> instead.
     /// </remarks>
-    Task<ICollection<Policy>> GetManyConfirmedAndAcceptedByUserAsync(Guid userId);
+    Task<ICollection<Policy>> GetManyConfirmedAcceptedByUserIdAsync(Guid userId);
 
     /// <summary>
     /// Retrieves <see cref="OrganizationPolicyDetails"/> of the specified <paramref name="policyType"/>

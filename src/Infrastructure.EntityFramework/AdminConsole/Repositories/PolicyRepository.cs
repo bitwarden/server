@@ -56,7 +56,7 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         }
     }
 
-    public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyConfirmedAndAcceptedByUserAsync(Guid userId)
+    public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyConfirmedAcceptedByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

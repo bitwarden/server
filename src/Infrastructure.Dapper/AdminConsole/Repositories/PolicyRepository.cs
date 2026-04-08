@@ -61,7 +61,7 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         }
     }
 
-    public async Task<ICollection<Policy>> GetManyConfirmedAndAcceptedByUserAsync(Guid userId)
+    public async Task<ICollection<Policy>> GetManyConfirmedAcceptedByUserIdAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
