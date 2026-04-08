@@ -41,6 +41,7 @@ public class UpcomingInvoiceHandlerTests
     private readonly IPricingClient _pricingClient;
     private readonly IProviderRepository _providerRepository;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IUserRepository _userRepository;
@@ -62,8 +63,10 @@ public class UpcomingInvoiceHandlerTests
         _mailService = Substitute.For<IMailService>();
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _pricingClient = Substitute.For<IPricingClient>();
+        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan>());
         _providerRepository = Substitute.For<IProviderRepository>();
         _stripeAdapter = Substitute.For<IStripeAdapter>();
+        _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
         _stripeEventService = Substitute.For<IStripeEventService>();
         _stripeEventUtilityService = Substitute.For<IStripeEventUtilityService>();
         _userRepository = Substitute.For<IUserRepository>();
@@ -79,6 +82,7 @@ public class UpcomingInvoiceHandlerTests
             _pricingClient,
             _providerRepository,
             _stripeAdapter,
+            _priceIncreaseScheduler,
             _stripeEventService,
             _stripeEventUtilityService,
             _userRepository,
@@ -172,12 +176,6 @@ public class UpcomingInvoiceHandlerTests
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
-        // If milestone 2 is disabled, the default email is sent
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(false);
-
-
         // Act
         await _sut.HandleAsync(parsedEvent);
 
@@ -265,11 +263,6 @@ public class UpcomingInvoiceHandlerTests
                 subscription.Id,
                 Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
-
-        // If milestone 2 is true, the updated invoice email is sent
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(true);
 
         var coupon = new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount };
 
@@ -1087,10 +1080,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
 
         _userRepository.GetByIdAsync(_userId).Returns(user);
-
-        _featureService
-            .IsEnabled(FeatureFlagKeys.PM23341_Milestone_2)
-            .Returns(true);
 
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
 
@@ -2682,7 +2671,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns((Coupon)null);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
@@ -2774,7 +2762,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
@@ -2866,7 +2853,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
             .Returns(subscription);
@@ -2951,7 +2937,6 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
             .ThrowsAsync(new StripeException("Stripe API error"));
         _stripeAdapter.UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
@@ -2985,117 +2970,7 @@ public class UpcomingInvoiceHandlerTests
     #region Deferred Price Migration (PM-32645)
 
     [Fact]
-    public async Task HandleAsync_Premium_DeferEnabled_CreatesSchedule()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-        var priceSubscriptionId = "si_premium_123";
-        var newPriceId = "premium-annually-2025";
-
-        var invoice = new Invoice { CustomerId = customerId };
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new() { Id = priceSubscriptionId, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
-        var plan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new Purchasable { Price = 10M, StripePriceId = newPriceId },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
-        };
-        var oldPlan = new PremiumPlan
-        {
-            Name = "Premium (Old)",
-            Available = false,
-            LegacyYear = 2023,
-            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
-        };
-        var customer = new Customer
-        {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
-        };
-        var coupon = new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount };
-
-        var phase1StartDate = DateTime.UtcNow;
-        var phase1EndDate = DateTime.UtcNow.AddDays(15);
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_123",
-            Phases = new List<SubscriptionSchedulePhase>
-            {
-                new()
-                {
-                    StartDate = phase1StartDate,
-                    EndDate = phase1EndDate,
-                    Items = new List<SubscriptionSchedulePhaseItem>
-                    {
-                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                    },
-                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
-                }
-            }
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
-        _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
-        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
-            .Returns(schedule);
-        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleAsync(
-            Arg.Is<SubscriptionScheduleCreateOptions>(o =>
-                o.FromSubscription == subscriptionId));
-
-        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
-            Arg.Is("sub_sched_123"),
-            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
-                o.EndBehavior == SubscriptionScheduleEndBehavior.Release &&
-                o.Phases.Count == 2 &&
-                o.Phases[0].StartDate == phase1StartDate &&
-                o.Phases[0].EndDate == phase1EndDate &&
-                o.Phases[0].ProrationBehavior == ProrationBehavior.None &&
-                o.Phases[1].StartDate == phase1EndDate &&
-                o.Phases[1].Items[0].Price == newPriceId &&
-                o.Phases[1].Discounts[0].Coupon == CouponIDs.Milestone2SubscriptionDiscount &&
-                o.Phases[1].ProrationBehavior == ProrationBehavior.None));
-
-        await _mailer.Received(1).SendEmail(Arg.Any<PremiumRenewalMail>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_Premium_DeferEnabled_ActiveScheduleExists_Skips()
+    public async Task HandleAsync_Premium_DeferEnabled_CallsScheduler()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -3111,7 +2986,7 @@ public class UpcomingInvoiceHandlerTests
             {
                 Data =
                 [
-                    new() { Id = "si_1", Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
+                    new() { Id = "si_premium_123", Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
                 ]
             },
             AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
@@ -3146,31 +3021,21 @@ public class UpcomingInvoiceHandlerTests
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
         _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data = new List<SubscriptionSchedule>
-                {
-                    new() { SubscriptionId = subscriptionId, Status = SubscriptionScheduleStatus.Active }
-                }
-            });
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount)
+            .Returns(new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(
-            Arg.Any<SubscriptionScheduleCreateOptions>());
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await _priceIncreaseScheduler.Received(1).Schedule(subscription);
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_Families2019_DeferEnabled_CreatesScheduleWithDiscount()
+    public async Task HandleAsync_Families_DeferEnabled_CallsScheduler()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
@@ -3178,7 +3043,6 @@ public class UpcomingInvoiceHandlerTests
         var subscriptionId = "sub_123";
 
         var families2019Plan = new Families2019Plan();
-        var familiesPlan = new FamiliesPlan();
 
         var subscription = new Subscription
         {
@@ -3212,624 +3076,239 @@ public class UpcomingInvoiceHandlerTests
             BillingEmail = "org@example.com",
             PlanType = PlanType.FamiliesAnnually2019
         };
-        var coupon = new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount };
-
-        var phase1StartDate = DateTime.UtcNow;
-        var phase1EndDate = DateTime.UtcNow.AddDays(15);
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_456",
-            Phases = new List<SubscriptionSchedulePhase>
-            {
-                new()
-                {
-                    StartDate = phase1StartDate,
-                    EndDate = phase1EndDate,
-                    Items = new List<SubscriptionSchedulePhaseItem>
-                    {
-                        new() { PriceId = families2019Plan.PasswordManager.StripePlanId, Price = new Price { Id = families2019Plan.PasswordManager.StripePlanId }, Quantity = 1 }
-                    },
-                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
-                }
-            }
-        };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
         _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount).Returns(coupon);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
-        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
-            .Returns(schedule);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert — schedule created with Phase 2 having families price + Milestone3 discount
-        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
-            Arg.Is("sub_sched_456"),
-            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
-                o.Phases.Count == 2 &&
-                o.Phases[1].Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
-                o.Phases[1].Discounts != null &&
-                o.Phases[1].Discounts[0].Coupon == CouponIDs.Milestone3SubscriptionDiscount &&
-                o.Phases[1].ProrationBehavior == ProrationBehavior.None));
-
-        // Assert — org DB NOT updated (deferred to renewal)
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
-
-        // Assert — no direct subscription update
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-
-        // Assert — renewal email still sent
-        await _mailer.Received(1).SendEmail(Arg.Any<Families2019RenewalMail>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_Families2025_DeferEnabled_CreatesScheduleWithoutDiscount()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-
-        var families2025Plan = new Families2025Plan();
-        var familiesPlan = new FamiliesPlan();
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new()
-                    {
-                        Id = "si_pm_123",
-                        Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId },
-                        Quantity = 1
-                    }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-        var invoice = new Invoice { CustomerId = customerId };
-        var customer = new Customer
-        {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "US" }
-        };
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.FamiliesAnnually2025
-        };
-
-        var phase1StartDate = DateTime.UtcNow;
-        var phase1EndDate = DateTime.UtcNow.AddDays(15);
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_789",
-            Phases = new List<SubscriptionSchedulePhase>
-            {
-                new()
-                {
-                    StartDate = phase1StartDate,
-                    EndDate = phase1EndDate,
-                    Items = new List<SubscriptionSchedulePhaseItem>
-                    {
-                        new() { PriceId = families2025Plan.PasswordManager.StripePlanId, Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }, Quantity = 1 }
-                    },
-                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
-                }
-            }
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
-        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
-            .Returns(schedule);
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert — schedule created with Phase 2 having families price, NO discount
-        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
-            Arg.Is("sub_sched_789"),
-            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
-                o.Phases.Count == 2 &&
-                o.Phases[1].Items[0].Price == familiesPlan.PasswordManager.StripePlanId &&
-                o.Phases[1].Discounts == null &&
-                o.Phases[1].ProrationBehavior == ProrationBehavior.None));
-
-        // Assert — org DB NOT updated
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
-
-        // Assert — no direct subscription update
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-
-        // Assert — renewal email still sent
-        await _mailer.Received(1).SendEmail(Arg.Any<Families2020RenewalMail>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_Families_DeferEnabled_ActiveScheduleExists_Skips()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-
-        var families2025Plan = new Families2025Plan();
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new()
-                    {
-                        Id = "si_pm_123",
-                        Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId },
-                        Quantity = 1
-                    }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-        var invoice = new Invoice { CustomerId = customerId };
-        var customer = new Customer
-        {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
-            Address = new Address { Country = "US" }
-        };
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.FamiliesAnnually2025
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
-        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(new FamiliesPlan());
         _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
         _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule>
-            {
-                Data = new List<SubscriptionSchedule>
-                {
-                    new() { SubscriptionId = subscriptionId, Status = SubscriptionScheduleStatus.Active }
-                }
-            });
+        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount)
+            .Returns(new Coupon { PercentOff = 25, Id = CouponIDs.Milestone3SubscriptionDiscount });
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
         // Assert
-        await _stripeAdapter.DidNotReceive().CreateSubscriptionScheduleAsync(
-            Arg.Any<SubscriptionScheduleCreateOptions>());
-        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
-            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await _priceIncreaseScheduler.Received(1).Schedule(subscription);
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
+    #endregion
+
+    #region Schedule-Aware Tax Handling
+
     [Fact]
-    public async Task HandleAsync_Premium_DeferEnabled_ScheduleUpdateFails_ReleasesScheduleAndLogsError()
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_FlagOn_SchedulePresent_UpdatesScheduleDefaultSettings()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-
-        var invoice = new Invoice
-        {
-            CustomerId = customerId,
-            Lines = new StripeList<InvoiceLineItem> { Data = [new() { Description = "Test" }] }
-        };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
         var subscription = new Subscription
         {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new() { Id = "si_1", Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
-        var plan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
-        };
-        var oldPlan = new PremiumPlan
-        {
-            Name = "Premium (Old)",
-            Available = false,
-            LegacyYear = 2023,
-            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "organizationId", _organizationId.ToString() } }
         };
         var customer = new Customer
         {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
-        };
-
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_123",
-            Phases = new List<SubscriptionSchedulePhase>
-            {
-                new()
-                {
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddDays(15),
-                    Items = new List<SubscriptionSchedulePhaseItem>
-                    {
-                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                    },
-                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
-                }
-            }
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
-        _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
-        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
-            .Returns(schedule);
-        _stripeAdapter.UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>())
-            .ThrowsAsync(new StripeException("Stripe API error"));
-
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert — orphaned schedule is released
-        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sub_sched_123", null);
-
-        // Assert — no renewal email sent (error path returns false, falls through to traditional email)
-        await _mailer.DidNotReceive().SendEmail(Arg.Any<PremiumRenewalMail>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_Families_DeferEnabled_ScheduleUpdateFails_ReleasesScheduleAndLogsError()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-
-        var families2025Plan = new Families2025Plan();
-        var familiesPlan = new FamiliesPlan();
-
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new()
-                    {
-                        Id = "si_pm_123",
-                        Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId },
-                        Quantity = 1
-                    }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-        var invoice = new Invoice
-        {
-            CustomerId = customerId,
-            Lines = new StripeList<InvoiceLineItem> { Data = [new() { Description = "Test" }] }
-        };
-        var customer = new Customer
-        {
-            Id = customerId,
+            Id = "cus_123",
             Subscriptions = new StripeList<Subscription> { Data = [subscription] },
             Address = new Address { Country = "US" }
         };
-        var organization = new Organization
-        {
-            Id = _organizationId,
-            BillingEmail = "org@example.com",
-            PlanType = PlanType.FamiliesAnnually2025
-        };
-
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_456",
-            Phases = new List<SubscriptionSchedulePhase>
-            {
-                new()
-                {
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddDays(15),
-                    Items = new List<SubscriptionSchedulePhaseItem>
-                    {
-                        new() { PriceId = families2025Plan.PasswordManager.StripePlanId, Price = new Price { Id = families2025Plan.PasswordManager.StripePlanId }, Quantity = 1 }
-                    },
-                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
-                }
-            }
-        };
+        var organization = new Organization { Id = _organizationId, PlanType = PlanType.TeamsAnnually, BillingEmail = "test@test.com" };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
         _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
-        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
-        _featureService.IsEnabled(FeatureFlagKeys.PM26462_Milestone_3).Returns(true);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: true));
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeEventUtilityService.IsSponsoredSubscription(subscription).Returns(false);
-        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
-            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
-        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
-            .Returns(schedule);
-        _stripeAdapter.UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>())
-            .ThrowsAsync(new StripeException("Stripe API error"));
 
-        // Act
-        await _sut.HandleAsync(parsedEvent);
-
-        // Assert — orphaned schedule is released
-        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync("sub_sched_456", null);
-
-        // Assert — org DB not updated
-        await _organizationRepository.DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
-    }
-
-    [Fact]
-    public async Task HandleAsync_Premium_DeferEnabled_ScheduleForDifferentSubscription_StillCreatesSchedule()
-    {
-        // Arrange
-        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-
-        var invoice = new Invoice { CustomerId = customerId };
-        var subscription = new Subscription
-        {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new() { Id = "si_1", Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
-        var plan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
-        };
-        var oldPlan = new PremiumPlan
-        {
-            Name = "Premium (Old)",
-            Available = false,
-            LegacyYear = 2023,
-            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
-        };
-        var customer = new Customer
-        {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
-        };
-        var coupon = new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount };
-
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_new",
-            Phases = new List<SubscriptionSchedulePhase>
-            {
-                new()
-                {
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddDays(15),
-                    Items = new List<SubscriptionSchedulePhaseItem>
-                    {
-                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                    },
-                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
-                }
-            }
-        };
-
-        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
-        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
-            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
-        _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
-        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
-
-        // Return an active schedule for a DIFFERENT subscription on the same customer
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
             {
-                Data = new List<SubscriptionSchedule>
-                {
-                    new() { SubscriptionId = "sub_OTHER", Status = SubscriptionScheduleStatus.Active }
-                }
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = "sub_123",
+                        Status = SubscriptionScheduleStatus.Active
+                    }
+                ]
             });
-        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
-            .Returns(schedule);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — schedule creation proceeds despite active schedule for different subscription
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleAsync(
-            Arg.Any<SubscriptionScheduleCreateOptions>());
+        // Assert — schedule's default_settings updated
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true));
+
+        // Assert — subscription NOT updated directly for tax
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Is("sub_123"), Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax != null));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenOrganizationTaxNotEnabled_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "organizationId", _organizationId.ToString() } }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Address = new Address { Country = "US" }
+        };
+        var organization = new Organization { Id = _organizationId, PlanType = PlanType.TeamsAnnually, BillingEmail = "test@test.com" };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(_organizationId, null, null));
+        _organizationRepository.GetByIdAsync(_organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(new TeamsPlan(isAnnual: true));
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — subscription updated directly
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            Arg.Is("sub_123"),
+            Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax.Enabled == true));
+
+        // Assert — schedule NOT updated
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
     }
 
     [Fact]
-    public async Task HandleAsync_Premium_DeferEnabled_CompletedScheduleExists_StillCreatesSchedule()
+    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_FlagOn_SchedulePresent_UpdatesScheduleDefaultSettings()
     {
         // Arrange
         var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
-        var customerId = "cus_123";
-        var subscriptionId = "sub_123";
-
-        var invoice = new Invoice { CustomerId = customerId };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
         var subscription = new Subscription
         {
-            Id = subscriptionId,
-            CustomerId = customerId,
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new() { Id = "si_1", Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                ]
-            },
-            AutomaticTax = new SubscriptionAutomaticTax { Enabled = true },
-            Metadata = new Dictionary<string, string>()
-        };
-        var user = new User { Id = _userId, Email = "user@example.com", Premium = true };
-        var plan = new PremiumPlan
-        {
-            Name = "Premium",
-            Available = true,
-            LegacyYear = null,
-            Seat = new Purchasable { Price = 10M, StripePriceId = "premium-annually-2025" },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
-        };
-        var oldPlan = new PremiumPlan
-        {
-            Name = "Premium (Old)",
-            Available = false,
-            LegacyYear = 2023,
-            Seat = new Purchasable { Price = 10M, StripePriceId = Prices.PremiumAnnually },
-            Storage = new Purchasable { Price = 4M, StripePriceId = Prices.StoragePlanPersonal }
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "userId", _userId.ToString() } }
         };
         var customer = new Customer
         {
-            Id = customerId,
-            Subscriptions = new StripeList<Subscription> { Data = [subscription] }
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported }
         };
-        var coupon = new Coupon { PercentOff = 20, Id = CouponIDs.Milestone2SubscriptionDiscount };
-
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_new",
-            Phases = new List<SubscriptionSchedulePhase>
-            {
-                new()
-                {
-                    StartDate = DateTime.UtcNow,
-                    EndDate = DateTime.UtcNow.AddDays(15),
-                    Items = new List<SubscriptionSchedulePhaseItem>
-                    {
-                        new() { PriceId = Prices.PremiumAnnually, Price = new Price { Id = Prices.PremiumAnnually }, Quantity = 1 }
-                    },
-                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
-                }
-            }
-        };
+        var user = new User { Id = _userId, Email = "test@test.com", Premium = true };
 
         _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
-        _stripeAdapter.GetCustomerAsync(customerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
         _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
             .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
         _userRepository.GetByIdAsync(_userId).Returns(user);
-        _pricingClient.ListPremiumPlans().Returns(new List<PremiumPlan> { oldPlan, plan });
-        _featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2).Returns(true);
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
-        _stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount).Returns(coupon);
 
-        // Return a COMPLETED schedule for the same subscription (from a prior billing cycle)
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
             {
-                Data = new List<SubscriptionSchedule>
-                {
-                    new() { SubscriptionId = subscriptionId, Status = SubscriptionScheduleStatus.Completed }
-                }
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_456",
+                        SubscriptionId = "sub_123",
+                        Status = SubscriptionScheduleStatus.Active
+                    }
+                ]
             });
-        _stripeAdapter.CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
-            .Returns(schedule);
 
         // Act
         await _sut.HandleAsync(parsedEvent);
 
-        // Assert — schedule creation proceeds because existing schedule is not "active"
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleAsync(
-            Arg.Any<SubscriptionScheduleCreateOptions>());
+        // Assert — schedule's default_settings updated
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_456"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true));
+
+        // Assert — subscription NOT updated directly for tax
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Is("sub_123"), Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax != null));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenPremiumUserTaxNotEnabled_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    {
+        // Arrange
+        var parsedEvent = new Event { Id = "evt_123", Type = "invoice.upcoming" };
+        var invoice = new Invoice { CustomerId = "cus_123", Lines = new StripeList<InvoiceLineItem> { Data = [] } };
+        var subscription = new Subscription
+        {
+            Id = "sub_123",
+            CustomerId = "cus_123",
+            AutomaticTax = new SubscriptionAutomaticTax { Enabled = false },
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string> { { "userId", _userId.ToString() } }
+        };
+        var customer = new Customer
+        {
+            Id = "cus_123",
+            Subscriptions = new StripeList<Subscription> { Data = [subscription] },
+            Tax = new CustomerTax { AutomaticTax = AutomaticTaxStatus.Supported }
+        };
+        var user = new User { Id = _userId, Email = "test@test.com", Premium = true };
+
+        _stripeEventService.GetInvoice(parsedEvent).Returns(invoice);
+        _stripeAdapter.GetCustomerAsync(invoice.CustomerId, Arg.Any<CustomerGetOptions>()).Returns(customer);
+        _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata)
+            .Returns(new Tuple<Guid?, Guid?, Guid?>(null, _userId, null));
+        _userRepository.GetByIdAsync(_userId).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert — subscription updated directly
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            Arg.Is("sub_123"),
+            Arg.Is<SubscriptionUpdateOptions>(o => o.AutomaticTax.Enabled == true));
+
+        // Assert — schedule NOT updated
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
     }
 
     #endregion
 }
+

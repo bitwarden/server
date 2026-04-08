@@ -34,6 +34,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderService _providerService;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IFeatureService _featureService;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
 
@@ -52,6 +53,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IProviderRepository providerRepository,
         IProviderService providerService,
         IPushNotificationAdapter pushNotificationAdapter,
+        IPriceIncreaseScheduler priceIncreaseScheduler,
         IFeatureService featureService,
         ILogger<SubscriptionUpdatedHandler> logger)
     {
@@ -71,6 +73,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _providerRepository = providerRepository;
         _providerService = providerService;
         _pushNotificationAdapter = pushNotificationAdapter;
+        _priceIncreaseScheduler = priceIncreaseScheduler;
         _featureService = featureService;
         _logger = logger;
     }
@@ -218,6 +221,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task SetSubscriptionToCancelAsync(Subscription subscription)
     {
+        await _priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
+
         if (subscription.TestClock != null)
         {
             await WaitForTestClockToAdvanceAsync(subscription.TestClock);
@@ -237,11 +242,15 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     }
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
-        => await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
+    {
+        await _priceIncreaseScheduler.Schedule(subscription);
+
+        await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
             ProrationBehavior = ProrationBehavior.None
         });
+    }
 
     /// <summary>
     /// Removes the Password Manager coupon if the organization is removing the Secrets Manager trial.
