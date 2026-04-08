@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Identity.Billing.Controller;
