@@ -233,8 +233,9 @@ public class AccountsController : Controller
         if (kdfInformation == null)
         {
             kdfInformation = GetDefaultKdf(model.Email);
+            return new PasswordPreloginResponseModel(kdfInformation, model.Email);
         }
-        return new PasswordPreloginResponseModel(kdfInformation, model.Email);
+        return new PasswordPreloginResponseModel(kdfInformation, kdfInformation.MasterPasswordSalt);
     }
 
     [HttpGet("webauthn/assertion-options")]
