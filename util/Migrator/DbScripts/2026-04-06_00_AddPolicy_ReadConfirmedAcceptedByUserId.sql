@@ -1,10 +1,4 @@
-IF OBJECT_ID('[dbo].[Policy_ReadByUserIdWithConfirmedAndAccepted]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Policy_ReadByUserIdWithConfirmedAndAccepted]
-END
-GO
-
-CREATE PROCEDURE [dbo].[Policy_ReadByUserIdWithConfirmedAndAccepted]
+CREATE OR ALTER PROCEDURE [dbo].[Policy_ReadConfirmedAcceptedByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN

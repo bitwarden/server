@@ -66,7 +66,7 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<Policy>(
-                $"[{Schema}].[{Table}_ReadByUserIdWithConfirmedAndAccepted]",
+                $"[{Schema}].[{Table}_ReadConfirmedAcceptedByUserId]",
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 

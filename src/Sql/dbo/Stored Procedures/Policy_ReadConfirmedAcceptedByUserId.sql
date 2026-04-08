@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Policy_ReadByUserIdWithConfirmedAndAccepted]
+CREATE PROCEDURE [dbo].[Policy_ReadConfirmedAcceptedByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
