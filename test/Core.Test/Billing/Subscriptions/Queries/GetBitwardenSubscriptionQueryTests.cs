@@ -831,6 +831,32 @@ public class GetBitwardenSubscriptionQueryTests
                 opts.Discounts == null));
     }
 
+    [Fact]
+    public async Task Run_WithSchedulePhase2AlreadyStarted_ReturnsNoDiscount()
+    {
+        var user = CreateUser();
+        var subscription = CreateSubscription(SubscriptionStatus.Active);
+        subscription.ScheduleId = "sub_sched_test";
+        var premiumPlans = CreatePremiumPlans();
+        var schedule = CreateSubscriptionSchedule(
+            percentOff: 30,
+            phase2StartDate: DateTime.UtcNow.AddDays(-1));
+
+        _stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        _pricingClient.ListPremiumPlans().Returns(premiumPlans);
+        _stripeAdapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>())
+            .Returns(CreateInvoicePreview());
+        _stripeAdapter.GetSubscriptionScheduleAsync("sub_sched_test", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await _query.Run(user);
+
+        Assert.NotNull(result);
+        Assert.Null(result.Cart.Discount);
+        Assert.Null(result.Cart.PasswordManager.Seats.Discount);
+    }
+
     #region Helper Methods
 
     private static User CreateUser()
@@ -984,11 +1010,12 @@ public class GetBitwardenSubscriptionQueryTests
         long? amountOff = null,
         string status = StripeConstants.SubscriptionScheduleStatus.Active,
         bool validCoupon = true,
-        string? couponId = null)
+        string? couponId = null,
+        DateTime? phase2StartDate = null)
     {
         var phases = new List<SubscriptionSchedulePhase>
         {
-            new() { Discounts = [] }
+            new() { StartDate = DateTime.UtcNow.AddMonths(-1), Discounts = [] }
         };
 
         if (includePhase2)
@@ -1004,7 +1031,11 @@ public class GetBitwardenSubscriptionQueryTests
                 }
                 : new List<SubscriptionSchedulePhaseDiscount>();
 
-            phases.Add(new SubscriptionSchedulePhase { Discounts = discounts });
+            phases.Add(new SubscriptionSchedulePhase
+            {
+                StartDate = phase2StartDate ?? DateTime.UtcNow.AddMonths(1),
+                Discounts = discounts
+            });
         }
 
         return new SubscriptionSchedule
