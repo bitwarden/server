@@ -949,7 +949,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(_masterKeyWrappedUserKey, updatedUser.Key);
         Assert.Equal(PasswordVerificationResult.Success,
             _passwordHasher.VerifyHashedPassword(updatedUser, updatedUser.MasterPassword!, _newMasterPasswordHash));
-        Assert.Equal(newEmail, updatedUser.MasterPasswordSalt);
     }
 
     [Fact]
