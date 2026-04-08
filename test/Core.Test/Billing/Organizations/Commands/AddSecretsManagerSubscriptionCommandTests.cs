@@ -150,6 +150,23 @@ public class AddSecretsManagerSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task RunAsync_UpdatesOrganization_WhenTeamsStarterPlan_AndSeatsWithinLimit()
+    {
+        // Covers the false branch of the TeamsStarter seats-vs-PM check (additionalSmSeats <= BaseSeats).
+        var organization = CreateOrganization(PlanType.TeamsStarter);
+        var plan = MockPlans.Get(PlanType.TeamsStarter);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        SetupSubscriptionCommandSuccess();
+
+        await _command.RunAsync(organization, additionalSmSeats: 5, additionalServiceAccounts: 5);
+
+        Assert.Equal(plan.SecretsManager.BaseSeats + 5, organization.SmSeats);
+        Assert.Equal(plan.SecretsManager.BaseServiceAccount + 5, organization.SmServiceAccounts);
+        Assert.True(organization.UseSecretsManager);
+        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    [Fact]
     public async Task RunAsync_ThrowsBadRequest_WhenAdditionalServiceAccountsIsNegative()
     {
         var organization = CreateOrganization(PlanType.EnterpriseAnnually);
