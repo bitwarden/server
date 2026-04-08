@@ -165,6 +165,7 @@ public static class FeatureFlagKeys
     public const string AdminResetTwoFactor = "pm-15489-reset-two-factor-account-recovery";
     public const string PublicMembersInviteRefactor = "pm-33398-refactor-members-invite-org-users-command";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
+    public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -243,6 +244,7 @@ public static class FeatureFlagKeys
     public const string CxpExportMobile = "cxp-export-mobile";
     public const string DeviceAuthKey = "pm-27581-device-auth-key";
     public const string PremiumUpgradePath = "pm-31697-premium-upgrade-path";
+    public const string MobileCardScanner = "pm-34171-card-scanner";
 
     /* Platform Team */
     public const string WebPush = "web-push";
