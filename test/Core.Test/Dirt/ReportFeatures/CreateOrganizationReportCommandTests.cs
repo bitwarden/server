@@ -105,6 +105,75 @@ public class CreateOrganizationReportCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task CreateAsync_MissingSummaryData_ThrowsBadRequestException(
+        SutProvider<CreateOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Build<AddOrganizationReportRequest>()
+            .With(r => r.ContentEncryptionKey, "test-key")
+            .With(r => r.SummaryData, string.Empty)
+            .Create();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns(fixture.Create<Organization>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.CreateAsync(request));
+        Assert.Equal("Summary Data is required", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateAsync_MissingApplicationData_ThrowsBadRequestException(
+        SutProvider<CreateOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Build<AddOrganizationReportRequest>()
+            .With(r => r.ContentEncryptionKey, "test-key")
+            .With(r => r.SummaryData, "summary")
+            .With(r => r.ApplicationData, string.Empty)
+            .Create();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns(fixture.Create<Organization>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.CreateAsync(request));
+        Assert.Equal("Application Data is required", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateAsync_MissingReportMetrics_ThrowsBadRequestException(
+        SutProvider<CreateOrganizationReportCommand> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var request = fixture.Build<AddOrganizationReportRequest>()
+            .With(r => r.ContentEncryptionKey, "test-key")
+            .With(r => r.SummaryData, "summary")
+            .With(r => r.ApplicationData, "app-data")
+            .With(r => r.ReportMetrics, (OrganizationReportMetrics)null)
+            .Create();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(request.OrganizationId)
+            .Returns(fixture.Create<Organization>());
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.CreateAsync(request));
+        Assert.Equal("Report Metrics is required", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task CreateAsync_WithMetrics_StoresMetricsCorrectly(
         SutProvider<CreateOrganizationReportCommand> sutProvider)
     {

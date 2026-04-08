@@ -4,6 +4,7 @@ using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
@@ -97,10 +98,7 @@ public class OrganizationReportsController : Controller
         Guid organizationId,
         [FromBody] AddOrganizationReportRequestModel request)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("Organization ID is required.");
-        }
+        EnsureValidIds(organizationId);
 
         await AuthorizeAsync(organizationId);
 
@@ -143,10 +141,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{organizationId}/latest")]
     public async Task<IActionResult> GetLatestOrganizationReportAsync(Guid organizationId)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
+        EnsureValidIds(organizationId);
 
         await AuthorizeAsync(organizationId);
 
@@ -182,24 +177,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{organizationId}/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
-
-        await AuthorizeAsync(organizationId);
-
-        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
-
-        if (report.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Invalid report ID");
-        }
+        var report = await GetAuthorizedReportAsync(organizationId, reportId);
 
         var response = new OrganizationReportResponseModel(report);
 
@@ -232,15 +210,7 @@ public class OrganizationReportsController : Controller
         Guid reportId,
         [FromBody] UpdateOrganizationReportV2RequestModel request)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
+        EnsureValidIds(organizationId, reportId);
 
         await AuthorizeAsync(organizationId);
 
@@ -283,10 +253,7 @@ public class OrganizationReportsController : Controller
     public async Task<IActionResult> GetOrganizationReportSummaryDataByDateRangeAsync(
         Guid organizationId, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("Organization ID is required.");
-        }
+        EnsureValidIds(organizationId);
 
         await AuthorizeAsync(organizationId);
 
@@ -305,28 +272,7 @@ public class OrganizationReportsController : Controller
     [HttpDelete("{organizationId}/{reportId}")]
     public async Task DeleteOrganizationReportAsync(Guid organizationId, Guid reportId)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
-
-        await AuthorizeAsync(organizationId);
-
-        var report = await _organizationReportRepo.GetByIdAsync(reportId);
-        if (report == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (report.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Invalid report ID");
-        }
+        var report = await GetAuthorizedReportAsync(organizationId, reportId);
 
         var fileData = report.GetReportFile();
 
@@ -364,32 +310,11 @@ public class OrganizationReportsController : Controller
     public async Task<OrganizationReportFileResponseModel> RenewFileUploadUrlAsync(
         Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
+        var report = await GetAuthorizedReportAsync(organizationId, reportId);
 
         if (string.IsNullOrEmpty(reportFileId))
         {
             throw new BadRequestException("ReportFileId is required.");
-        }
-
-        await AuthorizeAsync(organizationId);
-
-        var report = await _organizationReportRepo.GetByIdAsync(reportId);
-        if (report == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (report.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Invalid report ID");
         }
 
         var fileData = report.GetReportFile();
@@ -467,13 +392,13 @@ public class OrganizationReportsController : Controller
     /// <param name="reportId">The unique identifier of the report to attach the file to.</param>
     /// <param name="reportFileId">The identifier of the report file entry to upload against.</param>
     [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
-    [HttpPost("{organizationId}/{reportId}/file/report-data")]
+    [HttpPost("{organizationId}/{reportId}/file")]
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
     public async Task UploadReportFileAsync(Guid organizationId, Guid reportId, [FromQuery] string reportFileId)
     {
-        await AuthorizeAsync(organizationId);
+        var report = await GetAuthorizedReportAsync(organizationId, reportId);
 
         if (!Request?.ContentType?.Contains("multipart/") ?? true)
         {
@@ -483,17 +408,6 @@ public class OrganizationReportsController : Controller
         if (string.IsNullOrEmpty(reportFileId))
         {
             throw new BadRequestException("ReportFileId query parameter is required");
-        }
-
-        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
-        if (report == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (report.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Invalid report ID");
         }
 
         var fileData = report.GetReportFile();
@@ -545,28 +459,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{organizationId}/{reportId}/file/download")]
     public async Task<IActionResult> DownloadReportFileAsync(Guid organizationId, Guid reportId)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
-
-        await AuthorizeAsync(organizationId);
-
-        var report = await _organizationReportRepo.GetByIdAsync(reportId);
-        if (report == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (report.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("Invalid report ID");
-        }
+        var report = await GetAuthorizedReportAsync(organizationId, reportId);
 
         var fileData = report.GetReportFile();
         if (fileData == null)
@@ -597,21 +490,35 @@ public class OrganizationReportsController : Controller
         }
     }
 
-
-    // Is being used by client on V2
-
-    [HttpGet("{organizationId}/data/summary/{reportId}")]
-    public async Task<IActionResult> GetOrganizationReportSummaryAsync(Guid organizationId, Guid reportId)
+    private static void EnsureValidIds(Guid organizationId, Guid? reportId = null)
     {
         if (organizationId == Guid.Empty)
         {
             throw new BadRequestException("OrganizationId is required.");
         }
 
-        if (reportId == Guid.Empty)
+        if (reportId.HasValue && reportId.Value == Guid.Empty)
         {
             throw new BadRequestException("ReportId is required.");
         }
+    }
+
+    private async Task<OrganizationReport> GetAuthorizedReportAsync(Guid organizationId, Guid reportId)
+    {
+        EnsureValidIds(organizationId, reportId);
+        await AuthorizeAsync(organizationId);
+        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+        if (report.OrganizationId != organizationId) throw new BadRequestException("Invalid report ID");
+        return report;
+    }
+
+
+    // Is being used by client on V2
+
+    [HttpGet("{organizationId}/data/summary/{reportId}")]
+    public async Task<IActionResult> GetOrganizationReportSummaryAsync(Guid organizationId, Guid reportId)
+    {
+        EnsureValidIds(organizationId, reportId);
 
         await AuthorizeAsync(organizationId);
 
@@ -632,15 +539,7 @@ public class OrganizationReportsController : Controller
         Guid reportId,
         [FromBody] UpdateOrganizationReportSummaryRequestModel request)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
+        EnsureValidIds(organizationId, reportId);
 
         await AuthorizeAsync(organizationId);
 
@@ -654,15 +553,7 @@ public class OrganizationReportsController : Controller
     [HttpGet("{organizationId}/data/application/{reportId}")]
     public async Task<IActionResult> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
+        EnsureValidIds(organizationId, reportId);
 
         await AuthorizeAsync(organizationId);
 
@@ -684,15 +575,7 @@ public class OrganizationReportsController : Controller
         Guid reportId,
         [FromBody] UpdateOrganizationReportApplicationDataRequestModel request)
     {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
+        EnsureValidIds(organizationId, reportId);
 
         await AuthorizeAsync(organizationId);
 

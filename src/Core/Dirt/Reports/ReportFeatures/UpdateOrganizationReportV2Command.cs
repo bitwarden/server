@@ -105,26 +105,6 @@ public class UpdateOrganizationReportV2Command : IUpdateOrganizationReportV2Comm
             return (false, "Invalid Organization");
         }
 
-        if (string.IsNullOrWhiteSpace(request.ContentEncryptionKey))
-        {
-            return (false, "Content Encryption Key is required");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.SummaryData))
-        {
-            return (false, "Summary Data is required");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.ApplicationData))
-        {
-            return (false, "Application Data is required");
-        }
-
-        if (request.ReportMetrics == null)
-        {
-            return (false, "Report Metrics is required");
-        }
-
         return (true, string.Empty);
     }
 }
