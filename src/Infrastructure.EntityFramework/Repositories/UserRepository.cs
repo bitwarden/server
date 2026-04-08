@@ -10,8 +10,6 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
@@ -75,7 +73,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                     Kdf = e.Kdf,
                     KdfIterations = e.KdfIterations,
                     KdfMemory = e.KdfMemory,
-                    KdfParallelism = e.KdfParallelism
+                    KdfParallelism = e.KdfParallelism,
+                    MasterPasswordSalt = e.MasterPasswordSalt
                 }).SingleOrDefaultAsync();
         }
     }
@@ -309,7 +308,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.SecurityVersion = accountKeysData.SecurityStateData.SecurityVersion;
         userEntity.SignedPublicKey = accountKeysData.PublicKeyEncryptionKeyPairData.SignedPublicKey;
 
-        // Replace existing keypair if it exists
+        // Replace existing key-pair if it exists
         var existingKeyPair = await dbContext.UserSignatureKeyPairs
             .FirstOrDefaultAsync(x => x.UserId == userId);
         if (existingKeyPair != null)
@@ -563,7 +562,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
-
+            userEntity.MasterPasswordSalt = masterPasswordUnlockData.Salt;
             await dbContext.SaveChangesAsync();
         };
     }

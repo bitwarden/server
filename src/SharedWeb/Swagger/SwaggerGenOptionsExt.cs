@@ -13,8 +13,10 @@ public static class SwaggerGenOptionsExt
     {
         config.SchemaFilter<EnumSchemaFilter>();
         config.SchemaFilter<EncryptedStringSchemaFilter>();
+        config.SchemaFilter<Base64UrlSchemaFilter>();
 
         config.OperationFilter<ActionNameOperationFilter>();
+        config.OperationFilter<BindNeverOperationFilter>();
 
         // Set the operation ID to the name of the controller followed by the name of the function.
         // Note that the "Controller" suffix for the controllers, and the "Async" suffix for the actions

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Bit.Seeder.Attributes;
 
 namespace Bit.Seeder.Models;
 
@@ -13,15 +14,14 @@ public class CipherViewDto
     [JsonPropertyName("folderId")]
     public Guid? FolderId { get; set; }
 
-    [JsonPropertyName("collectionIds")]
-    public List<Guid> CollectionIds { get; set; } = [];
-
     [JsonPropertyName("key")]
     public string? Key { get; set; }
 
+    [EncryptProperty]
     [JsonPropertyName("name")]
     public required string Name { get; set; }
 
+    [EncryptProperty]
     [JsonPropertyName("notes")]
     public string? Notes { get; set; }
 
@@ -52,29 +52,8 @@ public class CipherViewDto
     [JsonPropertyName("reprompt")]
     public int Reprompt { get; set; }
 
-    [JsonPropertyName("organizationUseTotp")]
-    public bool OrganizationUseTotp { get; set; }
-
-    [JsonPropertyName("edit")]
-    public bool Edit { get; set; } = true;
-
-    [JsonPropertyName("permissions")]
-    public object? Permissions { get; set; }
-
-    [JsonPropertyName("viewPassword")]
-    public bool ViewPassword { get; set; } = true;
-
-    [JsonPropertyName("localData")]
-    public object? LocalData { get; set; }
-
-    [JsonPropertyName("attachments")]
-    public object? Attachments { get; set; }
-
     [JsonPropertyName("fields")]
     public List<FieldViewDto>? Fields { get; set; }
-
-    [JsonPropertyName("passwordHistory")]
-    public object? PasswordHistory { get; set; }
 
     [JsonPropertyName("creationDate")]
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
@@ -84,16 +63,15 @@ public class CipherViewDto
 
     [JsonPropertyName("revisionDate")]
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
-
-    [JsonPropertyName("archivedDate")]
-    public DateTime? ArchivedDate { get; set; }
 }
 
 public class LoginViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("username")]
     public string? Username { get; set; }
 
+    [EncryptProperty]
     [JsonPropertyName("password")]
     public string? Password { get; set; }
 
@@ -103,33 +81,77 @@ public class LoginViewDto
     [JsonPropertyName("uris")]
     public List<LoginUriViewDto>? Uris { get; set; }
 
+    [EncryptProperty]
     [JsonPropertyName("totp")]
     public string? Totp { get; set; }
 
-    [JsonPropertyName("autofillOnPageLoad")]
-    public bool? AutofillOnPageLoad { get; set; }
-
     [JsonPropertyName("fido2Credentials")]
-    public object? Fido2Credentials { get; set; }
+    public List<Fido2CredentialViewDto>? Fido2Credentials { get; set; }
+}
+
+public class Fido2CredentialViewDto
+{
+    [JsonPropertyName("creationDate")]
+    public DateTime CreationDate { get; set; } = DateTime.UtcNow;
+    [JsonPropertyName("discoverable")]
+    [EncryptProperty]
+    public required string Discoverable { get; set; }
+    [JsonPropertyName("credentialId")]
+    [EncryptProperty]
+    public required string CredentialId { get; set; }
+    [JsonPropertyName("keyType")]
+    [EncryptProperty]
+    public string KeyType { get; } = "public-key";
+    [JsonPropertyName("keyAlgorithm")]
+    [EncryptProperty]
+    public string KeyAlgorithm { get; } = "ECDSA";
+    [JsonPropertyName("keyCurve")]
+    [EncryptProperty]
+    public string KeyCurve { get; } = "P-256";
+    [JsonPropertyName("keyValue")]
+    [EncryptProperty]
+    public required string KeyValue { get; set; }
+    [JsonPropertyName("counter")]
+    [EncryptProperty]
+    public required string Counter { get; set; }
+    [JsonPropertyName("rpId")]
+    [EncryptProperty]
+    public required string RpId { get; set; }
+    [JsonPropertyName("rpName")]
+    [EncryptProperty]
+    public required string RpName { get; set; }
+    [JsonPropertyName("userHandle")]
+    [EncryptProperty]
+    public required string UserHandle { get; set; }
+    [JsonPropertyName("userName")]
+    [EncryptProperty]
+    public required string UserName { get; set; }
+    [JsonPropertyName("userDisplayName")]
+    [EncryptProperty]
+    public required string UserDisplayName { get; set; }
 }
 
 public class LoginUriViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("uri")]
     public string? Uri { get; set; }
 
     [JsonPropertyName("match")]
     public int? Match { get; set; }
 
+    [EncryptProperty]
     [JsonPropertyName("uriChecksum")]
     public string? UriChecksum { get; set; }
 }
 
 public class FieldViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
+    [EncryptProperty]
     [JsonPropertyName("value")]
     public string? Value { get; set; }
 
@@ -157,91 +179,115 @@ public static class RepromptTypes
 }
 
 /// <summary>
-/// Card cipher data for SDK encryption. Uses record for composition via `with` expressions.
+/// Card cipher data. Uses record for composition via `with` expressions.
 /// </summary>
 public record CardViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("cardholderName")]
     public string? CardholderName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("brand")]
     public string? Brand { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("number")]
     public string? Number { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("expMonth")]
     public string? ExpMonth { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("expYear")]
     public string? ExpYear { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("code")]
     public string? Code { get; init; }
 }
 
 /// <summary>
-/// Identity cipher data for SDK encryption. Uses record for composition via `with` expressions.
+/// Identity cipher data. Uses record for composition via `with` expressions.
 /// </summary>
 public record IdentityViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("title")]
     public string? Title { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("firstName")]
     public string? FirstName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("middleName")]
     public string? MiddleName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("lastName")]
     public string? LastName { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("address1")]
     public string? Address1 { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("address2")]
     public string? Address2 { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("address3")]
     public string? Address3 { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("city")]
     public string? City { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("state")]
     public string? State { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("postalCode")]
     public string? PostalCode { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("country")]
     public string? Country { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("company")]
     public string? Company { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("email")]
     public string? Email { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("phone")]
     public string? Phone { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("ssn")]
     public string? SSN { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("username")]
     public string? Username { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("passportNumber")]
     public string? PassportNumber { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("licenseNumber")]
     public string? LicenseNumber { get; init; }
 }
 
 /// <summary>
-/// SecureNote cipher data for SDK encryption. Minimal structure - content is in cipher.Notes.
+/// SecureNote cipher data. Minimal structure - content is in cipher.Notes.
 /// </summary>
 public record SecureNoteViewDto
 {
@@ -250,17 +296,19 @@ public record SecureNoteViewDto
 }
 
 /// <summary>
-/// SSH Key cipher data for SDK encryption. Uses record for composition via `with` expressions.
+/// SSH Key cipher data. Uses record for composition via `with` expressions.
 /// </summary>
 public record SshKeyViewDto
 {
+    [EncryptProperty]
     [JsonPropertyName("privateKey")]
     public string? PrivateKey { get; init; }
 
+    [EncryptProperty]
     [JsonPropertyName("publicKey")]
     public string? PublicKey { get; init; }
 
-    /// <summary>SDK expects "fingerprint" field name.</summary>
+    [EncryptProperty]
     [JsonPropertyName("fingerprint")]
     public string? Fingerprint { get; init; }
 }

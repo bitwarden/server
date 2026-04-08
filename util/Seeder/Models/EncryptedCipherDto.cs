@@ -82,7 +82,7 @@ public class EncryptedLoginDto
     public DateTime? PasswordRevisionDate { get; set; }
 
     [JsonPropertyName("fido2Credentials")]
-    public object? Fido2Credentials { get; set; }
+    public List<EncryptedFido2CredentialDto>? Fido2Credentials { get; set; }
 }
 
 public class EncryptedLoginUriDto
@@ -95,6 +95,36 @@ public class EncryptedLoginUriDto
 
     [JsonPropertyName("uriChecksum")]
     public string? UriChecksum { get; set; }
+}
+
+public class EncryptedFido2CredentialDto
+{
+    [JsonPropertyName("creationDate")]
+    public DateTime CreationDate { get; set; }
+    [JsonPropertyName("discoverable")]
+    public required string Discoverable { get; set; }
+    [JsonPropertyName("credentialId")]
+    public required string CredentialId { get; set; }
+    [JsonPropertyName("keyType")]
+    public required string KeyType { get; set; }
+    [JsonPropertyName("keyAlgorithm")]
+    public required string KeyAlgorithm { get; set; }
+    [JsonPropertyName("keyCurve")]
+    public required string KeyCurve { get; set; }
+    [JsonPropertyName("keyValue")]
+    public required string KeyValue { get; set; }
+    [JsonPropertyName("counter")]
+    public required string Counter { get; set; }
+    [JsonPropertyName("rpId")]
+    public required string RpId { get; set; }
+    [JsonPropertyName("rpName")]
+    public required string RpName { get; set; }
+    [JsonPropertyName("userHandle")]
+    public required string UserHandle { get; set; }
+    [JsonPropertyName("userName")]
+    public required string UserName { get; set; }
+    [JsonPropertyName("userDisplayName")]
+    public required string UserDisplayName { get; set; }
 }
 
 public class EncryptedFieldDto

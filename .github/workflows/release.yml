@@ -27,6 +27,7 @@ jobs:
     outputs:
       release_version: ${{ steps.version.outputs.version }}
       branch-name: ${{ steps.branch.outputs.branch-name }}
+      last_release_tag: ${{ steps.get_release_info.outputs.last_release_tag }}
     steps:
       - name: Branch check
         if: ${{ inputs.release_type != 'Dry Run' }}
@@ -39,7 +40,7 @@ jobs:
           fi
 
       - name: Check out repo
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -57,6 +58,13 @@ jobs:
         run: |
           BRANCH_NAME=$(basename "${GITHUB_REF}")
           echo "branch-name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Get version info from run logs and set release tag name
+        id: get_release_info
+        run: |
+          last_release_tag=$(git tag -l --sort=-authordate | head -n 1)
+          echo "🔖 Last release tag: $last_release_tag"
+          echo "last_release_tag=$last_release_tag" >> "$GITHUB_OUTPUT"
 
   release:
     name: Create GitHub release
@@ -90,13 +98,18 @@ jobs:
       - name: Create release
         if: ${{ inputs.release_type != 'Dry Run' }}
         uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
+        env:
+          RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
+          LAST_RELEASE_TAG: ${{ needs.setup.outputs.last_release_tag }}
         with:
           artifacts: "docker-stub-US.zip,
             docker-stub-EU.zip,
             swagger.json"
           commit: ${{ github.sha }}
-          tag: "v${{ needs.setup.outputs.release_version }}"
-          name: "Version ${{ needs.setup.outputs.release_version }}"
+          tag: "v${{ env.RELEASE_VERSION }}"
+          name: "Version ${{ env.RELEASE_VERSION }}"
           body: "<insert release notes here>"
           token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: true
+          generateReleaseNotesPreviousTag: ${{ env.LAST_RELEASE_TAG }}          
           draft: true

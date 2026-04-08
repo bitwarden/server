@@ -2,13 +2,13 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -26,49 +26,47 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly IEventService _eventService;
-    private readonly IMailService _mailService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
-    private readonly IPolicyService _policyService;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
     private readonly ISendOrganizationConfirmationCommand _sendOrganizationConfirmationCommand;
+    private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
+
     public ConfirmOrganizationUserCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         IEventService eventService,
-        IMailService mailService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
-        IPolicyService policyService,
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
         ICollectionRepository collectionRepository,
         IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
-        ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand)
+        ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand,
+        IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _eventService = eventService;
-        _mailService = mailService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
-        _policyService = policyService;
         _deviceRepository = deviceRepository;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _collectionRepository = collectionRepository;
         _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
         _sendOrganizationConfirmationCommand = sendOrganizationConfirmationCommand;
+        _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, string defaultUserCollectionName = null)
@@ -92,7 +90,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             throw new BadRequestException(error);
         }
 
-        await CreateDefaultCollectionAsync(orgUser, organization, defaultUserCollectionName);
+        await CreateManyDefaultCollectionsAsync(organization, [orgUser], defaultUserCollectionName);
 
         return orgUser;
     }
@@ -109,14 +107,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             .Select(r => r.Item1)
             .ToList();
 
-        if (confirmedOrganizationUsers.Count == 1)
-        {
-            await CreateDefaultCollectionAsync(confirmedOrganizationUsers.Single(), organization, defaultUserCollectionName);
-        }
-        else if (confirmedOrganizationUsers.Count > 1)
-        {
-            await CreateManyDefaultCollectionsAsync(organization, confirmedOrganizationUsers, defaultUserCollectionName);
-        }
+        await CreateManyDefaultCollectionsAsync(organization, confirmedOrganizationUsers, defaultUserCollectionName);
 
         return result;
     }
@@ -192,20 +183,22 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     private async Task CheckPoliciesAsync(Guid organizationId, User user,
-        ICollection<OrganizationUser> userOrgs, bool userTwoFactorEnabled)
+        ICollection<OrganizationUser> orgUsers, bool userTwoFactorEnabled)
     {
         // Enforce Two Factor Authentication Policy for this organization
         await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
 
-        var hasOtherOrgs = userOrgs.Any(ou => ou.OrganizationId != organizationId);
-
         if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
         {
+            var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+                user.Id);
+
             var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
                     new AutomaticUserConfirmationPolicyEnforcementRequest(
                         organizationId,
-                        userOrgs,
-                        user)))
+                        orgUsers,
+                        user),
+                    policyRequirement))
                 .Match(
                     error => new BadRequestException(error.Message),
                     _ => null
@@ -215,45 +208,38 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             {
                 throw error;
             }
+
+            if (policyRequirement.IsEnabled(organizationId))
+            {
+                await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
+            }
         }
 
-        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
-        var otherSingleOrgPolicies =
-            singleOrgPolicies.Where(p => p.OrganizationId != organizationId);
-        // Enforce Single Organization Policy for this organization
-        if (hasOtherOrgs && singleOrgPolicies.Any(p => p.OrganizationId == organizationId))
+        var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+        var singleOrgError = singleOrgRequirement.CanJoinOrganization(organizationId, orgUsers);
+        if (singleOrgError is not null)
         {
-            throw new BadRequestException("Cannot confirm this member to the organization until they leave or remove all other organizations.");
-        }
-        // Enforce Single Organization Policy of other organizations user is a member of
-        if (otherSingleOrgPolicies.Any())
-        {
-            throw new BadRequestException("Cannot confirm this member to the organization because they are in another organization which forbids it.");
+            var singleOrgErrorMessage = singleOrgError switch
+            {
+                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be confirmed until they leave or remove all other organizations.",
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be confirmed because they are in another organization which forbids it.",
+                _ => singleOrgError.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
         }
     }
 
     private async Task ValidateTwoFactorAuthenticationPolicyAsync(User user, Guid organizationId, bool userTwoFactorEnabled)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        if (userTwoFactorEnabled)
         {
-            if (userTwoFactorEnabled)
-            {
-                // If the user has two-step login enabled, we skip checking the 2FA policy
-                return;
-            }
-
-            var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
-            {
-                throw new BadRequestException("User does not have two-step login enabled.");
-            }
-
+            // If the user has two-step login enabled, we skip checking the 2FA policy
             return;
         }
 
-        var orgRequiresTwoFactor = (await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication))
-            .Any(p => p.OrganizationId == organizationId);
-        if (orgRequiresTwoFactor && !userTwoFactorEnabled)
+        var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
         {
             throw new BadRequestException("User does not have two-step login enabled.");
         }
@@ -279,38 +265,6 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     /// <summary>
-    /// Creates a default collection for a single user if required by the Organization Data Ownership policy.
-    /// </summary>
-    /// <param name="organizationUser">The organization user who has just been confirmed.</param>
-    /// <param name="organization">The organization.</param>
-    /// <param name="defaultUserCollectionName">The encrypted default user collection name.</param>
-    private async Task CreateDefaultCollectionAsync(OrganizationUser organizationUser, Organization organization, string defaultUserCollectionName)
-    {
-        // Skip if no collection name provided (backwards compatibility)
-        if (string.IsNullOrWhiteSpace(defaultUserCollectionName))
-        {
-            return;
-        }
-
-        // Skip if organization has disabled My Items
-        if (!organization.UseMyItems)
-        {
-            return;
-        }
-
-        var organizationDataOwnershipPolicy = await _policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId!.Value);
-        if (!organizationDataOwnershipPolicy.RequiresDefaultCollectionOnConfirm(organizationUser.OrganizationId))
-        {
-            return;
-        }
-
-        await _collectionRepository.CreateDefaultCollectionsAsync(
-            organizationUser.OrganizationId,
-            [organizationUser.Id],
-            defaultUserCollectionName);
-    }
-
-    /// <summary>
     /// Creates default collections for multiple users if required by the Organization Data Ownership policy.
     /// </summary>
     /// <param name="organization">The organization.</param>
@@ -331,12 +285,17 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
             return;
         }
 
-        var policyEligibleOrganizationUserIds = await _policyRequirementQuery
-            .GetManyByOrganizationIdAsync<OrganizationDataOwnershipPolicyRequirement>(organization.Id);
+        var confirmedUserIds = confirmedOrganizationUsers
+            .Select(s => s.UserId!.Value)
+            .ToList();
 
-        var eligibleOrganizationUserIds = confirmedOrganizationUsers
-            .Where(ou => policyEligibleOrganizationUserIds.Contains(ou.Id))
-            .Select(ou => ou.Id)
+        var policiesForUsers = await _policyRequirementQuery
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(confirmedUserIds);
+
+        var eligibleOrganizationUserIds = policiesForUsers
+            .Select(x => x.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
             .ToList();
 
         if (eligibleOrganizationUserIds.Count == 0)
@@ -348,21 +307,13 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     }
 
     /// <summary>
-    /// Sends the organization confirmed email using either the new mailer pattern or the legacy mail service,
-    /// depending on the feature flag.
+    /// Sends the organization confirmed email using the new mailer pattern.
     /// </summary>
     /// <param name="organization">The organization the user was confirmed to.</param>
     /// <param name="userEmail">The email address of the confirmed user.</param>
     /// <param name="accessSecretsManager">Whether the user has access to Secrets Manager.</param>
     internal async Task SendOrganizationConfirmedEmailAsync(Organization organization, string userEmail, bool accessSecretsManager)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.OrganizationConfirmationEmail))
-        {
-            await _sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
-        }
-        else
-        {
-            await _mailService.SendOrganizationConfirmedEmailAsync(organization.DisplayName(), userEmail, accessSecretsManager);
-        }
+        await _sendOrganizationConfirmationCommand.SendConfirmationAsync(organization, userEmail, accessSecretsManager);
     }
 }

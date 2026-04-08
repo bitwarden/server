@@ -19,6 +19,30 @@ public class FeatureRoutedCacheService(
     public Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync() =>
         inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
 
+    public async Task<ProviderAbility?> GetProviderAbilityAsync(Guid providerId)
+    {
+        (await GetProviderAbilitiesAsync([providerId])).TryGetValue(providerId, out var providerAbility);
+        return providerAbility;
+    }
+
+    public async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync(IEnumerable<Guid> providerIds)
+    {
+        var allProviderAbilities = await inMemoryApplicationCacheService.GetProviderAbilitiesAsync();
+        return providerIds
+            .Distinct()
+            .Where(allProviderAbilities.ContainsKey)
+            .ToDictionary(id => id, id => allProviderAbilities[id]);
+    }
+
+    public async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(IEnumerable<Guid> orgIds)
+    {
+        var allOrganizationAbilities = await inMemoryApplicationCacheService.GetOrganizationAbilitiesAsync();
+        return orgIds
+            .Distinct()
+            .Where(allOrganizationAbilities.ContainsKey)
+            .ToDictionary(id => id, id => allOrganizationAbilities[id]);
+    }
+
     public Task UpsertOrganizationAbilityAsync(Organization organization) =>
         inMemoryApplicationCacheService.UpsertOrganizationAbilityAsync(organization);
 

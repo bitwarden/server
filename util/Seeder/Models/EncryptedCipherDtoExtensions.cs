@@ -20,6 +20,22 @@ internal static class EncryptedCipherDtoExtensions
             UriChecksum = u.UriChecksum,
             Match = u.Match.HasValue ? (UriMatchType?)u.Match : null
         }),
+        Fido2Credentials = e.Login?.Fido2Credentials?.Select(f => new CipherLoginFido2CredentialData
+        {
+            CredentialId = f.CredentialId,
+            KeyType = f.KeyType,
+            KeyAlgorithm = f.KeyAlgorithm,
+            KeyCurve = f.KeyCurve,
+            KeyValue = f.KeyValue,
+            RpId = f.RpId,
+            RpName = f.RpName,
+            UserHandle = f.UserHandle,
+            UserName = f.UserName,
+            UserDisplayName = f.UserDisplayName,
+            Counter = f.Counter,
+            Discoverable = f.Discoverable,
+            CreationDate = f.CreationDate
+        }).ToArray(),
         Fields = e.ToFields()
     };
 

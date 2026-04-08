@@ -46,6 +46,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 
@@ -148,6 +149,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
         services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
         services.AddScoped<IAdminRecoverAccountCommand, AdminRecoverAccountCommand>();
+        services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountCommand, AccountRecoveryV2.AdminRecoverAccountCommand>();
+        services.AddScoped<AccountRecoveryV2.IAdminRecoverAccountValidator, AccountRecoveryV2.AdminRecoverAccountValidator>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
         services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
 
@@ -221,6 +224,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();
         services.AddScoped<IInviteUsersPasswordManagerValidator, InviteUsersPasswordManagerValidator>();
         services.AddScoped<IInviteUsersEnvironmentValidator, InviteUsersEnvironmentValidator>();
+        services.AddScoped<IInitPendingOrganizationValidator, InitPendingOrganizationValidator>();
         services.AddScoped<IInitPendingOrganizationCommand, InitPendingOrganizationCommand>();
         services.AddScoped<IImportOrganizationUsersAndGroupsCommand, ImportOrganizationUsersAndGroupsCommand>();
     }

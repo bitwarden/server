@@ -15,6 +15,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -124,7 +125,7 @@ public class SyncController : Controller
         var organizationClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(user.Id);
         var organizationIdsClaimingActiveUser = organizationClaimingActiveUser.Select(o => o.Id);
 
-        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var organizationAbilities = await GetOrganizationAbilitiesAsync(ciphers);
         var webAuthnCredentials = _featureService.IsEnabled(FeatureFlagKeys.PM2035PasskeyUnlock)
             ? await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id)
             : [];
@@ -140,6 +141,24 @@ public class SyncController : Controller
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials);
         return response;
+    }
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync(ICollection<CipherDetails> ciphers)
+    {
+        var orgIds = ciphers
+            .Where(c => c.OrganizationId.HasValue)
+            .Select(c => c.OrganizationId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (orgIds.Count == 0)
+        {
+            return new Dictionary<Guid, OrganizationAbility>();
+        }
+
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync(orgIds);
+
+        return organizationAbilities;
     }
 
     private ICollection<CipherDetails> FilterUnsupportedCipherTypes(ICollection<CipherDetails> ciphers)

@@ -39,36 +39,22 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **When to use:** New bulk operations, especially with presets. Provides ultimate flexibility.
 
-**Flow**: Preset JSON → PresetLoader → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
-
-**Key actors**:
-
-- **RecipeBuilder**: Fluent API with dependency validation
-- **IStep**: Isolated unit of work (CreateOrganizationStep, CreateUsersStep, etc.)
-- **RecipeExecutor**: Executes steps, captures statistics, commits
-- **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
-- **SeederContext**: Shared mutable state (NOT thread-safe)
+**Flow**: Preset JSON → Loader → Builder → Steps → Executor → Context → BulkCommitter
 
 **Why this architecture wins**:
 
 - **Infrastructure as Code**: JSON presets define complete scenarios
 - **Mix & Match**: Fixtures + generation in one preset
-- **Extensible**: Add entity types via new IStep implementations
-- **Future-ready**: Supports custom DSLs on top of RecipeBuilder
+- **Extensible**: Add entity types via new step implementations
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
-
-**Naming**: `{Purpose}Step` classes implementing `IStep`
+**Phase order (org)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → FolderAssignments → FavoriteAssignments
 
 **Files**: `Pipeline/` folder
-
----
 
 #### Factories
 
 **Purpose:** Create individual domain entities with cryptographically correct encrypted data.
-
-**Metaphor:** Skilled craftspeople who create one perfect item per call.
 
 **When to use:** Need to create ONE entity (user, cipher, collection) with proper encryption.
 
@@ -79,17 +65,15 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Stateless (except for SDK service dependency)
 - Do NOT interact with database directly
 
-**Naming:** `{Entity}Seeder` class with `Create{Type}{Entity}()` methods
+**Naming:** `{Entity}Seeder` with `Create()` methods
 
----
+**Pipeline cipher path:** Each cipher factory accepts a single `CipherSeed` parameter. `CipherSeed.FromSeedItem()` converts a deserialized `SeedVaultItem` into a `CipherSeed` for the pipeline path.
 
 #### Recipes
 
 **Purpose:** Orchestrate cohesive bulk operations using BulkCopy for performance.
 
-**Metaphor:** Cooking recipes that produce one complete result through coordinated steps. Like baking a three-layer cake - you don't grab three separate recipes and stack them; you follow one comprehensive recipe that orchestrates all the steps.
-
-**When to use:** Need to create MANY related entities as one cohesive operation (e.g., organization + users + collections + ciphers).
+**When to use:** Need to create MANY related entities as one cohesive operation.
 
 **Key characteristics:**
 
@@ -100,70 +84,51 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **SHALL have a `Seed()` method** that executes the complete recipe
 - Use method parameters (with defaults) for variations, not separate methods
 
-**Naming:** `{DomainConcept}Recipe` class with primary `Seed()` method
-
-**Note:** Some existing recipes violate the `Seed()` method convention and will be refactored in the future.
-
----
+**Naming:** `{DomainConcept}Recipe` with a `Seed()` method
 
 #### Models
 
-**Purpose:** DTOs that bridge the gap between SDK encryption format and server storage format.
+**Purpose:** DTOs that transform plaintext cipher data into encrypted form for database storage.
 
-**Metaphor:** Translators between two different languages (SDK format vs. Server format).
-
-**When to use:** Need data transformation during the encryption pipeline (SDK → Server format).
+**When to use:** Need to convert `CipherViewDto` to `EncryptedCipherDto` during the encryption pipeline.
 
 **Key characteristics:**
 
 - Pure data structures (DTOs)
 - No business logic
-- Handle serialization/deserialization
-- Bridge SDK ↔ Server format differences
+- Handle serialization/deserialization (camelCase ↔ PascalCase)
+- Mark encryptable fields with `[EncryptProperty]` attribute
 
 #### Scenes
 
 **Purpose:** Create complete, isolated test scenarios for integration tests.
 
-**Metaphor:** Theater scenes with multiple actors and props arranged to tell a complete story.
-
 **When to use:** Need a complete test scenario with proper ID mangling for test isolation.
 
 **Key characteristics:**
 
-- Implement `IScene<TRequest>` or `IScene<TRequest, TResult>`
-- Create complete, realistic test scenarios
-- Receive `IManglerService` via DI for test isolation—service handles mangling automatically
-- Return `SceneResult` with MangleMap (original→mangled) for test assertions
-- Async operations
+- Complete, realistic test scenarios with ID mangling for isolation
+- Receive mangling service via DI — returns a map of original→mangled values for assertions
 - CAN modify database state
 
-**Naming:** `{Scenario}Scene` class with `SeedAsync(Request)` method (defined by interface)
+**Naming:** `{Scenario}Scene` with a `SeedAsync()` method
 
 #### Queries
 
 **Purpose:** Read-only data retrieval for test assertions and verification.
 
-**Metaphor:** Information desks that answer questions without changing anything.
-
 **When to use:** Need to READ existing seeded data for verification or follow-up operations.
-
-**Example:** Inviting a user to an organization produces a magic link to accept the invite, a query should be used to retrieve that link because it is easier than interfacing with an external smtp catcher.
 
 **Key characteristics:**
 
-- Implement `IQuery<TRequest, TResult>`
 - Read-only (no database modifications)
 - Return typed data for test assertions
-- Can be used to retrieve side effects due to tested flows
 
-**Naming:** `{DataToRetrieve}Query` class with `Execute(Request)` method (defined by interface)
+**Naming:** `{DataToRetrieve}Query` with an `Execute()` method
 
 #### Data
 
 **Purpose:** Reusable, realistic test data collections that provide the foundation for cipher generation.
-
-**Metaphor:** A well-stocked ingredient pantry that all recipes draw from.
 
 **When to use:** Need realistic, filterable data for cipher content (company names, passwords, usernames).
 
@@ -173,43 +138,22 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Filterable by region, type, category
 - Deterministic (seeded randomness for reproducibility)
 - Composable across regions
-- Enums provide the public API (CompanyType, PasswordStrength, etc.)
+- Enums provide the public API
 
-**Folder structure:** See `Data/README.md` for Generators and Distributions details.
-
-- `Static/` - Read-only data arrays (Companies, Passwords, Names, OrgStructures)
-- `Generators/` - Seeded data generators via `GeneratorContext`
-- `Distributions/` - Percentage-based selection via `Distribution<T>`
-- `Enums/` - Public API enums
+See `Data/README.md` for Generators and Distributions details.
 
 #### Services
 
 **Purpose:** Injectable services that provide cross-cutting functionality via dependency injection.
 
-**`IManglerService`** - Context-aware string mangling for test isolation:
-
-- `Mangle(string)` - Transforms strings with unique prefixes for collision-free test data
-- `GetMangleMap()` - Returns dictionary of original → mangled mappings for assertions
-- `IsEnabled` - Indicates whether mangling is active
-
-**Implementations:**
-
-- `ManglerService` - Scoped stateful service that adds unique prefixes (`{prefix}+user@domain` for emails, `{prefix}-value` for strings)
-- `NoOpManglerService` - Singleton no-op service that returns values unchanged
-
-**Configuration:**
-
-- SeederApi: Enabled when `GlobalSettings.TestPlayIdTrackingEnabled` is true
-- SeederUtility: Enabled with `--mangle` CLI flag
-
----
+Context-aware string mangling for test isolation. Adds unique prefixes to emails and strings for collision-free test data. Enabled via `--mangle` CLI flag (SeederUtility) or application settings (SeederApi).
 
 ## Rust SDK Integration
 
 The seeder uses FFI calls to the Rust SDK for cryptographically correct encryption:
 
 ```
-CipherViewDto → RustSdkService.EncryptCipher() → EncryptedCipherDto → Server Format
+CipherViewDto → encrypt_fields (field-level encryption via bitwarden_crypto) → EncryptedCipherDto → Server Format
 ```
 
 This ensures seeded data can be decrypted and displayed in the actual Bitwarden clients.
