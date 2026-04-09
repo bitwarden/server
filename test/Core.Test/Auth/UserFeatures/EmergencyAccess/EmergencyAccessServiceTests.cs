@@ -102,7 +102,7 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task InviteAsync_FeatureFlagEnabled_GrantorInAutoConfirmOrg_ThrowsBadRequest(
+    public async Task InviteAsync_GrantorInAutoConfirmOrg_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
@@ -402,7 +402,7 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptUserAsync_FeatureFlagEnabled_GranteeInAutoConfirmOrg_ThrowsBadRequest(
+    public async Task AcceptUserAsync_GranteeInAutoConfirmOrg_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
         Core.Auth.Entities.EmergencyAccess emergencyAccess,
