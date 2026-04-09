@@ -17,7 +17,10 @@ public class PasswordRequestModel : SecretVerificationRequestModel
     // To be removed in PM-33141
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        yield return base.Validate(validationContext);
+        foreach (var result in base.Validate(validationContext))
+        {
+            yield return result;
+        }
 
         var hasNewPayloads = AuthenticationData is not null && UnlockData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
