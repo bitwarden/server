@@ -60,7 +60,7 @@ services:
     ports:
       - "3306:3306"
     command:
-      - --default-authentication-plugin=mysql_native_password
+      - --mysql-native-password=ON
       - --innodb-print-all-deadlocks=ON
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
