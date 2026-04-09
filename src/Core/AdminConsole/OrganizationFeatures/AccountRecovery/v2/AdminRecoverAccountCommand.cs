@@ -60,7 +60,7 @@ public class AdminRecoverAccountCommand(
         if (request.ResetMasterPassword)
         {
             // Unwind this with PM-33141 to only use the new payload
-            if (request.HasNewPayloads())
+            if (request.RequestHasNewDataTypes())
             {
                 var result = await HandlePayloadsWithUnlockAndAuthenticationDataAsync(user, request);
                 if (result.IsError)

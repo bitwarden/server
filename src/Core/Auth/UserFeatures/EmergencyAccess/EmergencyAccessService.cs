@@ -372,7 +372,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         return (emergencyAccess, grantor);
     }
 
-    [Obsolete]
+    [Obsolete("To be removed in PM-33141")]
     public async Task FinishRecoveryTakeoverAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(emergencyAccessId);

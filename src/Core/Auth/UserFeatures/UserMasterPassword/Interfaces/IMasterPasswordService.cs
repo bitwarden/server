@@ -99,7 +99,7 @@ public interface IMasterPasswordService
     /// An <see cref="UpdateUserData"/> delegate suitable for inclusion in a batch passed to
     /// <see cref="IUserRepository.UpdateUserDataAsync"/>.
     /// </returns>
-    UpdateUserData BuildTransactionForSetInitialMasterPasswordAsync(User user, SetInitialPasswordData setInitialPasswordData);
+    UpdateUserData BuildTransactionForSetInitialMasterPassword(User user, SetInitialPasswordData setInitialPasswordData);
 
     /// <summary>
     /// Applies a new master password over the user's existing one, mutating the

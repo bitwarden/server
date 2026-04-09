@@ -175,7 +175,7 @@ public class EmergencyAccessController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
 
         // Unwind this with PM-33141 to only use the new payload
-        if (model.HasNewPayloads())
+        if (model.RequestHasNewDataTypes())
         {
             await _emergencyAccessService.FinishRecoveryTakeoverAsync(id, user, model.UnlockData!.ToData(), model.AuthenticationData!.ToData());
         }

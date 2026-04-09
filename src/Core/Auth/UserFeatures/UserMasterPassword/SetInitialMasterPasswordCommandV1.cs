@@ -42,6 +42,7 @@ public class SetInitialMasterPasswordCommandV1 : ISetInitialMasterPasswordComman
         _organizationRepository = organizationRepository;
     }
 
+    [Obsolete("To be removed in PM-33141")]
     public async Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
         string orgSsoIdentifier)
     {

@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
@@ -16,19 +15,19 @@ public class TdeSetPasswordCommand : ITdeSetPasswordCommand
     private readonly IMasterPasswordService _masterPasswordService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IEventService _eventService;
 
-    public TdeSetPasswordCommand(IUserRepository userRepository,
+    public TdeSetPasswordCommand(
+        IUserRepository userRepository,
         IMasterPasswordService masterPasswordService,
-        IOrganizationUserRepository organizationUserRepository, IOrganizationRepository organizationRepository,
-        IPasswordHasher<User> passwordHasher, IEventService eventService)
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IEventService eventService)
     {
         _userRepository = userRepository;
         _masterPasswordService = masterPasswordService;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _passwordHasher = passwordHasher;
         _eventService = eventService;
     }
 
@@ -53,7 +52,7 @@ public class TdeSetPasswordCommand : ITdeSetPasswordCommand
             throw new BadRequestException("User not found within organization.");
         }
 
-        var setMasterPasswordTask = _masterPasswordService.BuildTransactionForSetInitialMasterPasswordAsync(user,
+        var setMasterPasswordTask = _masterPasswordService.BuildTransactionForSetInitialMasterPassword(user,
             new SetInitialPasswordData
             {
                 MasterPasswordUnlock = masterPasswordDataModel.MasterPasswordUnlock,

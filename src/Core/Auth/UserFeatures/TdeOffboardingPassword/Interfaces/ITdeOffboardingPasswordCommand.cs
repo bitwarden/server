@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
@@ -11,4 +12,7 @@ public interface ITdeOffboardingPasswordCommand
 {
     public Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string masterPassword, string key,
         string orgSsoIdentifier);
+
+    public Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, MasterPasswordUnlockData unlockData,
+        MasterPasswordAuthenticationData authenticationData, string orgSsoIdentifier);
 }

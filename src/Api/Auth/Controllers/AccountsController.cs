@@ -222,7 +222,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.IsV2Request())
+        if (model.RequestHasNewDataTypes())
         {
             if (model.IsTdeSetPasswordRequest())
             {

@@ -343,7 +343,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.RequestHasNewDataTypes();
 
         // Assert
         Assert.True(result);
@@ -370,7 +370,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.RequestHasNewDataTypes();
 
         // Assert
         Assert.False(result);
@@ -397,7 +397,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.RequestHasNewDataTypes();
 
         // Assert
         Assert.False(result);
@@ -418,7 +418,7 @@ public class SetInitialPasswordRequestModelTests
         };
 
         // Act
-        var result = model.IsV2Request();
+        var result = model.RequestHasNewDataTypes();
 
         // Assert
         Assert.False(result);

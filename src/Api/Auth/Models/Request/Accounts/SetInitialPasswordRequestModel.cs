@@ -58,7 +58,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (IsV2Request())
+        if (RequestHasNewDataTypes())
         {
             // V2 registration
 
@@ -134,7 +134,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         }
     }
 
-    public bool IsV2Request()
+    public bool RequestHasNewDataTypes()
     {
         // AccountKeys can be null for TDE users, so we don't check that here
         return MasterPasswordAuthentication != null && MasterPasswordUnlock != null;

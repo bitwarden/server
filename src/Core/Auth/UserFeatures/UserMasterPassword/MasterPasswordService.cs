@@ -23,8 +23,6 @@ public class MasterPasswordService(
         SetInitialOrChangeExistingPasswordData setOrUpdatePasswordData)
     {
         IdentityResult mutationResult;
-        // We can recover an account for users who both have a master password and
-        // those who do not. TDE users can be recovered and will not have a password
         if (user.HasMasterPassword())
         {
             mutationResult = await OnlyMutateUserUpdateExistingMasterPasswordAsync(
@@ -57,7 +55,7 @@ public class MasterPasswordService(
             return result;
         }
 
-        // Set kdf data on the user.
+        // Set kdf data on the user
         user.Key = setInitialData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
         user.Kdf = setInitialData.MasterPasswordUnlock.Kdf.KdfType;
         user.KdfIterations = setInitialData.MasterPasswordUnlock.Kdf.Iterations;
@@ -85,7 +83,7 @@ public class MasterPasswordService(
         User user,
         SetInitialPasswordData setInitialData)
     {
-        // No need to validate because we will validate in the sibling call here.
+        // No need to validate because we will validate in the sibling call here
         var result = await OnlyMutateUserSetInitialMasterPasswordAsync(user, setInitialData);
         if (!result.Succeeded)
         {
@@ -96,7 +94,7 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
-    public UpdateUserData BuildTransactionForSetInitialMasterPasswordAsync(
+    public UpdateUserData BuildTransactionForSetInitialMasterPassword(
         User user,
         SetInitialPasswordData setInitialData)
     {
