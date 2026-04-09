@@ -12,7 +12,7 @@ jobs:
   setup-ephemeral-environment:
     name: Setup Ephemeral Environment
     if: github.event.label.name == 'ephemeral-environment'
-    uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
+    uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@agalles/BRE-1670-2
     with:
       project: server
       pull_request_number: ${{ github.event.number }}
