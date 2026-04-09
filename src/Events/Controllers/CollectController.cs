@@ -133,6 +133,9 @@ public class CollectController : Controller
                 case EventType.Organization_ClientExportedVault:
                 case EventType.Organization_AutoConfirmEnabled_Admin:
                 case EventType.Organization_AutoConfirmDisabled_Admin:
+                case EventType.PhishingBlocker_SiteAccessed:
+                case EventType.PhishingBlocker_SiteExited:
+                case EventType.PhishingBlocker_Bypassed:
                     if (!eventModel.OrganizationId.HasValue)
                     {
                         continue;
