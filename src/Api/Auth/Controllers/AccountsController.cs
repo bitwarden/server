@@ -13,6 +13,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -44,6 +45,7 @@ public class AccountsController(
     ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
     ITdeSetPasswordCommand tdeSetPasswordCommand,
     ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
+    IUpdateTempPasswordCommand updateTempPasswordCommand,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IUserAccountKeysQuery userAccountKeysQuery,
     ITwoFactorEmailService twoFactorEmailService,
@@ -60,6 +62,7 @@ public class AccountsController(
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand = tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
+    private readonly IUpdateTempPasswordCommand _updateTempPasswordCommand = updateTempPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery = userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService = twoFactorEmailService;
@@ -643,7 +646,25 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.UpdateTempPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
+        IdentityResult result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _updateTempPasswordCommand.UpdateTempPasswordAsync(
+                user,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData(),
+                model.MasterPasswordHint);
+        }
+        // To be removed in PM-33141
+        else
+        {
+            result = await _userService.UpdateTempPasswordAsync(
+                user,
+                model.NewMasterPasswordHash,
+                model.Key,
+                model.MasterPasswordHint);
+        }
+
         if (result.Succeeded)
         {
             return;
@@ -666,12 +687,12 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-
         IdentityResult result;
         if (model.RequestHasNewDataTypes())
         {
             result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.UnlockData!.ToData(), model.AuthenticationData!.ToData(), model.MasterPasswordHint);
         }
+        // To be removed in PM-33141
         else
         {
             result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash!, model.Key!, model.MasterPasswordHint);

@@ -16,8 +16,8 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
     [Obsolete("To be removed in PM-33141")]
     public string? Key { get; set; }
 
-    public MasterPasswordUnlockDataRequestModel? UnlockData;
-    public MasterPasswordAuthenticationDataRequestModel? AuthenticationData;
+    public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
+    public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
 
     public RecoverAccountRequest ToCommandRequest(Guid orgId, OrganizationUser organizationUser) => new()
     {
@@ -32,6 +32,12 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
         UnlockData = UnlockData,
         AuthenticationData = AuthenticationData,
     };
+
+    // To be removed in PM-33141
+    public bool RequestHasNewDataTypes()
+    {
+        return UnlockData is not null && AuthenticationData is not null;
+    }
 
     // To be removed in PM-33141
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

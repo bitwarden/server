@@ -3,7 +3,7 @@ using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class PasswordRequestModel
+public class PasswordRequestModel : IValidatableObject
 {
     [Required]
     public required string MasterPasswordHash { get; set; }

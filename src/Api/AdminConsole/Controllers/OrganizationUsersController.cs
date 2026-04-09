@@ -41,6 +41,7 @@ using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using AccountRecoveryV2 = Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
@@ -533,14 +534,25 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return Handle(await _adminRecoverAccountCommandV2.RecoverAccountAsync(commandRequest));
         }
 
-        var result = await _adminRecoverAccountCommand.RecoverAccountAsync(
-            orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
-        if (result.Succeeded)
+        IdentityResult identityResult;
+        if (model.RequestHasNewDataTypes())
+        {
+            identityResult = await _adminRecoverAccountCommand.RecoverAccountAsync(
+                orgId, targetOrganizationUser, model.UnlockData!.ToData(), model.AuthenticationData!.ToData());
+        }
+        // To be removed in PM-33141
+        else
+        {
+            identityResult = await _adminRecoverAccountCommand.RecoverAccountAsync(
+                orgId, targetOrganizationUser, model.NewMasterPasswordHash!, model.Key!);
+        }
+
+        if (identityResult.Succeeded)
         {
             return TypedResults.Ok();
         }
 
-        foreach (var error in result.Errors)
+        foreach (var error in identityResult.Errors)
         {
             ModelState.AddModelError(string.Empty, error.Description);
         }

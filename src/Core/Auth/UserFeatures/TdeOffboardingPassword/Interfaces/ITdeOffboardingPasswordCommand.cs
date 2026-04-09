@@ -10,6 +10,7 @@ namespace Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 /// </summary>
 public interface ITdeOffboardingPasswordCommand
 {
+    [Obsolete("To be removed in PM-33141")]
     public Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string masterPassword, string key,
         string? masterPasswordHint);
 

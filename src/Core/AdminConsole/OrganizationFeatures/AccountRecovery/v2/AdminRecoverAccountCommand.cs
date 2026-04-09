@@ -68,6 +68,7 @@ public class AdminRecoverAccountCommand(
                     return result;
                 }
             }
+            // To be removed in PM-33141
             else
             {
                 var result = await HandlePayloadWithDeprecatedRawDataAsync(user, request);

@@ -29,8 +29,8 @@ public interface IAdminRecoverAccountCommand
     /// </summary>
     /// <param name="orgId">The organization the user belongs to.</param>
     /// <param name="organizationUser">The organization user being recovered.</param>
-    /// <param name="newMasterPassword">The user's new master password hash.</param>
-    /// <param name="key">The user's new master-password-sealed user key.</param>
+    /// <param name="unlockData">The user's new master-password unlock data.</param>
+    /// <param name="authenticationData">The user's new master-password authentication data.</param>
     /// <returns>An IdentityResult indicating success or failure.</returns>
     /// <exception cref="BadRequestException">When organization settings, policy, or user state is invalid.</exception>
     /// <exception cref="NotFoundException">When the user does not exist.</exception>

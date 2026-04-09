@@ -46,7 +46,7 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
     }
 
     [Obsolete("To be removed in PM-33141")]
-    public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string hint)
+    public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string? hint)
     {
         if (string.IsNullOrWhiteSpace(newMasterPassword))
         {
@@ -108,7 +108,7 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
         User user,
         MasterPasswordUnlockData unlockData,
         MasterPasswordAuthenticationData authenticationData,
-        string hint)
+        string? masterPasswordHint)
     {
         var orgUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id);
         orgUserDetails = orgUserDetails.Where(x => x.UseSso).ToList();
@@ -117,35 +117,35 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
             throw new BadRequestException("User is not part of any organization that has SSO enabled.");
         }
 
-        var orgSSOUsers = await Task.WhenAll(orgUserDetails.Select(async x => await _ssoUserRepository.GetByUserIdOrganizationIdAsync(x.OrganizationId, user.Id)));
-        if (orgSSOUsers.Length != 1)
+        var orgSsoUsers = await Task.WhenAll(orgUserDetails.Select(async x => await _ssoUserRepository.GetByUserIdOrganizationIdAsync(x.OrganizationId, user.Id)));
+        if (orgSsoUsers.Length != 1)
         {
             throw new BadRequestException("User is part of no or multiple SSO configurations.");
         }
 
         var orgUser = orgUserDetails.First();
-        var orgSSOConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgUser.OrganizationId);
-        if (orgSSOConfig == null)
+        var orgSsoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgUser.OrganizationId);
+        if (orgSsoConfig == null)
         {
             throw new BadRequestException("Organization SSO configuration not found.");
         }
 
-        if (orgSSOConfig.GetData().MemberDecryptionType != Enums.MemberDecryptionType.MasterPassword)
+        if (orgSsoConfig.GetData().MemberDecryptionType != Enums.MemberDecryptionType.MasterPassword)
         {
             throw new BadRequestException("Organization SSO Member Decryption Type is not Master Password.");
         }
 
         // We only want to be setting an initial master password here, if they already have one,
         // we are in an error state.
-        var result = await _masterPasswordService.OnlyMutateUserSetInitialMasterPasswordAsync(user, new SetInitialPasswordData
+        var identityResult = await _masterPasswordService.OnlyMutateUserSetInitialMasterPasswordAsync(user, new SetInitialPasswordData
         {
             MasterPasswordUnlock = unlockData,
             MasterPasswordAuthentication = authenticationData,
-            MasterPasswordHint = hint
+            MasterPasswordHint = masterPasswordHint
         });
-        if (!result.Succeeded)
+        if (!identityResult.Succeeded)
         {
-            return result;
+            return identityResult;
         }
 
         // Side effect of running TDE offboarding, we want to force reset
