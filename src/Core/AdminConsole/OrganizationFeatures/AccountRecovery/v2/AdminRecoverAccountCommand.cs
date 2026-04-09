@@ -1,10 +1,8 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
@@ -29,9 +27,7 @@ public class AdminRecoverAccountCommand(
     IUserService userService,
     IMasterPasswordService masterPasswordService,
     IResetUserTwoFactorCommand resetUserTwoFactorCommand,
-    IFeatureService featureService,
     IPolicyRequirementQuery policyRequirementQuery,
-    IPolicyService policyService,
     IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
     TimeProvider timeProvider) : IAdminRecoverAccountCommand
 {
@@ -117,50 +113,30 @@ public class AdminRecoverAccountCommand(
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
+        if (!requirement.OrganizationsRequiringTwoFactor.Any())
         {
-            var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
-            if (!requirement.OrganizationsRequiringTwoFactor.Any())
-            {
-                return;
-            }
-
-            var organizationIds = requirement.OrganizationsRequiringTwoFactor.Select(o => o.OrganizationId).ToList();
-            var organizations = await organizationRepository.GetManyByIdsAsync(organizationIds);
-            var organizationLookup = organizations.ToDictionary(org => org.Id);
-
-            var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor
-                .Where(o => organizationLookup.ContainsKey(o.OrganizationId))
-                .Select(async o =>
-                {
-                    var organization = organizationLookup[o.OrganizationId];
-                    await revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                        new RevokeOrganizationUsersRequest(
-                            o.OrganizationId,
-                            [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
-                            new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                    await mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
-                }).ToArray();
-
-            await Task.WhenAll(revokeOrgUserTasks);
-
             return;
         }
 
-        var twoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+        var organizationIds = requirement.OrganizationsRequiringTwoFactor.Select(o => o.OrganizationId).ToList();
+        var organizations = await organizationRepository.GetManyByIdsAsync(organizationIds);
+        var organizationLookup = organizations.ToDictionary(org => org.Id);
 
-        var legacyRevokeOrgUserTasks = twoFactorPolicies.Select(async p =>
-        {
-            var organization = await organizationRepository.GetByIdAsync(p.OrganizationId);
-            await revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                new RevokeOrganizationUsersRequest(
-                    p.OrganizationId,
-                    [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
-                    new SystemUser(EventSystemUser.TwoFactorDisabled)));
-            await mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization!.DisplayName(), user.Email);
-        }).ToArray();
+        var revokeOrgUserTasks = requirement.OrganizationsRequiringTwoFactor
+            .Where(o => organizationLookup.ContainsKey(o.OrganizationId))
+            .Select(async o =>
+            {
+                var organization = organizationLookup[o.OrganizationId];
+                await revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                    new RevokeOrganizationUsersRequest(
+                        o.OrganizationId,
+                        [new OrganizationUserUserDetails { Id = o.OrganizationUserId, OrganizationId = o.OrganizationId }],
+                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                await mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
+            }).ToArray();
 
-        await Task.WhenAll(legacyRevokeOrgUserTasks);
+        await Task.WhenAll(revokeOrgUserTasks);
     }
 
     private async Task<CommandResult> HandlePayloadsWithUnlockAndAuthenticationDataAsync(User user, RecoverAccountRequest request)

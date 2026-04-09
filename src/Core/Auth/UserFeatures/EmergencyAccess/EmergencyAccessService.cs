@@ -39,7 +39,6 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
-    private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public EmergencyAccessService(
@@ -55,7 +54,6 @@ public class EmergencyAccessService : IEmergencyAccessService
         GlobalSettings globalSettings,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
@@ -70,7 +68,6 @@ public class EmergencyAccessService : IEmergencyAccessService
         _globalSettings = globalSettings;
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
-        _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
     }
 
@@ -91,15 +88,12 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("You cannot use Emergency Access Takeover because you are using Key Connector.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var requirement = await _policyRequirementQuery
-                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
+        var requirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(grantorUser.Id);
 
-            if (requirement.GrantorCannotInviteToEmergencyAccess())
-            {
-                throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
-            }
+        if (requirement.GrantorCannotInviteToEmergencyAccess())
+        {
+            throw new BadRequestException("You cannot invite emergency contacts because you are a member of an organization that uses Automatic User Confirmation.");
         }
 
         var emergencyAccess = new Entities.EmergencyAccess
@@ -160,15 +154,12 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Invalid token.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var requirement = await _policyRequirementQuery
-                .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
+        var granteeRequirement = await _policyRequirementQuery
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(granteeUser.Id);
 
-            if (requirement.GranteeCannotAcceptEmergencyAccess())
-            {
-                throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
-            }
+        if (granteeRequirement.GranteeCannotAcceptEmergencyAccess())
+        {
+            throw new BadRequestException("You cannot accept emergency access invitations because you are a member of an organization that uses Automatic User Confirmation.");
         }
 
         if (emergencyAccess.Status == EmergencyAccessStatusType.Accepted)
