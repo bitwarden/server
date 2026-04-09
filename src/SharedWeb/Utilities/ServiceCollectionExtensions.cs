@@ -478,10 +478,6 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
-        if (env.IsDevelopment())
-        {
-            return;
-        }
 
         if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
         {
@@ -502,9 +498,13 @@ public static class ServiceCollectionExtensions
                     "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
-            builder
-                .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                .ProtectKeysWithCertificate(dataProtectionCert);
+
+            if (dataProtectionCert != null)
+            {
+                builder
+                    .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
+                    .ProtectKeysWithCertificate(dataProtectionCert);
+            }
         }
     }
 
