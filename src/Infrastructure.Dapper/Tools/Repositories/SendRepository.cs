@@ -145,12 +145,16 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         };
     }
 
-    public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled)
+    public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled, IEnumerable<Guid> userIds)
     {
         using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.ExecuteAsync(
+        await connection.ExecuteAsync(
             $"[{Schema}].[Send_SetDisabledByIds]",
             new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled },
+            commandType: CommandType.StoredProcedure);
+        await connection.ExecuteAsync(
+            $"[{Schema}].[User_BumpManyAccountRevisionDates]",
+            new { Ids = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
     }
 

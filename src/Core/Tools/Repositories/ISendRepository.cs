@@ -48,5 +48,6 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// </summary>
     /// <param name="ids">A list of Send IDs to update</param>
     /// <param name="disabled">The value to set the 'Disabled' field to</param>
-    Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled);
+    /// <param name="userIds">A list of UserIds to bump the account revision time for</param>
+    Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled, IEnumerable<Guid> userIds);
 }

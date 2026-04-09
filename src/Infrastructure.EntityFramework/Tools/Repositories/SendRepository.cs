@@ -95,18 +95,16 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />  
-    public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled)
+    public async Task UpdateManyDisabledAsync(IEnumerable<Guid> ids, bool disabled, IEnumerable<Guid> userIds)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var sends = await GetDbSet(dbContext)
-            .Where(s => ids.Contains(s.Id))
-            .ToListAsync();
-        foreach (var send in sends)
-        {
-            send.Disabled = disabled;
-        }
-
+        await dbContext.Sends.Where(s => ids.Contains(s.Id))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(s => s.Disabled, disabled)
+                .SetProperty(s => s.RevisionDate, DateTime.UtcNow)
+            );
+        await dbContext.UserBumpManyAccountRevisionDatesAsync([..userIds]);
         await dbContext.SaveChangesAsync();
     }
 }

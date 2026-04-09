@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Billing.Pricing;
@@ -159,6 +160,9 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = true });
+        
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
 
         // No exception implies success
         await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
@@ -175,8 +179,77 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
             .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
+        
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
 
         // No exception implies success
         await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_WhenPasswordAuthRequiredByPolicy(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId
+    )
+    {
+        send.AuthType = AuthType.None;
+        send.Password = null;
+        send.Emails = null;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
+        
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.PasswordProtected });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Due to an Enterpise Policy your Sends must be protected by password", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_WhenEmailAuthRequiredByPolicy(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId
+    )
+    {
+        send.AuthType = AuthType.Password;
+        send.Password = "testpassword";
+        send.Emails = null;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
+        
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.SpecificPeople });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Due to an Enterpise Policy your Sends must be protected by email verification", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_WhenEmailAuthAndDomainsRequiredByPolicy(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId
+    )
+    {
+        send.AuthType = AuthType.Email;
+        send.Password = null;
+        send.Emails = "badguy@fake-bitwarden.com";
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement { DisableSend = false });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement { DisableHideEmail = false });
+        
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.SpecificPeople, AllowedDomains = "bitwarden.com" });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): bitwarden.com", exception.Message);
     }
 }

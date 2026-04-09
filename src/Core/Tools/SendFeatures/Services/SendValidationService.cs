@@ -11,6 +11,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Tools.Services;
 
@@ -53,7 +54,7 @@ public class SendValidationService : ISendValidationService
         var disableSendTask = _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
         var sendOptionsTask = _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
 
-        await Task.WhenAll(disableSendTask, sendOptionsTask);
+        await Task.WhenAll(sendControlsTask, disableSendTask, sendOptionsTask);
 
         var sendControlsRequirement = sendControlsTask.Result;
         var disableSendRequirement = disableSendTask.Result;
@@ -82,12 +83,19 @@ public class SendValidationService : ISendValidationService
         {
             var domains = sendControlsRequirement.AllowedDomains.Split(",").Select(domain => domain.Trim());
             var emails = send.Emails.Split(",").Select(email => email.Trim());
-            if (emails.Any(email => !domains.Any(domain => email.EndsWith(domain))))
+            if (emails.Any(email => !domains.Any(domain => SendEmailMatchesDomain(email, domain))))
             {
                 throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by email verification and access granted only to the following domain(s): {string.Join(", ", domains)}");
             }
         }
     }
+
+    public static bool SendEmailMatchesDomain(string email, string domain)
+    {
+        var emailDomain = EmailValidation.GetDomain(email);
+        return emailDomain.Equals(domain, StringComparison.OrdinalIgnoreCase)
+            || emailDomain.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
+    } 
 
     public async Task<long> StorageRemainingForSendAsync(Send send)
     {
