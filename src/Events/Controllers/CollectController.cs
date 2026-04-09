@@ -161,6 +161,12 @@ public class CollectController : Controller
                         continue;
                     }
 
+                    var organizationForPhishingEvent = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                    if (organizationForPhishingEvent == null || !organizationForPhishingEvent.UsePhishingBlocker)
+                    {
+                        continue;
+                    }
+
                     await _eventService.LogOrganizationUserEventAsync(orgUserContext, eventModel.Type, eventModel.Date);
                     break;
                 default:
