@@ -4,6 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Test.Billing.Extensions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -16,6 +17,7 @@ using static StripeConstants;
 
 public class UpdateBillingAddressCommandTests
 {
+    private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly UpdateBillingAddressCommand _command;
@@ -23,6 +25,7 @@ public class UpdateBillingAddressCommandTests
     public UpdateBillingAddressCommandTests()
     {
         _command = new UpdateBillingAddressCommand(
+            _featureService,
             Substitute.For<ILogger<UpdateBillingAddressCommand>>(),
             _subscriberService,
             _stripeAdapter);
@@ -690,5 +693,132 @@ public class UpdateBillingAddressCommandTests
 
         await _stripeAdapter.Received(1).UpdateCustomerAsync(organization.GatewayCustomerId,
             Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.Exempt));
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_UpdatesScheduleDefaultSettings()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions")
+        )).Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = "sub_sched_123",
+                        SubscriptionId = organization.GatewaySubscriptionId,
+                        Status = SubscriptionScheduleStatus.Active
+                    }
+                ]
+            });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            Arg.Is("sub_sched_123"),
+            Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
+                o.DefaultSettings.AutomaticTax.Enabled == true));
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_PersonalOrganization_FlagOn_NoSchedule_UpdatesSubscriptionDirectly()
+    {
+        var organization = new Organization
+        {
+            PlanType = PlanType.FamiliesAnnually,
+            GatewayCustomerId = "cus_123",
+            GatewaySubscriptionId = "sub_123"
+        };
+
+        var input = new BillingAddress
+        {
+            Country = "US",
+            PostalCode = "12345",
+            Line1 = "123 Main St.",
+            City = "New York",
+            State = "NY"
+        };
+
+        var customer = new Customer
+        {
+            Address = new Address { Country = "US", PostalCode = "12345", Line1 = "123 Main St.", City = "New York", State = "NY" },
+            Subscriptions = new StripeList<Subscription>
+            {
+                Data =
+                [
+                    new Subscription
+                    {
+                        Id = organization.GatewaySubscriptionId,
+                        CustomerId = organization.GatewayCustomerId,
+                        AutomaticTax = new SubscriptionAutomaticTax { Enabled = false }
+                    }
+                ]
+            }
+        };
+
+        _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
+            options.Address.Matches(input) &&
+            options.HasExpansions("subscriptions")
+        )).Returns(customer);
+
+        _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
+
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = new List<SubscriptionSchedule>() });
+
+        var result = await _command.Run(organization, input);
+
+        Assert.True(result.IsT0);
+
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.AutomaticTax.Enabled == true));
     }
 }

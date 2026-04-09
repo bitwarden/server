@@ -43,8 +43,7 @@ public class CloudOrganizationSignUpCommand(
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
     IPricingClient pricingClient,
-    IPolicyRequirementQuery policyRequirementQuery,
-    IFeatureService featureService) : ICloudOrganizationSignUpCommand
+    IPolicyRequirementQuery policyRequirementQuery) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
@@ -239,15 +238,12 @@ public class CloudOrganizationSignUpCommand(
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            var requirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
+        var requirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(ownerId);
 
-            if (requirement.CannotCreateNewOrganization())
-            {
-                throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                              "which has a policy that prohibits you from being a member of any other organization.");
-            }
+        if (requirement.CannotCreateNewOrganization())
+        {
+            throw new BadRequestException("You may not create an organization. You belong to an organization " +
+                                          "which has a policy that prohibits you from being a member of any other organization.");
         }
 
         var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);

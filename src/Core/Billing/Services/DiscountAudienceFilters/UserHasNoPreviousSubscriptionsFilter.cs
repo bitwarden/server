@@ -93,7 +93,8 @@ public class UserHasNoPreviousSubscriptionsFilter : IDiscountAudienceFilter
             var subscriptions = await stripeAdapter.ListSubscriptionsAsync(new SubscriptionListOptions
             {
                 Customer = user.GatewayCustomerId,
-                Expand = ["data.items.data.price"]
+                Expand = ["data.items.data.price"],
+                Status = "all"
             });
             return subscriptions.Data.Any(subscription =>
                 subscription.Items.Data.Any(item => premiumPriceIds.Contains(item.Price.Id)));

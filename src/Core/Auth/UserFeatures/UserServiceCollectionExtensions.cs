@@ -52,7 +52,7 @@ public static class UserServiceCollectionExtensions
 
     private static void AddUserPasswordCommands(this IServiceCollection services)
     {
-        services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
+        services.AddScoped<IFinishSsoJitProvisionMasterPasswordCommand, FinishSsoJitProvisionMasterPasswordCommand>();
         services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
         services.AddScoped<ITdeSetPasswordCommand, TdeSetPasswordCommand>();
     }
@@ -85,6 +85,7 @@ public static class UserServiceCollectionExtensions
                 StartTwoFactorWebAuthnRegistrationCommand>();
         services.AddScoped<IDeleteTwoFactorWebAuthnCredentialCommand, DeleteTwoFactorWebAuthnCredentialCommand>();
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
+        services.AddScoped<IResetUserTwoFactorCommand, ResetUserTwoFactorCommand>();
     }
 
     private static void AddSsoQueries(this IServiceCollection services)

@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
@@ -235,9 +235,11 @@ public class CipherServiceTests
         cipher.UserId = savingUserId;
         cipher.OrganizationId = null;
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership)
-            .Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
+            .Returns(new OrganizationDataOwnershipPolicyRequirement(
+                OrganizationDataOwnershipState.Enabled,
+                [new PolicyDetails()]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
@@ -254,58 +256,6 @@ public class CipherServiceTests
         cipher.Id = default;
         cipher.UserId = savingUserId;
         cipher.OrganizationId = null;
-
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.OrganizationDataOwnership)
-            .Returns(false);
-
-        await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
-
-        await sutProvider.GetDependency<ICipherRepository>()
-            .Received(1)
-            .CreateAsync(cipher);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyEnabled_Throws(
-        SutProvider<CipherService> sutProvider,
-        CipherDetails cipher,
-        Guid savingUserId)
-    {
-        cipher.Id = default;
-        cipher.UserId = savingUserId;
-        cipher.OrganizationId = null;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
-            .Returns(new OrganizationDataOwnershipPolicyRequirement(
-                OrganizationDataOwnershipState.Enabled,
-                [new PolicyDetails()]));
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
-        Assert.Contains("restricted from saving items to your personal vault", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task SaveDetailsAsync_PersonalVault_WithPolicyRequirementsEnabled_WithOrganizationDataOwnershipPolicyDisabled_Succeeds(
-        SutProvider<CipherService> sutProvider,
-        CipherDetails cipher,
-        Guid savingUserId)
-    {
-        cipher.Id = default;
-        cipher.UserId = savingUserId;
-        cipher.OrganizationId = null;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
 
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<OrganizationDataOwnershipPolicyRequirement>(savingUserId)
@@ -1073,7 +1023,7 @@ public class CipherServiceTests
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
                 {
@@ -1135,7 +1085,7 @@ public class CipherServiceTests
             .GetUserByIdAsync(restoringUserId)
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
                 {
@@ -1487,6 +1437,12 @@ public class CipherServiceTests
             .Received(1)
             .DeleteByIdsOrganizationIdAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == cipherIds.Count() &&
                 ids.All(id => cipherIds.Contains(id))), organizationId);
+        foreach (var cipher in ciphers)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
@@ -1525,6 +1481,12 @@ public class CipherServiceTests
             .Received(1)
             .DeleteAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == cipherIds.Count() &&
                 ids.All(id => cipherIds.Contains(id))), deletingUserId);
+        foreach (var cipher in ciphers)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
@@ -1591,7 +1553,7 @@ public class CipherServiceTests
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
                 {
@@ -1639,7 +1601,7 @@ public class CipherServiceTests
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
                 {
@@ -1663,6 +1625,87 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushSyncCiphersAsync(deletingUserId);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteManyAsync_WithOrgCipherNotFoundInCache_ThrowsNotFoundException(
+        Guid deletingUserId, List<CipherDetails> ciphers, User user, SutProvider<CipherService> sutProvider)
+    {
+        var targetOrgId = Guid.NewGuid();
+        var orgIdNotInCache = Guid.NewGuid();
+        var cipherDetailsNotInCache = new CipherDetails { Id = Guid.NewGuid(), OrganizationId = orgIdNotInCache, Manage = true };
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = targetOrgId;
+            cipher.Manage = true;
+        }
+
+        var cipherIds = ciphers.Concat([cipherDetailsNotInCache]).Select(c => c.Id).ToArray();
+
+        var allCiphers = ciphers.Concat([cipherDetailsNotInCache]).ToList();
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(deletingUserId)
+            .Returns(allCiphers);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { targetOrgId, new OrganizationAbility { Id = targetOrgId, LimitItemDeletion = true } }
+            });
+
+        // Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() =>
+             sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId));
+
+        Assert.Contains("Cipher does not belong to the input organization.", exception.Message);
+
+        await sutProvider.GetDependency<IApplicationCacheService>()
+             .Received(1)
+             .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                 ids.Contains(targetOrgId) &&
+                 ids.Contains(orgIdNotInCache)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PurgeAsync_WithOrganizationId_DeletesCiphersAndAttachments(
+        Organization org, List<Cipher> ciphers, SutProvider<CipherService> sutProvider)
+    {
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = org.Id;
+            cipher.Attachments = JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
+        }
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(org);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(ciphers);
+
+        await sutProvider.Sut.PurgeAsync(org.Id);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteByOrganizationIdAsync(org.Id);
+        foreach (var cipher in ciphers)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
     [Theory]
@@ -1938,7 +1981,7 @@ public class CipherServiceTests
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
                 {
@@ -1987,7 +2030,7 @@ public class CipherServiceTests
             .GetUserByIdAsync(deletingUserId)
             .Returns(user);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetOrganizationAbilitiesAsync()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, OrganizationAbility>
             {
                 {
@@ -2452,5 +2495,44 @@ public class CipherServiceTests
 
         Assert.Equal(expectedUrl, result.Url);
         Assert.Equal(attachmentId, result.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentsForOrganizationAsync_OnlyDeletesAttachmentsForCiphersWithAttachments(
+        SutProvider<CipherService> sutProvider,
+        Guid organizationId,
+        List<Cipher> ciphersWithAttachments,
+        List<Cipher> ciphersWithoutAttachments)
+    {
+        foreach (var cipher in ciphersWithAttachments)
+        {
+            cipher.Attachments = JsonSerializer.Serialize(
+                new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
+        }
+
+        foreach (var cipher in ciphersWithoutAttachments)
+        {
+            cipher.Attachments = null;
+        }
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(ciphersWithAttachments.Concat(ciphersWithoutAttachments).ToList());
+
+        await sutProvider.Sut.DeleteAttachmentsForOrganizationAsync(organizationId);
+
+        foreach (var cipher in ciphersWithAttachments)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .Received(1)
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
+
+        foreach (var cipher in ciphersWithoutAttachments)
+        {
+            await sutProvider.GetDependency<IAttachmentStorageService>()
+                .DidNotReceive()
+                .DeleteAttachmentsForCipherAsync(cipher.Id);
+        }
     }
 }

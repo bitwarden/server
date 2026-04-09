@@ -3,6 +3,7 @@ using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -10,10 +11,12 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -25,6 +28,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using OneOf.Types;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
@@ -49,6 +53,8 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationInstallationRepository _organizationInstallationRepository;
     private readonly IPricingClient _pricingClient;
+    private readonly IFeatureService _featureService;
+    private readonly IReinstateSubscriptionCommand _reinstateSubscriptionCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -73,6 +79,8 @@ public class OrganizationsControllerTests : IDisposable
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
         _organizationInstallationRepository = Substitute.For<IOrganizationInstallationRepository>();
         _pricingClient = Substitute.For<IPricingClient>();
+        _featureService = Substitute.For<IFeatureService>();
+        _reinstateSubscriptionCommand = Substitute.For<IReinstateSubscriptionCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -89,7 +97,9 @@ public class OrganizationsControllerTests : IDisposable
             _addSecretsManagerSubscriptionCommand,
             _subscriberService,
             _organizationInstallationRepository,
-            _pricingClient);
+            _pricingClient,
+            _featureService,
+            _reinstateSubscriptionCommand);
     }
 
     public void Dispose()
@@ -285,5 +295,51 @@ public class OrganizationsControllerTests : IDisposable
         await _addSecretsManagerSubscriptionCommand.Received(1)
             .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostReinstate_WhenFlagEnabled_CallsReinstateCommand(Guid organizationId)
+    {
+        var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_123" };
+
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _featureService
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _reinstateSubscriptionCommand
+            .Run(organization)
+            .Returns(new BillingCommandResult<None>(new None()));
+
+        await _sut.PostReinstate(organizationId);
+
+        await _reinstateSubscriptionCommand.Received(1).Run(organization);
+        await _organizationService.DidNotReceiveWithAnyArgs().ReinstateSubscriptionAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task PostReinstate_WhenFlagDisabled_CallsLegacyOrganizationService(Guid organizationId)
+    {
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _featureService
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(false);
+
+        await _sut.PostReinstate(organizationId);
+
+        await _organizationService.Received(1).ReinstateSubscriptionAsync(organizationId);
+        await _reinstateSubscriptionCommand.DidNotReceiveWithAnyArgs().Run(default);
+    }
+
+    [Theory, AutoData]
+    public async Task PostReinstate_WhenFlagEnabled_AndOrgNotFound_ThrowsNotFoundException(Guid organizationId)
+    {
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _featureService
+            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
+            .Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostReinstate(organizationId));
     }
 }
