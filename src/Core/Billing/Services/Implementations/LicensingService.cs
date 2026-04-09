@@ -22,6 +22,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Duende.IdentityModel;
+using Duende.IdentityServer.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,10 @@ namespace Bit.Core.Billing.Services;
 
 public class LicensingService : ILicensingService
 {
-    private readonly X509Certificate2 _certificate;
+    const string productionCertThumbprint = "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
+    const string developmentCertThumbprint = "207E64A231E8AA32AAF68A61037C075EBEBD553F";
+    private readonly X509Certificate2 _creationCertificate;
+    private readonly List<X509Certificate2> _verificationCertificates;
     private readonly IGlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
@@ -63,30 +67,53 @@ public class LicensingService : ILicensingService
         _userLicenseClaimsFactory = userLicenseClaimsFactory;
         _pushNotificationService = pushNotificationService;
 
-        var certThumbprint = environment.IsDevelopment() ?
-            "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
-            "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
+
+        // Load license creation cert
+        var creationCertThumbprint = environment.IsDevelopment() ? developmentCertThumbprint : productionCertThumbprint;
+        _verificationCertificates = new List<X509Certificate2>();
         if (_globalSettings.SelfHosted)
         {
-            _certificate = CoreHelpers.GetEmbeddedCertificateAsync(environment.IsDevelopment() ? "licensing_dev.cer" : "licensing.cer", null)
-                .GetAwaiter().GetResult();
+            X509Certificate2 devCert = null;
+            X509Certificate2 prodCert = CoreHelpers.GetEmbeddedCertificateAsync("licensing.cer", null).GetAwaiter().GetResult();
+
+            if (environment.IsDevelopment())
+            {
+                devCert = CoreHelpers.GetEmbeddedCertificateAsync("licensing_dev.cer", null).GetAwaiter().GetResult();
+                _creationCertificate = devCert;
+            }
+            else
+            {
+                _creationCertificate = prodCert;
+            }
+
+            // non-production environments can use dev cert-generated licenses
+            if (!environment.IsProduction() && devCert != null) // Should already be set by above IsDevelopment check
+            {
+                _verificationCertificates.Add(devCert);
+            }
         }
         else if (CoreHelpers.SettingHasValue(_globalSettings.Storage?.ConnectionString) &&
             CoreHelpers.SettingHasValue(_globalSettings.LicenseCertificatePassword))
         {
-            _certificate = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
+            _creationCertificate = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
                 "licensing.pfx", _globalSettings.LicenseCertificatePassword)
                 .GetAwaiter().GetResult();
         }
         else
         {
-            _certificate = CoreHelpers.GetCertificate(certThumbprint);
+            _creationCertificate = CoreHelpers.GetCertificate(creationCertThumbprint);
         }
+        // Creation cert can always be used to verify
+        _verificationCertificates.Add(_creationCertificate);
 
-        if (_certificate == null || !_certificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(certThumbprint),
+        if (_creationCertificate == null || !_creationCertificate.Thumbprint.Equals(CoreHelpers.CleanCertificateThumbprint(creationCertThumbprint),
             StringComparison.InvariantCultureIgnoreCase))
         {
             throw new Exception("Invalid licensing certificate.");
+        }
+        if (_verificationCertificates.IsNullOrEmpty() || _verificationCertificates.Any((c) => !new List<string>([productionCertThumbprint, developmentCertThumbprint]).Select(CoreHelpers.CleanCertificateThumbprint).Contains(c.Thumbprint)))
+        {
+            throw new Exception("Invalid license verifying certificate.");
         }
 
         if (_globalSettings.SelfHosted && !CoreHelpers.SettingHasValue(_globalSettings.LicenseDirectory))
@@ -132,7 +159,7 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_certificate))
+                if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_creationCertificate))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
                     continue;
@@ -231,7 +258,7 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_certificate))
+        if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_creationCertificate))
         {
             await DisablePremiumAsync(user, license, "Invalid signature.");
             return false;
@@ -271,7 +298,7 @@ public class LicensingService : ILicensingService
     {
         if (string.IsNullOrWhiteSpace(license.Token))
         {
-            return license.VerifySignature(_certificate);
+            return license.VerifySignature(_creationCertificate);
         }
 
         try
@@ -288,12 +315,12 @@ public class LicensingService : ILicensingService
 
     public byte[] SignLicense(ILicense license)
     {
-        if (_globalSettings.SelfHosted || !_certificate.HasPrivateKey)
+        if (_globalSettings.SelfHosted || !_creationCertificate.HasPrivateKey)
         {
             throw new InvalidOperationException("Cannot sign licenses.");
         }
 
-        return license.Sign(_certificate);
+        return license.Sign(_creationCertificate);
     }
 
     private UserLicense ReadUserLicense(User user)
@@ -336,12 +363,20 @@ public class LicensingService : ILicensingService
             _ => throw new ArgumentException("Unsupported license type.", nameof(license)),
         };
 
-        var token = license.Token;
+        // Merge claims from all issuers
+        var claimsIdentities = _verificationCertificates.Select((c) => new ClaimsIdentity(ValidateTokenWithIssuer(license.Token, audience, new X509SecurityKey(c)).Identity));
+        var claimsPrincipal = new ClaimsPrincipal(claimsIdentities);
+
+        return claimsPrincipal;
+    }
+
+    private ClaimsPrincipal ValidateTokenWithIssuer(string token, string audience, X509SecurityKey issuerKey)
+    {
         var tokenHandler = new JwtSecurityTokenHandler();
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new X509SecurityKey(_certificate),
+            IssuerSigningKey = issuerKey,
             ValidateIssuer = true,
             ValidIssuer = "bitwarden",
             ValidateAudience = true,
@@ -393,7 +428,7 @@ public class LicensingService : ILicensingService
             claims.Add(new Claim(JwtClaimTypes.JwtId, Guid.NewGuid().ToString()));
         }
 
-        var securityKey = new RsaSecurityKey(_certificate.GetRSAPrivateKey());
+        var securityKey = new RsaSecurityKey(_creationCertificate.GetRSAPrivateKey());
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
