@@ -863,11 +863,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
-    {
-        await RevokeManyAsync(organizationUserIds);
-    }
-
     public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();

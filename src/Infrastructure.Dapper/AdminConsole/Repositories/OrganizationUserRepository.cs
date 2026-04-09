@@ -608,11 +608,6 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
-    {
-        await RevokeManyAsync(organizationUserIds);
-    }
-
     public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null)
     {
         await using var connection = new SqlConnection(ConnectionString);
