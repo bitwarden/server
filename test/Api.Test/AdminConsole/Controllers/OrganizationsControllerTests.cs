@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
@@ -7,6 +8,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -227,5 +229,114 @@ public class OrganizationsControllerTests
                     s.LimitCollectionDeletion == model.LimitCollectionDeletion &&
                     s.LimitItemDeletion == model.LimitItemDeletion &&
                     s.AllowAdminAccessToAllCollectionItems == model.AllowAdminAccessToAllCollectionItems));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ApiKey_ScimType_InvalidSecret_ThrowsBadRequest(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "invalid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ApiKey(organization.Id.ToString(), model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ApiKey_ScimType_ValidSecret_ReturnsApiKey(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "valid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(true);
+
+        var result = await sutProvider.Sut.ApiKey(organization.Id.ToString(), model);
+
+        Assert.Equal(organizationApiKey.ApiKey, result.ApiKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateApiKey_ScimType_InvalidSecret_ThrowsBadRequest(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "invalid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(false);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RotateApiKey(organization.Id.ToString(), model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RotateApiKey_ScimType_ValidSecret_ReturnsApiKey(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        OrganizationApiKey organizationApiKey,
+        User user)
+    {
+        var model = new OrganizationApiKeyRequestModel
+        {
+            Type = OrganizationApiKeyType.Scim,
+            MasterPasswordHash = "valid-hash"
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().ManageScim(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IGetOrganizationApiKeyQuery>()
+            .GetOrganizationApiKeyAsync(organization.Id, OrganizationApiKeyType.Scim)
+            .Returns(organizationApiKey);
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        userService.VerifySecretAsync(user, model.Secret).Returns(true);
+
+        var result = await sutProvider.Sut.RotateApiKey(organization.Id.ToString(), model);
+
+        Assert.Equal(organizationApiKey.ApiKey, result.ApiKey);
     }
 }
