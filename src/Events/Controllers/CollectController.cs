@@ -133,9 +133,6 @@ public class CollectController : Controller
                 case EventType.Organization_ClientExportedVault:
                 case EventType.Organization_AutoConfirmEnabled_Admin:
                 case EventType.Organization_AutoConfirmDisabled_Admin:
-                case EventType.PhishingBlocker_SiteAccessed:
-                case EventType.PhishingBlocker_SiteExited:
-                case EventType.PhishingBlocker_Bypassed:
                     if (!eventModel.OrganizationId.HasValue)
                     {
                         continue;
@@ -149,7 +146,23 @@ public class CollectController : Controller
 
                     await _eventService.LogOrganizationEventAsync(organization, eventModel.Type, eventModel.Date);
                     break;
+                case EventType.PhishingBlocker_SiteAccessed:
+                case EventType.PhishingBlocker_SiteExited:
+                case EventType.PhishingBlocker_Bypassed:
+                    if (!eventModel.OrganizationId.HasValue)
+                    {
+                        continue;
+                    }
 
+                    // Verify the user belongs to this organization
+                    var orgUserContext = await _organizationUserRepository.GetByOrganizationAsync(eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+                    if (orgUserContext == null)
+                    {
+                        continue;
+                    }
+
+                    await _eventService.LogOrganizationUserEventAsync(orgUserContext, eventModel.Type, eventModel.Date);
+                    break;
                 default:
                     continue;
             }
