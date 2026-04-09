@@ -9,6 +9,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Api.Request;
@@ -51,6 +52,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly IUserSignatureKeyPairRepository _userSignatureKeyPairRepository;
     private readonly IEventRepository _eventRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IStripeSyncService _stripeSyncService;
 
     private string _ownerEmail = null!;
 
@@ -59,6 +61,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
         _factory.SubstituteService<IFeatureService>(_ => { });
+        _factory.SubstituteService<IStripeSyncService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
@@ -70,6 +73,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _userSignatureKeyPairRepository = _factory.GetService<IUserSignatureKeyPairRepository>();
         _eventRepository = _factory.GetService<IEventRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        _stripeSyncService = _factory.GetService<IStripeSyncService>();
     }
 
     public async Task InitializeAsync()
@@ -985,6 +989,43 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         // Verify email was not changed
         var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(unchangedUser);
+    }
+
+    [Fact]
+    public async Task PostEmail_WhenStripeSyncFails_MasterPasswordSaltIsRolledBack()
+    {
+        // Arrange
+        var newEmail = $"new-email-{Guid.NewGuid()}@bitwarden.com";
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        // Set up the user as a Stripe customer to exercise the sync code path in ChangeEmailAsync
+        user.Gateway = GatewayType.Stripe;
+        user.GatewayCustomerId = "cus_test_stripe_fail";
+        await _userRepository.ReplaceAsync(user);
+
+        // Configure the substitute to simulate a Stripe sync failure after the DB write
+        _stripeSyncService
+            .UpdateCustomerEmailAddressAsync(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromException(new Exception("Stripe sync failure")));
+
+        var userManager = _factory.GetService<UserManager<User>>();
+        var token = await userManager.GenerateChangeEmailTokenAsync(user, newEmail);
+
+        // Act
+        var response = await PostEmailAsync(newEmail, token);
+
+        // Assert - Stripe failure is surfaced as a bad request
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        // Verify MasterPasswordSalt was rolled back to the original email, not left at newEmail.
+        // ChangeEmailAsync sets MasterPasswordSalt = newEmail and persists before attempting Stripe
+        // sync; on failure it must re-persist MasterPasswordSalt = previousState.Email.
+        var unchangedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(unchangedUser);
+        Assert.Equal(_ownerEmail, unchangedUser.MasterPasswordSalt);
     }
 
     private async Task<HttpResponseMessage> PostEmailAsync(string newEmail, string token)
