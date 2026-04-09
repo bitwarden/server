@@ -2,7 +2,6 @@
 #nullable disable
 
 using System.Security.Claims;
-using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
@@ -31,9 +30,6 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Data;
-using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
@@ -74,7 +70,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IPricingClient _pricingClient;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly ISubscriberService _subscriberService;
-    private readonly ISendRepository _sendRepository;
     private readonly ISendFileStorageService _sendFileStorageService;
 
     public UserService(
@@ -110,7 +105,6 @@ public class UserService : UserManager<User>, IUserService
         IPricingClient pricingClient,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         ISubscriberService subscriberService,
-        ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService)
         : base(
               store,
@@ -150,7 +144,6 @@ public class UserService : UserManager<User>, IUserService
         _pricingClient = pricingClient;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _subscriberService = subscriberService;
-        _sendRepository = sendRepository;
         _sendFileStorageService = sendFileStorageService;
     }
 
@@ -292,8 +285,7 @@ public class UserService : UserManager<User>, IUserService
             catch (BillingException) { }
         }
 
-        await DeleteSendFilesForUserAsync(user);
-
+        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
         await _userRepository.DeleteAsync(user);
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
@@ -1200,28 +1192,4 @@ public class UserService : UserManager<User>, IUserService
         }
     }
 
-    /// <summary>
-    /// Deletes Send files from storage. Send objects are deleted via
-    /// IOrganizationRepository.DeleteAsync.
-    /// </summary>
-    /// <param name="user">The user whose Send files will be deleted.</param>
-    private async Task DeleteSendFilesForUserAsync(User user)
-    {
-        var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
-        foreach (var send in sends.Where(s => s.Type == SendType.File))
-        {
-            try
-            {
-                var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
-                if (data?.Id != null)
-                {
-                    await _sendFileStorageService.DeleteFileAsync(send, data.Id);
-                }
-            }
-            catch (JsonException ex)
-            {
-                Logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
-            }
-        }
-    }
 }

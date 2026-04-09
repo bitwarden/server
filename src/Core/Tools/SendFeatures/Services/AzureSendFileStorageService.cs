@@ -1,20 +1,28 @@
-﻿using Azure.Storage.Blobs;
+﻿using System.Text.Json;
+using Azure;
+using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs.Specialized;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tools.Services;
 
 public class AzureSendFileStorageService(
     GlobalSettings globalSettings,
+    ISendRepository sendRepository,
     ILogger<AzureSendFileStorageService> logger) : ISendFileStorageService
 {
     public const string FilesContainerName = "sendfiles";
     private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
     private readonly BlobServiceClient _blobServiceClient = new(globalSettings.Send.ConnectionString);
+    private readonly ISendRepository _sendRepository = sendRepository;
     private readonly ILogger<AzureSendFileStorageService> _logger = logger;
     /*
      * When this file was made nullable, multiple instances of ! were introduced asserting that
@@ -66,11 +74,15 @@ public class AzureSendFileStorageService(
     public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
     {
         await InitAsync();
+        var sends = await _sendRepository.GetManyByOrganizationIdAsync(organizationId);
+        await DeleteBlobsForSendsAsync(sends);
     }
 
     public async Task DeleteFilesForUserAsync(Guid userId)
     {
         await InitAsync();
+        var sends = await _sendRepository.GetManyByUserIdAsync(userId);
+        await DeleteBlobsForSendsAsync(sends);
     }
 
     public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
@@ -125,6 +137,53 @@ public class AzureSendFileStorageService(
         {
             _logger.LogError(ex, $"A storage operation failed in {nameof(ValidateFileAsync)}");
             return (false, -1);
+        }
+    }
+
+    private async Task DeleteBlobsForSendsAsync(ICollection<Send> sends)
+    {
+        var blobUris = new List<Uri>();
+
+        foreach (var send in sends.Where(s => s.Type == SendType.File))
+        {
+            try
+            {
+                var data = send.Data != null
+                    ? JsonSerializer.Deserialize<SendFileData>(send.Data)
+                    : null;
+                if (data?.Id != null)
+                {
+                    var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, data.Id));
+                    blobUris.Add(blobClient.Uri);
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
+            }
+        }
+
+        if (blobUris.Count == 0)
+        {
+            return;
+        }
+
+        var blobBatchClient = _blobServiceClient.GetBlobBatchClient();
+
+        foreach (var batch in blobUris.Chunk(256))
+        {
+            try
+            {
+                await blobBatchClient.DeleteBlobsAsync(batch);
+            }
+            catch (AggregateException ex)
+            {
+                _logger.LogError(ex, "One or more blob deletions failed in a batch of {Count} blobs.", batch.Length);
+            }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Batch blob deletion request failed for {Count} blobs.", batch.Length);
+            }
         }
     }
 

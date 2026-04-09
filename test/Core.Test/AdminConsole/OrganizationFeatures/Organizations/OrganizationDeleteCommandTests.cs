@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -11,10 +10,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Data;
-using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
@@ -164,29 +159,9 @@ public class OrganizationDeleteCommandTests
         // 1. DB row is deleted successfully
         // 2. File blob fails to delete
         // 3. File blob still exists but with no parent Send
-        var fileData = new SendFileData { Id = "file1", FileName = "test.txt", Size = 100 };
-        var fileSend = new Send
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            Type = SendType.File,
-            Data = JsonSerializer.Serialize(fileData)
-        };
-        var textSend = new Send
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organization.Id,
-            Type = SendType.Text,
-            Data = "{}"
-        };
-
-        sutProvider.GetDependency<ISendRepository>()
-            .GetManyByOrganizationIdAsync(organization.Id)
-            .Returns(new List<Send> { fileSend, textSend });
-
         var callOrder = new List<string>();
         sutProvider.GetDependency<ISendFileStorageService>()
-            .DeleteFileAsync(fileSend, fileData.Id)
+            .DeleteFilesForOrganizationAsync(organization.Id)
             .Returns(Task.CompletedTask)
             .AndDoes(_ => callOrder.Add("file"));
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -197,7 +172,7 @@ public class OrganizationDeleteCommandTests
         await sutProvider.Sut.DeleteAsync(organization);
 
         await sutProvider.GetDependency<ISendFileStorageService>()
-            .Received(1).DeleteFileAsync(fileSend, fileData.Id);
+            .Received(1).DeleteFilesForOrganizationAsync(organization.Id);
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1).DeleteAsync(organization);
         Assert.Equal(new[] { "file", "db" }, callOrder);
