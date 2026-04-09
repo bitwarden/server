@@ -9,13 +9,18 @@ public class UpdateTdeOffboardingPasswordRequestModel : IValidatableObject
     [StringLength(300)]
     public string? NewMasterPasswordHash { get; set; }
     [Obsolete("To be removed in PM-33141")]
-    [Required]
     public string? Key { get; set; }
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
 
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
+
+    // To be removed in PM-33141
+    public bool RequestHasNewDataTypes()
+    {
+        return UnlockData is not null && AuthenticationData is not null;
+    }
 
     // To be removed in PM-33141
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

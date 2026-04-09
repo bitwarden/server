@@ -13,11 +13,16 @@ public class MasterPasswordService(
     IPasswordHasher<User> passwordHasher,
     IEnumerable<IPasswordValidator<User>> passwordValidators,
     UserManager<User> userManager,
-    ILogger<MasterPasswordService> logger,
-    ISetInitialMasterPasswordStateCommand setInitialMasterPasswordStateCommand,
-    IUpdateMasterPasswordStateCommand updateMasterPasswordStateCommand)
+    ILogger<MasterPasswordService> logger)
     : IMasterPasswordService
 {
+    private readonly IUserRepository _userRepository = userRepository;
+    private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly IPasswordHasher<User> _passwordHasher = passwordHasher;
+    private readonly IEnumerable<IPasswordValidator<User>> _passwordValidators = passwordValidators;
+    private readonly UserManager<User> _userManager = userManager;
+    private readonly ILogger<MasterPasswordService> _logger = logger;
+
     public async Task<IdentityResult> OnlyMutateEitherUpdateExistingPasswordOrSetInitialPassword(
         User user,
         SetInitialOrChangeExistingPasswordData setOrUpdatePasswordData)
@@ -72,7 +77,7 @@ public class MasterPasswordService(
         }
 
         // Update time markers on the user
-        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         user.LastPasswordChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;
 
@@ -90,7 +95,8 @@ public class MasterPasswordService(
             return result;
         }
 
-        await setInitialMasterPasswordStateCommand.ExecuteAsync(user);
+        await _userRepository.ReplaceAsync(user);
+
         return IdentityResult.Success;
     }
 
@@ -101,10 +107,10 @@ public class MasterPasswordService(
         setInitialData.ValidateDataForUser(user);
 
         // Hash the provided user master password authentication hash on the server side
-        var serverSideHashedMasterPasswordAuthenticationHash = passwordHasher.HashPassword(user,
+        var serverSideHashedMasterPasswordAuthenticationHash = _passwordHasher.HashPassword(user,
             setInitialData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash);
 
-        var setMasterPasswordTask = userRepository.SetMasterPassword(user.Id,
+        var setMasterPasswordTask = _userRepository.SetMasterPassword(user.Id,
             setInitialData.MasterPasswordUnlock, serverSideHashedMasterPasswordAuthenticationHash,
             setInitialData.MasterPasswordHint);
 
@@ -129,7 +135,7 @@ public class MasterPasswordService(
             return result;
         }
 
-        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
 
@@ -152,7 +158,8 @@ public class MasterPasswordService(
             return result;
         }
 
-        await updateMasterPasswordStateCommand.ExecuteAsync(user);
+        await _userRepository.ReplaceAsync(user);
+
         return IdentityResult.Success;
     }
 
@@ -168,7 +175,7 @@ public class MasterPasswordService(
             }
         }
 
-        user.MasterPassword = passwordHasher.HashPassword(user, newPassword);
+        user.MasterPassword = _passwordHasher.HashPassword(user, newPassword);
         if (refreshStamp)
         {
             user.SecurityStamp = Guid.NewGuid().ToString();
@@ -177,12 +184,13 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
+    // Taken from the
     private async Task<IdentityResult> ValidatePasswordInternalAsync(User user, string password)
     {
         var errors = new List<IdentityError>();
-        foreach (var v in passwordValidators)
+        foreach (var v in _passwordValidators)
         {
-            var result = await v.ValidateAsync(userManager, user, password);
+            var result = await v.ValidateAsync(_userManager, user, password);
             if (!result.Succeeded)
             {
                 errors.AddRange(result.Errors);
@@ -191,7 +199,7 @@ public class MasterPasswordService(
 
         if (errors.Count > 0)
         {
-            logger.LogWarning("User {userId} password validation failed: {errors}.", user.Id,
+            _logger.LogWarning("User {userId} password validation failed: {errors}.", user.Id,
                 string.Join(";", errors.Select(e => e.Code)));
             return IdentityResult.Failed(errors.ToArray());
         }

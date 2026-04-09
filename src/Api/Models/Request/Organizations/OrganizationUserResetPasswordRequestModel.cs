@@ -32,6 +32,12 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
     };
 
     // To be removed in PM-33141
+    public bool RequestHasNewDataTypes()
+    {
+        return UnlockData is not null && AuthenticationData is not null;
+    }
+
+    // To be removed in PM-33141
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var hasNewPayloads = UnlockData is not null && AuthenticationData is not null;
