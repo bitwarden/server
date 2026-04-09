@@ -10,7 +10,7 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories.Vault.Queries;
 using Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 using Bit.Test.Common.AutoFixture.Attributes;
-using LinqToDB;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
