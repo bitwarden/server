@@ -1451,7 +1451,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
@@ -2195,7 +2195,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
@@ -2309,7 +2309,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
@@ -2432,7 +2432,7 @@ public class UpcomingInvoiceHandlerTests
         await _mailer.Received(1).SendEmail(
             Arg.Is<Families2019RenewalMail>(email =>
                 email.ToEmails.Contains("org@example.com") &&
-                email.Subject == "Your Bitwarden Families renewal is updating" &&
+                email.Subject == "Your Bitwarden Families subscription is updating" &&
                 email.View.BaseMonthlyRenewalPrice == (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")) &&
                 email.View.BaseAnnualRenewalPrice == familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")) &&
                 email.View.DiscountAmount == $"{coupon.PercentOff}%"
