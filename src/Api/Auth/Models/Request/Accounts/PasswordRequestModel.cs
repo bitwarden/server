@@ -3,8 +3,10 @@ using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class PasswordRequestModel : SecretVerificationRequestModel
+public class PasswordRequestModel
 {
+    [Required]
+    public required string MasterPasswordHash { get; set; }
     [Obsolete("To be removed in PM-33141")]
     [StringLength(300)]
     public string? NewMasterPasswordHash { get; set; }
@@ -17,13 +19,14 @@ public class PasswordRequestModel : SecretVerificationRequestModel
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
 
     // To be removed in PM-33141
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public bool RequestHasNewDataTypes()
     {
-        foreach (var result in base.Validate(validationContext))
-        {
-            yield return result;
-        }
+        return UnlockData is not null && AuthenticationData is not null;
+    }
 
+    // To be removed in PM-33141
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
         var hasNewPayloads = AuthenticationData is not null && UnlockData is not null;
         var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
 

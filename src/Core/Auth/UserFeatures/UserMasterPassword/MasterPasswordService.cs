@@ -182,7 +182,6 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
-    // Taken from the
     private async Task<IdentityResult> ValidatePasswordInternalAsync(User user, string password)
     {
         var errors = new List<IdentityError>();

@@ -481,6 +481,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("To be removed in PM-33141")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {

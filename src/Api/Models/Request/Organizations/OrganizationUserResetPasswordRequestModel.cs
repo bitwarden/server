@@ -25,17 +25,13 @@ public class OrganizationUserResetPasswordRequestModel : IValidatableObject
         OrganizationUser = organizationUser,
         ResetMasterPassword = ResetMasterPassword,
         ResetTwoFactor = ResetTwoFactor,
+        // To be removed in PM-33141
         NewMasterPasswordHash = NewMasterPasswordHash,
+        // To be removed in PM-33141
         Key = Key,
         UnlockData = UnlockData,
         AuthenticationData = AuthenticationData,
     };
-
-    // To be removed in PM-33141
-    public bool RequestHasNewDataTypes()
-    {
-        return UnlockData is not null && AuthenticationData is not null;
-    }
 
     // To be removed in PM-33141
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

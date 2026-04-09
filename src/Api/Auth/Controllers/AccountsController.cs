@@ -14,6 +14,7 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,64 +26,45 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
 [Route("accounts")]
 [Authorize(Policies.Application)]
-public class AccountsController : Controller
+public class AccountsController(
+    IOrganizationService organizationService,
+    IOrganizationUserRepository organizationUserRepository,
+    IProviderUserRepository providerUserRepository,
+    IUserService userService,
+    IMasterPasswordService masterPasswordService,
+    IPolicyService policyService,
+    IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
+    ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
+    ITdeSetPasswordCommand tdeSetPasswordCommand,
+    ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
+    ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+    IUserAccountKeysQuery userAccountKeysQuery,
+    ITwoFactorEmailService twoFactorEmailService,
+    IChangeKdfCommand changeKdfCommand,
+    IUserRepository userRepository) : Controller
 {
-    private readonly IOrganizationService _organizationService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IUserService _userService;
-    private readonly IPolicyService _policyService;
-    private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
-    private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
-    private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
-    private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
-    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IFeatureService _featureService;
-    private readonly IUserAccountKeysQuery _userAccountKeysQuery;
-    private readonly ITwoFactorEmailService _twoFactorEmailService;
-    private readonly IChangeKdfCommand _changeKdfCommand;
-    private readonly IUserRepository _userRepository;
-
-    public AccountsController(
-        IOrganizationService organizationService,
-        IOrganizationUserRepository organizationUserRepository,
-        IProviderUserRepository providerUserRepository,
-        IUserService userService,
-        IPolicyService policyService,
-        IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
-        ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
-        ITdeSetPasswordCommand tdeSetPasswordCommand,
-        ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IFeatureService featureService,
-        IUserAccountKeysQuery userAccountKeysQuery,
-        ITwoFactorEmailService twoFactorEmailService,
-        IChangeKdfCommand changeKdfCommand,
-        IUserRepository userRepository
-        )
-    {
-        _organizationService = organizationService;
-        _organizationUserRepository = organizationUserRepository;
-        _providerUserRepository = providerUserRepository;
-        _userService = userService;
-        _policyService = policyService;
-        _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
-        _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
-        _tdeSetPasswordCommand = tdeSetPasswordCommand;
-        _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
-        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _featureService = featureService;
-        _userAccountKeysQuery = userAccountKeysQuery;
-        _twoFactorEmailService = twoFactorEmailService;
-        _changeKdfCommand = changeKdfCommand;
-        _userRepository = userRepository;
-    }
+    private readonly IOrganizationService _organizationService = organizationService;
+    private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
+    private readonly IProviderUserRepository _providerUserRepository = providerUserRepository;
+    private readonly IUserService _userService = userService;
+    private readonly IMasterPasswordService _masterPasswordService = masterPasswordService;
+    private readonly IPolicyService _policyService = policyService;
+    private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
+    private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
+    private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand = tdeSetPasswordCommand;
+    private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+    private readonly IUserAccountKeysQuery _userAccountKeysQuery = userAccountKeysQuery;
+    private readonly ITwoFactorEmailService _twoFactorEmailService = twoFactorEmailService;
+    private readonly IChangeKdfCommand _changeKdfCommand = changeKdfCommand;
+    private readonly IUserRepository _userRepository = userRepository;
 
 
     [HttpPost("password-hint")]
@@ -197,8 +179,23 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
+        IdentityResult result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _masterPasswordService.UpdateExistingMasterPasswordAndSaveAsync(user, new UpdateExistingPasswordData
+            {
+                MasterPasswordUnlock = model.UnlockData!.ToData(),
+                MasterPasswordAuthentication = model.AuthenticationData!.ToData(),
+                MasterPasswordHint = model.MasterPasswordHint,
+            });
+        }
+        // To be removed in PM-33141
+        else
+        {
+            result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
+                model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
+        }
+
         if (result.Succeeded)
         {
             return;
@@ -670,17 +667,16 @@ public class AccountsController : Controller
         }
 
 
-        var result;
+        IdentityResult result;
         if (model.RequestHasNewDataTypes())
         {
             result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.UnlockData!.ToData(), model.AuthenticationData!.ToData(), model.MasterPasswordHint);
         }
         else
         {
-            result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
+            result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash!, model.Key!, model.MasterPasswordHint);
         }
 
-        var result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
         if (result.Succeeded)
         {
             return;

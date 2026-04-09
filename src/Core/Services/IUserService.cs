@@ -28,6 +28,7 @@ public interface IUserService
     Task InitiateEmailChangeAsync(User user, string newEmail);
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
+    [Obsolete("To be removed in PM-33141")]
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
