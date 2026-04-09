@@ -150,6 +150,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public bool UseMyItems { get; set; }
 
+    /// <summary>
+    /// If set to true, the organization is exempt from billing automations.
+    /// </summary>
+    public bool ExemptFromBillingAutomation { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))

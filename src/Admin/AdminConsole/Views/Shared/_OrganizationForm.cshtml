@@ -294,6 +294,14 @@
     @if (canViewBilling)
     {
         <h2>Billing</h2>
+        @if (!canEditBilling && Model.ExemptFromBillingAutomation)
+        {
+            <input type="hidden" name="ExemptFromBillingAutomation" value="true">
+        }
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="ExemptFromBillingAutomation" disabled='@(canEditBilling ? null : "disabled")'>
+            <label class="form-check-label" asp-for="ExemptFromBillingAutomation"></label>
+        </div>
         <div class="row">
             <div class="col-sm">
                 <div class="mb-3">
