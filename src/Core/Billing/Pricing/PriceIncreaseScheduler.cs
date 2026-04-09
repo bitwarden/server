@@ -31,6 +31,20 @@ public interface IPriceIncreaseScheduler
     /// <param name="customerId">The Stripe customer ID that owns the subscription.</param>
     /// <param name="subscriptionId">The Stripe subscription ID to release the schedule for.</param>
     Task Release(string customerId, string subscriptionId);
+
+    /// <summary>
+    /// Resolves the Phase 2 subscription schedule options for a price migration based on the subscription's
+    /// current plan. Determines the appropriate target plan, pricing, and discount (if applicable) for
+    /// supported migration paths (Premium and Families plans). Gated behind the
+    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag.
+    /// </summary>
+    /// <param name="subscription">The Stripe subscription to resolve Phase 2 options for.</param>
+    /// <returns>
+    /// A <see cref="SubscriptionSchedulePhaseOptions"/> object containing the migration details if a supported
+    /// migration path is found; otherwise, null if the feature flag is disabled, the subscription does not
+    /// match a known migration path, or an error occurs during resolution.
+    /// </returns>
+    Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription);
 }
 
 public class PriceIncreaseScheduler(
@@ -151,8 +165,13 @@ public class PriceIncreaseScheduler(
         }
     }
 
-    private async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription)
+    public async Task<SubscriptionSchedulePhaseOptions?> ResolvePhase2Async(Subscription subscription)
     {
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            return null;
+        }
+
         try
         {
             SubscriberId subscriberId = subscription;
@@ -216,9 +235,19 @@ public class PriceIncreaseScheduler(
             });
         }
 
+        var startDate = subscription.GetCurrentPeriodEnd();
+        if (startDate == null)
+        {
+            logger.LogError(
+                "Could not determine current period end for subscription ({SubscriptionId}), skipping schedule creation",
+                subscription.Id);
+            return null;
+        }
+
         return new SubscriptionSchedulePhaseOptions
         {
-            StartDate = subscription.GetCurrentPeriodEnd(),
+            StartDate = startDate,
+            EndDate = startDate.Value.AddYears(1),
             Items = items,
             Discounts = [new() { Coupon = CouponIDs.Milestone2SubscriptionDiscount }],
             ProrationBehavior = ProrationBehavior.None
@@ -269,9 +298,19 @@ public class PriceIncreaseScheduler(
             }
             : null;
 
+        var startDate = subscription.GetCurrentPeriodEnd();
+        if (startDate == null)
+        {
+            logger.LogError(
+                "Could not determine current period end for subscription ({SubscriptionId}), skipping schedule creation",
+                subscription.Id);
+            return null;
+        }
+
         return new SubscriptionSchedulePhaseOptions
         {
-            StartDate = subscription.GetCurrentPeriodEnd(),
+            StartDate = startDate,
+            EndDate = startDate.Value.AddYears(1),
             Items = items,
             Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None

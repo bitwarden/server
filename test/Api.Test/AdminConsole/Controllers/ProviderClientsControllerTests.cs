@@ -92,6 +92,91 @@ public class ProviderClientsControllerTests
 
     #endregion
 
+    #region AddExistingOrganizationAsync
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganizationAsync_ServiceUser_Unauthorized(
+        Provider provider,
+        AddExistingOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
+
+        var result = await sutProvider.Sut.AddExistingOrganizationAsync(provider.Id, requestBody);
+
+        AssertUnauthorized(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganizationAsync_NotOrgOwner_Unauthorized(
+        Provider provider,
+        AddExistingOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(requestBody.OrganizationId)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.AddExistingOrganizationAsync(provider.Id, requestBody);
+
+        AssertUnauthorized(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganizationAsync_OrgNotAddable_NotFound(
+        Provider provider,
+        AddExistingOrganizationRequestBody requestBody,
+        Guid userId,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(requestBody.OrganizationId)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetAddableToProviderByUserIdAsync(userId, provider.Type)
+            .Returns([]);
+
+        var result = await sutProvider.Sut.AddExistingOrganizationAsync(provider.Id, requestBody);
+
+        AssertNotFound(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddExistingOrganizationAsync_Ok(
+        Provider provider,
+        AddExistingOrganizationRequestBody requestBody,
+        Organization organization,
+        Guid userId,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        organization.Id = requestBody.OrganizationId;
+
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(requestBody.OrganizationId)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetAddableToProviderByUserIdAsync(userId, provider.Type)
+            .Returns([organization]);
+
+        var result = await sutProvider.Sut.AddExistingOrganizationAsync(provider.Id, requestBody);
+
+        await sutProvider.GetDependency<IProviderBillingService>().Received(1)
+            .AddExistingOrganization(provider, organization, requestBody.Key);
+
+        Assert.IsType<Ok>(result);
+    }
+
+    #endregion
+
     #region UpdateAsync
 
     [Theory, BitAutoData]

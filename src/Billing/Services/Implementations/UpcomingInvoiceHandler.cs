@@ -190,11 +190,7 @@ public class UpcomingInvoiceHandler(
         {
             try
             {
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
+                await EnableAutomaticTaxAsync(subscription);
             }
             catch (Exception exception)
             {
@@ -343,19 +339,15 @@ public class UpcomingInvoiceHandler(
 
         await AlignPremiumUsersTaxConcernsAsync(user, @event, customer, subscription);
 
-        var milestone2Feature = featureService.IsEnabled(FeatureFlagKeys.PM23341_Milestone_2);
-        if (milestone2Feature)
-        {
-            var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
+        var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
 
-            /*
-             * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
-             * with processing.
-             */
-            if (subscriptionAligned)
-            {
-                return;
-            }
+        /*
+         * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
+         * with processing.
+         */
+        if (subscriptionAligned)
+        {
+            return;
         }
 
         if (user.Premium)
@@ -374,11 +366,7 @@ public class UpcomingInvoiceHandler(
         {
             try
             {
-                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
+                await EnableAutomaticTaxAsync(subscription);
             }
             catch (Exception exception)
             {
@@ -573,6 +561,40 @@ public class UpcomingInvoiceHandler(
     #endregion
 
     #region Shared
+
+    private async Task EnableAutomaticTaxAsync(Subscription subscription)
+    {
+        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        {
+            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+            var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active);
+
+            if (activeSchedule != null)
+            {
+                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                    new SubscriptionScheduleUpdateOptions
+                    {
+                        DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
+                        {
+                            AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
+                            {
+                                Enabled = true
+                            }
+                        }
+                    });
+                return;
+            }
+        }
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+            new SubscriptionUpdateOptions
+            {
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+            });
+    }
 
     private async Task SendUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice)
     {

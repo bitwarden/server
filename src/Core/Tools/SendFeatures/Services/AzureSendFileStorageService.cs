@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Azure.Storage.Blobs;
+﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
@@ -11,39 +8,40 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tools.Services;
 
-public class AzureSendFileStorageService : ISendFileStorageService
+public class AzureSendFileStorageService(
+    GlobalSettings globalSettings,
+    ILogger<AzureSendFileStorageService> logger) : ISendFileStorageService
 {
     public const string FilesContainerName = "sendfiles";
     private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
-    private readonly BlobServiceClient _blobServiceClient;
-    private readonly ILogger<AzureSendFileStorageService> _logger;
-    private BlobContainerClient _sendFilesContainerClient;
+    private readonly BlobServiceClient _blobServiceClient = new(globalSettings.Send.ConnectionString);
+    private readonly ILogger<AzureSendFileStorageService> _logger = logger;
+    /*
+     * When this file was made nullable, multiple instances of ! were introduced asserting that
+     * _sendFilesContainerClient abd the blobClient it is used to construct are not null.
+     *
+     * See InitAsync() at end of file which is responsible for assigning value asynchronously ensuring
+     * _sendFilesContainerClient and blobClient are not null.
+     */
+    private BlobContainerClient? _sendFilesContainerClient;
 
     public FileUploadType FileUploadType => FileUploadType.Azure;
 
     public static string SendIdFromBlobName(string blobName) => blobName.Split('/')[0];
     public static string BlobName(Send send, string fileId) => $"{send.Id}/{fileId}";
 
-    public AzureSendFileStorageService(
-        GlobalSettings globalSettings,
-        ILogger<AzureSendFileStorageService> logger)
-    {
-        _blobServiceClient = new BlobServiceClient(globalSettings.Send.ConnectionString);
-        _logger = logger;
-    }
-
     public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
     {
         await InitAsync();
 
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
 
         var metadata = new Dictionary<string, string>();
         if (send.UserId.HasValue)
         {
             metadata.Add("userId", send.UserId.Value.ToString());
         }
-        else
+        else if (send.OrganizationId.HasValue)
         {
             metadata.Add("organizationId", send.OrganizationId.Value.ToString());
         }
@@ -61,7 +59,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
     public async Task DeleteBlobAsync(string blobName)
     {
         await InitAsync();
-        var blobClient = _sendFilesContainerClient.GetBlobClient(blobName);
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(blobName);
         await blobClient.DeleteIfExistsAsync();
     }
 
@@ -78,7 +76,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
     public async Task<string> GetSendFileDownloadUrlAsync(Send send, string fileId)
     {
         await InitAsync();
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
         var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(_downloadLinkLiveTime));
         return sasUri.ToString();
     }
@@ -86,7 +84,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
     public async Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
     {
         await InitAsync();
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
         var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(_downloadLinkLiveTime));
         return sasUri.ToString();
     }
@@ -95,7 +93,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
     {
         await InitAsync();
 
-        var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
+        var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
 
         try
         {
@@ -106,7 +104,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
             {
                 metadata["userId"] = send.UserId.Value.ToString();
             }
-            else
+            else if (send.OrganizationId.HasValue)
             {
                 metadata["organizationId"] = send.OrganizationId.Value.ToString();
             }

@@ -2,7 +2,6 @@
 #nullable disable
 
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
 using Stripe;
 
@@ -11,18 +10,19 @@ namespace Bit.Core.Billing.Services;
 public interface ISubscriberService
 {
     /// <summary>
-    /// Cancels a subscriber's subscription while including user-provided feedback via the <paramref name="offboardingSurveyResponse"/>.
+    /// Cancels a subscriber's subscription.
     /// If the <paramref name="cancelImmediately"/> flag is <see langword="false"/>,
     /// this command sets the subscription's <b>"cancel_at_end_of_period"</b> property to <see langword="true"/>.
     /// Otherwise, this command cancels the subscription immediately.
+    /// Optionally includes user-provided feedback via the <paramref name="offboardingSurveyResponse"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber with the subscription to cancel.</param>
-    /// <param name="offboardingSurveyResponse">An <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling the subscription.</param>
     /// <param name="cancelImmediately">A flag indicating whether to cancel the subscription immediately or at the end of the subscription period.</param>
+    /// <param name="offboardingSurveyResponse">An optional <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling the subscription.</param>
     Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately);
+        bool cancelImmediately,
+        OffboardingSurveyResponse offboardingSurveyResponse = null);
 
     /// <summary>
     /// Creates a Braintree <see cref="Braintree.Customer"/> for the provided <paramref name="subscriber"/> while attaching the provided <paramref name="paymentMethodNonce"/>.
@@ -103,15 +103,6 @@ public interface ISubscriberService
     /// </summary>
     /// <param name="subscriber">The subscriber to remove the saved payment source for.</param>
     Task RemovePaymentSource(ISubscriber subscriber);
-
-    /// <summary>
-    /// Updates the tax information for the provided <paramref name="subscriber"/>.
-    /// </summary>
-    /// <param name="subscriber">The <paramref name="subscriber"/> to update the tax information for.</param>
-    /// <param name="taxInformation">A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s updated tax information.</param>
-    Task UpdateTaxInformation(
-        ISubscriber subscriber,
-        TaxInformation taxInformation);
 
     /// <summary>
     /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> exists in the gateway.
