@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
@@ -32,6 +34,7 @@ public class AdminRecoverAccountCommandTests
         SetupOrganization(sutProvider, organization);
         SetupUser(sutProvider, user, organizationUser);
         SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+        SetupPolicy(sutProvider, user);
 
         var request = CreateRequest(organization.Id, organizationUser,
             resetMasterPassword: true, resetTwoFactor: false,
@@ -84,6 +87,7 @@ public class AdminRecoverAccountCommandTests
         // Arrange
         SetupOrganization(sutProvider, organization);
         SetupUser(sutProvider, user, organizationUser);
+        SetupPolicy(sutProvider, user);
 
         var request = CreateRequest(organization.Id, organizationUser,
             resetMasterPassword: false, resetTwoFactor: true);
@@ -134,6 +138,7 @@ public class AdminRecoverAccountCommandTests
         SetupOrganization(sutProvider, organization);
         SetupUser(sutProvider, user, organizationUser);
         SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+        SetupPolicy(sutProvider, user);
 
         var request = CreateRequest(organization.Id, organizationUser,
             resetMasterPassword: true, resetTwoFactor: true,
@@ -191,6 +196,7 @@ public class AdminRecoverAccountCommandTests
         // Arrange
         SetupOrganization(sutProvider, organization);
         SetupUser(sutProvider, user, organizationUser);
+        SetupPolicy(sutProvider, user);
 
         var failedResult = IdentityResult.Failed(new IdentityError { Description = "Password update failed" });
         sutProvider.GetDependency<IUserService>()
@@ -298,5 +304,13 @@ public class AdminRecoverAccountCommandTests
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(user, newMasterPassword)
             .Returns(IdentityResult.Success);
+    }
+
+    private static void SetupPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, User user)
+    {
+        // 2FA policy does not apply
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
     }
 }
