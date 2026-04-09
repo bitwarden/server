@@ -669,6 +669,17 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+
+        var result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.UnlockData!.ToData(), model.AuthenticationData!.ToData(), model.MasterPasswordHint);
+        }
+        else
+        {
+            result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
+        }
+
         var result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
         if (result.Succeeded)
         {

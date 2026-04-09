@@ -70,11 +70,8 @@ public class MasterPasswordService(
         // Set salt on the user
         user.MasterPasswordSalt = setInitialData.MasterPasswordUnlock.Salt;
 
-        // If we've passed in a hint then set it
-        if (setInitialData.MasterPasswordHint != null)
-        {
-            user.MasterPasswordHint = setInitialData.MasterPasswordHint;
-        }
+        // Always override the master password hint, even if it's null.
+        user.MasterPasswordHint = setInitialData.MasterPasswordHint;
 
         // Update time markers on the user
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -139,7 +136,8 @@ public class MasterPasswordService(
 
         user.Key = updateExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
 
-        user.MasterPasswordSalt = updateExistingData.MasterPasswordUnlock.Salt;
+        // Always override the master password hint, even if it's null.
+        user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
 
         user.LastPasswordChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;

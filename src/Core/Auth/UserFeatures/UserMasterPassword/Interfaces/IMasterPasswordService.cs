@@ -107,8 +107,8 @@ public interface IMasterPasswordService
     /// Use when the caller controls persistence.
     /// </summary>
     /// <param name="user">
-    /// The user object to mutate. Must already have a master password; must not be a Key Connector
-    /// user. KDF parameters and salt must be unchanged relative to the values in
+    /// The user object to mutate. Will not update a master password salt. Must already have a master password;
+    /// must not be a Key Connector user. KDF parameters and salt must be unchanged relative to the values in
     /// <paramref name="updateExistingData"/>. Validated via
     /// <see cref="UpdateExistingPasswordData.ValidateDataForUser"/>.
     /// </param>

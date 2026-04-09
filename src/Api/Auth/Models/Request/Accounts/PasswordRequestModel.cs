@@ -5,11 +5,13 @@ namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class PasswordRequestModel : SecretVerificationRequestModel
 {
+    [Obsolete("To be removed in PM-33141")]
     [StringLength(300)]
     public string? NewMasterPasswordHash { get; set; }
+    [Obsolete("To be removed in PM-33141")]
+    public string? Key { get; set; }
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
-    public string? Key { get; set; }
 
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
