@@ -634,6 +634,34 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             commandType: CommandType.StoredProcedure);
     }
 
+    public async Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_RevokeMany]",
+            new
+            {
+                OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                RevocationReason = (byte?)reason
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_RestoreMany]",
+            new
+            {
+                OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                Status = status
+            },
+            commandType: CommandType.StoredProcedure);
+    }
+
     public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
     {
         using (var connection = new SqlConnection(ConnectionString))

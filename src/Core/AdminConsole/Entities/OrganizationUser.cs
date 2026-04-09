@@ -80,6 +80,11 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// True if the User has access to Secrets Manager for this Organization, false otherwise.
     /// </summary>
     public bool AccessSecretsManager { get; set; }
+    /// <summary>
+    /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public RevocationReason? RevocationReason { get; set; }
 
     /// <summary>
     /// Checks whether the given reset password key is non-null and non-whitespace.

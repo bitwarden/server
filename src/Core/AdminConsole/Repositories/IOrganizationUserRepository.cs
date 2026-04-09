@@ -79,6 +79,8 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
+    Task RevokeManyAsync(IEnumerable<Guid> organizationUserIds, RevocationReason? reason = null);
+    Task RestoreManyAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status);
 
     /// <summary>
     /// Returns a list of OrganizationUsersUserDetails with the specified role.
