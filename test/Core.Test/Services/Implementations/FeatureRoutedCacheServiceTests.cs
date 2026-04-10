@@ -156,6 +156,25 @@ public class FeatureRoutedCacheServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetProviderAbilitiesAsync_WhenDuplicateIdsProvided_DoesNotThrowAndReturnsSingleEntry(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        ProviderAbility ability)
+    {
+        // Arrange
+        var allAbilities = new Dictionary<Guid, ProviderAbility> { [ability.Id] = ability };
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(allAbilities);
+
+        // Act - passing the same ID twice simulates a provider with duplicate entries
+        var result = await sutProvider.Sut.GetProviderAbilitiesAsync([ability.Id, ability.Id]);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(ability, result[ability.Id]);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetOrganizationAbilitiesAsync_ReturnsOnlyMatchingAbilities(
         SutProvider<FeatureRoutedCacheService> sutProvider,
         OrganizationAbility matchedAbility,
@@ -178,6 +197,26 @@ public class FeatureRoutedCacheServiceTests
         Assert.Single(result);
         Assert.Equal(matchedAbility, result[matchedAbility.Id]);
     }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationAbilitiesAsync_WhenDuplicateIdsProvided_DoesNotThrowAndReturnsSingleEntry(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        OrganizationAbility ability)
+    {
+        // Arrange
+        var allAbilities = new Dictionary<Guid, OrganizationAbility> { [ability.Id] = ability };
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(allAbilities);
+
+        // Act - passing the same ID twice simulates a user with duplicate org memberships
+        var result = await sutProvider.Sut.GetOrganizationAbilitiesAsync([ability.Id, ability.Id]);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(ability, result[ability.Id]);
+    }
+
 
     [Theory, BitAutoData]
     public async Task GetOrganizationAbilitiesAsync_WhenNoIdsMatched_ReturnsEmptyDictionary(

@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Api.Tools.Models.Request.Accounts;
+﻿using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
@@ -56,7 +53,7 @@ public class ImportCiphersController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
         var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId, false)).ToList();
         await _importCiphersCommand.ImportIntoIndividualVaultAsync(folders, ciphers, model.FolderRelationships, userId);
@@ -78,18 +75,18 @@ public class ImportCiphersController : Controller
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
 
         //An User is allowed to import if CanCreate Collections or has AccessToImportExport
-        var authorized = await CheckOrgImportPermission(collections, orgId);
+        var authorized = await CheckOrgImportPermissionAsync(collections, orgId);
         if (!authorized)
         {
             throw new BadRequestException("Not enough privileges to import into this organization.");
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
         await _importCiphersCommand.ImportIntoOrganizationalVaultAsync(collections, ciphers, model.CollectionRelationships, userId);
     }
 
-    private async Task<bool> CheckOrgImportPermission(List<Collection> collections, Guid orgId)
+    private async Task<bool> CheckOrgImportPermissionAsync(List<Collection> collections, Guid orgId)
     {
         //Users are allowed to import if they have the AccessToImportExport permission
         if (await _currentContext.AccessImportExport(orgId))
@@ -103,12 +100,6 @@ public class ImportCiphersController : Controller
             (await _collectionRepository.GetManyByOrganizationIdAsync(orgId))
             .Select(c => c.Id)
             .ToHashSet();
-
-        // when there are no collections, then we can import
-        if (collections.Count == 0)
-        {
-            return true;
-        }
 
         // are we trying to import into existing collections?
         var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));

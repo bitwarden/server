@@ -38,34 +38,67 @@ internal sealed class GeneratePersonalCiphersStep(
         var passwordDistribution = pwDist ?? PasswordDistributions.Realistic;
         var companies = Companies.All;
         var personalDist = density?.PersonalCipherDistribution;
+        var userFolderIds = context.Registry.UserFolderIds;
         var expectedTotal = personalDist is not null
             ? EstimateTotal(userDigests.Count, personalDist)
             : userDigests.Count * countPerUser;
 
-        var ciphers = new List<Cipher>(expectedTotal);
-        var cipherIds = new List<Guid>(expectedTotal);
-        var globalIndex = 0;
+        // Force lazy generator init before parallel loop (prevents ??= data race)
+        _ = (generator.Username, generator.Card, generator.Identity, generator.SecureNote);
 
-        for (var userIndex = 0; userIndex < userDigests.Count; userIndex++)
+        // Pre-compute per-user counts and globalIndex offsets
+        var userCounts = new int[userDigests.Count];
+        var offsets = new int[userDigests.Count];
+        var runningOffset = 0;
+
+        for (var u = 0; u < userDigests.Count; u++)
         {
-            var userDigest = userDigests[userIndex];
             var userCount = countPerUser;
             if (personalDist is not null)
             {
-                var range = personalDist.Select(userIndex, userDigests.Count);
-                userCount = range.Min + (userIndex % Math.Max(range.Max - range.Min + 1, 1));
+                var range = personalDist.Select(u, userDigests.Count);
+                userCount = range.Min + (u % Math.Max(range.Max - range.Min + 1, 1));
             }
 
-            for (var i = 0; i < userCount; i++)
+            userCounts[u] = userCount;
+            offsets[u] = runningOffset;
+            runningOffset += userCount;
+        }
+
+        var userCiphers = new Cipher[userDigests.Count][];
+
+        Parallel.For(0, userDigests.Count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, u =>
+        {
+            var userDigest = userDigests[u];
+            var localCount = userCounts[u];
+            var baseOffset = offsets[u];
+            var localCiphers = new Cipher[localCount];
+
+            for (var i = 0; i < localCount; i++)
             {
+                var globalIndex = baseOffset + i;
                 var cipherType = typeDistribution.Select(globalIndex, expectedTotal);
                 var cipher = CipherComposer.Compose(globalIndex, cipherType, userDigest.SymmetricKey, companies, generator, passwordDistribution, userId: userDigest.UserId);
 
-                CipherComposer.AssignFolder(cipher, userDigest.UserId, i, context.Registry.UserFolderIds);
+                CipherComposer.AssignFolder(cipher, userDigest.UserId, i, userFolderIds);
 
-                ciphers.Add(cipher);
-                cipherIds.Add(cipher.Id);
-                globalIndex++;
+                localCiphers[i] = cipher;
+            }
+
+            userCiphers[u] = localCiphers;
+        });
+
+        // Flatten jagged array into context lists
+        var ciphers = new List<Cipher>(expectedTotal);
+        var cipherIds = new List<Guid>(expectedTotal);
+
+        for (var u = 0; u < userDigests.Count; u++)
+        {
+            var localCiphers = userCiphers[u];
+            for (var i = 0; i < localCiphers.Length; i++)
+            {
+                ciphers.Add(localCiphers[i]);
+                cipherIds.Add(localCiphers[i].Id);
             }
         }
 

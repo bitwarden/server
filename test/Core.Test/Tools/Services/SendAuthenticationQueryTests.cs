@@ -106,15 +106,15 @@ public class SendAuthenticationQueryTests
     public static IEnumerable<object[]> AuthenticationMethodTestCases()
     {
         yield return new object[] { null, typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
-        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(NeverAuthenticate) };
+        yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(SendInaccessible) };
+        yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(SendInaccessible) };
         yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: "person@company.com", password: null, AuthType.Email), typeof(EmailOtp) };
         yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: "hashedpassword", AuthType.Password), typeof(ResourcePassword) };
         yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: null, password: null, AuthType.None), typeof(NotAuthenticated) };
     }
 
     [Fact]
-    public async Task GetAuthenticationMethod_WithDisabledSend_ReturnsNeverAuthenticate()
+    public async Task GetAuthenticationMethod_WithDisabledSend_ReturnsSendInaccessible()
     {
         // Arrange
         var sendId = Guid.NewGuid();
@@ -136,11 +136,11 @@ public class SendAuthenticationQueryTests
         var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
 
         // Assert
-        Assert.IsType<NeverAuthenticate>(result);
+        Assert.IsType<SendInaccessible>(result);
     }
 
     [Fact]
-    public async Task GetAuthenticationMethod_WithExpiredSend_ReturnsNeverAuthenticate()
+    public async Task GetAuthenticationMethod_WithExpiredSend_ReturnsSendInaccessible()
     {
         // Arrange
         var sendId = Guid.NewGuid();
@@ -162,11 +162,11 @@ public class SendAuthenticationQueryTests
         var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
 
         // Assert
-        Assert.IsType<NeverAuthenticate>(result);
+        Assert.IsType<SendInaccessible>(result);
     }
 
     [Fact]
-    public async Task GetAuthenticationMethod_WithDeletionDatePassed_ReturnsNeverAuthenticate()
+    public async Task GetAuthenticationMethod_WithDeletionDatePassed_ReturnsSendInaccessible()
     {
         // Arrange
         var sendId = Guid.NewGuid();
@@ -188,11 +188,11 @@ public class SendAuthenticationQueryTests
         var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
 
         // Assert
-        Assert.IsType<NeverAuthenticate>(result);
+        Assert.IsType<SendInaccessible>(result);
     }
 
     [Fact]
-    public async Task GetAuthenticationMethod_WithDeletionDateEqualToNow_ReturnsNeverAuthenticate()
+    public async Task GetAuthenticationMethod_WithDeletionDateEqualToNow_ReturnsSendInaccessible()
     {
         // Arrange
         var sendId = Guid.NewGuid();
@@ -215,11 +215,11 @@ public class SendAuthenticationQueryTests
         var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
 
         // Assert
-        Assert.IsType<NeverAuthenticate>(result);
+        Assert.IsType<SendInaccessible>(result);
     }
 
     [Fact]
-    public async Task GetAuthenticationMethod_WithAccessCountEqualToMaxAccessCount_ReturnsNeverAuthenticate()
+    public async Task GetAuthenticationMethod_WithAccessCountEqualToMaxAccessCount_ReturnsSendInaccessible()
     {
         // Arrange
         var sendId = Guid.NewGuid();
@@ -241,7 +241,7 @@ public class SendAuthenticationQueryTests
         var result = await _sendAuthenticationQuery.GetAuthenticationMethod(sendId);
 
         // Assert
-        Assert.IsType<NeverAuthenticate>(result);
+        Assert.IsType<SendInaccessible>(result);
     }
 
     [Fact]

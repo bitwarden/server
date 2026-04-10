@@ -2,6 +2,7 @@
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
+using Duende.IdentityModel.Client;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest;
@@ -10,11 +11,16 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
 {
     private readonly HttpClient _client;
     private readonly SeederApiApplicationFactory _factory;
+    private readonly string Username = "username";
+    private readonly string Password = "pass";
+
 
     public SeedControllerTests(SeederApiApplicationFactory factory)
     {
         _factory = factory;
+        factory.ConfigureAuth(Username, Password);
         _client = _factory.CreateClient();
+        _client.SetBasicAuthentication(Username, Password);
     }
 
     public Task InitializeAsync()

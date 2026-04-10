@@ -16,15 +16,18 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly TimeProvider _timeProvider;
 
     public UpdateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        TimeProvider timeProvider)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _collectionRepository = collectionRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task<Collection> UpdateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
@@ -51,15 +54,31 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
             throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
         }
 
-        // A collection should always have someone with Can Manage permissions
-        var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
-        var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
-        if (!groupHasManageAccess && !userHasManageAccess && !org.AllowAdminAccessToAllCollectionItems)
+        // A collection should always have someone with Can Manage permissions.
+        // When groups or users is null it means "don't change that association", so we must
+        // fall back to the existing relationships when evaluating this rule.
+        if (!org.AllowAdminAccessToAllCollectionItems)
         {
-            throw new BadRequestException(
-                "At least one member or group must have can manage permission.");
+            IEnumerable<CollectionAccessSelection> groupsForValidation = groupsList;
+            IEnumerable<CollectionAccessSelection> usersForValidation = usersList;
+
+            if (groupsForValidation == null || usersForValidation == null)
+            {
+                var (_, currentAccess) = await _collectionRepository.GetByIdWithAccessAsync(collection.Id);
+                groupsForValidation ??= currentAccess.Groups;
+                usersForValidation ??= currentAccess.Users;
+            }
+
+            var groupHasManageAccess = groupsForValidation?.Any(g => g.Manage) ?? false;
+            var userHasManageAccess = usersForValidation?.Any(u => u.Manage) ?? false;
+            if (!groupHasManageAccess && !userHasManageAccess)
+            {
+                throw new BadRequestException(
+                    "At least one member or group must have can manage permission.");
+            }
         }
 
+        collection.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
         await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groupsList : null, usersList);
         await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
 
