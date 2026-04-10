@@ -22,7 +22,9 @@ public class AzureSendFileStorageService(
     private static readonly TimeSpan _downloadLinkLiveTime = TimeSpan.FromMinutes(1);
     private readonly BlobServiceClient _blobServiceClient = new(globalSettings.Send.ConnectionString);
     private readonly ISendRepository _sendRepository = sendRepository;
+
     private readonly ILogger<AzureSendFileStorageService> _logger = logger;
+
     /*
      * When this file was made nullable, multiple instances of ! were introduced asserting that
      * _sendFilesContainerClient abd the blobClient it is used to construct are not null.
@@ -53,10 +55,7 @@ public class AzureSendFileStorageService(
             metadata.Add("organizationId", send.OrganizationId.Value.ToString());
         }
 
-        var headers = new BlobHttpHeaders
-        {
-            ContentDisposition = $"attachment; filename=\"{fileId}\""
-        };
+        var headers = new BlobHttpHeaders { ContentDisposition = $"attachment; filename=\"{fileId}\"" };
 
         await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });
     }
@@ -96,7 +95,8 @@ public class AzureSendFileStorageService(
     {
         await InitAsync();
         var blobClient = _sendFilesContainerClient!.GetBlobClient(BlobName(send, fileId));
-        var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+        var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write,
+            DateTime.UtcNow.Add(_downloadLinkLiveTime));
         return sasUri.ToString();
     }
 
@@ -119,12 +119,10 @@ public class AzureSendFileStorageService(
             {
                 metadata["organizationId"] = send.OrganizationId.Value.ToString();
             }
+
             await blobClient.SetMetadataAsync(metadata);
 
-            var headers = new BlobHttpHeaders
-            {
-                ContentDisposition = $"attachment; filename=\"{fileId}\""
-            };
+            var headers = new BlobHttpHeaders { ContentDisposition = $"attachment; filename=\"{fileId}\"" };
             await blobClient.SetHttpHeadersAsync(headers);
 
             var length = blobProperties.Value.ContentLength;
@@ -177,11 +175,15 @@ public class AzureSendFileStorageService(
             }
             catch (AggregateException ex)
             {
-                _logger.LogError(ex, "One or more blob deletions failed in a batch of {Count} blobs.", batch.Length);
+                _logger.LogError(ex,
+                    "One or more blob deletions failed in a batch of {Count} blobs. The following URIs may be orphaned: {}",
+                    batch.Length, string.Join<Uri>(", ", batch));
             }
             catch (RequestFailedException ex)
             {
-                _logger.LogError(ex, "Batch blob deletion request failed for {Count} blobs.", batch.Length);
+                _logger.LogError(ex,
+                    "Batch blob deletion request failed for {Count} blobs.The following URIs may be orphaned: {}",
+                    batch.Length, string.Join<Uri>(", ", batch));
             }
         }
     }
