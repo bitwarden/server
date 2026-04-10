@@ -16,15 +16,18 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly TimeProvider _timeProvider;
 
     public UpdateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        TimeProvider timeProvider)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _collectionRepository = collectionRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task<Collection> UpdateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
@@ -75,6 +78,7 @@ public class UpdateCollectionCommand : IUpdateCollectionCommand
             }
         }
 
+        collection.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
         await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groupsList : null, usersList);
         await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
 

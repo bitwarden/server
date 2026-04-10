@@ -214,7 +214,7 @@ public class EventServiceTests
         {
             {providerUser.ProviderId, new ProviderAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync().Returns(providerAbilities);
+        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -347,7 +347,7 @@ public class EventServiceTests
         {
             { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync().Returns(providerAbilities);
+        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>()).Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
@@ -386,7 +386,7 @@ public class EventServiceTests
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetProviderAbilitiesAsync()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(userId)
@@ -421,7 +421,7 @@ public class EventServiceTests
             .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(orgAbilities);
         sutProvider.GetDependency<IApplicationCacheService>()
-            .GetProviderAbilitiesAsync()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, ProviderAbility>());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(userId)
@@ -440,5 +440,200 @@ public class EventServiceTests
         await sutProvider.GetDependency<IEventWriteService>()
             .DidNotReceiveWithAnyArgs()
             .CreateManyAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogProviderUsersEventAsync_LogsRequiredInfo(Provider provider, ICollection<ProviderUser> providerUsers,
+        EventType eventType, DateTime date, Guid actingUserId, string ipAddress, DeviceType deviceType,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        foreach (var providerUser in providerUsers)
+        {
+            providerUser.ProviderId = provider.Id;
+        }
+
+        var providerAbilities = new Dictionary<Guid, ProviderAbility>()
+        {
+            { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
+        };
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(providerAbilities);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+
+        // Act
+        await sutProvider.Sut.LogProviderUsersEventAsync(providerUsers.Select(providerUser => (providerUser, eventType, (DateTime?)date)));
+
+        // Assert
+        var expected = providerUsers.Select(pu => new EventMessage()
+        {
+            IpAddress = ipAddress,
+            DeviceType = deviceType,
+            ProviderId = provider.Id,
+            UserId = pu.UserId,
+            ProviderUserId = pu.Id,
+            Type = eventType,
+            ActingUserId = actingUserId,
+            Date = date
+        }).ToList();
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1)
+            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogProviderUsersEventAsync_WhenEventsDisabled_DoesNotLog(Provider provider,
+        ICollection<ProviderUser> providerUsers, EventType eventType, DateTime date,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        foreach (var providerUser in providerUsers)
+        {
+            providerUser.ProviderId = provider.Id;
+        }
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>
+            {
+                { provider.Id, new ProviderAbility() { UseEvents = false, Enabled = true } }
+            });
+
+        // Act
+        await sutProvider.Sut.LogProviderUsersEventAsync(providerUsers.Select(providerUser => (providerUser, eventType, (DateTime?)date)));
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events => !events.Any()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogProviderUsersEventAsync_QueriesOnlyRelevantProviderIds(
+        ICollection<ProviderUser> providerUsers, EventType eventType, DateTime date,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+
+        // Act
+        await sutProvider.Sut.LogProviderUsersEventAsync(providerUsers.Select(pu => (pu, eventType, (DateTime?)date)));
+
+        // Assert
+        var expectedIds = providerUsers.Select(pu => pu.ProviderId).Distinct();
+        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+            .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogProviderOrganizationEventsAsync_WhenEventsDisabled_DoesNotLog(Provider provider,
+        ICollection<ProviderOrganization> providerOrganizations, EventType eventType, DateTime date,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            providerOrganization.ProviderId = provider.Id;
+        }
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>
+            {
+                { provider.Id, new ProviderAbility() { UseEvents = false, Enabled = true } }
+            });
+
+        // Act
+        await sutProvider.Sut.LogProviderOrganizationEventsAsync(
+            providerOrganizations.Select(po => (po, eventType, (DateTime?)date)));
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events => !events.Any()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogProviderOrganizationEventsAsync_QueriesOnlyRelevantProviderIds(
+        ICollection<ProviderOrganization> providerOrganizations, EventType eventType, DateTime date,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+
+        // Act
+        await sutProvider.Sut.LogProviderOrganizationEventsAsync(
+            providerOrganizations.Select(providerOrganization => (providerOrganization, eventType, (DateTime?)date)));
+
+        // Assert
+        var expectedIds = providerOrganizations.Select(po => po.ProviderId).Distinct();
+        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+            .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogUserEventAsync_WithProviderMembership_LogsProviderEvent(
+        Guid userId, EventType eventType, CurrentContextProvider provider,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        var providerAbilities = new Dictionary<Guid, ProviderAbility>
+        {
+            { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
+        };
+
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(providerAbilities);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), userId)
+            .Returns(new List<CurrentContextOrganization>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), userId)
+            .Returns(new List<CurrentContextProvider> { provider });
+
+        // Act
+        await sutProvider.Sut.LogUserEventAsync(userId, eventType);
+
+        // Assert
+        await sutProvider.GetDependency<IEventWriteService>().Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Any(e => e.ProviderId == provider.Id && e.UserId == userId && e.Type == eventType)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogUserEventAsync_QueriesOnlyMemberProviderIds(
+        Guid userId, EventType eventType, ICollection<CurrentContextProvider> providers,
+        SutProvider<EventService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>());
+        sutProvider.GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), userId)
+            .Returns(new List<CurrentContextOrganization>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), userId)
+            .Returns(providers.ToList());
+
+        // Act
+        await sutProvider.Sut.LogUserEventAsync(userId, eventType);
+
+        // Assert
+        var expectedIds = providers.Select(provider => provider.Id);
+        await sutProvider.GetDependency<IApplicationCacheService>().Received(1)
+            .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
     }
 }

@@ -28,7 +28,6 @@ public class RestoreOrganizationUserCommand(
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IUserRepository userRepository,
     IOrganizationService organizationService,
-    IFeatureService featureService,
     IPolicyRequirementQuery policyRequirementQuery,
     ICollectionRepository collectionRepository,
     IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
@@ -341,30 +340,27 @@ public class RestoreOrganizationUserCommand(
             throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+            user.Id);
+
+        var validationResult = await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
+            new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user!),
+            policyRequirement);
+
+        var badRequestException = validationResult.Match(
+            error => new BadRequestException(user.Email +
+                                             " is not compliant with the automatic user confirmation policy: " +
+                                             error.Message),
+            _ => null);
+
+        if (badRequestException is not null)
         {
-            var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
-                user.Id);
+            throw badRequestException;
+        }
 
-            var validationResult = await automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
-                new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user!),
-                policyRequirement);
-
-            var badRequestException = validationResult.Match(
-                error => new BadRequestException(user.Email +
-                                                 " is not compliant with the automatic user confirmation policy: " +
-                                                 error.Message),
-                _ => null);
-
-            if (badRequestException is not null)
-            {
-                throw badRequestException;
-            }
-
-            if (policyRequirement.IsEnabled(orgUser.OrganizationId))
-            {
-                await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
-            }
+        if (policyRequirement.IsEnabled(orgUser.OrganizationId))
+        {
+            await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
     }
 

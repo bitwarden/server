@@ -293,7 +293,8 @@ public class SubscriberService(
                                 EndDate = phase1.EndDate,
                                 Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
                                 {
-                                    Price = i.PriceId, Quantity = i.Quantity
+                                    Price = i.PriceId,
+                                    Quantity = i.Quantity
                                 }).ToList(),
                                 Discounts = phase1.Discounts?.Select(d =>
                                     new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),

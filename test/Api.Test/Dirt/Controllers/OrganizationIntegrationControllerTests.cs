@@ -89,6 +89,9 @@ public class OrganizationIntegrationControllerTests
             .OrganizationOwner(organizationId)
             .Returns(true);
         sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
+            .CanCreateAsync(Arg.Any<OrganizationIntegration>())
+            .Returns(true);
+        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
             .CreateAsync(Arg.Any<OrganizationIntegration>())
             .Returns(integration);
 
@@ -98,7 +101,31 @@ public class OrganizationIntegrationControllerTests
             .CreateAsync(Arg.Is<OrganizationIntegration>(i =>
                 i.OrganizationId == organizationId &&
                 i.Type == IntegrationType.Webhook));
-        Assert.IsType<OrganizationIntegrationResponseModel>(response);
+        Assert.IsType<ActionResult<OrganizationIntegrationResponseModel>>(response);
+        Assert.IsType<OkObjectResult>(response.Result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAsync_TheTypeAlreadyExists_ThrowsConflict(
+        SutProvider<OrganizationIntegrationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration integration)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
+            .CanCreateAsync(Arg.Any<OrganizationIntegration>())
+            .Returns(false);
+        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
+            .CreateAsync(Arg.Any<OrganizationIntegration>())
+            .Returns(integration);
+
+        var response = await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel);
+
+        Assert.IsType<ActionResult<OrganizationIntegrationResponseModel>>(response);
+        Assert.IsType<ConflictResult>(response.Result);
     }
 
     [Theory, BitAutoData]

@@ -716,7 +716,7 @@ public class StripePaymentService : IStripePaymentService
             var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
-                    Expand = ["phases.discounts.coupon", "phases.items.price"]
+                    Expand = ["phases.discounts.coupon.applies_to", "phases.items.price"]
                 });
 
             if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
@@ -736,6 +736,10 @@ public class StripePaymentService : IStripePaymentService
             if (phase2.Items != null && subscriptionInfo.Subscription?.Items != null)
             {
                 var items = subscriptionInfo.Subscription.Items.ToList();
+                var matchedPhase1Items = new HashSet<SubscriptionInfo.BillingSubscription.BillingSubscriptionItem>();
+                var unmatchedPhase2Items = new List<SubscriptionSchedulePhaseItem>();
+
+                // Pass 1: Match by product ID
                 foreach (var phase2Item in phase2.Items)
                 {
                     if (phase2Item.Price is not { UnitAmount: not null, ProductId: not null })
@@ -747,6 +751,34 @@ public class StripePaymentService : IStripePaymentService
                     if (matchingItem != null)
                     {
                         matchingItem.Amount = phase2Item.Price.UnitAmount.Value / 100M;
+                        matchedPhase1Items.Add(matchingItem);
+                    }
+                    else
+                    {
+                        unmatchedPhase2Items.Add(phase2Item);
+                    }
+                }
+
+                // Pass 2: Fallback for cross-product migrations (e.g., Families 2019 → current Families)
+                // where the old and new plans use different Stripe products.
+                foreach (var phase2Item in unmatchedPhase2Items)
+                {
+                    var fallbackItem = items.FirstOrDefault(i =>
+                        !matchedPhase1Items.Contains(i) && !i.AddonSubscriptionItem);
+
+                    if (fallbackItem != null)
+                    {
+                        fallbackItem.Amount = phase2Item.Price.UnitAmount!.Value / 100M;
+                        fallbackItem.ProductId = phase2Item.Price.ProductId;
+                        fallbackItem.Name = phase2Item.Price.Nickname;
+                        matchedPhase1Items.Add(fallbackItem);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Phase 2 item with product {ProductId} could not be matched to any Phase 1 item for subscription schedule ({ScheduleId})",
+                            phase2Item.Price.ProductId,
+                            subscription.ScheduleId);
                     }
                 }
 

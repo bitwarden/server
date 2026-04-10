@@ -630,7 +630,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     }
 
     public async Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
-        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups)
+        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups,
+        DateTime revisionDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -715,6 +716,16 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             }
             // Need to save the new collection users/groups before running the bump revision code
             await dbContext.SaveChangesAsync();
+
+            // Bump the revision date on all affected collections
+            var collections = await dbContext.Collections
+                .Where(c => collectionIdsList.Contains(c.Id))
+                .ToListAsync();
+            foreach (var c in collections)
+            {
+                c.RevisionDate = revisionDate;
+            }
+
             await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIdsList, organizationId);
             await dbContext.SaveChangesAsync();
         }

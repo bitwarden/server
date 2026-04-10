@@ -394,16 +394,10 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Put_RevokeUser_Success(bool scimRevokeV2Enabled)
+    [Fact]
+    public async Task Put_RevokeUser_Success()
     {
         var localFactory = new ScimApplicationFactory();
-        localFactory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.ScimRevokeV2)
-                .Returns(scimRevokeV2Enabled));
-
         localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
 
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;

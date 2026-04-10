@@ -132,15 +132,13 @@ public class OrganizationReportsController : Controller
     # region SummaryData Field Endpoints
 
     /// <summary>
-    /// Gets summary data for organization reports within a specified date range. 
-    /// The response is optimized for widget display by returning up to 6 entries that are 
-    /// evenly spaced across the date range, including the most recent entry. 
-    /// This allows the widget to show trends over time while ensuring the latest data point is always included.
+    /// Gets summary data for organization reports within a specified date range.
+    /// Returns all report summary entries within the range.
     /// </summary>
-    /// <param name="organizationId"></param>
-    /// <param name="startDate"></param>
-    /// <param name="endDate"></param>
-    /// <returns></returns>
+    /// <param name="organizationId">The unique identifier of the organization.</param>
+    /// <param name="startDate">The start of the date range to query.</param>
+    /// <param name="endDate">The end of the date range to query.</param>
+    /// <returns>A collection of summary data entries within the date range.</returns>
     /// <exception cref="NotFoundException"></exception>
     /// <exception cref="BadRequestException"></exception>
     [HttpGet("{organizationId}/data/summary")]

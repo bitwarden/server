@@ -56,6 +56,18 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         }
     }
 
+    public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyConfirmedAcceptedByUserIdAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var query = new PolicyReadByUserIdConfirmedAndAcceptedQuery(userId);
+            var results = await query.Run(dbContext).ToListAsync();
+            return Mapper.Map<List<AdminConsoleEntities.Policy>>(results);
+        }
+    }
+
     public async Task<IEnumerable<OrganizationPolicyDetails>> GetPolicyDetailsByOrganizationIdAsync(Guid organizationId, PolicyType policyType)
     {
         using var scope = ServiceScopeFactory.CreateScope();

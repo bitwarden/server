@@ -2,7 +2,8 @@ CREATE PROCEDURE [dbo].[Collection_CreateOrUpdateAccessForMany]
 	@OrganizationId UNIQUEIDENTIFIER,
 	@CollectionIds AS [dbo].[GuidIdArray] READONLY,
     @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
-    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @RevisionDate DATETIME2(7) = NULL
 AS
 BEGIN
 	SET NOCOUNT ON
@@ -108,6 +109,19 @@ BEGIN
 			[Source].[HidePasswords],
 			[Source].[Manage]
 		);
+
+    IF @RevisionDate IS NOT NULL
+    BEGIN
+		-- Bump the revision date on all affected collections
+        UPDATE
+            C
+        SET
+            C.[RevisionDate] = @RevisionDate
+        FROM
+            [dbo].[Collection] C
+        INNER JOIN
+            @CollectionIds CI ON C.[Id] = CI.[Id]
+    END
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @CollectionIds, @OrganizationId
 END

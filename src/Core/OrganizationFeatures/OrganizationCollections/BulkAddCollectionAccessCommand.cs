@@ -15,17 +15,20 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
+    private readonly TimeProvider _timeProvider;
 
     public BulkAddCollectionAccessCommand(
         ICollectionRepository collectionRepository,
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
-        IEventService eventService)
+        IEventService eventService,
+        TimeProvider timeProvider)
     {
         _collectionRepository = collectionRepository;
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
         _eventService = eventService;
+        _timeProvider = timeProvider;
     }
 
     public async Task AddAccessAsync(ICollection<Collection> collections,
@@ -34,15 +37,18 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
     {
         await ValidateRequestAsync(collections, users, groups);
 
+        var revisionDate = _timeProvider.GetUtcNow().UtcDateTime;
+
         await _collectionRepository.CreateOrUpdateAccessForManyAsync(
             collections.First().OrganizationId,
             collections.Select(c => c.Id),
             users,
-            groups
+            groups,
+            revisionDate
         );
 
         await _eventService.LogCollectionEventsAsync(collections.Select(c =>
-            (c, EventType.Collection_Updated, (DateTime?)DateTime.UtcNow)));
+            (c, EventType.Collection_Updated, (DateTime?)revisionDate)));
     }
 
     private async Task ValidateRequestAsync(ICollection<Collection> collections, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)

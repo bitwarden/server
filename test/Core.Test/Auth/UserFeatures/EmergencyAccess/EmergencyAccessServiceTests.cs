@@ -79,6 +79,9 @@ public class EmergencyAccessServiceTests
         EmergencyAccessType accessType, SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var result = await sutProvider.Sut.InviteAsync(invitingUser, email, accessType, waitTime);
 
@@ -99,13 +102,10 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task InviteAsync_FeatureFlagEnabled_GrantorInAutoConfirmOrg_ThrowsBadRequest(
+    public async Task InviteAsync_GrantorInAutoConfirmOrg_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([
@@ -125,9 +125,6 @@ public class EmergencyAccessServiceTests
         SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
     {
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(invitingUser.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
@@ -137,23 +134,6 @@ public class EmergencyAccessServiceTests
         Assert.NotNull(result);
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1).CreateAsync(Arg.Any<Core.Auth.Entities.EmergencyAccess>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task InviteAsync_FeatureFlagDisabled_GrantorInAutoConfirmOrg_Succeeds(
-        SutProvider<EmergencyAccessService> sutProvider, User invitingUser, string email, int waitTime)
-    {
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(false);
-
-        var result = await sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.Takeover, waitTime);
-
-        Assert.NotNull(result);
-        await sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -353,6 +333,10 @@ public class EmergencyAccessServiceTests
                 return true;
             });
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
 
@@ -379,6 +363,10 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>()));
@@ -414,7 +402,7 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptUserAsync_FeatureFlagEnabled_GranteeInAutoConfirmOrg_ThrowsBadRequest(
+    public async Task AcceptUserAsync_GranteeInAutoConfirmOrg_ThrowsBadRequest(
         SutProvider<EmergencyAccessService> sutProvider,
         User acceptingUser,
         Core.Auth.Entities.EmergencyAccess emergencyAccess,
@@ -432,9 +420,6 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([
@@ -472,9 +457,6 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
@@ -484,40 +466,6 @@ public class EmergencyAccessServiceTests
         await sutProvider.GetDependency<IEmergencyAccessRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<Core.Auth.Entities.EmergencyAccess>(x => x.Status == EmergencyAccessStatusType.Accepted));
-    }
-
-    [Theory, BitAutoData]
-    public async Task AcceptUserAsync_FeatureFlagDisabled_GranteeInAutoConfirmOrg_Succeeds(
-        SutProvider<EmergencyAccessService> sutProvider,
-        User acceptingUser,
-        User invitingUser,
-        Core.Auth.Entities.EmergencyAccess emergencyAccess,
-        string token)
-    {
-        emergencyAccess.Status = EmergencyAccessStatusType.Invited;
-        emergencyAccess.Email = acceptingUser.Email;
-        sutProvider.GetDependency<IEmergencyAccessRepository>()
-            .GetByIdAsync(Arg.Any<Guid>())
-            .Returns(emergencyAccess);
-        sutProvider.GetDependency<IUserService>()
-            .GetUserByIdAsync(Arg.Any<Guid>())
-            .Returns(invitingUser);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
-            .TryUnprotect(token, out Arg.Any<EmergencyAccessInviteTokenable>())
-            .Returns(callInfo =>
-            {
-                callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
-                return true;
-            });
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers)
-            .Returns(false);
-
-        await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
-
-        await sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -545,6 +493,10 @@ public class EmergencyAccessServiceTests
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
                 return true;
             });
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<AutomaticUserConfirmationPolicyRequirement>(acceptingUser.Id)
+            .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
         await sutProvider.Sut.AcceptUserAsync(emergencyAccess.Id, acceptingUser, token, sutProvider.GetDependency<IUserService>());
 

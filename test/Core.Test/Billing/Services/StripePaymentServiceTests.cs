@@ -819,6 +819,335 @@ public class StripePaymentServiceTests
         Assert.Null(result.CustomerDiscount);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithActiveSchedule_CrossProductMigration_OverridesPriceProductIdAndName(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — Phase 1 item uses a different Stripe product than Phase 2 (Families 2019 → current)
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_old_families", Nickname = "Families 2019", Amount = 1200, Interval = "year" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 4788, ProductId = "prod_families", Nickname = "Families" }
+                        }
+                    ],
+                    Discounts =
+                    [
+                        new SubscriptionSchedulePhaseDiscount
+                        {
+                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — price, product ID, and name overridden with Phase 2 values
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal(47.88m, item.Amount);
+        Assert.Equal("prod_families", item.ProductId);
+        Assert.Equal("Families", item.Name);
+
+        // Assert — discount overridden with Phase 2 discount
+        Assert.NotNull(result.CustomerDiscount);
+        Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
+        Assert.Equal(25m, result.CustomerDiscount.PercentOff);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithActiveSchedule_CrossProductMigration_WithStorage_OverridesCorrectly(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — storage matches by product ID (Pass 1), main plan falls back (Pass 2)
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_old_families", Nickname = "Families 2019", Amount = 1200, Interval = "year" },
+                        Quantity = 1
+                    },
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_storage", Nickname = "Storage", Amount = 400, Interval = "year" },
+                        Quantity = 2
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 4788, ProductId = "prod_families", Nickname = "Families" }
+                        },
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 400, ProductId = "prod_storage", Nickname = "Storage" }
+                        }
+                    ],
+                    Discounts =
+                    [
+                        new SubscriptionSchedulePhaseDiscount
+                        {
+                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — main plan overridden via fallback
+        var items = result.Subscription!.Items.ToList();
+        Assert.Equal(2, items.Count);
+
+        var mainItem = items.First(i => i.ProductId == "prod_families");
+        Assert.Equal(47.88m, mainItem.Amount);
+        Assert.Equal("Families", mainItem.Name);
+
+        // Assert — storage matched by product ID, amount updated
+        var storageItem = items.First(i => i.ProductId == "prod_storage");
+        Assert.Equal(4.00m, storageItem.Amount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithActiveSchedule_CrossProductMigration_SkipsAddonItems(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — Phase 1 has main plan + addon; fallback should pick main plan, not addon
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
+                        Quantity = 1,
+                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                    },
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_old_families", Nickname = "Families 2019", Amount = 1200, Interval = "year" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 4788, ProductId = "prod_families", Nickname = "Families" }
+                        }
+                    ],
+                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — main plan overridden, addon untouched
+        var items = result.Subscription!.Items.ToList();
+        Assert.Equal(2, items.Count);
+
+        var mainItem = items.First(i => i.ProductId == "prod_families");
+        Assert.Equal(47.88m, mainItem.Amount);
+        Assert.Equal("Families", mainItem.Name);
+
+        var addonItem = items.First(i => i.ProductId == "prod_premium_access");
+        Assert.Equal(0m, addonItem.Amount);
+        Assert.True(addonItem.AddonSubscriptionItem);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithActiveSchedule_CrossProductMigration_NoFallbackTarget_GracefullyIgnored(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — Phase 1 has only an addon item; no eligible fallback target for Phase 2
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
+                        Quantity = 1,
+                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 4788, ProductId = "prod_families", Nickname = "Families" }
+                        }
+                    ],
+                    Discounts = new List<SubscriptionSchedulePhaseDiscount>()
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — addon item is untouched, Phase 2 item was not applied
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal("prod_premium_access", item.ProductId);
+        Assert.Equal(0m, item.Amount);
+        Assert.True(item.AddonSubscriptionItem);
+    }
+
     #region AdjustSubscription — CompleteSubscriptionUpdate tax exempt alignment
 
     [Theory, BitAutoData]

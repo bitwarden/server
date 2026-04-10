@@ -3,7 +3,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.Tools.AutoFixture.SendFixtures;
 using Bit.Core.Tools.Entities;
@@ -30,7 +29,6 @@ public class NonAnonymousSendCommandTests
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ISendValidationService _sendValidationService;
-    private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
@@ -42,7 +40,6 @@ public class NonAnonymousSendCommandTests
         _sendRepository = Substitute.For<ISendRepository>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
         _pushNotificationService = Substitute.For<IPushNotificationService>();
-        _featureService = Substitute.For<IFeatureService>();
         _sendValidationService = Substitute.For<ISendValidationService>();
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
@@ -291,9 +288,6 @@ public class NonAnonymousSendCommandTests
         _currentContext.ClientId.Returns("test-client");
         _currentContext.ClientVersion.Returns(Version.Parse("1.0.0"));
 
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
-
         // Act
         await _nonAnonymousSendCommand.SaveSendAsync(send);
 
@@ -331,9 +325,6 @@ public class NonAnonymousSendCommandTests
             UserId = userId,
             HideEmail = true
         };
-
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Configure validation service to throw when DisableHideEmail policy applies in vNext implementation
         _sendValidationService.ValidateUserCanSaveAsync(userId, send)
@@ -374,9 +365,6 @@ public class NonAnonymousSendCommandTests
 
         var initialDate = DateTime.UtcNow.AddMinutes(-5);
         send.RevisionDate = initialDate;
-
-        // Enable feature flag for policy requirements (vNext path)
-        _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Configure validation service to allow saves when HideEmail is false
         _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);

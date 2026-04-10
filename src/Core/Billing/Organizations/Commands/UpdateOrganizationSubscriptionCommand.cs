@@ -109,11 +109,11 @@ public class UpdateOrganizationSubscriptionCommand(
         var activeSchedule = schedules.Data.FirstOrDefault(s =>
             s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscription.Id);
 
-        // An active schedule here means PriceIncreaseScheduler created a schedule to defer a
-        // Families price migration to renewal. A 2-phase schedule is the standard migration
-        // state; a 1-phase schedule means the subscription was cancelled (end-of-period) while
-        // a schedule was attached (PM-33897). Either way, we update via the schedule to avoid
-        // conflicting with Stripe's schedule ownership of the subscription.
+        /* An active schedule here means PriceIncreaseScheduler created a schedule to defer a
+         * Families price migration to renewal. A 2-phase schedule is the standard migration
+         * state; a 1-phase schedule means the subscription was cancelled (end-of-period) while
+         * a schedule was attached (PM-33897). Either way, we update via the schedule to avoid
+         * conflicting with Stripe's schedule ownership of the subscription. */
         if (activeSchedule is { Phases.Count: > 0 })
         {
             if (activeSchedule.Phases.Count > 2)
@@ -128,24 +128,37 @@ public class UpdateOrganizationSubscriptionCommand(
                 CommandName, activeSchedule.Id, subscription.Id);
 
             var phase1 = activeSchedule.Phases[0];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
-            // This applies the change set's price IDs (which are Phase 1 / current-plan prices)
-            // to both phases. This works because storage prices are uniform across the Families
-            // migration. If storage prices ever differ between phases, both this command and
-            // UpdatePremiumStorageCommand would need plan-aware price resolution (e.g. matching
-            // Phase 2's seat price to determine the correct storage price).
-            var phases = new List<SubscriptionSchedulePhaseOptions>
+            /* This applies the change set's price IDs (which are Phase 1 / current-plan prices)
+             * to all active phases. This works because storage prices are uniform across the
+             * Families migration. If storage prices ever differ between phases, both this command
+             * and UpdatePremiumStorageCommand would need plan-aware price resolution (e.g. matching
+             * Phase 2's seat price to determine the correct storage price). */
+            var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+            // Stripe rejects schedule updates that include phases whose end_date is in the past.
+            // A phase ending at exactly `now` has effectively ended (strict > is intentional).
+            if (phase1.EndDate > now)
             {
-                new()
+                phases.Add(new SubscriptionSchedulePhaseOptions
                 {
                     StartDate = phase1.StartDate,
                     EndDate = phase1.EndDate,
                     Items = ApplyChangesToPhaseItems(phase1.Items, changeSet.Changes),
                     Discounts = phase1.Discounts?.Select(d =>
                         new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                    ProrationBehavior = prorationBehavior
-                }
-            };
+                    ProrationBehavior = phase1.ProrationBehavior
+                });
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "{Command}: Phase 1 has already ended (EndDate: {EndDate}), updating only active phase(s)",
+                    CommandName, phase1.EndDate);
+            }
+
+            var phase1Ended = phase1.EndDate <= now;
 
             if (activeSchedule.Phases.Count >= 2)
             {
@@ -155,26 +168,40 @@ public class UpdateOrganizationSubscriptionCommand(
                     StartDate = phase2.StartDate,
                     EndDate = phase2.EndDate,
                     Items = ApplyChangesToPhaseItems(phase2.Items, changeSet.Changes),
-                    Discounts = phase2.Discounts?.Select(d =>
-                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                    // When Phase 2 is already active, its one-time migration discount has been
+                    // applied and consumed. Re-including it would cause Stripe to re-apply it.
+                    Discounts = phase1Ended
+                        ? []
+                        : phase2.Discounts?.Select(d =>
+                            new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
                     ProrationBehavior = phase2.ProrationBehavior
                 });
             }
 
-            // Note: the schedule phase API does not support PendingInvoiceItemInterval. For annual
-            // subscribers, the non-schedule path invoices prorations monthly. Here, prorations
-            // remain pending until the next invoice (~15 days, when the schedule was created on
-            // invoice.upcoming). Accepted trade-off for the migration window.
+            if (phases.Count == 0)
+            {
+                _logger.LogWarning(
+                    "{Command}: Schedule ({ScheduleId}) has no updatable phases remaining",
+                    CommandName, activeSchedule.Id);
+                return DefaultConflict;
+            }
+
+            /* Note: the schedule phase API does not support PendingInvoiceItemInterval. For annual
+             * subscribers, the non-schedule path invoices prorations monthly. When the top-level
+             * ProrationBehavior is AlwaysInvoice (structural changes), Stripe invoices immediately.
+             * When it is CreateProrations (non-structural changes), prorations remain pending until
+             * the next invoice (~15 days). Accepted trade-off for the migration window. */
             await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                 new SubscriptionScheduleUpdateOptions
                 {
                     EndBehavior = activeSchedule.EndBehavior,
-                    Phases = phases
+                    Phases = phases,
+                    ProrationBehavior = prorationBehavior
                 });
 
-            // Note: this returns the pre-update subscription. The schedule update modified the
-            // subscription via Stripe, but we don't re-fetch it. Callers currently only check
-            // success/failure. If a caller ever needs the post-update state, re-fetch here.
+            /* Note: this returns the pre-update subscription. The schedule update modified the
+             * subscription via Stripe, but we don't re-fetch it. Callers currently only check
+             * success/failure. If a caller ever needs the post-update state, re-fetch here. */
             return subscription;
         }
 
@@ -224,7 +251,7 @@ public class UpdateOrganizationSubscriptionCommand(
         {
             return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
             {
-                Expand = ["customer"]
+                Expand = ["customer", "test_clock"]
             });
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
@@ -324,10 +351,10 @@ public class UpdateOrganizationSubscriptionCommand(
         IList<SubscriptionSchedulePhaseItem> phaseItems,
         IReadOnlyList<OrganizationSubscriptionChange> changes)
     {
-        // Note: when a change targets a price ID not present in this phase (e.g. Phase 2 has
-        // migrated prices), the change is silently skipped. This is safe because subscription-
-        // level validation (ValidateItemAddition, ValidateItemPriceChange, etc.) already ran
-        // before this method is called.
+        /* Note: when a change targets a price ID not present in this phase (e.g. Phase 2 has
+         * migrated prices), the change is silently skipped. This is safe because subscription-
+         * level validation (ValidateItemAddition, ValidateItemPriceChange, etc.) already ran
+         * before this method is called. */
         var items = phaseItems
             .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
             .ToList();

@@ -39,6 +39,9 @@ public class UpdatePremiumStorageCommand(
 {
     private readonly ILogger<UpdatePremiumStorageCommand> _logger = logger;
 
+    protected override Conflict DefaultConflict =>
+        new("We had a problem updating your subscription. Please contact support for assistance.");
+
     public Task<BillingCommandResult<None>> Run(User user, short additionalStorageGb) => HandleAsync<None>(async () =>
     {
         if (user is not { Premium: true, GatewaySubscriptionId: not null and not "" })
@@ -55,7 +58,7 @@ public class UpdatePremiumStorageCommand(
         var premiumPlans = await pricingClient.ListPremiumPlans();
         var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
         {
-            Expand = ["customer"]
+            Expand = ["customer", "test_clock"]
         });
 
         // Find the password manager subscription item (seat, not storage) and match it to a plan
@@ -160,26 +163,37 @@ public class UpdatePremiumStorageCommand(
                 CommandName, activeSchedule.Id, subscription.Id);
 
             var phase1 = activeSchedule.Phases[0];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
             // Storage prices are uniform across the Premium migration, so we use the same price
-            // for both phases. If storage prices ever differ between phases, this would need
-            // plan-aware price resolution (e.g. matching Phase 2's seat price to a plan).
+            // for all active phases. If storage prices ever differ between phases, this would
+            // need plan-aware price resolution (e.g. matching Phase 2's seat price to a plan).
             var storagePriceId = premiumPlan.Storage.StripePriceId;
 
-            var phases = new List<SubscriptionSchedulePhaseOptions>
+            var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+            // Stripe rejects schedule updates that include phases whose end_date is in the past.
+            // A phase ending at exactly `now` has effectively ended (strict > is intentional).
+            if (phase1.EndDate > now)
             {
-                new()
+                phases.Add(new SubscriptionSchedulePhaseOptions
                 {
                     StartDate = phase1.StartDate,
                     EndDate = phase1.EndDate,
                     Items = BuildPhaseItemsWithStorage(phase1.Items, storagePriceId, additionalStorageGb),
                     Discounts = phase1.Discounts?.Select(d =>
                         new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
-                    ProrationBehavior = usingPayPal
-                        ? ProrationBehavior.CreateProrations
-                        : ProrationBehavior.AlwaysInvoice
-                }
-            };
+                    ProrationBehavior = phase1.ProrationBehavior
+                });
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "{Command}: Phase 1 has already ended (EndDate: {EndDate}), updating only active phase(s)",
+                    CommandName, phase1.EndDate);
+            }
+
+            var phase1Ended = phase1.EndDate <= now;
 
             if (activeSchedule.Phases.Count >= 2)
             {
@@ -189,17 +203,32 @@ public class UpdatePremiumStorageCommand(
                     StartDate = phase2.StartDate,
                     EndDate = phase2.EndDate,
                     Items = BuildPhaseItemsWithStorage(phase2.Items, storagePriceId, additionalStorageGb),
-                    Discounts = phase2.Discounts?.Select(d =>
-                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
+                    // When Phase 2 is already active, its one-time migration discount has been
+                    // applied and consumed. Re-including it would cause Stripe to re-apply it.
+                    Discounts = phase1Ended
+                        ? []
+                        : phase2.Discounts?.Select(d =>
+                            new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList(),
                     ProrationBehavior = phase2.ProrationBehavior
                 });
+            }
+
+            if (phases.Count == 0)
+            {
+                _logger.LogWarning(
+                    "{Command}: Schedule ({ScheduleId}) has no updatable phases remaining",
+                    CommandName, activeSchedule.Id);
+                return DefaultConflict;
             }
 
             await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                 new SubscriptionScheduleUpdateOptions
                 {
                     EndBehavior = activeSchedule.EndBehavior,
-                    Phases = phases
+                    Phases = phases,
+                    ProrationBehavior = usingPayPal
+                        ? ProrationBehavior.CreateProrations
+                        : ProrationBehavior.AlwaysInvoice
                 });
         }
         else
