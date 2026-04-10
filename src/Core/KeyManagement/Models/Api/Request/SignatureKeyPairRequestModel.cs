@@ -11,13 +11,15 @@ public class SignatureKeyPairRequestModel
 
     public SignatureKeyPairData ToSignatureKeyPairData()
     {
-        if (SignatureAlgorithm != "ed25519")
+        if (SignatureAlgorithm != "ed25519" && SignatureAlgorithm != "mldsa65")
         {
             throw new ArgumentException(
                 $"Unsupported signature algorithm: {SignatureAlgorithm}"
             );
         }
-        var algorithm = Core.KeyManagement.Enums.SignatureAlgorithm.Ed25519;
+        var algorithm = SignatureAlgorithm == "ed25519"
+            ? Core.KeyManagement.Enums.SignatureAlgorithm.Ed25519
+            : Core.KeyManagement.Enums.SignatureAlgorithm.MlDsa65;
 
         return new SignatureKeyPairData(
             algorithm,
