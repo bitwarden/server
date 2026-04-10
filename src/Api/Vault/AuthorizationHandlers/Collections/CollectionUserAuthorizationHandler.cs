@@ -90,7 +90,7 @@ public class CollectionUserAuthorizationHandler
 
         if (editingSelf && !await AllowAdminAccessToAllCollectionItems(org))
         {
-            return false;
+            throw new BadRequestException("You cannot add yourself to a collection.");
         }
 
         return await CanModifyUserAccessAsync(resource.Collections, org);
