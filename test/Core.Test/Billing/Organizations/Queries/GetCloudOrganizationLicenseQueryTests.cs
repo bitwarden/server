@@ -185,23 +185,6 @@ public class GetCloudOrganizationLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_UnpaidSubscription_Throws(
-        SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo)
-    {
-        installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "unpaid" });
-
-        sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sutProvider.Sut.GetLicenseAsync(organization, installationId));
-        Assert.Contains("Unable to generate license due to a payment issue", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task GetLicenseAsync_NullSubscription_Throws(
         SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
         Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo)

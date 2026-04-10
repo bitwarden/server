@@ -76,7 +76,7 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
         var status = subscriptionInfo.Subscription.Status;
 
         if (status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.Incomplete
-            or StripeConstants.SubscriptionStatus.IncompleteExpired or StripeConstants.SubscriptionStatus.Unpaid)
+            or StripeConstants.SubscriptionStatus.IncompleteExpired)
         {
             throw new BadRequestException(
                 "Unable to generate license due to a payment issue. Please update your billing information or contact support for assistance.");
