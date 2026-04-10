@@ -48,7 +48,7 @@ public class CollectionUserAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanCreate_WhenAdminOrOwner_Success(
+    public async Task CanCreate_WithAdminOrOwnerAndAllowAdminAccess_Succeeds(
         OrganizationUserType userType,
         Guid actingUserId,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
@@ -75,7 +75,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanCreate_CustomUserWithManageUsers_WhenAdminAccessToAllCollectionItemsEnabled_Success(
+    public async Task CanCreate_WithCustomUserManageUsersAndAllowAdminAccess_Succeeds(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization,
@@ -101,7 +101,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanCreate_CustomUserWithManageUsers_WhenAdminAccessToAllCollectionItemsDisabled_Failure(
+    public async Task CanCreate_WithCustomUserManageUsersAndNoAllowAdminAccess_DoesNotSucceed(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization,
@@ -127,7 +127,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanCreate_UserWithCollectionManagePermission_Success(
+    public async Task CanCreate_WithUserManagePermissionOnAllCollections_Succeeds(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization,
@@ -159,7 +159,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanCreate_WhenMissingOrgAccess_NoSuccess(
+    public async Task CanCreate_WithNoOrgAccessAndNotProvider_DoesNotSucceed(
         Guid actingUserId,
         ICollection<Collection> collections,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider)
@@ -214,7 +214,7 @@ public class CollectionUserAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanCreate_SelfAssignment_WithoutAllowAdminAccess_Fails(
+    public async Task CanCreate_WithSelfAssignmentAndNoAllowAdminAccess_DoesNotSucceed(
         OrganizationUserType userType,
         Guid actingUserId,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
@@ -243,7 +243,7 @@ public class CollectionUserAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanCreate_NotSelf_Succeeds(
+    public async Task CanCreate_WithDifferentTargetUser_Succeeds(
         OrganizationUserType userType,
         Guid actingUserId,
         Guid targetUserId,
@@ -273,7 +273,7 @@ public class CollectionUserAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanUpdate_WhenAdminOrOwner_Success(
+    public async Task CanUpdate_WithAdminOrOwnerAndAllowAdminAccess_Succeeds(
         OrganizationUserType userType,
         Guid actingUserId,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
@@ -300,7 +300,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdate_CustomUserWithManageUsers_WhenAdminAccessToAllCollectionItemsEnabled_Success(
+    public async Task CanUpdate_WithCustomUserManageUsersAndAllowAdminAccess_Succeeds(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization,
@@ -326,7 +326,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdate_CustomUserWithManageUsers_WhenAdminAccessToAllCollectionItemsDisabled_Failure(
+    public async Task CanUpdate_WithCustomUserManageUsersAndNoAllowAdminAccess_DoesNotSucceed(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization,
@@ -352,7 +352,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdate_UserWithCollectionManagePermission_Success(
+    public async Task CanUpdate_WithUserManagePermissionOnAllCollections_Succeeds(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization,
@@ -384,7 +384,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdate_WhenMissingOrgAccess_NoSuccess(
+    public async Task CanUpdate_WithNoOrgAccessAndNotProvider_DoesNotSucceed(
         Guid actingUserId,
         ICollection<Collection> collections,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider)
@@ -410,7 +410,7 @@ public class CollectionUserAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanDelete_WhenAdminOrOwner_Success(
+    public async Task CanDelete_WithAdminOrOwnerAndAllowAdminAccess_Succeeds(
         OrganizationUserType userType,
         Guid actingUserId,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
@@ -437,7 +437,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDelete_CustomUserWithManageUsers_WhenAdminAccessToAllCollectionItemsEnabled_Success(
+    public async Task CanDelete_WithCustomUserManageUsersAndAllowAdminAccess_Succeeds(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization,
@@ -463,7 +463,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDelete_UserWithCollectionManagePermission_Success(
+    public async Task CanDelete_WithUserManagePermissionOnAllCollections_Succeeds(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization,
@@ -495,7 +495,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDelete_WhenMissingOrgAccess_NoSuccess(
+    public async Task CanDelete_WithNoOrgAccessAndNotProvider_DoesNotSucceed(
         Guid actingUserId,
         ICollection<Collection> collections,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider)
@@ -519,7 +519,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_MissingUserId_Failure(
+    public async Task HandleRequirementAsync_WithNoUserId_Fails(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
@@ -538,7 +538,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_NullCollections_Failure(
+    public async Task HandleRequirementAsync_WithNullCollections_Fails(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider)
     {
         ArrangeFeatureFlag(sutProvider);
@@ -556,7 +556,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_Provider_Success(
+    public async Task HandleRequirementAsync_WithProviderUser_Succeeds(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         Guid actingUserId)
@@ -580,7 +580,7 @@ public class CollectionUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_MultipleOrgs_Exception(
+    public async Task HandleRequirementAsync_WithMultipleOrgs_ThrowsBadRequest(
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
         Guid actingUserId)
     {
@@ -598,6 +598,63 @@ public class CollectionUserAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.HandleAsync(context));
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreate_WithCustomUserEditAnyCollection_Succeeds(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization,
+        Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { EditAnyCollection = true };
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperations.Create },
+            new ClaimsPrincipal(),
+            MakeResource(collections));
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanCreate_WithAdminOrOwnerAndNoAllowAdminAccess_DoesNotSucceed(
+        OrganizationUserType userType,
+        Guid actingUserId,
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperations.Create },
+            new ClaimsPrincipal(),
+            MakeResource(collections));
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
     }
 
     private static CollectionUserAccessResource MakeResource<T>(
