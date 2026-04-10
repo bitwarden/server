@@ -16,6 +16,7 @@ using Xunit;
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
 [SutProviderCustomize]
+[Obsolete("To be removed in PM-33141")]
 public class SetInitialMasterPasswordCommandV1Tests
 {
     [Theory]

@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword;
-using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
@@ -24,13 +25,31 @@ public class MasterPasswordServiceTests
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
         user.Key = null;
+        user.MasterPasswordSalt = null;
+        user.UsesKeyConnector = false;
         var expectedHash = "server-hashed-" + masterPasswordHash;
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(user, masterPasswordHash)
             .Returns(expectedHash);
 
+        var setInitialData = new SetInitialPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
+
         // Act
-        await sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf, salt);
+        await sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, setInitialData);
 
         // Assert
         Assert.Equal(expectedHash, user.MasterPassword);
@@ -44,69 +63,139 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SetInitialMasterPassword_SaltNull_DoesNotSetMasterPasswordSalt(User user, string masterPasswordHash, string key, KdfSettings kdf)
+    public async Task SetInitialMasterPassword_SetsMasterPasswordHint(User user, string masterPasswordHash, string key, KdfSettings kdf, string salt, string hint)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
         user.Key = null;
-        var originalSalt = user.MasterPasswordSalt;
+        user.MasterPasswordSalt = null;
+        user.UsesKeyConnector = false;
+
+        var setInitialData = new SetInitialPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            },
+            MasterPasswordHint = hint
+        };
 
         // Act
-        await sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf, null);
+        await sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, setInitialData);
 
         // Assert
-        Assert.Equal(originalSalt, user.MasterPasswordSalt);
+        Assert.Equal(hint, user.MasterPasswordHint);
     }
 
     [Theory, BitAutoData]
-    public async Task SetInitialMasterPassword_ThrowsWhenMasterPasswordAlreadySet(User user, string masterPasswordHash, string key, KdfSettings kdf)
+    public async Task SetInitialMasterPassword_ThrowsWhenMasterPasswordAlreadySet(User user, string masterPasswordHash, string key, KdfSettings kdf, string salt)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
         user.Key = null;
+        user.MasterPasswordSalt = null;
+
+        var setInitialData = new SetInitialPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf));
+            sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, setInitialData));
         Assert.Equal("User already has a master password set.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task SetInitialMasterPassword_ThrowsWhenKeyAlreadySet(User user, string masterPasswordHash, string key, KdfSettings kdf)
+    public async Task SetInitialMasterPassword_ThrowsWhenKeyAlreadySet(User user, string masterPasswordHash, string key, KdfSettings kdf, string salt)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
         user.Key = "existing-key";
+        user.MasterPasswordSalt = null;
+
+        var setInitialData = new SetInitialPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, masterPasswordHash, key, kdf));
-        Assert.Equal("User already has a master password set.", exception.Message);
+            sutProvider.Sut.OnlyMutateUserSetInitialMasterPasswordAsync(user, setInitialData));
+        Assert.Equal("User already has a key set.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task SetInitialMasterPasswordAsync_CallsMutationThenCommand(
+    public async Task SetInitialMasterPasswordAsync_CallsMutationThenSavesUser(
         User user, string masterPasswordHash, string key, KdfSettings kdf, string salt)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
         user.Key = null;
+        user.MasterPasswordSalt = null;
+        user.UsesKeyConnector = false;
+
+        var setInitialData = new SetInitialPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
 
         // Act
-        await sutProvider.Sut.SetInitialMasterPasswordAndSaveUserAsync(user, masterPasswordHash, key, kdf, salt);
+        await sutProvider.Sut.SetInitialMasterPasswordAndSaveUserAsync(user, setInitialData);
 
         // Assert: mutation was applied
         Assert.NotNull(user.MasterPassword);
         Assert.Equal(key, user.Key);
 
-        // Assert: command was called with the mutated user
-        await sutProvider.GetDependency<ISetInitialMasterPasswordStateCommand>()
+        // Assert: user was persisted
+        await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
-            .ExecuteAsync(user);
+            .ReplaceAsync(user);
     }
 
     // -------------------------------------------------------------------------
@@ -118,6 +207,9 @@ public class MasterPasswordServiceTests
     {
         // Arrange
         var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = salt;
+        user.UsesKeyConnector = false;
         var kdf = new KdfSettings
         {
             KdfType = user.Kdf,
@@ -125,19 +217,33 @@ public class MasterPasswordServiceTests
             Memory = user.KdfMemory,
             Parallelism = user.KdfParallelism
         };
-        user.MasterPassword = "existing-hash";
         var expectedHash = "server-hashed-" + masterPasswordHash;
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(user, masterPasswordHash)
             .Returns(expectedHash);
 
+        var updateData = new UpdateExistingPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
+
         // Act
-        await sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf, salt);
+        await sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, updateData);
 
         // Assert
         Assert.Equal(expectedHash, user.MasterPassword);
         Assert.Equal(key, user.Key);
-        Assert.Equal(salt, user.MasterPasswordSalt);
         Assert.NotNull(user.LastPasswordChangeDate);
         // KDF fields must be unchanged
         Assert.Equal(kdf.KdfType, user.Kdf);
@@ -147,10 +253,13 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateMasterPassword_SaltNull_DoesNotSetMasterPasswordSalt(User user, string masterPasswordHash, string key)
+    public async Task UpdateMasterPassword_SetsMasterPasswordHint(User user, string masterPasswordHash, string key, string salt, string hint)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = salt;
+        user.UsesKeyConnector = false;
         var kdf = new KdfSettings
         {
             KdfType = user.Kdf,
@@ -158,35 +267,67 @@ public class MasterPasswordServiceTests
             Memory = user.KdfMemory,
             Parallelism = user.KdfParallelism
         };
-        user.MasterPassword = "existing-hash";
-        var originalSalt = user.MasterPasswordSalt;
+
+        var updateData = new UpdateExistingPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            },
+            MasterPasswordHint = hint
+        };
 
         // Act
-        await sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf, null);
+        await sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, updateData);
 
         // Assert
-        Assert.Equal(originalSalt, user.MasterPasswordSalt);
+        Assert.Equal(hint, user.MasterPasswordHint);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateMasterPassword_ThrowsWhenNoExistingPassword(User user, string masterPasswordHash, string key, KdfSettings kdf)
+    public async Task UpdateMasterPassword_ThrowsWhenNoExistingPassword(User user, string masterPasswordHash, string key, KdfSettings kdf, string salt)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
 
+        var updateData = new UpdateExistingPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, kdf));
+            sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, updateData));
         Assert.Equal("User does not have an existing master password to update.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateMasterPassword_ThrowsWhenKdfMismatch(User user, string masterPasswordHash, string key)
+    public async Task UpdateMasterPassword_ThrowsWhenKdfMismatch(User user, string masterPasswordHash, string key, string salt)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
+        user.UsesKeyConnector = false;
         user.Kdf = KdfType.PBKDF2_SHA256;
         user.KdfIterations = 600000;
         // Pass KDF settings that differ from user's stored KDF
@@ -198,16 +339,35 @@ public class MasterPasswordServiceTests
             Parallelism = 4
         };
 
+        var updateData = new UpdateExistingPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = mismatchedKdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = mismatchedKdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
+
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, masterPasswordHash, key, mismatchedKdf));
+            sutProvider.Sut.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, updateData));
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateMasterPasswordAsync_CallsMutationThenCommand(User user, string masterPasswordHash, string key)
+    public async Task UpdateMasterPasswordAsync_CallsMutationThenSavesUser(User user, string masterPasswordHash, string key, string salt)
     {
         // Arrange
         var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = salt;
+        user.UsesKeyConnector = false;
         var kdf = new KdfSettings
         {
             KdfType = user.Kdf,
@@ -215,18 +375,33 @@ public class MasterPasswordServiceTests
             Memory = user.KdfMemory,
             Parallelism = user.KdfParallelism
         };
-        user.MasterPassword = "existing-hash";
+
+        var updateData = new UpdateExistingPasswordData
+        {
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationData
+            {
+                Kdf = kdf,
+                MasterPasswordAuthenticationHash = masterPasswordHash,
+                Salt = salt
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockData
+            {
+                Kdf = kdf,
+                MasterKeyWrappedUserKey = key,
+                Salt = salt
+            }
+        };
 
         // Act
-        await sutProvider.Sut.UpdateMasterPasswordAndSaveAsync(user, masterPasswordHash, key, kdf);
+        await sutProvider.Sut.UpdateExistingMasterPasswordAndSaveAsync(user, updateData);
 
         // Assert: mutation was applied
         Assert.NotNull(user.MasterPassword);
         Assert.Equal(key, user.Key);
 
-        // Assert: command was called with the mutated user
-        await sutProvider.GetDependency<IUpdateMasterPasswordStateCommand>()
+        // Assert: user was persisted
+        await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
-            .ExecuteAsync(user);
+            .ReplaceAsync(user);
     }
 }
