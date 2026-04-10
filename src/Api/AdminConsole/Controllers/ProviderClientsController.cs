@@ -1,15 +1,17 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Providers.Requirements;
-using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,16 +25,14 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class ProviderClientsController(
     ICurrentContext currentContext,
-    ILogger<BaseProviderController> logger,
+    ILogger<ProviderClientsController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
+    IUserService userService) : Controller
 {
-    private readonly ICurrentContext _currentContext = currentContext;
-
     [HttpPost]
     [SelfHosted(NotSelfHostedOnly = true)]
     [Authorize<ProviderAdminRequirement>]
@@ -40,18 +40,18 @@ public class ProviderClientsController(
         [FromRoute] Guid providerId,
         [FromBody] CreateClientOrganizationRequestBody requestBody)
     {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
+        var (provider, result) = await TryGetBillableProviderAsync(providerId);
 
         if (provider == null)
         {
             return result;
         }
 
-        var user = await UserService.GetUserByPrincipalAsync(User);
+        var user = await userService.GetUserByPrincipalAsync(User);
 
         if (user == null)
         {
-            return Error.Unauthorized();
+            return Error401();
         }
 
         var organizationSignup = new OrganizationSignup
@@ -99,7 +99,7 @@ public class ProviderClientsController(
         [FromRoute] Guid providerOrganizationId,
         [FromBody] UpdateClientOrganizationRequestBody requestBody)
     {
-        var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
+        var (provider, result) = await TryGetBillableProviderAsync(providerId);
 
         if (provider == null)
         {
@@ -110,19 +110,19 @@ public class ProviderClientsController(
 
         if (providerOrganization == null)
         {
-            return Error.NotFound();
+            return Error404();
         }
 
         if (providerOrganization.ProviderId != provider.Id)
         {
-            return Error.NotFound();
+            return Error404();
         }
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
         if (clientOrganization is not { Status: OrganizationStatusType.Managed })
         {
-            return Error.ServerError();
+            return Error500();
         }
 
         var seatAdjustment = requestBody.AssignedSeats - (clientOrganization.Seats ?? 0);
@@ -132,9 +132,9 @@ public class ProviderClientsController(
             clientOrganization.PlanType,
             seatAdjustment);
 
-        if (seatAdjustmentResultsInPurchase && !_currentContext.ProviderProviderAdmin(provider.Id))
+        if (seatAdjustmentResultsInPurchase && !currentContext.ProviderProviderAdmin(provider.Id))
         {
-            return Error.Unauthorized("Service users cannot purchase additional seats.");
+            return Error401("Service users cannot purchase additional seats.");
         }
 
         await providerBillingService.ScaleSeats(provider, clientOrganization.PlanType, seatAdjustment);
@@ -152,18 +152,18 @@ public class ProviderClientsController(
     [Authorize<ProviderUserRequirement>]
     public async Task<IResult> GetAddableOrganizationsAsync([FromRoute] Guid providerId)
     {
-        var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
+        var (provider, result) = await TryGetBillableProviderAsync(providerId);
 
         if (provider == null)
         {
             return result;
         }
 
-        var userId = _currentContext.UserId;
+        var userId = currentContext.UserId;
 
         if (!userId.HasValue)
         {
-            return Error.Unauthorized();
+            return Error401();
         }
 
         var addable =
@@ -179,22 +179,22 @@ public class ProviderClientsController(
         [FromRoute] Guid providerId,
         [FromBody] AddExistingOrganizationRequestBody requestBody)
     {
-        var userId = _currentContext.UserId;
+        var userId = currentContext.UserId;
         if (!userId.HasValue)
         {
-            return Error.Unauthorized();
+            return Error401();
         }
 
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
+        var (provider, result) = await TryGetBillableProviderAsync(providerId);
 
         if (provider == null)
         {
             return result;
         }
 
-        if (!await _currentContext.OrganizationOwner(requestBody.OrganizationId))
+        if (!await currentContext.OrganizationOwner(requestBody.OrganizationId))
         {
-            return Error.Unauthorized();
+            return Error401();
         }
 
         var addableOrganizations = await organizationRepository.GetAddableToProviderByUserIdAsync(userId.Value, provider.Type);
@@ -202,11 +202,58 @@ public class ProviderClientsController(
 
         if (organization == null)
         {
-            return Error.NotFound();
+            return Error404();
         }
 
         await providerBillingService.AddExistingOrganization(provider, organization, requestBody.Key);
 
         return TypedResults.Ok();
     }
+
+    private async Task<(Provider, IResult)> TryGetBillableProviderAsync(Guid providerId)
+    {
+        var provider = await providerRepository.GetByIdAsync(providerId);
+
+        if (provider == null)
+        {
+            logger.LogError(
+                "Cannot find provider ({ProviderID}) for Consolidated Billing operation",
+                providerId);
+
+            return (null, Error404());
+        }
+
+        if (!provider.IsBillable())
+        {
+            logger.LogError(
+                "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is not billable",
+                providerId);
+
+            return (null, Error401());
+        }
+
+        if (provider.IsStripeEnabled())
+        {
+            return (provider, null);
+        }
+
+        logger.LogError(
+            "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is missing Stripe configuration",
+            providerId);
+
+        return (null, Error500());
+    }
+
+    private static IResult Error404() =>
+        TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
+
+    private static IResult Error401(string message = "Unauthorized.") =>
+        TypedResults.Json(
+            new ErrorResponseModel(message),
+            statusCode: StatusCodes.Status401Unauthorized);
+
+    private static IResult Error500() =>
+        TypedResults.Json(
+            new ErrorResponseModel("Something went wrong with your request. Please contact support for assistance."),
+            statusCode: StatusCodes.Status500InternalServerError);
 }

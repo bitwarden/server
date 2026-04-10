@@ -1,8 +1,9 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
@@ -10,16 +11,17 @@ using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using static Bit.Api.Test.Billing.Utilities;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -35,7 +37,7 @@ public class ProviderClientsControllerTests
         CreateClientOrganizationRequestBody requestBody,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsNull();
 
@@ -50,7 +52,7 @@ public class ProviderClientsControllerTests
         CreateClientOrganizationRequestBody requestBody,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         var user = new User();
 
@@ -100,7 +102,7 @@ public class ProviderClientsControllerTests
         AddExistingOrganizationRequestBody requestBody,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         var result = await sutProvider.Sut.AddExistingOrganizationAsync(provider.Id, requestBody);
 
@@ -113,7 +115,7 @@ public class ProviderClientsControllerTests
         AddExistingOrganizationRequestBody requestBody,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(requestBody.OrganizationId)
             .Returns(false);
@@ -130,7 +132,7 @@ public class ProviderClientsControllerTests
         Guid userId,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(requestBody.OrganizationId)
             .Returns(true);
@@ -156,7 +158,7 @@ public class ProviderClientsControllerTests
     {
         organization.Id = requestBody.OrganizationId;
 
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(requestBody.OrganizationId)
             .Returns(true);
@@ -194,7 +196,7 @@ public class ProviderClientsControllerTests
         requestBody.AssignedSeats = 20;
         providerOrganization.ProviderId = provider.Id;
 
-        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
             .Returns(providerOrganization);
@@ -222,7 +224,7 @@ public class ProviderClientsControllerTests
         ProviderOrganization providerOrganization,
         SutProvider<ProviderClientsController> sutProvider)
     {
-        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         providerOrganization.ProviderId = Guid.NewGuid();
 
@@ -249,7 +251,7 @@ public class ProviderClientsControllerTests
         requestBody.AssignedSeats = 20;
         providerOrganization.ProviderId = provider.Id;
 
-        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
             .Returns(providerOrganization);
@@ -279,4 +281,28 @@ public class ProviderClientsControllerTests
     }
 
     #endregion
+
+    private static void ConfigureStableProviderInputs(
+        Provider provider,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+    }
+
+    private static void AssertUnauthorized(IResult result, string message = "Unauthorized.")
+    {
+        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        var response = (JsonHttpResult<ErrorResponseModel>)result;
+        Assert.Equal(StatusCodes.Status401Unauthorized, response.StatusCode);
+        Assert.Equal(message, response.Value.Message);
+    }
+
+    private static void AssertNotFound(IResult result)
+    {
+        Assert.IsType<NotFound<ErrorResponseModel>>(result);
+        var response = ((NotFound<ErrorResponseModel>)result).Value;
+        Assert.Equal("Resource not found.", response.Message);
+    }
 }
