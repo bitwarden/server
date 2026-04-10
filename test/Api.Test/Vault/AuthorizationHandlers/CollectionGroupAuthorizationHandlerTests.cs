@@ -579,6 +579,128 @@ public class CollectionGroupAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanUpdate_WithCustomUserManageGroupsAndNoAllowAdminAccess_DoesNotSucceed(
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization,
+        Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { ManageGroups = true };
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Update },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanUpdate_WithAdminOrOwnerAndNoAllowAdminAccess_DoesNotSucceed(
+        OrganizationUserType userType,
+        Guid actingUserId,
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Update },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDelete_WithCustomUserManageGroupsAndNoAllowAdminAccess_DoesNotSucceed(
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization,
+        Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { ManageGroups = true };
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Delete },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDelete_WithAdminOrOwnerAndNoAllowAdminAccess_DoesNotSucceed(
+        OrganizationUserType userType,
+        Guid actingUserId,
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Delete },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
     private static void ArrangeFeatureFlag(SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()

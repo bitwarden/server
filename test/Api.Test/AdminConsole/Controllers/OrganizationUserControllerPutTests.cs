@@ -18,6 +18,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
@@ -358,7 +359,7 @@ public class OrganizationUserControllerPutTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_FeatureFlagEnabled_SelfAssignment_ThrowsNotFound(OrganizationUserUpdateRequestModel model,
+    public async Task Put_FeatureFlagEnabled_SelfAssignment_ThrowsBadRequest(OrganizationUserUpdateRequestModel model,
         OrganizationUser organizationUser, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
     {
@@ -370,14 +371,15 @@ public class OrganizationUserControllerPutTests
             .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
             .Returns(true);
 
-        // Self-assignment check is now in the handler; when it denies, the extension throws NotFoundException
+        // Self-assignment check in handler throws BadRequestException directly
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
-            .Returns(AuthorizationResult.Failed());
+            .Throws(new BadRequestException("You cannot add yourself to a collection."));
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+        Assert.Equal("You cannot add yourself to a collection.", exception.Message);
     }
 
     [Theory]

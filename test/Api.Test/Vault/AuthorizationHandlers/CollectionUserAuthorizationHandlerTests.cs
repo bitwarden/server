@@ -214,7 +214,7 @@ public class CollectionUserAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanCreate_WithSelfAssignmentAndNoAllowAdminAccess_DoesNotSucceed(
+    public async Task CanCreate_WithSelfAssignmentAndNoAllowAdminAccess_ThrowsBadRequest(
         OrganizationUserType userType,
         Guid actingUserId,
         SutProvider<CollectionUserAuthorizationHandler> sutProvider,
@@ -235,9 +235,9 @@ public class CollectionUserAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.False(context.HasSucceeded);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.HandleAsync(context));
+        Assert.Equal("You cannot add yourself to a collection.", exception.Message);
     }
 
     [Theory, CollectionCustomization]
@@ -644,6 +644,94 @@ public class CollectionUserAuthorizationHandlerTests
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionUserOperations.Create },
+            new ClaimsPrincipal(),
+            MakeResource(collections));
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanUpdate_WithAdminOrOwnerAndNoAllowAdminAccess_DoesNotSucceed(
+        OrganizationUserType userType,
+        Guid actingUserId,
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperations.Update },
+            new ClaimsPrincipal(),
+            MakeResource(collections));
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDelete_WithCustomUserManageUsersAndNoAllowAdminAccess_DoesNotSucceed(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization,
+        Guid actingUserId)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { ManageUsers = true };
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperations.Delete },
+            new ClaimsPrincipal(),
+            MakeResource(collections));
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDelete_WithAdminOrOwnerAndNoAllowAdminAccess_DoesNotSucceed(
+        OrganizationUserType userType,
+        Guid actingUserId,
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperations.Delete },
             new ClaimsPrincipal(),
             MakeResource(collections));
 
