@@ -128,6 +128,7 @@
         "AutoMapper.Extensions.Microsoft.DependencyInjection",
         "AWSSDK.SimpleEmail",
         "AWSSDK.SQS",
+        "Azure.Storage.Blobs.Batch",
         "Handlebars.Net",
         "MailKit",
         "Microsoft.Azure.NotificationHubs",
