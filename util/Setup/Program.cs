@@ -8,16 +8,34 @@ using Bit.Setup.Enums;
 
 namespace Bit.Setup;
 
+public class Application
+{
+    public virtual string RootDirectory => "/bitwarden";
+    public virtual bool ReadQuestion(string prompt) => Helpers.ReadQuestion(prompt);
+    public virtual string ReadInput(string prompt) => Helpers.ReadInput(prompt);
+    public virtual HttpClient GetHttpClient()
+    {
+        return new HttpClient();
+    }
+}
+
 public class Program
 {
     private static Context _context;
 
     public static void Main(string[] args)
     {
+        MainCore(args, new Application());
+    }
+
+    // internal for testing
+    internal static void MainCore(string[] args, Application application)
+    {
         CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
 
         _context = new Context
         {
+            App = application,
             Args = args
         };
 
@@ -52,11 +70,11 @@ public class Program
 
         if (_context.Parameters.ContainsKey("install"))
         {
-            Install();
+            Install(application);
         }
         else if (_context.Parameters.ContainsKey("update"))
         {
-            Update();
+            Update(application);
         }
         else if (_context.Parameters.ContainsKey("printenv"))
         {
@@ -68,7 +86,7 @@ public class Program
         }
     }
 
-    private static void Install()
+    private static void Install(Application application)
     {
         if (_context.Parameters.TryGetValue("letsencrypt", out var sslManagedLetsEncrypt))
         {
@@ -89,7 +107,7 @@ public class Program
             _context.Install.InstallationId = Guid.Empty;
             _context.Install.InstallationKey = "SECRET_INSTALLATION_KEY";
         }
-        else if (!ValidateInstallation())
+        else if (!ValidateInstallation(application))
         {
             return;
         }
@@ -135,24 +153,24 @@ public class Program
         Console.WriteLine(string.Empty);
     }
 
-    private static void Update()
+    private static void Update(Application config)
     {
         // This portion of code checks for multiple certs in the Identity.pfx PKCS12 bag.  If found, it generates
         // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
         // moving the project to .NET 5.
-        _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile("global", "globalSettings__identityServer__certificatePassword");
-        var certCountString = Helpers.Exec("openssl pkcs12 -nokeys -info -in /bitwarden/identity/identity.pfx " +
+        _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile(_context.App, "global", "globalSettings__identityServer__certificatePassword");
+        var certCountString = Helpers.Exec($"openssl pkcs12 -nokeys -info -in {config.RootDirectory}/identity/identity.pfx " +
             $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
         if (int.TryParse(certCountString, out var certCount) && certCount > 1)
         {
             // Extract key from identity.pfx
-            Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -nocerts -nodes -out identity.key " +
+            Helpers.Exec($"openssl pkcs12 -in {config.RootDirectory}/identity/identity.pfx -nocerts -nodes -out identity.key " +
                 $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
             // Extract certificate from identity.pfx
-            Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
+            Helpers.Exec($"openssl pkcs12 -in {config.RootDirectory}/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
                 $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
             // Create new PKCS12 bag with certificate and key
-            Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
+            Helpers.Exec($"openssl pkcs12 -export -out {config.RootDirectory}/identity/identity.pfx -inkey identity.key " +
                 $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
         }
 
@@ -190,7 +208,7 @@ public class Program
 
     private static void PrepareAndMigrateDatabase()
     {
-        var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
+        var vaultConnectionString = Helpers.GetValueFromEnvFile(_context.App, "global",
             "globalSettings__sqlServer__connectionString");
         var migrator = new DbMigrator(vaultConnectionString);
 
@@ -203,7 +221,7 @@ public class Program
         migrator.MigrateMsSqlDatabaseWithRetries(enableLogging, true, MigratorConstants.TransitionMigrationsFolderName);
     }
 
-    private static bool ValidateInstallation()
+    private static bool ValidateInstallation(Application application)
     {
         var installationId = string.Empty;
         var installationKey = string.Empty;
@@ -216,11 +234,11 @@ public class Program
         else
         {
             var prompt = "Enter your installation id (get at https://bitwarden.com/host)";
-            installationId = Helpers.ReadInput(prompt);
+            installationId = application.ReadInput(prompt);
             while (string.IsNullOrEmpty(installationId))
             {
                 Helpers.WriteError("Invalid input for installation id. Please try again.");
-                installationId = Helpers.ReadInput(prompt);
+                installationId = application.ReadInput(prompt);
             }
         }
 
@@ -237,11 +255,11 @@ public class Program
         else
         {
             var prompt = "Enter your installation key";
-            installationKey = Helpers.ReadInput(prompt);
+            installationKey = application.ReadInput(prompt);
             while (string.IsNullOrEmpty(installationKey))
             {
                 Helpers.WriteError("Invalid input for installation key. Please try again.");
-                installationKey = Helpers.ReadInput(prompt);
+                installationKey = application.ReadInput(prompt);
             }
         }
 
@@ -252,13 +270,13 @@ public class Program
         else
         {
             var prompt = "Enter your region (US/EU) [US]";
-            var region = Helpers.ReadInput(prompt);
+            var region = application.ReadInput(prompt);
             if (string.IsNullOrEmpty(region)) region = "US";
 
             while (!Enum.TryParse(region, out cloudRegion))
             {
                 Helpers.WriteError("Invalid input for region. Please try again.");
-                region = Helpers.ReadInput(prompt);
+                region = application.ReadInput(prompt);
                 if (string.IsNullOrEmpty(region)) region = "US";
             }
         }
@@ -287,7 +305,7 @@ public class Program
                 url = $"{installationUrl}/installations/";
             }
 
-            var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
+            var response = _context.App.GetHttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
 
             if (!response.IsSuccessStatusCode)
             {
