@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Globalization;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -37,6 +38,7 @@ public class AccountsController : Controller
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IWebAuthnChallengeCache _webAuthnChallengeCache;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
@@ -83,7 +85,8 @@ public class AccountsController : Controller
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
-        GlobalSettings globalSettings
+        GlobalSettings globalSettings,
+        IWebAuthnChallengeCache webAuthnChallengeCache
         )
     {
         _currentContext = currentContext;
@@ -95,6 +98,7 @@ public class AccountsController : Controller
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _webAuthnChallengeCache = webAuthnChallengeCache;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
@@ -238,9 +242,11 @@ public class AccountsController : Controller
     }
 
     [HttpGet("webauthn/assertion-options")]
-    public WebAuthnLoginAssertionOptionsResponseModel GetWebAuthnLoginAssertionOptions()
+    public async Task<WebAuthnLoginAssertionOptionsResponseModel> GetWebAuthnLoginAssertionOptions()
     {
         var options = _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptions();
+
+        await _webAuthnChallengeCache.StoreChallengeAsync(options.Challenge);
 
         var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.Authentication, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);
@@ -266,7 +272,7 @@ public class AccountsController : Controller
         // Convert the hash to a number
         var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
         var hashFirst8Bytes = hashHex.Substring(0, 16);
-        var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
+        var hashNumber = long.Parse(hashFirst8Bytes, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         // Find the default KDF value for this hash number
         var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
         return _defaultKdfResults[hashIndex];
