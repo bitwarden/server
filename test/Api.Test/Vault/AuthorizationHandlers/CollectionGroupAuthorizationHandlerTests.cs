@@ -701,6 +701,135 @@ public class CollectionGroupAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanCreate_WithOrphanedCollectionAndAdminRole_Succeeds(
+        OrganizationUserType userType,
+        Guid actingUserId,
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Create },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId)
+            .Returns(new List<CollectionDetails>());
+        ArrangeOrphanedCollections(sutProvider, organization.Id, collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreate_WithOrphanedCollectionAndUserRole_DoesNotSucceed(
+        Guid actingUserId,
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Create },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId)
+            .Returns(new List<CollectionDetails>());
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
+        ArrangeOrphanedCollections(sutProvider, organization.Id, collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreate_WithOrphanedCollectionAndEditAnyCollectionPermission_Succeeds(
+        Guid actingUserId,
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { EditAnyCollection = true };
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Create },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanUpdate_WithOrphanedCollectionAndAdminRole_Succeeds(
+        OrganizationUserType userType,
+        Guid actingUserId,
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var resources = collections.ToList();
+
+        ArrangeFeatureFlag(sutProvider);
+        ArrangeOrganizationAbility(sutProvider, organization, true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperations.Update },
+            new ClaimsPrincipal(),
+            resources);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId)
+            .Returns(new List<CollectionDetails>());
+        ArrangeOrphanedCollections(sutProvider, organization.Id, collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
     private static void ArrangeFeatureFlag(SutProvider<CollectionGroupAuthorizationHandler> sutProvider)
     {
         sutProvider.GetDependency<IFeatureService>()
@@ -720,5 +849,25 @@ public class CollectionGroupAuthorizationHandlerTests
                 Id = organization.Id,
                 AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems
             });
+    }
+
+    private static void ArrangeOrphanedCollections(
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        Guid organizationId,
+        ICollection<Collection> orphanedCollections)
+    {
+        var orgCollections = orphanedCollections
+            .Select(c => new Tuple<Collection, CollectionAccessDetails>(
+                c,
+                new CollectionAccessDetails
+                {
+                    Users = new List<CollectionAccessSelection>(),
+                    Groups = new List<CollectionAccessSelection>()
+                }))
+            .ToList();
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdWithAccessAsync(organizationId)
+            .Returns(orgCollections);
     }
 }
