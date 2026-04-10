@@ -574,6 +574,47 @@ public class UpcomingInvoiceHandler(
 
             if (activeSchedule != null)
             {
+                var now = DateTime.UtcNow;
+                var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+                for (var i = 0; i < activeSchedule.Phases.Count; i++)
+                {
+                    var phase = activeSchedule.Phases[i];
+
+                    // Skip phases that have already completed
+                    if (phase.EndDate <= now)
+                    {
+                        continue;
+                    }
+
+                    // When a phase's predecessor has ended, the phase is already active and
+                    // its one-time migration discount has been applied and consumed.
+                    // Re-including it would cause Stripe to re-apply it.
+                    var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
+
+                    phases.Add(new SubscriptionSchedulePhaseOptions
+                    {
+                        StartDate = phase.StartDate,
+                        EndDate = phase.EndDate,
+                        Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                        {
+                            Price = item.PriceId,
+                            Quantity = item.Quantity
+                        }).ToList(),
+                        Discounts = discountConsumed
+                            ? []
+                            : phase.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
+                            {
+                                Coupon = d.CouponId
+                            }).ToList(),
+                        ProrationBehavior = phase.ProrationBehavior,
+                        AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                        {
+                            Enabled = true
+                        }
+                    });
+                }
+
                 await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                     new SubscriptionScheduleUpdateOptions
                     {
@@ -583,7 +624,8 @@ public class UpcomingInvoiceHandler(
                             {
                                 Enabled = true
                             }
-                        }
+                        },
+                        Phases = phases
                     });
                 return;
             }

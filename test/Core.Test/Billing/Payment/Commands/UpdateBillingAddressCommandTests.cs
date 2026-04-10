@@ -696,7 +696,7 @@ public class UpdateBillingAddressCommandTests
     }
 
     [Fact]
-    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_UpdatesScheduleDefaultSettings()
+    public async Task Run_PersonalOrganization_FlagOn_SchedulePresent_UpdatesSchedulePhasesAndDefaultSettings()
     {
         var organization = new Organization
         {
@@ -713,6 +713,10 @@ public class UpdateBillingAddressCommandTests
             City = "New York",
             State = "NY"
         };
+
+        var phase1Start = DateTime.UtcNow.AddDays(-10);
+        var phase1End = DateTime.UtcNow.AddDays(5);
+        var phase2End = DateTime.UtcNow.AddDays(370);
 
         var customer = new Customer
         {
@@ -747,7 +751,26 @@ public class UpdateBillingAddressCommandTests
                     {
                         Id = "sub_sched_123",
                         SubscriptionId = organization.GatewaySubscriptionId,
-                        Status = SubscriptionScheduleStatus.Active
+                        Status = SubscriptionScheduleStatus.Active,
+                        Phases = new List<SubscriptionSchedulePhase>
+                        {
+                            new()
+                            {
+                                StartDate = phase1Start,
+                                EndDate = phase1End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_old", Quantity = 1 }],
+                                Discounts = [],
+                                ProrationBehavior = "none"
+                            },
+                            new()
+                            {
+                                StartDate = phase1End,
+                                EndDate = phase2End,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "price_new", Quantity = 1 }],
+                                Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "milestone-3" }],
+                                ProrationBehavior = "none"
+                            }
+                        }
                     }
                 ]
             });
@@ -759,7 +782,13 @@ public class UpdateBillingAddressCommandTests
         await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
             Arg.Is("sub_sched_123"),
             Arg.Is<SubscriptionScheduleUpdateOptions>(o =>
-                o.DefaultSettings.AutomaticTax.Enabled == true));
+                o.DefaultSettings.AutomaticTax.Enabled == true &&
+                o.Phases.Count == 2 &&
+                o.Phases[0].AutomaticTax.Enabled == true &&
+                o.Phases[0].Items[0].Price == "price_old" &&
+                o.Phases[1].AutomaticTax.Enabled == true &&
+                o.Phases[1].Items[0].Price == "price_new" &&
+                o.Phases[1].Discounts[0].Coupon == "milestone-3"));
 
         await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
             Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
