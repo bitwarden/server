@@ -98,7 +98,7 @@ public class KdfSettingsValidatorTests
         var results = KdfSettingsValidator.ValidateAuthenticationAndUnlockData(authentication, unlock).ToList();
 
         Assert.Single(results);
-        Assert.Equal("Salt must be equal for authentication and unlock.", results[0].ErrorMessage);
+        Assert.Equal("Invalid master password salt.", results[0].ErrorMessage);
     }
 
     [Fact]

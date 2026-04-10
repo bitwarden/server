@@ -408,7 +408,7 @@ public class RegisterFinishRequestModelTests
 
         var results = Validate(model);
 
-        Assert.Contains(results, r => r.ErrorMessage == "Salt must be equal for authentication and unlock.");
+        Assert.Contains(results, r => r.ErrorMessage == "Invalid master password salt.");
     }
 
     [Fact]

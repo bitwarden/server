@@ -133,7 +133,7 @@ public class SetInitialPasswordRequestModelTests
         var result = model.Validate(new ValidationContext(model)).ToList();
 
         // Assert
-        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("Salt must be equal"));
+        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("Invalid master password salt."));
     }
 
     [Theory]
