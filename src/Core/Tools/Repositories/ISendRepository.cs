@@ -48,6 +48,30 @@ public interface ISendRepository : IRepository<Send, Guid>
     Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore);
 
     /// <summary>
+    /// Loads file-type <see cref="Send"/>s created by a user.
+    /// </summary>
+    /// <param name="userId">
+    /// Identifies the user.
+    /// </param>
+    /// <returns>
+    /// A task that completes once the <see cref="Send"/>s have been loaded.
+    /// The task's result contains the loaded file-type <see cref="Send"/>s.
+    /// </returns>
+    Task<ICollection<Send>> GetManyFileSendsByUserIdAsync(Guid userId);
+
+    /// <summary>
+    /// Loads file-type <see cref="Send"/>s owned by an organization.
+    /// </summary>
+    /// <param name="organizationId">
+    /// Identifies the organization.
+    /// </param>
+    /// <returns>
+    /// A task that completes once the <see cref="Send"/>s have been loaded.
+    /// The task's result contains the loaded file-type <see cref="Send"/>s.
+    /// </returns>
+    Task<ICollection<Send>> GetManyFileSendsByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
     /// Updates encrypted data for sends during a key rotation
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
