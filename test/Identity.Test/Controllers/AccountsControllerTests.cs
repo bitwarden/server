@@ -18,7 +18,9 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Identity.Controllers;
 using Bit.Identity.Models.Request.Accounts;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -42,6 +44,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
     private readonly GlobalSettings _globalSettings;
+    private readonly IWebAuthnChallengeCache _webAuthnChallengeCache;
 
 
     public AccountsControllerTests()
@@ -56,6 +59,7 @@ public class AccountsControllerTests : IDisposable
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
         _globalSettings = Substitute.For<GlobalSettings>();
+        _webAuthnChallengeCache = Substitute.For<IWebAuthnChallengeCache>();
 
         _sut = new AccountsController(
             _currentContext,
@@ -67,7 +71,8 @@ public class AccountsControllerTests : IDisposable
             _sendVerificationEmailForRegistrationCommand,
             _featureService,
             _registrationEmailVerificationTokenDataFactory,
-            _globalSettings
+            _globalSettings,
+            _webAuthnChallengeCache
         );
     }
 
@@ -1087,5 +1092,24 @@ public class AccountsControllerTests : IDisposable
         var hashFirst8Bytes = hashHex.Substring(0, 16);
         var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
         return (int)(Math.Abs(hashNumber) % defaultKdfResults.Count);
+    }
+
+    [Fact]
+    public async Task GetWebAuthnLoginAssertionOptions_StoresChallenge()
+    {
+        // Arrange
+        var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        var options = new AssertionOptions { Challenge = challenge };
+        _getWebAuthnLoginCredentialAssertionOptionsCommand
+            .GetWebAuthnLoginCredentialAssertionOptions()
+            .Returns(options);
+        _assertionOptionsDataProtector.Protect(Arg.Any<WebAuthnLoginAssertionOptionsTokenable>())
+            .Returns("protected-token");
+
+        // Act
+        var result = await _sut.GetWebAuthnLoginAssertionOptions();
+
+        // Assert
+        await _webAuthnChallengeCache.Received(1).StoreChallengeAsync(challenge);
     }
 }
