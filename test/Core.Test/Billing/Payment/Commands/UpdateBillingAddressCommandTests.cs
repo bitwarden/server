@@ -77,7 +77,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         var result = await _command.Run(organization, input);
@@ -135,7 +135,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         var result = await _command.Run(organization, input);
@@ -199,7 +199,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -270,7 +270,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -335,7 +335,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
         )).Returns(customer);
 
@@ -398,7 +398,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -463,7 +463,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Reverse
         )).Returns(customer);
 
@@ -543,7 +543,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -622,7 +622,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.None
         )).Returns(customer);
 
@@ -683,7 +683,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions", "tax_ids") &&
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock", "tax_ids") &&
             options.TaxExempt == TaxExempt.Exempt
         )).Returns(customer);
 
@@ -737,7 +737,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);
@@ -832,7 +832,7 @@ public class UpdateBillingAddressCommandTests
 
         _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(options =>
             options.Address.Matches(input) &&
-            options.HasExpansions("subscriptions")
+            options.HasExpansions("subscriptions", "subscriptions.data.test_clock")
         )).Returns(customer);
 
         _featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(true);

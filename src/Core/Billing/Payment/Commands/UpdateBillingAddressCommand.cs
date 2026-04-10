@@ -60,7 +60,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -86,7 +86,7 @@ public class UpdateBillingAddressCommand(
                     City = billingAddress.City,
                     State = billingAddress.State
                 },
-                Expand = ["subscriptions", "tax_ids"],
+                Expand = ["subscriptions", "subscriptions.data.test_clock", "tax_ids"],
                 TaxExempt = determinedTaxExemptStatus
             });
 

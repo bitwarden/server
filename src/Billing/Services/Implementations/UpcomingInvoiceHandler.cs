@@ -50,7 +50,7 @@ public class UpcomingInvoiceHandler(
 
         var customer =
             await stripeAdapter.GetCustomerAsync(invoice.CustomerId,
-                new CustomerGetOptions { Expand = ["subscriptions", "tax", "tax_ids"] });
+                new CustomerGetOptions { Expand = ["subscriptions", "subscriptions.data.test_clock", "tax", "tax_ids"] });
 
         var subscription = customer.Subscriptions.FirstOrDefault();
 
