@@ -7,7 +7,6 @@ using Azure.Storage.Sas;
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Microsoft.Extensions.Logging;
@@ -74,14 +73,14 @@ public class AzureSendFileStorageService(
     public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
     {
         await InitAsync();
-        var sends = await _sendRepository.GetManyByOrganizationIdAsync(organizationId);
+        var sends = await _sendRepository.GetManyFileSendsByOrganizationIdAsync(organizationId);
         await DeleteBlobsForSendsAsync(sends);
     }
 
     public async Task DeleteFilesForUserAsync(Guid userId)
     {
         await InitAsync();
-        var sends = await _sendRepository.GetManyByUserIdAsync(userId);
+        var sends = await _sendRepository.GetManyFileSendsByUserIdAsync(userId);
         await DeleteBlobsForSendsAsync(sends);
     }
 
@@ -140,11 +139,11 @@ public class AzureSendFileStorageService(
         }
     }
 
-    private async Task DeleteBlobsForSendsAsync(ICollection<Send> sends)
+    private async Task DeleteBlobsForSendsAsync(ICollection<Send> fileSends)
     {
         var blobUris = new List<Uri>();
 
-        foreach (var send in sends.Where(s => s.Type == SendType.File))
+        foreach (var send in fileSends)
         {
             try
             {

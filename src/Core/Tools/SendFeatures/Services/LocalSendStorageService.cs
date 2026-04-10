@@ -49,14 +49,14 @@ public class LocalSendStorageService(
     public async Task DeleteFilesForOrganizationAsync(Guid organizationId)
     {
         await InitAsync();
-        var sends = await _sendRepository.GetManyByOrganizationIdAsync(organizationId);
+        var sends = await _sendRepository.GetManyFileSendsByOrganizationIdAsync(organizationId);
         await DeleteFilesForSendsAsync(sends);
     }
 
     public async Task DeleteFilesForUserAsync(Guid userId)
     {
         await InitAsync();
-        var sends = await _sendRepository.GetManyByUserIdAsync(userId);
+        var sends = await _sendRepository.GetManyFileSendsByUserIdAsync(userId);
         await DeleteFilesForSendsAsync(sends);
     }
 
