@@ -313,23 +313,25 @@ public class GroupsController : Controller
             createIds.Concat(updateIds).Concat(deleteIds));
 
         await AuthorizeCollectionAccessAsync(
-            allCollections.Where(c => createIds.Contains(c.Id)), CollectionGroupOperations.Create);
+            allCollections.Where(c => createIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Create);
         await AuthorizeCollectionAccessAsync(
-            allCollections.Where(c => updateIds.Contains(c.Id)), CollectionGroupOperations.Update);
+            allCollections.Where(c => updateIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Update);
         await AuthorizeCollectionAccessAsync(
-            allCollections.Where(c => deleteIds.Contains(c.Id)), CollectionGroupOperations.Delete);
+            allCollections.Where(c => deleteIds.Contains(c.Id)).ToList(), CollectionGroupOperations.Delete);
     }
 
     private async Task AuthorizeCollectionAccessAsync(
-        IEnumerable<Core.Entities.Collection> collections,
+        ICollection<Core.Entities.Collection> collections,
         IAuthorizationRequirement requirement)
     {
-        foreach (var collection in collections)
+        if (collections.Count == 0)
         {
-            if (!(await _authorizationService.AuthorizeAsync(User, collection, requirement)).Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            return;
+        }
+
+        if (!(await _authorizationService.AuthorizeAsync(User, collections, requirement)).Succeeded)
+        {
+            throw new NotFoundException();
         }
     }
 
