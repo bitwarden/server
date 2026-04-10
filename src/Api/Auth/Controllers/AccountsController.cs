@@ -266,8 +266,8 @@ public class AccountsController(
 
             var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
                 user,
-                model.MasterPasswordHash,
-                model.Key,
+                model.MasterPasswordHash!,
+                model.Key!,
                 model.OrgIdentifier);
 
             if (result.Succeeded)

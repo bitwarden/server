@@ -45,7 +45,8 @@ public class MasterPasswordServiceTests
                 Kdf = kdf,
                 MasterKeyWrappedUserKey = key,
                 Salt = salt
-            }
+            },
+            ValidatePassword = false
         };
 
         // Act
@@ -86,7 +87,8 @@ public class MasterPasswordServiceTests
                 MasterKeyWrappedUserKey = key,
                 Salt = salt
             },
-            MasterPasswordHint = hint
+            MasterPasswordHint = hint,
+            ValidatePassword = false
         };
 
         // Act
@@ -182,7 +184,8 @@ public class MasterPasswordServiceTests
                 Kdf = kdf,
                 MasterKeyWrappedUserKey = key,
                 Salt = salt
-            }
+            },
+            ValidatePassword = false
         };
 
         // Act
@@ -235,7 +238,8 @@ public class MasterPasswordServiceTests
                 Kdf = kdf,
                 MasterKeyWrappedUserKey = key,
                 Salt = salt
-            }
+            },
+            ValidatePassword = false
         };
 
         // Act
@@ -282,7 +286,8 @@ public class MasterPasswordServiceTests
                 MasterKeyWrappedUserKey = key,
                 Salt = salt
             },
-            MasterPasswordHint = hint
+            MasterPasswordHint = hint,
+            ValidatePassword = false
         };
 
         // Act
@@ -389,7 +394,8 @@ public class MasterPasswordServiceTests
                 Kdf = kdf,
                 MasterKeyWrappedUserKey = key,
                 Salt = salt
-            }
+            },
+            ValidatePassword = false
         };
 
         // Act
