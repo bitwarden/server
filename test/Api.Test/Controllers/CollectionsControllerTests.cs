@@ -2,6 +2,7 @@
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -10,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -711,5 +713,450 @@ public class CollectionsControllerTests
         await sutProvider.GetDependency<IProviderService>()
             .DidNotReceive()
             .LogProviderAccessToOrganizationAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_FeatureFlagEnabled_UsesNewOperations(User actingUser, List<Collection> collections,
+        Organization organization, SutProvider<CollectionsController> sutProvider)
+    {
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+        var userId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var model = new BulkCollectionAccessRequestModel
+        {
+            CollectionIds = collections.Select(c => c.Id),
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
+        };
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(model.CollectionIds)
+            .Returns(collections);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(actingUser.Id);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model);
+
+        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().Received(1)
+            .AddAccessAsync(collections, Arg.Any<ICollection<CollectionAccessSelection>>(),
+                Arg.Any<ICollection<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_FeatureFlagEnabled_AccessDenied_Throws(User actingUser, List<Collection> collections,
+        Organization organization, SutProvider<CollectionsController> sutProvider)
+    {
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+        var model = new BulkCollectionAccessRequestModel
+        {
+            CollectionIds = collections.Select(c => c.Id),
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = Guid.NewGuid(), Manage = true } },
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = Guid.NewGuid(), ReadOnly = true } },
+        };
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(model.CollectionIds)
+            .Returns(collections);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(actingUser.Id);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_WithNewUsersAndGroups_AuthorizesCreateAccess(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = Guid.NewGuid() } },
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = Guid.NewGuid() } }
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = Array.Empty<CollectionAccessSelection>(),
+            Groups = Array.Empty<CollectionAccessSelection>()
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organization.Id, collection.Id, model);
+
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().Received(1)
+            .UpdateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_WithExistingUsersAndGroups_AuthorizesUpdateAccess(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var userId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId } },
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId } }
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = new[] { new CollectionAccessSelection { Id = userId } },
+            Groups = new[] { new CollectionAccessSelection { Id = groupId } }
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organization.Id, collection.Id, model);
+
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().Received(1)
+            .UpdateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_WithRemovedUsersAndGroups_AuthorizesDeleteAccess(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Users = Array.Empty<SelectionReadOnlyRequestModel>(),
+            Groups = Array.Empty<SelectionReadOnlyRequestModel>()
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = new[] { new CollectionAccessSelection { Id = Guid.NewGuid() } },
+            Groups = new[] { new CollectionAccessSelection { Id = Guid.NewGuid() } }
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Delete)))
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organization.Id, collection.Id, model);
+
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().Received(1)
+            .UpdateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_UserCreateAccessDenied_Throws(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = Guid.NewGuid() } },
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = Array.Empty<CollectionAccessSelection>(),
+            Groups = Array.Empty<CollectionAccessSelection>()
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organization.Id, collection.Id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_UserUpdateAccessDenied_Throws(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var userId = Guid.NewGuid();
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId } },
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = new[] { new CollectionAccessSelection { Id = userId } },
+            Groups = Array.Empty<CollectionAccessSelection>()
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organization.Id, collection.Id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_UserDeleteAccessDenied_Throws(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Users = Array.Empty<SelectionReadOnlyRequestModel>(),
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = new[] { new CollectionAccessSelection { Id = Guid.NewGuid() } },
+            Groups = Array.Empty<CollectionAccessSelection>()
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organization.Id, collection.Id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_GroupCreateAccessDenied_Throws(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = Guid.NewGuid() } },
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = Array.Empty<CollectionAccessSelection>(),
+            Groups = Array.Empty<CollectionAccessSelection>()
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organization.Id, collection.Id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_GroupUpdateAccessDenied_Throws(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var groupId = Guid.NewGuid();
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId } },
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = Array.Empty<CollectionAccessSelection>(),
+            Groups = new[] { new CollectionAccessSelection { Id = groupId } }
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organization.Id, collection.Id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_GroupDeleteAccessDenied_Throws(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Groups = Array.Empty<SelectionReadOnlyRequestModel>(),
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = Array.Empty<CollectionAccessSelection>(),
+            Groups = new[] { new CollectionAccessSelection { Id = Guid.NewGuid() } }
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Delete)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organization.Id, collection.Id, model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_FeatureFlagEnabled_NullUsersAndGroups_SkipsAccessAuthorization(
+        SutProvider<CollectionsController> sutProvider, Organization organization)
+    {
+        var collection = new Collection { Id = Guid.NewGuid(), OrganizationId = organization.Id };
+        collection.DefaultUserCollectionEmail = null;
+        var model = new UpdateCollectionRequestModel
+        {
+            Name = "Updated",
+            Users = null,
+            Groups = null
+        };
+
+        var currentAccess = new CollectionAccessDetails
+        {
+            Users = new[] { new CollectionAccessSelection { Id = Guid.NewGuid() } },
+            Groups = new[] { new CollectionAccessSelection { Id = Guid.NewGuid() } }
+        };
+
+        Put_FeatureFlag_Setup(sutProvider, collection, currentAccess, organization);
+
+        await sutProvider.Sut.Put(organization.Id, collection.Id, model);
+
+        await sutProvider.GetDependency<IUpdateCollectionCommand>().Received(1)
+            .UpdateAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceive()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceive()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+    }
+
+    private static void Put_FeatureFlag_Setup(
+        SutProvider<CollectionsController> sutProvider,
+        Collection collection,
+        CollectionAccessDetails currentAccess,
+        Organization organization)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithAccessAsync(collection.Id)
+            .Returns(new Tuple<Collection, CollectionAccessDetails>(collection, currentAccess));
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), collection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(Guid.NewGuid());
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id)
+            .Returns(new CurrentContextOrganization { Id = organization.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithPermissionsAsync(collection.Id, Arg.Any<Guid?>(), false)
+            .Returns(new CollectionAdminDetails { Id = collection.Id });
     }
 }

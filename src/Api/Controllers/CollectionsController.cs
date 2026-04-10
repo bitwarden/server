@@ -4,6 +4,7 @@
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -31,6 +32,7 @@ public class CollectionsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
     private readonly IProviderService _providerService;
+    private readonly IFeatureService _featureService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -41,7 +43,8 @@ public class CollectionsController : Controller
         IAuthorizationService authorizationService,
         ICurrentContext currentContext,
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
-        IProviderService providerService)
+        IProviderService providerService,
+        IFeatureService featureService)
     {
         _collectionRepository = collectionRepository;
         _createCollectionCommand = createCollectionCommand;
@@ -52,6 +55,7 @@ public class CollectionsController : Controller
         _currentContext = currentContext;
         _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
         _providerService = providerService;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -183,6 +187,11 @@ public class CollectionsController : Controller
     [HttpPut("{id}")]
     public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] UpdateCollectionRequestModel model)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+        {
+            return await Put_vNext(orgId, id, model);
+        }
+
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
         if (!authorized)
@@ -221,12 +230,36 @@ public class CollectionsController : Controller
             throw new NotFoundException("One or more collections not found.");
         }
 
-        var result = await _authorizationService.AuthorizeAsync(User, collections,
-            new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
-
-        if (!result.Succeeded)
+        if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
         {
-            throw new NotFoundException();
+            if (model.Users?.Any() == true)
+            {
+                var resource = new CollectionUserAccessResource(collections.ToList(), null);
+                if (!(await _authorizationService.AuthorizeAsync(User, resource,
+                        CollectionUserOperations.Create)).Succeeded)
+                {
+                    throw new NotFoundException();
+                }
+            }
+
+            if (model.Groups?.Any() == true)
+            {
+                if (!(await _authorizationService.AuthorizeAsync(User, collections,
+                        CollectionGroupOperations.Create)).Succeeded)
+                {
+                    throw new NotFoundException();
+                }
+            }
+        }
+        else
+        {
+            var result = await _authorizationService.AuthorizeAsync(User, collections,
+                new[] { BulkCollectionOperations.ModifyUserAccess, BulkCollectionOperations.ModifyGroupAccess });
+
+            if (!result.Succeeded)
+            {
+                throw new NotFoundException();
+            }
         }
 
         await _bulkAddCollectionAccessCommand.AddAccessAsync(
@@ -273,5 +306,71 @@ public class CollectionsController : Controller
     public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
         await DeleteMany(orgId, model);
+    }
+
+    private async Task<CollectionResponseModel> Put_vNext(Guid orgId, Guid id, UpdateCollectionRequestModel model)
+    {
+        var (collection, currentAccess) = await _collectionRepository.GetByIdWithAccessAsync(id);
+
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Update)).Succeeded;
+        if (!authorized)
+        {
+            throw new NotFoundException();
+        }
+
+        if (model.Users != null)
+        {
+            var resource = new CollectionUserAccessResource(new[] { collection }, null);
+            await AuthorizeAccessChangesAsync(model.Users, currentAccess.Users, resource,
+                CollectionUserOperations.Create, CollectionUserOperations.Update, CollectionUserOperations.Delete);
+        }
+
+        if (model.Groups != null)
+        {
+            await AuthorizeAccessChangesAsync(model.Groups, currentAccess.Groups, new[] { collection },
+                CollectionGroupOperations.Create, CollectionGroupOperations.Update, CollectionGroupOperations.Delete);
+        }
+
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+        await _updateCollectionCommand.UpdateAsync(model.ToCollection(collection), groups, users);
+
+        if (!_currentContext.UserId.HasValue || (_currentContext.GetOrganization(collection.OrganizationId) == null && await _currentContext.ProviderUserForOrgAsync(collection.OrganizationId)))
+        {
+            return new CollectionAccessDetailsResponseModel(collection);
+        }
+
+        var collectionWithPermissions = await _collectionRepository.GetByIdWithPermissionsAsync(collection.Id, _currentContext.UserId.Value, false);
+
+        return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
+    }
+
+    private async Task AuthorizeAccessChangesAsync(
+        IEnumerable<SelectionReadOnlyRequestModel> posted,
+        IEnumerable<CollectionAccessSelection> current,
+        object resource,
+        IAuthorizationRequirement createRequirement,
+        IAuthorizationRequirement updateRequirement,
+        IAuthorizationRequirement deleteRequirement)
+    {
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
+
+        if (createIds.Count > 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, resource, createRequirement)).Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        if (updateIds.Count > 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, resource, updateRequirement)).Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        if (deleteIds.Count > 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, resource, deleteRequirement)).Succeeded)
+        {
+            throw new NotFoundException();
+        }
     }
 }
