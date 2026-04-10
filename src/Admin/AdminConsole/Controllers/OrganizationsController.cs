@@ -591,6 +591,7 @@ public class OrganizationsController : Controller
             organization.Gateway = model.Gateway;
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
+            organization.ExemptFromBillingAutomation = model.ExemptFromBillingAutomation;
         }
     }
 
