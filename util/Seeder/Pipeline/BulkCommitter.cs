@@ -25,8 +25,9 @@ namespace Bit.Seeder.Pipeline;
 /// Each list is cleared after insert so the context is ready for the next pipeline run.
 ///
 /// CollectionUser and CollectionGroup require an explicit table name in BulkCopyOptions because
-/// they lack IEntityTypeConfiguration mappings in DatabaseContext. Table names vary by provider —
-/// SQL Server uses singular names while EF Core-managed providers use pluralized names.
+/// they lack .ToTable() mappings in DatabaseContext, so LinqToDB cannot resolve their table names
+/// automatically. Table names vary by provider — SQL Server uses singular names while EF Core-managed
+/// providers use pluralized names.
 /// </remarks>
 /// <seealso cref="SeederContext"/>
 /// <seealso cref="RecipeExecutor"/>
