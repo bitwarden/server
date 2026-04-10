@@ -84,6 +84,8 @@ public class Startup
 
         // Add event integration services
         services.AddDistributedCache(globalSettings);
+        services.AddExtendedCache(ExtendedProviderAbilityCacheService.CacheName, globalSettings);
+        services.AddSingleton<IProviderAbilityCacheService, ExtendedProviderAbilityCacheService>();
         services.AddRabbitMqListeners(globalSettings);
     }
 
