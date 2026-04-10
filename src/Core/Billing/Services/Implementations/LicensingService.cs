@@ -60,12 +60,6 @@ public class LicensingService : ILicensingService
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
             "‎B34876439FCDA2846505B2EFBBA6C4A951313EBE";
-
-        _certificate = CoreHelpers.GetCertificate("/home/quexten/Downloads/dev.pfx", "c45ENTwskfkxn33CD345xuv");
-        if (_certificate != null)
-        {
-            return;
-        }
         if (_globalSettings.SelfHosted)
         {
             _certificate = CoreHelpers.GetEmbeddedCertificateAsync(environment.IsDevelopment() ? "licensing_dev.cer" : "licensing.cer", null)
