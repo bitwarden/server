@@ -195,12 +195,20 @@ public class AccountsController(
         IdentityResult result;
         if (model.RequestHasNewDataTypes())
         {
-            result = await _masterPasswordService.UpdateExistingMasterPasswordAndSaveAsync(user, new UpdateExistingPasswordData
+            // Jared, I'm unsure if check password should be turned into a query as a part of this work.
+            if (await _userService.CheckPasswordAsync(user, model.AuthenticationData!.MasterPasswordAuthenticationHash))
             {
-                MasterPasswordUnlock = model.UnlockData!.ToData(),
-                MasterPasswordAuthentication = model.AuthenticationData!.ToData(),
-                MasterPasswordHint = model.MasterPasswordHint,
-            });
+                result = await _masterPasswordService.UpdateExistingMasterPasswordAndSaveAsync(user, new UpdateExistingPasswordData
+                {
+                    MasterPasswordUnlock = model.UnlockData!.ToData(),
+                    MasterPasswordAuthentication = model.AuthenticationData!.ToData(),
+                    MasterPasswordHint = model.MasterPasswordHint
+                });
+            }
+            else
+            {
+                throw new BadRequestException("Passwords do not match.");
+            }
         }
         // To be removed in PM-33141
         else
@@ -298,7 +306,7 @@ public class AccountsController(
     }
 
     [HttpPost("kdf")]
-    public async Task PostKdf([FromBody] PasswordRequestModel model)
+    public async Task PostKdf([FromBody] ChangeKdfRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)

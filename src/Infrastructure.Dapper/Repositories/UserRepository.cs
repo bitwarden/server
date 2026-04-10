@@ -487,6 +487,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     KdfParallelism = masterPasswordUnlockData.Kdf.Parallelism,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
+                    // Need to add User.LastPasswordChangeDate here
                     MasterPasswordSalt = masterPasswordUnlockData.Salt
                 },
                 transaction: transaction,
