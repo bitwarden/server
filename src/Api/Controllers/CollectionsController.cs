@@ -320,15 +320,16 @@ public class CollectionsController : Controller
 
         if (model.Users != null)
         {
+            // TargetUserId is null because this endpoint modifies access for multiple users
+            // at the collection level; self-assignment protection is not applicable here
+            // (consistent with the pre-feature-flag behavior).
             var resource = new CollectionUserAccessResource(new[] { collection }, null);
-            await AuthorizeAccessChangesAsync(model.Users, currentAccess.Users, resource,
-                CollectionUserOperations.Create, CollectionUserOperations.Update, CollectionUserOperations.Delete);
+            await AuthorizeUserAccessChangesAsync(model.Users, currentAccess.Users, resource);
         }
 
         if (model.Groups != null)
         {
-            await AuthorizeAccessChangesAsync(model.Groups, currentAccess.Groups, new[] { collection },
-                CollectionGroupOperations.Create, CollectionGroupOperations.Update, CollectionGroupOperations.Delete);
+            await AuthorizeGroupAccessChangesAsync(model.Groups, currentAccess.Groups, new[] { collection });
         }
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
@@ -345,30 +346,53 @@ public class CollectionsController : Controller
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
 
-    private async Task AuthorizeAccessChangesAsync(
+    private async Task AuthorizeUserAccessChangesAsync(
         IEnumerable<SelectionReadOnlyRequestModel> posted,
         IEnumerable<CollectionAccessSelection> current,
-        object resource,
-        IAuthorizationRequirement createRequirement,
-        IAuthorizationRequirement updateRequirement,
-        IAuthorizationRequirement deleteRequirement)
+        CollectionUserAccessResource resource)
     {
         var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         if (createIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, resource, createRequirement)).Succeeded)
+            !(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Create)).Succeeded)
         {
             throw new NotFoundException();
         }
 
         if (updateIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, resource, updateRequirement)).Succeeded)
+            !(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Update)).Succeeded)
         {
             throw new NotFoundException();
         }
 
         if (deleteIds.Count > 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, resource, deleteRequirement)).Succeeded)
+            !(await _authorizationService.AuthorizeAsync(User, resource, CollectionUserOperations.Delete)).Succeeded)
+        {
+            throw new NotFoundException();
+        }
+    }
+
+    private async Task AuthorizeGroupAccessChangesAsync(
+        IEnumerable<SelectionReadOnlyRequestModel> posted,
+        IEnumerable<CollectionAccessSelection> current,
+        ICollection<Collection> collections)
+    {
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
+
+        if (createIds.Count > 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionGroupOperations.Create)).Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        if (updateIds.Count > 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionGroupOperations.Update)).Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        if (deleteIds.Count > 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, collections, CollectionGroupOperations.Delete)).Succeeded)
         {
             throw new NotFoundException();
         }
