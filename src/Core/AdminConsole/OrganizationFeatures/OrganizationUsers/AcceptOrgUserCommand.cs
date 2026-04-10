@@ -28,7 +28,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IUserRepository _userRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IFeatureService _featureService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
     private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
@@ -41,7 +40,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IUserRepository userRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IFeatureService featureService,
         IPolicyRequirementQuery policyRequirementQuery,
         IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
         IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
@@ -53,7 +51,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _userRepository = userRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _featureService = featureService;
         _policyRequirementQuery = policyRequirementQuery;
         _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
         _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
@@ -169,10 +166,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            await HandleAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
-        }
+        await HandleAutomaticUserConfirmationPolicyAsync(orgUser, allOrgUsers, user);
 
         await ValidateSingleOrganizationPolicyAsync(orgUser, allOrgUsers, user);
 
@@ -194,10 +188,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
-        {
-            await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
-        }
+        await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
 
         return orgUser;
     }
