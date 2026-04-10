@@ -3,14 +3,14 @@ using Bit.Core.Models.Data;
 
 namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
 
-public static class CollectionAccessExtensions
+public static class AccessSelectionExtensions
 {
     /// <summary>
-    /// Compares posted collection access against current access and returns
+    /// Compares posted access selections against current access and returns
     /// the ids categorized as creates, updates, or deletes.
     /// </summary>
     public static (HashSet<Guid> CreateIds, HashSet<Guid> UpdateIds, HashSet<Guid> DeleteIds)
-        DiffCollectionAccess(
+        DiffAccessSelections(
             this IEnumerable<SelectionReadOnlyRequestModel> posted,
             IEnumerable<CollectionAccessSelection> current)
     {

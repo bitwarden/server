@@ -5,10 +5,10 @@ using Xunit;
 
 namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 
-public class CollectionAccessExtensionsTests
+public class AccessSelectionExtensionsTests
 {
     [Fact]
-    public void DiffCollectionAccess_AllNew_ReturnsAllAsCreates()
+    public void DiffAccessSelections_AllNew_ReturnsAllAsCreates()
     {
         var posted = new[]
         {
@@ -17,7 +17,7 @@ public class CollectionAccessExtensionsTests
         };
         var current = Array.Empty<CollectionAccessSelection>();
 
-        var (createIds, updateIds, deleteIds) = posted.DiffCollectionAccess(current);
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         Assert.Equal(2, createIds.Count);
         Assert.Empty(updateIds);
@@ -25,7 +25,7 @@ public class CollectionAccessExtensionsTests
     }
 
     [Fact]
-    public void DiffCollectionAccess_AllExisting_ReturnsAllAsUpdates()
+    public void DiffAccessSelections_AllExisting_ReturnsAllAsUpdates()
     {
         var id1 = Guid.NewGuid();
         var id2 = Guid.NewGuid();
@@ -41,7 +41,7 @@ public class CollectionAccessExtensionsTests
             new CollectionAccessSelection { Id = id2 }
         };
 
-        var (createIds, updateIds, deleteIds) = posted.DiffCollectionAccess(current);
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         Assert.Empty(createIds);
         Assert.Equal(2, updateIds.Count);
@@ -49,7 +49,7 @@ public class CollectionAccessExtensionsTests
     }
 
     [Fact]
-    public void DiffCollectionAccess_RemovedItems_ReturnsAsDeletes()
+    public void DiffAccessSelections_RemovedItems_ReturnsAsDeletes()
     {
         var id1 = Guid.NewGuid();
         var id2 = Guid.NewGuid();
@@ -64,7 +64,7 @@ public class CollectionAccessExtensionsTests
             new CollectionAccessSelection { Id = id2 }
         };
 
-        var (createIds, updateIds, deleteIds) = posted.DiffCollectionAccess(current);
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         Assert.Empty(createIds);
         Assert.Single(updateIds);
@@ -73,7 +73,7 @@ public class CollectionAccessExtensionsTests
     }
 
     [Fact]
-    public void DiffCollectionAccess_MixedCreateUpdateDelete_CategorizesCorrectly()
+    public void DiffAccessSelections_MixedCreateUpdateDelete_CategorizesCorrectly()
     {
         var existingId = Guid.NewGuid();
         var removedId = Guid.NewGuid();
@@ -90,7 +90,7 @@ public class CollectionAccessExtensionsTests
             new CollectionAccessSelection { Id = removedId }
         };
 
-        var (createIds, updateIds, deleteIds) = posted.DiffCollectionAccess(current);
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         Assert.Single(createIds);
         Assert.Contains(newId, createIds);
@@ -101,7 +101,7 @@ public class CollectionAccessExtensionsTests
     }
 
     [Fact]
-    public void DiffCollectionAccess_EmptyPosted_ReturnsAllAsDeletes()
+    public void DiffAccessSelections_EmptyPosted_ReturnsAllAsDeletes()
     {
         var posted = Array.Empty<SelectionReadOnlyRequestModel>();
         var current = new[]
@@ -110,7 +110,7 @@ public class CollectionAccessExtensionsTests
             new CollectionAccessSelection { Id = Guid.NewGuid() }
         };
 
-        var (createIds, updateIds, deleteIds) = posted.DiffCollectionAccess(current);
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         Assert.Empty(createIds);
         Assert.Empty(updateIds);
@@ -118,7 +118,7 @@ public class CollectionAccessExtensionsTests
     }
 
     [Fact]
-    public void DiffCollectionAccess_EmptyCurrent_ReturnsAllAsCreates()
+    public void DiffAccessSelections_EmptyCurrent_ReturnsAllAsCreates()
     {
         var posted = new[]
         {
@@ -127,7 +127,7 @@ public class CollectionAccessExtensionsTests
         };
         var current = Array.Empty<CollectionAccessSelection>();
 
-        var (createIds, updateIds, deleteIds) = posted.DiffCollectionAccess(current);
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         Assert.Equal(2, createIds.Count);
         Assert.Empty(updateIds);
@@ -135,12 +135,12 @@ public class CollectionAccessExtensionsTests
     }
 
     [Fact]
-    public void DiffCollectionAccess_BothEmpty_ReturnsAllEmpty()
+    public void DiffAccessSelections_BothEmpty_ReturnsAllEmpty()
     {
         var posted = Array.Empty<SelectionReadOnlyRequestModel>();
         var current = Array.Empty<CollectionAccessSelection>();
 
-        var (createIds, updateIds, deleteIds) = posted.DiffCollectionAccess(current);
+        var (createIds, updateIds, deleteIds) = posted.DiffAccessSelections(current);
 
         Assert.Empty(createIds);
         Assert.Empty(updateIds);
