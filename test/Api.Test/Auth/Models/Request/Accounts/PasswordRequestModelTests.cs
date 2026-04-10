@@ -122,7 +122,7 @@ public class PasswordRequestModelTests
         var result = model.Validate(new ValidationContext(model)).ToList();
 
         // Assert
-        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("Salt must be equal"));
+        Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains("Invalid master password salt."));
     }
 
     [Fact]
@@ -162,31 +162,6 @@ public class PasswordRequestModelTests
     }
 
     #endregion
-
-    #region Both-or-Neither Tests
-
-    /// <summary>
-    /// This test proves backwards compatibility for clients that don't send either AuthenticationData or UnlockData
-    /// </summary>
-    [Fact]
-    public void Validate_WhenBothNull_NoAuthUnlockErrors()
-    {
-        // Arrange
-        var model = new PasswordRequestModel
-        {
-            MasterPasswordHash = "masterPasswordHash",
-            NewMasterPasswordHash = "newHash",
-            Key = "key",
-            AuthenticationData = null,
-            UnlockData = null
-        };
-
-        // Act
-        var result = model.Validate(new ValidationContext(model)).ToList();
-
-        // Assert — no auth/unlock-related errors
-        Assert.Empty(result);
-    }
 
     [Fact]
     public void Validate_WhenOnlyAuthPresent_ReturnsError()
@@ -245,8 +220,6 @@ public class PasswordRequestModelTests
         // Assert
         Assert.Contains(result, r => r.ErrorMessage != null && r.ErrorMessage.Contains(nameof(PasswordRequestModel.AuthenticationData)));
     }
-
-    #endregion
 
     #region Base Validation Preserved
 

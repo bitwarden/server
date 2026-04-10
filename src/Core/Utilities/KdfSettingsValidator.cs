@@ -24,10 +24,11 @@ public static class KdfSettingsValidator
             yield break;
         }
 
+        // Salt must be equal for authentication and unlock to prevent de-synced salt value
         if (authentication.Salt != unlock.Salt)
         {
             yield return new ValidationResult(
-                "Salt must be equal for authentication and unlock.",
+                "Invalid master password salt.",
                 [nameof(authentication.Salt)]);
         }
 
