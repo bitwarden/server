@@ -160,7 +160,7 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        var orgUserId = new Guid();
+        var orgUserId = Guid.NewGuid();
         var orgUser = new OrganizationUser
         {
             UserId = orgUserId
@@ -170,12 +170,12 @@ public class SendControlsSyncPolicyEventTests
             .Returns([ orgUser ]);
         var nonCompliantSend1 = new Send
         {
-            Id = new Guid(),
+            Id = Guid.NewGuid(),
             HideEmail = true
         };
         var nonCompliantSend2 = new Send
         {
-            Id = new Guid(),
+            Id = Guid.NewGuid(),
             AuthType = AuthType.Email,
             Emails = "marvin@mars.planet"
         };
@@ -210,7 +210,7 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        var orgUserId = new Guid();
+        var orgUserId = Guid.NewGuid();
         var orgUser = new OrganizationUser
         {
             UserId = orgUserId

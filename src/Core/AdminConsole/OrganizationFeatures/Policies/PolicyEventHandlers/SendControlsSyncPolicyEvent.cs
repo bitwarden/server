@@ -82,11 +82,11 @@ public class SendControlsSyncPolicyEvent(
         return Task.FromResult(string.Empty);
     }
 
-    public async Task SetDisabledForSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
+    private async Task SetDisabledForSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
     {
         var orgUsers = await organizationUserRepository.GetManyByOrganizationAsync(postUpsertedPolicyState.OrganizationId, null);
         var orgUserIds = orgUsers.Where(w => w.UserId != null).Select(s => s.UserId!.Value).ToList();
-        var domains = (sendControlsPolicyData.AllowedDomains ?? "").Split(",").Select(d => d.Trim());
+        var domains = (sendControlsPolicyData.AllowedDomains ?? "").Split(",").Select(d => d.Trim()).Where(d => d != "");
         var enabled = new List<Guid>();
         var enabledSendUserIds = new List<Guid>();
         var disabled = new List<Guid>();

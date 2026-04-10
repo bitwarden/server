@@ -76,7 +76,7 @@ public class SendValidationService : ISendValidationService
         if ((passwordRequired && send.Password == null) || (emailsRequired && send.Emails == null))
         {
             var requiredAccessControl = passwordRequired ? "password" : emailsRequired ? "email verification" : "(cannot determine required auth)";
-            throw new BadRequestException($"Due to an Enterpise Policy your Sends must be protected by {requiredAccessControl}");
+            throw new BadRequestException($"Due to an Enterprise Policy your Sends must be protected by {requiredAccessControl}");
         }
 
         if (emailsRequired && sendControlsRequirement.AllowedDomains != null)

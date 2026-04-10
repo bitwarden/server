@@ -154,7 +154,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             commandType: CommandType.StoredProcedure);
         await connection.ExecuteAsync(
             $"[{Schema}].[User_BumpManyAccountRevisionDates]",
-            new { Ids = ids.ToGuidIdArrayTVP() },
+            new { UserIds = userIds.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
     }
 
