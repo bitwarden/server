@@ -2,6 +2,7 @@
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
+
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class PasswordRequestModel : SecretVerificationRequestModel
@@ -20,36 +21,26 @@ public class PasswordRequestModel : SecretVerificationRequestModel
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        // validate the secrets for the base class first
         foreach (var result in base.Validate(validationContext))
         {
             yield return result;
         }
 
-        // Enforce both-or-neither for authentication and unlock data
-        if (AuthenticationData != null && UnlockData == null)
-        {
-            yield return new ValidationResult(
-                $"{nameof(UnlockData)} must be provided when {nameof(AuthenticationData)} is provided.",
-                [nameof(UnlockData)]);
-            yield break;
-        }
-
-        if (AuthenticationData == null && UnlockData != null)
-        {
-            yield return new ValidationResult(
-                $"{nameof(AuthenticationData)} must be provided when {nameof(UnlockData)} is provided.",
-                [nameof(AuthenticationData)]);
-            yield break;
-        }
-
-        // Validate KDF equality, salt equality, and KDF settings when both are present
+        // Enforce: if one is provided, both must be provided.
         if (AuthenticationData != null && UnlockData != null)
         {
-            foreach (var result in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
-                         AuthenticationData.ToData(), UnlockData.ToData()))
+            foreach (var validationResult in KdfSettingsValidator.ValidateAuthenticationAndUnlockData(
+                AuthenticationData.ToData(), UnlockData.ToData()))
             {
-                yield return result;
+                yield return validationResult;
             }
+        }
+        else
+        {
+            yield return new ValidationResult(
+                "AuthenticationData and UnlockData must be provided.",
+                [nameof(AuthenticationData), nameof(UnlockData)]);
         }
     }
 }
