@@ -88,7 +88,7 @@ public class LocalSendStorageServiceTests
         await File.WriteAllTextAsync(Path.Combine(dir1, fileId1), "contents1");
         await File.WriteAllTextAsync(Path.Combine(dir2, fileId2), "contents2");
 
-        sendRepository.GetManyByUserIdAsync(userId).Returns(new List<Send> { send1, send2 });
+        sendRepository.GetManyFileSendsByUserIdAsync(userId).Returns(new List<Send> { send1, send2 });
 
         await sut.DeleteFilesForUserAsync(userId);
 
@@ -108,7 +108,7 @@ public class LocalSendStorageServiceTests
         var userId = Guid.NewGuid();
         var textSend = new Send { Id = Guid.NewGuid(), UserId = userId, Type = SendType.Text };
 
-        sendRepository.GetManyByUserIdAsync(userId).Returns(new List<Send> { textSend });
+        sendRepository.GetManyFileSendsByUserIdAsync(userId).Returns(new List<Send> { textSend });
 
         await sut.DeleteFilesForUserAsync(userId);
 
@@ -124,7 +124,7 @@ public class LocalSendStorageServiceTests
         var sut = CreateSut(tempDirectory, sendRepository);
 
         var userId = Guid.NewGuid();
-        sendRepository.GetManyByUserIdAsync(userId).Returns(new List<Send>());
+        sendRepository.GetManyFileSendsByUserIdAsync(userId).Returns(new List<Send>());
 
         await sut.DeleteFilesForUserAsync(userId);
     }
@@ -147,7 +147,7 @@ public class LocalSendStorageServiceTests
         Directory.CreateDirectory(dir);
         await File.WriteAllTextAsync(Path.Combine(dir, fileId), "contents");
 
-        sendRepository.GetManyByUserIdAsync(userId).Returns(new List<Send> { badSend, goodSend });
+        sendRepository.GetManyFileSendsByUserIdAsync(userId).Returns(new List<Send> { badSend, goodSend });
 
         await sut.DeleteFilesForUserAsync(userId);
 
@@ -172,7 +172,7 @@ public class LocalSendStorageServiceTests
         Directory.CreateDirectory(dir);
         await File.WriteAllTextAsync(Path.Combine(dir, fileId), "org contents");
 
-        sendRepository.GetManyByOrganizationIdAsync(orgId).Returns(new List<Send> { send });
+        sendRepository.GetManyFileSendsByOrganizationIdAsync(orgId).Returns(new List<Send> { send });
 
         await sut.DeleteFilesForOrganizationAsync(orgId);
 
