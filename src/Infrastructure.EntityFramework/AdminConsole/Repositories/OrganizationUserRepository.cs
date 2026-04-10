@@ -46,6 +46,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 Manage = y.Manage
             });
             await dbContext.CollectionUsers.AddRangeAsync(collectionUsers);
+            // Bump RevisionDate on all affected collections
+            var filteredCollectionIds = filteredCollections.Select(fc => fc.Id).ToHashSet();
+            foreach (var c in availableCollections.Where(a => filteredCollectionIds.Contains(a.Id)))
+            {
+                c.RevisionDate = organizationUser.RevisionDate;
+            }
             await dbContext.SaveChangesAsync();
         }
 
@@ -651,6 +657,21 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             // Remove all existing ones that are no longer requested
             var requestedCollectionIds = requestedCollections.Select(c => c.Id).ToList();
             dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedCollectionIds.Contains(cu.CollectionId)));
+
+            // Bump the revision date on all affected collections
+            var allAffectedCollectionIds = existingCollectionUsers.Select(cu => cu.CollectionId)
+                .Union(requestedCollections.Select(rc => rc.Id))
+                .Distinct()
+                .ToList();
+            var affectedCollections = await dbContext.Collections
+                .Where(c => c.OrganizationId == obj.OrganizationId
+                    && allAffectedCollectionIds.Contains(c.Id))
+                .ToListAsync();
+            foreach (var c in affectedCollections)
+            {
+                c.RevisionDate = obj.RevisionDate;
+            }
+
             await dbContext.SaveChangesAsync();
         }
     }
@@ -923,6 +944,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
     {
+        if (!organizationUserCollection.Any())
+        {
+            return;
+        }
+
         using var scope = ServiceScopeFactory.CreateScope();
 
         await using var dbContext = GetDatabaseContext(scope);
@@ -941,6 +967,27 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             GroupId = group,
             OrganizationUserId = user.OrganizationUser.Id
         }));
+
+        // Bump RevisionDate on all affected collections
+        var affectedCollectionIds = organizationUserCollection
+            .SelectMany(x => x.Collections)
+            .Select(c => c.Id)
+            .Distinct()
+            .ToList();
+        if (affectedCollectionIds.Count > 0)
+        {
+            var organizationId = organizationUserCollection.First().OrganizationUser.OrganizationId;
+            var affectedCollections = await dbContext.Collections
+                .Where(c => c.OrganizationId == organizationId
+                    && affectedCollectionIds.Contains(c.Id))
+                .ToListAsync();
+            // Use the same RevisionDate as the created OrganizationUsers
+            var revisionDate = organizationUserCollection.First().OrganizationUser.RevisionDate;
+            foreach (var c in affectedCollections)
+            {
+                c.RevisionDate = revisionDate;
+            }
+        }
 
         await dbContext.SaveChangesAsync();
     }
