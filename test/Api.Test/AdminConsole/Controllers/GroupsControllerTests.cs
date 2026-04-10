@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Context;
@@ -89,5 +90,55 @@ public class GroupsControllerTests
 
         await sutProvider.GetDependency<ICreateGroupCommand>().DidNotReceiveWithAnyArgs()
             .CreateGroupAsync(default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Post_FeatureFlagEnabled_UsesCollectionGroupOperations(Organization organization,
+        GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                 Arg.Any<IEnumerable<Collection>>(),
+                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
+             .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
+
+        var response = await sutProvider.Sut.Post(organization.Id, groupRequestModel);
+
+        await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
+            Arg.Any<Group>(), organization, Arg.Any<ICollection<CollectionAccessSelection>>(),
+            Arg.Any<IEnumerable<Guid>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Post_FeatureFlagEnabled_NotAuthorized_Throws(Organization organization,
+        GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
+    {
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
+            new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<IEnumerable<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Post(organization.Id, groupRequestModel));
     }
 }
