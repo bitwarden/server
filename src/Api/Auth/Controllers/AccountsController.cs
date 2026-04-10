@@ -173,6 +173,16 @@ public class AccountsController(
         throw new BadRequestException(ModelState);
     }
 
+    /// <summary>
+    /// For a user updating an existing password.
+    ///
+    /// If calling this when a user does not have a master password, it will fail.
+    /// I don't think is a new boundary that has been introduced.
+    /// Need to double check this / get feedback from Jared.
+    /// </summary>
+    /// <param name="model"></param>
+    /// <exception cref="UnauthorizedAccessException"></exception>
+    /// <exception cref="BadRequestException"></exception>
     [HttpPost("password")]
     public async Task PostPassword([FromBody] PasswordRequestModel model)
     {
