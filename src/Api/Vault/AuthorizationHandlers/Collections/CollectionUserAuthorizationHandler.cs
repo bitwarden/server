@@ -20,6 +20,7 @@ public class CollectionUserAuthorizationHandler
     private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
     private HashSet<Guid>? _managedCollectionsIds;
+    private HashSet<Guid>? _orphanedCollectionsIds;
 
     public CollectionUserAuthorizationHandler(
         ICurrentContext currentContext,
@@ -123,7 +124,7 @@ public class CollectionUserAuthorizationHandler
 
         if (org is not null)
         {
-            var canManage = await CanManageCollectionsAsync(resources);
+            var canManage = await CanManageCollectionsAsync(resources, org);
             if (canManage)
             {
                 return true;
@@ -133,7 +134,8 @@ public class CollectionUserAuthorizationHandler
         return await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId);
     }
 
-    private async Task<bool> CanManageCollectionsAsync(ICollection<Collection> targetCollections)
+    private async Task<bool> CanManageCollectionsAsync(ICollection<Collection> targetCollections,
+        CurrentContextOrganization? org)
     {
         if (_managedCollectionsIds == null)
         {
@@ -146,7 +148,27 @@ public class CollectionUserAuthorizationHandler
                 .ToHashSet();
         }
 
-        return targetCollections.All(tc => _managedCollectionsIds.Contains(tc.Id));
+        if (targetCollections.All(tc => _managedCollectionsIds.Contains(tc.Id)))
+        {
+            return true;
+        }
+
+        if (org is not ({ Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or { Permissions.EditAnyCollection: true }))
+        {
+            return false;
+        }
+
+        if (_orphanedCollectionsIds == null)
+        {
+            var orgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(_targetOrganizationId);
+
+            _orphanedCollectionsIds = orgCollections.Where(c =>
+                    !c.Item2.Users.Any(u => u.Manage) && !c.Item2.Groups.Any(g => g.Manage))
+                .Select(c => c.Item1.Id)
+                .ToHashSet();
+        }
+
+        return targetCollections.All(tc => _orphanedCollectionsIds.Contains(tc.Id) || _managedCollectionsIds.Contains(tc.Id));
     }
 
     private async Task<OrganizationAbility?> GetOrganizationAbilityAsync(CurrentContextOrganization? organization)
