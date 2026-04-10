@@ -1,5 +1,5 @@
-﻿using System.Text;
-using System.Globalization;
+﻿using System.Globalization;
+using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;

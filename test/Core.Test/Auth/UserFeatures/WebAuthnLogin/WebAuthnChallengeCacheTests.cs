@@ -1,4 +1,4 @@
-using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
+﻿using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

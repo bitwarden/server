@@ -18,7 +18,6 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Identity.Controllers;
 using Bit.Identity.Models.Request.Accounts;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
