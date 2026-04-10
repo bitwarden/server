@@ -386,7 +386,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         {
             var dbContext = GetDatabaseContext(scope);
             var view = new OrganizationUserOrganizationDetailsViewQuery();
-            var t = await (view.Run(dbContext)).ToArrayAsync();
             var entity = await view.Run(dbContext)
                 .FirstOrDefaultAsync(o => o.UserId == userId &&
                     o.OrganizationId == organizationId &&
@@ -575,6 +574,22 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         where ou.UserId == userId &&
                         (status == null || ou.Status == status)
                         select ou;
+            var organizationUsers = await query.ToListAsync();
+            return organizationUsers;
+        }
+    }
+
+    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAcceptedDetailsByUserAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var view = new OrganizationUserOrganizationDetailsViewQuery();
+            var query = from organizationUserDetails in view.Run(dbContext)
+                        where organizationUserDetails.UserId == userId &&
+                        (organizationUserDetails.Status == OrganizationUserStatusType.Confirmed ||
+                         organizationUserDetails.Status == OrganizationUserStatusType.Accepted)
+                        select organizationUserDetails;
             var organizationUsers = await query.ToListAsync();
             return organizationUsers;
         }
