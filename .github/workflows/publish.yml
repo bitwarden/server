@@ -95,11 +95,13 @@ jobs:
           - project_name: Sso
     steps:
       - name: Print environment
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           whoami
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-          echo "Dry Run: ${{ inputs.dry_run }}"
+          echo "Dry Run: $DRY_RUN"
 
       - name: Set up project name
         id: setup
