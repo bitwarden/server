@@ -275,6 +275,51 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Invite_FeatureFlagEnabled_UsesCollectionUserOperations(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
+        Guid userId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+
+        await sutProvider.Sut.Invite(organizationAbility.Id, model);
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(organizationAbility.Id,
+            userId, systemUser: null, Arg.Any<IEnumerable<(OrganizationUserInvite, string)>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Invite_FeatureFlagEnabled_NotAuthorized_Throws(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
+        Guid userId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
+    }
+
     [Theory, BitAutoData]
     public async Task Get_ReturnsUser(
         OrganizationUserUserDetails organizationUser, ICollection<CollectionAccessSelection> collections,

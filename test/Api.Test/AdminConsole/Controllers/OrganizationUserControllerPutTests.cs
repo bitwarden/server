@@ -3,9 +3,11 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
@@ -267,6 +269,218 @@ public class OrganizationUserControllerPutTests
             .Returns(AuthorizationResult.Failed());
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_Success(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Any<OrganizationUser>(),
+            Arg.Any<OrganizationUserType>(),
+            savingUserId,
+            Arg.Any<List<CollectionAccessSelection>>(),
+            model.Groups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_AuthorizesCreateForNewCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        // All collections are new since currentCollectionAccess is empty -> Create operations
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        // Also allow Update for the readonly collection check
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), savingUserId,
+            Arg.Any<List<CollectionAccessSelection>>(), model.Groups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_AuthorizesUpdateForExistingCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        // Target user currently has access to the same collections being posted
+        var currentAccess = model.Collections.Select(c => c.ToSelectionReadOnly()).ToList();
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: currentAccess);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        // All collections are updates since currentAccess matches posted
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), savingUserId,
+            Arg.Any<List<CollectionAccessSelection>>(), model.Groups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_SelfAssignment_ThrowsNotFound(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        organizationUser.UserId = savingUserId;
+        organizationAbility.AllowAdminAccessToAllCollectionItems = false;
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        // Self-assignment check is now in the handler; when it denies, the extension throws NotFoundException
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_ThrowsIfCannotCreateCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: []);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Create)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_ThrowsIfCannotUpdateCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        var currentAccess = model.Collections.Select(c => c.ToSelectionReadOnly()).ToList();
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: currentAccess);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_AuthorizesDeleteForRemovedCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        var removedId = CoreHelpers.GenerateComb();
+        var currentAccess = model.Collections
+            .Select(c => c.ToSelectionReadOnly())
+            .Append(new CollectionAccessSelection { Id = removedId })
+            .ToList();
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: currentAccess);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model);
+
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), savingUserId,
+            Arg.Any<List<CollectionAccessSelection>>(), model.Groups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_FeatureFlagEnabled_ThrowsIfCannotDeleteCollections(OrganizationUserUpdateRequestModel model,
+        OrganizationUser organizationUser, OrganizationAbility organizationAbility,
+        SutProvider<OrganizationUsersController> sutProvider, Guid savingUserId)
+    {
+        var removedId = CoreHelpers.GenerateComb();
+        var currentAccess = model.Collections
+            .Select(c => c.ToSelectionReadOnly())
+            .Append(new CollectionAccessSelection { Id = removedId })
+            .ToList();
+        Put_Setup(sutProvider, organizationAbility, organizationUser, savingUserId, currentCollectionAccess: currentAccess);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
+            .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionUserAccessResource>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionUserOperations.Delete)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.Put(organizationAbility.Id, organizationUser.Id, model));
     }
 
     private void Put_Setup(SutProvider<OrganizationUsersController> sutProvider,
