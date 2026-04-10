@@ -297,7 +297,10 @@ public class FeatureRoutedCacheServiceTests
     {
         // Arrange
         var currentCacheService = CreateCurrentCacheMockService();
-        var sut = new FeatureRoutedCacheService(currentCacheService);
+        var sut = new FeatureRoutedCacheService(
+            currentCacheService,
+            Substitute.For<IProviderAbilityCacheService>(),
+            Substitute.For<IFeatureService>());
 
         // Act
         await sut.BaseUpsertOrganizationAbilityAsync(organization);
@@ -327,7 +330,10 @@ public class FeatureRoutedCacheServiceTests
     {
         // Arrange
         var currentCacheService = CreateCurrentCacheMockService();
-        var sut = new FeatureRoutedCacheService(currentCacheService);
+        var sut = new FeatureRoutedCacheService(
+            currentCacheService,
+            Substitute.For<IProviderAbilityCacheService>(),
+            Substitute.For<IFeatureService>());
 
         // Act
         await sut.BaseDeleteOrganizationAbilityAsync(organizationId);
@@ -349,6 +355,148 @@ public class FeatureRoutedCacheServiceTests
 
         // Assert
         Assert.Equal(ExpectedErrorMessage, ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetProviderAbilityAsync_WhenFeatureFlagEnabled_UsesExtendedCacheService(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid providerId,
+        ProviderAbility expectedAbility)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
+            .Returns(true);
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilityAsync(providerId)
+            .Returns(expectedAbility);
+
+        // Act
+        var result = await sutProvider.Sut.GetProviderAbilityAsync(providerId);
+
+        // Assert
+        Assert.Equal(expectedAbility, result);
+        await sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .Received(1)
+            .GetProviderAbilityAsync(providerId);
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .DidNotReceive()
+            .GetProviderAbilitiesAsync();
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetProviderAbilityAsync_WhenFeatureFlagDisabled_UsesInMemoryService(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        ProviderAbility providerAbility)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
+            .Returns(false);
+        var allAbilities = new Dictionary<Guid, ProviderAbility> { [providerAbility.Id] = providerAbility };
+        sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(allAbilities);
+
+        // Act
+        var result = await sutProvider.Sut.GetProviderAbilityAsync(providerAbility.Id);
+
+        // Assert
+        Assert.Equal(providerAbility, result);
+        await sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .DidNotReceive()
+            .GetProviderAbilityAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .Received(1)
+            .GetProviderAbilitiesAsync();
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpsertProviderAbilityAsync_WhenFeatureFlagEnabled_UsesExtendedCacheService(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Provider provider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.UpsertProviderAbilityAsync(provider);
+
+        // Assert
+        await sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .Received(1)
+            .UpsertProviderAbilityAsync(provider);
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .DidNotReceive()
+            .UpsertProviderAbilityAsync(Arg.Any<Provider>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpsertProviderAbilityAsync_WhenFeatureFlagDisabled_UsesInMemoryService(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Provider provider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.UpsertProviderAbilityAsync(provider);
+
+        // Assert
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .Received(1)
+            .UpsertProviderAbilityAsync(provider);
+        await sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .DidNotReceive()
+            .UpsertProviderAbilityAsync(Arg.Any<Provider>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteProviderAbilityAsync_WhenFeatureFlagEnabled_UsesExtendedCacheService(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid providerId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.DeleteProviderAbilityAsync(providerId);
+
+        // Assert
+        await sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .Received(1)
+            .DeleteProviderAbilityAsync(providerId);
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .DidNotReceive()
+            .DeleteProviderAbilityAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteProviderAbilityAsync_WhenFeatureFlagDisabled_UsesInMemoryService(
+        SutProvider<FeatureRoutedCacheService> sutProvider,
+        Guid providerId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.DeleteProviderAbilityAsync(providerId);
+
+        // Assert
+        await sutProvider.GetDependency<IVCurrentInMemoryApplicationCacheService>()
+            .Received(1)
+            .DeleteProviderAbilityAsync(providerId);
+        await sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .DidNotReceive()
+            .DeleteProviderAbilityAsync(Arg.Any<Guid>());
     }
 
     /// <summary>

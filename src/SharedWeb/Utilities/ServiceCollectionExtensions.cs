@@ -294,6 +294,10 @@ public static class ServiceCollectionExtensions
         services.AddOptionality();
         services.AddTokenizers();
 
+        services.AddDistributedCache(globalSettings);
+        services.AddExtendedCache(ExtendedProviderAbilityCacheService.CacheName, globalSettings);
+        services.AddSingleton<IProviderAbilityCacheService, ExtendedProviderAbilityCacheService>();
+
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
