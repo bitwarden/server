@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.Diagnostics;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -89,10 +90,18 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
                 break;
 
             case not null when requirement == BulkCollectionOperations.ModifyUserAccess:
+                if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+                {
+                    return;
+                }
                 authorized = await CanUpdateUserAccessAsync(resources, org);
                 break;
 
             case not null when requirement == BulkCollectionOperations.ModifyGroupAccess:
+                if (_featureService.IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers))
+                {
+                    return;
+                }
                 authorized = await CanUpdateGroupAccessAsync(resources, org);
                 break;
 
