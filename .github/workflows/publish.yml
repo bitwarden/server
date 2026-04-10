@@ -101,7 +101,7 @@ jobs:
           whoami
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-          echo "Dry Run: $DRY_RUN"
+          echo "Dry Run: $DRY_RUN" 
 
       - name: Set up project name
         id: setup
