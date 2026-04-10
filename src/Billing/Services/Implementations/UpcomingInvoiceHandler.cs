@@ -574,7 +574,7 @@ public class UpcomingInvoiceHandler(
 
             if (activeSchedule != null)
             {
-                var now = DateTime.UtcNow;
+                var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
                 var phases = new List<SubscriptionSchedulePhaseOptions>();
 
                 for (var i = 0; i < activeSchedule.Phases.Count; i++)
