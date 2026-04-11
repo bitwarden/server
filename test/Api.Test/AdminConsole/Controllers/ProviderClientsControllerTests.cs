@@ -293,7 +293,7 @@ public class ProviderClientsControllerTests
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
     }
 
-    private static void AssertUnauthorized(IResult result, string message = "Unauthorized.")
+    private static void AssertUnauthorized(IResult result)
     {
         Assert.IsType<UnauthorizedHttpResult>(result);
     }
