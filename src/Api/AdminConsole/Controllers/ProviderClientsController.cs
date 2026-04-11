@@ -1,4 +1,4 @@
-// FIXME: Update this file to be null safe and then delete the line below
+﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using Bit.Api.AdminConsole.Authorization;
@@ -31,7 +31,7 @@ public class ProviderClientsController(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : Controller
+    IUserService userService) : BaseAdminConsoleController
 {
     [HttpPost]
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -51,7 +51,7 @@ public class ProviderClientsController(
 
         if (user == null)
         {
-            return Error401();
+            return Error.Unauthorized();
         }
 
         var organizationSignup = new OrganizationSignup
@@ -110,19 +110,19 @@ public class ProviderClientsController(
 
         if (providerOrganization == null)
         {
-            return Error404();
+            return Error.NotFound();
         }
 
         if (providerOrganization.ProviderId != provider.Id)
         {
-            return Error404();
+            return Error.NotFound();
         }
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
         if (clientOrganization is not { Status: OrganizationStatusType.Managed })
         {
-            return Error500();
+            return Error.InternalError();
         }
 
         var seatAdjustment = requestBody.AssignedSeats - (clientOrganization.Seats ?? 0);
@@ -134,7 +134,9 @@ public class ProviderClientsController(
 
         if (seatAdjustmentResultsInPurchase && !currentContext.ProviderProviderAdmin(provider.Id))
         {
-            return Error401("Service users cannot purchase additional seats.");
+            return TypedResults.Json(
+                new ErrorResponseModel("Service users cannot purchase additional seats."),
+                statusCode: StatusCodes.Status401Unauthorized);
         }
 
         await providerBillingService.ScaleSeats(provider, clientOrganization.PlanType, seatAdjustment);
@@ -163,7 +165,7 @@ public class ProviderClientsController(
 
         if (!userId.HasValue)
         {
-            return Error401();
+            return Error.Unauthorized();
         }
 
         var addable =
@@ -182,7 +184,7 @@ public class ProviderClientsController(
         var userId = currentContext.UserId;
         if (!userId.HasValue)
         {
-            return Error401();
+            return Error.Unauthorized();
         }
 
         var (provider, result) = await TryGetBillableProviderAsync(providerId);
@@ -194,7 +196,7 @@ public class ProviderClientsController(
 
         if (!await currentContext.OrganizationOwner(requestBody.OrganizationId))
         {
-            return Error401();
+            return Error.Unauthorized();
         }
 
         var addableOrganizations = await organizationRepository.GetAddableToProviderByUserIdAsync(userId.Value, provider.Type);
@@ -202,7 +204,7 @@ public class ProviderClientsController(
 
         if (organization == null)
         {
-            return Error404();
+            return Error.NotFound();
         }
 
         await providerBillingService.AddExistingOrganization(provider, organization, requestBody.Key);
@@ -220,7 +222,7 @@ public class ProviderClientsController(
                 "Cannot find provider ({ProviderID}) for Consolidated Billing operation",
                 providerId);
 
-            return (null, Error404());
+            return (null, Error.NotFound());
         }
 
         if (!provider.IsBillable())
@@ -229,7 +231,7 @@ public class ProviderClientsController(
                 "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is not billable",
                 providerId);
 
-            return (null, Error401());
+            return (null, Error.Unauthorized());
         }
 
         if (provider.IsStripeEnabled())
@@ -241,19 +243,7 @@ public class ProviderClientsController(
             "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is missing Stripe configuration",
             providerId);
 
-        return (null, Error500());
+        return (null, Error.InternalError());
     }
 
-    private static IResult Error404() =>
-        TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
-
-    private static IResult Error401(string message = "Unauthorized.") =>
-        TypedResults.Json(
-            new ErrorResponseModel(message),
-            statusCode: StatusCodes.Status401Unauthorized);
-
-    private static IResult Error500() =>
-        TypedResults.Json(
-            new ErrorResponseModel("Something went wrong with your request. Please contact support for assistance."),
-            statusCode: StatusCodes.Status500InternalServerError);
 }

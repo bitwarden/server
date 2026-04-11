@@ -228,9 +228,6 @@ public class ProviderClientsControllerTests : IClassFixture<ApiApplicationFactor
             "key");
     }
 
-    // GET /providers/{providerId}/clients/addable — ProviderUserRequirement
-    // Both ProviderAdmin and ServiceUser should be allowed; non-members should be rejected.
-
     [Fact]
     public async Task GetAddableOrganizations_Unauthenticated_ReturnsUnauthorized()
     {

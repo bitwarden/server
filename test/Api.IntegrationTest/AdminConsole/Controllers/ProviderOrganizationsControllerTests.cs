@@ -170,9 +170,6 @@ public class ProviderOrganizationsControllerTests : IClassFixture<ApiApplication
         Assert.Equal(_provider.Id, providerOrganization.ProviderId);
     }
 
-    // GET /providers/{providerId}/organizations — ProviderUserRequirement
-    // Both ProviderAdmin and ServiceUser should be allowed; non-members should be rejected.
-
     [Fact]
     public async Task Get_Unauthenticated_ReturnsUnauthorized()
     {
@@ -203,9 +200,6 @@ public class ProviderOrganizationsControllerTests : IClassFixture<ApiApplication
         var response = await _client.GetAsync($"providers/{_provider.Id}/organizations");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
-
-    // POST /providers/{providerId}/organizations/add — ProviderAdminRequirement
-    // Only ProviderAdmin should be allowed; ServiceUser should be rejected.
 
     [Fact]
     public async Task Add_AsNonMember_ReturnsForbidden()

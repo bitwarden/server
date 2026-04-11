@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Core.AdminConsole.Entities;
@@ -213,7 +213,9 @@ public class ProviderClientsControllerTests
 
         var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
 
-        AssertUnauthorized(result, message: "Service users cannot purchase additional seats.");
+        var response = (JsonHttpResult<ErrorResponseModel>)result;
+        Assert.Equal(StatusCodes.Status401Unauthorized, response.StatusCode);
+        Assert.Equal("Service users cannot purchase additional seats.", response.Value.Message);
     }
 
     [Theory, BitAutoData]
@@ -293,10 +295,7 @@ public class ProviderClientsControllerTests
 
     private static void AssertUnauthorized(IResult result, string message = "Unauthorized.")
     {
-        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
-        var response = (JsonHttpResult<ErrorResponseModel>)result;
-        Assert.Equal(StatusCodes.Status401Unauthorized, response.StatusCode);
-        Assert.Equal(message, response.Value.Message);
+        Assert.IsType<UnauthorizedHttpResult>(result);
     }
 
     private static void AssertNotFound(IResult result)
