@@ -29,7 +29,50 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class ProviderClientsControllerTests
 {
-    #region CreateAsync
+    [Theory, BitAutoData]
+    public async Task TryGetBillableProviderAsync_ProviderNotFound_ReturnsNotFound(
+        Guid providerId,
+        CreateClientOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).ReturnsNull();
+
+        var result = await sutProvider.Sut.CreateAsync(providerId, requestBody);
+
+        AssertNotFound(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task TryGetBillableProviderAsync_ProviderNotBillable_ReturnsUnauthorized(
+        Provider provider,
+        CreateClientOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        provider.Status = ProviderStatusType.Created;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var result = await sutProvider.Sut.CreateAsync(provider.Id, requestBody);
+
+        AssertUnauthorized(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task TryGetBillableProviderAsync_StripeNotEnabled_ReturnsInternalError(
+        Provider provider,
+        CreateClientOrganizationRequestBody requestBody,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
+        provider.GatewayCustomerId = null;
+        provider.GatewaySubscriptionId = null;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var result = await sutProvider.Sut.CreateAsync(provider.Id, requestBody);
+
+        var response = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, response.StatusCode);
+    }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_NoPrincipalUser_Unauthorized(
@@ -91,10 +134,6 @@ public class ProviderClientsControllerTests
             provider,
             clientOrganization);
     }
-
-    #endregion
-
-    #region AddExistingOrganizationAsync
 
     [Theory, BitAutoData]
     public async Task AddExistingOrganizationAsync_ServiceUser_Unauthorized(
@@ -176,10 +215,6 @@ public class ProviderClientsControllerTests
 
         Assert.IsType<Ok>(result);
     }
-
-    #endregion
-
-    #region UpdateAsync
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_ServiceUserMakingPurchase_Unauthorized(
@@ -281,8 +316,6 @@ public class ProviderClientsControllerTests
 
         Assert.IsType<Ok>(result);
     }
-
-    #endregion
 
     private static void ConfigureStableProviderInputs(
         Provider provider,
