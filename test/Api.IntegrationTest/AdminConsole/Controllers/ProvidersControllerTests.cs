@@ -78,9 +78,6 @@ public class ProvidersControllerTests : IClassFixture<ApiApplicationFactory>, IA
         return Task.CompletedTask;
     }
 
-    // GET /providers/{providerId} — ProviderUserRequirement
-    // Both ProviderAdmin and ServiceUser should be allowed; non-members should be rejected.
-
     [Fact]
     public async Task Get_Unauthenticated_ReturnsUnauthorized()
     {
