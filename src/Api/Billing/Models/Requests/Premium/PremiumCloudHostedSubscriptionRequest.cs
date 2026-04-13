@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Core.Auth.Attributes;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Premium.Models;
 
