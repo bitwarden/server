@@ -26,11 +26,15 @@ public static class BulkCollectionOperations
     /// </summary>
     public static readonly BulkCollectionOperationRequirement ImportCiphers = new() { Name = nameof(ImportCiphers) };
     /// <summary>
-    /// Create, update or delete user access (CollectionUser)
+    /// Create, update or delete user access (CollectionUser).
+    /// Replaced by <see cref="CollectionUserOperations"/>.
     /// </summary>
+    [Obsolete("Use CollectionUserOperations.Create/Update/Delete instead.")]
     public static readonly BulkCollectionOperationRequirement ModifyUserAccess = new() { Name = nameof(ModifyUserAccess) };
     /// <summary>
-    /// Create, update or delete group access (CollectionGroup)
+    /// Create, update or delete group access (CollectionGroup).
+    /// Replaced by <see cref="CollectionGroupOperations"/>.
     /// </summary>
+    [Obsolete("Use CollectionGroupOperations.Create/Update/Delete instead.")]
     public static readonly BulkCollectionOperationRequirement ModifyGroupAccess = new() { Name = nameof(ModifyGroupAccess) };
 }
