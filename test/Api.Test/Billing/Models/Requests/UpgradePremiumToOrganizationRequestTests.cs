@@ -22,7 +22,7 @@ public class UpgradePremiumToOrganizationRequestTests
             EncryptedPrivateKey = "encrypted-private-key",
             CollectionName = "Default Collection",
             TargetProductTierType = tierType,
-            BillingAddress = new MinimalBillingAddressRequest
+            BillingAddress = new CheckoutBillingAddressRequest
             {
                 Country = "US",
                 PostalCode = "12345"
@@ -56,7 +56,7 @@ public class UpgradePremiumToOrganizationRequestTests
             PublicKey = "public-key",
             EncryptedPrivateKey = "encrypted-private-key",
             TargetProductTierType = tierType,
-            BillingAddress = new MinimalBillingAddressRequest
+            BillingAddress = new CheckoutBillingAddressRequest
             {
                 Country = "US",
                 PostalCode = "12345"
@@ -66,5 +66,54 @@ public class UpgradePremiumToOrganizationRequestTests
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => sut.ToDomain());
         Assert.Contains($"Cannot upgrade Premium subscription to {tierType} plan", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(ProductTierType.Teams, PlanType.TeamsAnnually, "DE", "10115", "eu_vat", "DE123456789")]
+    [InlineData(ProductTierType.Enterprise, PlanType.EnterpriseAnnually, "FR", "75001", "eu_vat", "FR12345678901")]
+    public void ToDomain_BusinessPlansWithNonUsTaxId_IncludesTaxIdInBillingAddress(
+        ProductTierType tierType,
+        PlanType expectedPlanType,
+        string country,
+        string postalCode,
+        string taxIdCode,
+        string taxIdValue)
+    {
+        // Arrange
+        var sut = new UpgradePremiumToOrganizationRequest
+        {
+            OrganizationName = "International Business",
+            Key = "encrypted-key",
+            TargetProductTierType = tierType,
+            PublicKey = "public-key",
+            EncryptedPrivateKey = "encrypted-private-key",
+            CollectionName = "Default Collection",
+            BillingAddress = new CheckoutBillingAddressRequest
+            {
+                Country = country,
+                PostalCode = postalCode,
+                TaxId = new CheckoutBillingAddressRequest.TaxIdRequest
+                {
+                    Code = taxIdCode,
+                    Value = taxIdValue
+                }
+            }
+        };
+
+        // Act
+        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = sut.ToDomain();
+
+        // Assert
+        Assert.Equal("International Business", organizationName);
+        Assert.Equal("encrypted-key", key);
+        Assert.Equal("public-key", publicKey);
+        Assert.Equal("encrypted-private-key", encryptedPrivateKey);
+        Assert.Equal("Default Collection", collectionName);
+        Assert.Equal(expectedPlanType, planType);
+        Assert.Equal(country, billingAddress.Country);
+        Assert.Equal(postalCode, billingAddress.PostalCode);
+        Assert.NotNull(billingAddress.TaxId);
+        Assert.Equal(taxIdCode, billingAddress.TaxId.Code);
+        Assert.Equal(taxIdValue, billingAddress.TaxId.Value);
     }
 }

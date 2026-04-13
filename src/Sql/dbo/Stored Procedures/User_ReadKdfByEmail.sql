@@ -8,7 +8,8 @@ BEGIN
         [Kdf],
         [KdfIterations],
         [KdfMemory],
-        [KdfParallelism]
+        [KdfParallelism],
+        [MasterPasswordSalt]
     FROM
         [dbo].[User]
     WHERE

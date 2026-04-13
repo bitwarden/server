@@ -11,14 +11,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -42,14 +42,12 @@ public class OrganizationService : IOrganizationService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IGroupRepository _groupRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IStripePaymentService _paymentService;
     private readonly IPolicyQuery _policyQuery;
-    private readonly IPolicyService _policyService;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IGlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
@@ -62,21 +60,19 @@ public class OrganizationService : IOrganizationService
     private readonly IFeatureService _featureService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
         IEventService eventService,
         IApplicationCacheService applicationCacheService,
         IStripePaymentService paymentService,
         IPolicyQuery policyQuery,
-        IPolicyService policyService,
         ISsoUserRepository ssoUserRepository,
         IGlobalSettings globalSettings,
         ICurrentContext currentContext,
@@ -89,21 +85,17 @@ public class OrganizationService : IOrganizationService
         IFeatureService featureService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
-        IPolicyRequirementQuery policyRequirementQuery,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IStripeAdapter stripeAdapter
-    )
+        IStripeAdapter stripeAdapter, IUpdateOrganizationSubscriptionCommand updateOrganizationSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
-        _groupRepository = groupRepository;
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
         _eventService = eventService;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyQuery = policyQuery;
-        _policyService = policyService;
         _ssoUserRepository = ssoUserRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
@@ -116,9 +108,9 @@ public class OrganizationService : IOrganizationService
         _featureService = featureService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
-        _policyRequirementQuery = policyRequirementQuery;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
         _stripeAdapter = stripeAdapter;
+        _updateOrganizationSubscriptionCommand = updateOrganizationSubscriptionCommand;
     }
 
     public async Task ReinstateSubscriptionAsync(Guid organizationId)
@@ -147,8 +139,15 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional storage.");
         }
 
-        var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
-            plan.PasswordManager.StripeStoragePlanId, plan.PasswordManager.BaseStorageGb);
+        var secret = await BillingHelpers.AdjustStorageAsync(
+            _paymentService,
+            _updateOrganizationSubscriptionCommand,
+            _featureService,
+            organization,
+            storageAdjustmentGb,
+            plan.PasswordManager.StripeStoragePlanId,
+            plan.PasswordManager.BaseStorageGb,
+            plan);
         await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
@@ -295,7 +294,21 @@ public class OrganizationService : IOrganizationService
         _logger.LogInformation("{Method}: Invoking _paymentService.AdjustSeatsAsync with {AdditionalSeats} additional seats for Organization ({OrganizationID})",
             nameof(AdjustSeatsAsync), additionalSeats, organization.Id);
 
-        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
+        string paymentIntentClientSecret = null;
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
+        {
+            var changeSet = OrganizationSubscriptionChangeSet.Builder(plan)
+                .UpdatePasswordManagerSeats(additionalSeats)
+                .Build();
+            var result = await _updateOrganizationSubscriptionCommand.Run(organization, changeSet);
+            result.GetValueOrThrow();
+        }
+        else
+        {
+            paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats);
+        }
+
         organization.Seats = (short?)newSeatTotal;
 
         _logger.LogInformation("{Method}: Invoking _organizationRepository.ReplaceAsync with {Seats} seats for Organization ({OrganizationID})", nameof(AdjustSeatsAsync), organization.Seats, organization.Id); ;
@@ -837,6 +850,7 @@ public class OrganizationService : IOrganizationService
         }
 
         // Make sure the organization has the policy enabled
+        // Todo: Cannot use PolicyRequirements until PM-34092 is complete
         var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
         if (!resetPasswordPolicy.Enabled)
         {
@@ -844,28 +858,15 @@ public class OrganizationService : IOrganizationService
         }
 
         // Block the user from withdrawal if auto enrollment is enabled
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
         {
-            var resetPasswordPolicyRequirement =
-                await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId);
-            if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
+            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
+                JsonHelpers.IgnoreCase);
+
+            if (data?.AutoEnrollEnabled ?? false)
             {
                 throw new BadRequestException(
                     "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
-            }
-        }
-        else
-        {
-            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
-            {
-                var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
-                    JsonHelpers.IgnoreCase);
-
-                if (data?.AutoEnrollEnabled ?? false)
-                {
-                    throw new BadRequestException(
-                        "Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
-                }
             }
         }
 

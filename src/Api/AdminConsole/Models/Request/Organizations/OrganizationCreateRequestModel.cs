@@ -3,8 +3,8 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using Bit.Core;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -81,6 +81,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
 
     public bool SkipTrial { get; set; }
 
+    public string[] Coupons { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -114,6 +116,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
             },
             InitiationPath = InitiationPath,
             SkipTrial = SkipTrial,
+            Coupons = Coupons,
             Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
         };
 
@@ -139,7 +142,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
                 new string[] { nameof(BillingAddressCountry) });
         }
 
-        if (PlanType != PlanType.Free && BillingAddressCountry == Constants.CountryAbbreviations.UnitedStates &&
+        if (PlanType != PlanType.Free && TaxHelpers.IsDirectTaxCountry(BillingAddressCountry) &&
             string.IsNullOrWhiteSpace(BillingAddressPostalCode))
         {
             yield return new ValidationResult("Zip / postal code is required.",

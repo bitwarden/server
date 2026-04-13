@@ -65,6 +65,12 @@ public static class StripeConstants
         ];
     }
 
+    public static class Intervals
+    {
+        public const string Month = "month";
+        public const string Year = "year";
+    }
+
     public static class InvoiceStatus
     {
         public const string Draft = "draft";
@@ -84,11 +90,14 @@ public static class StripeConstants
         public const string RetiredBraintreeCustomerId = "btCustomerId_old";
         public const string UserId = "userId";
         public const string StorageReconciled2025 = "storage_reconciled_2025";
+        public const string OriginatingPlatform = "originatingPlatform";
+        public const string OriginatingAppVersion = "originatingAppVersion";
     }
 
     public static class PaymentBehavior
     {
         public const string DefaultIncomplete = "default_incomplete";
+        public const string PendingIfIncomplete = "pending_if_incomplete";
     }
 
     public static class PaymentMethodTypes
@@ -108,6 +117,23 @@ public static class StripeConstants
         public const string AlwaysInvoice = "always_invoice";
         public const string CreateProrations = "create_prorations";
         public const string None = "none";
+    }
+
+    public static class SubscriptionScheduleEndBehavior
+    {
+        public const string Cancel = "cancel";
+        public const string None = "none";
+        public const string Release = "release";
+        public const string Renew = "renew";
+    }
+
+    public static class SubscriptionScheduleStatus
+    {
+        public const string Active = "active";
+        public const string Canceled = "canceled";
+        public const string Completed = "completed";
+        public const string NotStarted = "not_started";
+        public const string Released = "released";
     }
 
     public static class SubscriptionStatus
@@ -184,5 +210,28 @@ public static class StripeConstants
         };
     }
 
+    public static class CheckoutSession
+    {
+        public static class Modes
+        {
+            public const string Subscription = "subscription";
+            public const string Payment = "payment";
+            public const string Setup = "setup";
+        }
+
+        // https://docs.stripe.com/api/checkout/sessions/create#create_checkout_session-customer_update-address
+        // Determines whether the customer's address should be updated during checkout session or not.
+        public static class CustomerUpdateAddressOptions
+        {
+            public const string Auto = "auto";
+            public const string Never = "never";
+        }
+
+        public static class Platforms
+        {
+            public const string Ios = "ios";
+            public const string Android = "android";
+        }
+    }
 
 }

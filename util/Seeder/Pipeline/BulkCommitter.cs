@@ -2,6 +2,7 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB.Data;
 using LinqToDB.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using EfCollection = Bit.Infrastructure.EntityFramework.Models.Collection;
 using EfCollectionGroup = Bit.Infrastructure.EntityFramework.Models.CollectionGroup;
 using EfCollectionUser = Bit.Infrastructure.EntityFramework.Models.CollectionUser;
@@ -9,6 +10,7 @@ using EfFolder = Bit.Infrastructure.EntityFramework.Vault.Models.Folder;
 using EfGroup = Bit.Infrastructure.EntityFramework.Models.Group;
 using EfGroupUser = Bit.Infrastructure.EntityFramework.Models.GroupUser;
 using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
+using EfOrganizationApiKey = Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey;
 using EfOrganizationUser = Bit.Infrastructure.EntityFramework.Models.OrganizationUser;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
@@ -18,14 +20,15 @@ namespace Bit.Seeder.Pipeline;
 /// Flushes accumulated entities from <see cref="SeederContext"/> to the database via BulkCopy.
 /// </summary>
 /// <remarks>
-/// Entities are committed in foreign-key-safe order (Organizations → Users → OrgUsers → … → Folders → Ciphers).
+/// Entities are committed in foreign-key-safe order (Organizations → OrgApiKeys → Users → OrgUsers → … → Folders → Ciphers).
 /// Most Core entities require AutoMapper conversion to their EF counterparts before insert;
 /// a few (Cipher, CollectionCipher) share the same type across layers and copy directly.
 /// Each list is cleared after insert so the context is ready for the next pipeline run.
 ///
 /// CollectionUser and CollectionGroup require an explicit table name in BulkCopyOptions because
-/// they lack both IEntityTypeConfiguration and .ToTable() mappings in DatabaseContext, so LinqToDB
-/// cannot resolve their table names automatically.
+/// they lack .ToTable() mappings in DatabaseContext, so LinqToDB cannot resolve their table names
+/// automatically. Table names vary by provider — SQL Server uses singular names while EF Core-managed
+/// providers use pluralized names.
 /// </remarks>
 /// <seealso cref="SeederContext"/>
 /// <seealso cref="RecipeExecutor"/>
@@ -34,6 +37,8 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
     internal void Commit(SeederContext context)
     {
         MapCopyAndClear<Core.AdminConsole.Entities.Organization, EfOrganization>(context.Organizations);
+
+        MapAndCopy<Core.Entities.OrganizationApiKey, EfOrganizationApiKey>(context.OrganizationApiKey);
 
         MapCopyAndClear<Core.Entities.User, EfUser>(context.Users);
 
@@ -45,9 +50,11 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         MapCopyAndClear<Core.Entities.Collection, EfCollection>(context.Collections);
 
-        MapCopyAndClear<Core.Entities.CollectionUser, EfCollectionUser>(context.CollectionUsers, nameof(Core.Entities.CollectionUser));
+        MapCopyAndClear<Core.Entities.CollectionUser, EfCollectionUser>(context.CollectionUsers,
+            GetTableName<EfCollectionUser>());
 
-        MapCopyAndClear<Core.Entities.CollectionGroup, EfCollectionGroup>(context.CollectionGroups, nameof(Core.Entities.CollectionGroup));
+        MapCopyAndClear<Core.Entities.CollectionGroup, EfCollectionGroup>(context.CollectionGroups,
+            GetTableName<EfCollectionGroup>());
 
         MapCopyAndClear<Core.Vault.Entities.Folder, EfFolder>(context.Folders);
 
@@ -55,6 +62,15 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         CopyAndClear(context.CollectionCiphers);
     }
+
+    /// <summary>
+    /// Resolves the table name for an EF entity type from the EF Core model,
+    /// falling back to the C# class name for SQL Server.
+    /// </summary>
+    private string? GetTableName<TEf>() where TEf : class =>
+        db.Database.IsSqlServer()
+            ? typeof(TEf).Name
+            : db.Model.FindEntityType(typeof(TEf))?.GetTableName();
 
     private void MapCopyAndClear<TCore, TEf>(List<TCore> entities, string? tableName = null) where TEf : class
     {
@@ -75,6 +91,17 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
         }
 
         entities.Clear();
+    }
+
+    private void MapAndCopy<TCore, TEf>(TCore? entity) where TCore : class where TEf : class
+    {
+        if (entity is null)
+        {
+            return;
+        }
+
+        var mapped = mapper.Map<TEf>(entity);
+        db.BulkCopy(new[] { mapped });
     }
 
     private void CopyAndClear<T>(List<T> entities) where T : class

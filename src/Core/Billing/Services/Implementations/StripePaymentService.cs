@@ -9,6 +9,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -50,6 +51,7 @@ public class StripePaymentService : IStripePaymentService
         _pricingClient = pricingClient;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     private async Task ChangeOrganizationSponsorship(
         Organization org,
         OrganizationSponsorship sponsorship,
@@ -73,9 +75,11 @@ public class StripePaymentService : IStripePaymentService
         }
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated SetUpSponsorshipCommand
     public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, true);
 
+    // TODO: Remove -> Unused
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
@@ -119,14 +123,14 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            if (sub.Customer is
-                {
-                    Address.Country: not Core.Constants.CountryAbbreviations.UnitedStates,
-                    TaxExempt: not StripeConstants.TaxExempt.Reverse
-                })
+            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
+            switch (sub.Customer)
             {
-                await _stripeAdapter.UpdateCustomerAsync(sub.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
+                    when determinedTaxExemptStatus != customerTaxExemptStatus:
+                    await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
+                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
+                    break;
             }
 
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
@@ -227,6 +231,7 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpgradeOrganizationPlanCommand
     public async Task<string> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,
@@ -254,14 +259,17 @@ public class StripePaymentService : IStripePaymentService
                 }), true);
     }
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated OrganizationService.AdjustSeatsAsync
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
+    // TODO: Remove with FF: pm-32581-use-update-organization-subscription-command -> Updated UpdateSecretsManagerSubscriptionCommand
     public Task<string> AdjustServiceAccountsAsync(
         Organization organization,
         StaticStore.Plan plan,
@@ -653,6 +661,8 @@ public class StripePaymentService : IStripePaymentService
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
+        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo);
+
         var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(subscription);
 
         if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
@@ -694,15 +704,105 @@ public class StripePaymentService : IStripePaymentService
         return subscriptionInfo;
     }
 
-    public async Task<string> AddSecretsManagerToSubscription(
-        Organization org,
-        StaticStore.Plan plan,
-        int additionalSmSeats,
-        int additionalServiceAccount) =>
-        await FinalizeSubscriptionChangeAsync(
-            org,
-            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
-            true);
+    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo)
+    {
+        if (string.IsNullOrEmpty(subscription.ScheduleId))
+        {
+            return;
+        }
+
+        try
+        {
+            var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
+                new SubscriptionScheduleGetOptions
+                {
+                    Expand = ["phases.discounts.coupon.applies_to", "phases.items.price"]
+                });
+
+            if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return;
+            }
+
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                return;
+            }
+
+            // Override line item amounts with Phase 2 prices
+            if (phase2.Items != null && subscriptionInfo.Subscription?.Items != null)
+            {
+                var items = subscriptionInfo.Subscription.Items.ToList();
+                var matchedPhase1Items = new HashSet<SubscriptionInfo.BillingSubscription.BillingSubscriptionItem>();
+                var unmatchedPhase2Items = new List<SubscriptionSchedulePhaseItem>();
+
+                // Pass 1: Match by product ID
+                foreach (var phase2Item in phase2.Items)
+                {
+                    if (phase2Item.Price is not { UnitAmount: not null, ProductId: not null })
+                    {
+                        continue;
+                    }
+
+                    var matchingItem = items.FirstOrDefault(i => i.ProductId == phase2Item.Price.ProductId);
+                    if (matchingItem != null)
+                    {
+                        matchingItem.Amount = phase2Item.Price.UnitAmount.Value / 100M;
+                        matchedPhase1Items.Add(matchingItem);
+                    }
+                    else
+                    {
+                        unmatchedPhase2Items.Add(phase2Item);
+                    }
+                }
+
+                // Pass 2: Fallback for cross-product migrations (e.g., Families 2019 → current Families)
+                // where the old and new plans use different Stripe products.
+                foreach (var phase2Item in unmatchedPhase2Items)
+                {
+                    var fallbackItem = items.FirstOrDefault(i =>
+                        !matchedPhase1Items.Contains(i) && !i.AddonSubscriptionItem);
+
+                    if (fallbackItem != null)
+                    {
+                        fallbackItem.Amount = phase2Item.Price.UnitAmount!.Value / 100M;
+                        fallbackItem.ProductId = phase2Item.Price.ProductId;
+                        fallbackItem.Name = phase2Item.Price.Nickname;
+                        matchedPhase1Items.Add(fallbackItem);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Phase 2 item with product {ProductId} could not be matched to any Phase 1 item for subscription schedule ({ScheduleId})",
+                            phase2Item.Price.ProductId,
+                            subscription.ScheduleId);
+                    }
+                }
+
+                subscriptionInfo.Subscription.Items = items;
+            }
+
+            // Override discount with Phase 2 discount
+            var phase2Discount = phase2.Discounts?.FirstOrDefault();
+            if (phase2Discount?.Coupon != null)
+            {
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+            }
+        }
+        catch (StripeException ex)
+        {
+            // Fallback: user sees current Phase 1 prices instead of Phase 2 prices.
+            // Accepted tradeoff: showing current data is better than failing the page.
+            _logger.LogWarning(ex,
+                "Failed to retrieve subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), Phase 2 data resolution. Error Code: {ErrorCode}",
+                subscription.ScheduleId,
+                subscription.Id,
+                ex.StripeError?.Code);
+        }
+    }
 
     public async Task<bool> HasSecretsManagerStandalone(Organization organization) =>
         await HasSecretsManagerStandaloneAsync(gatewayCustomerId: organization.GatewayCustomerId,

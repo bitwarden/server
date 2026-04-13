@@ -26,6 +26,7 @@ public interface IGlobalSettings
     ILaunchDarklySettings LaunchDarkly { get; set; }
     string DatabaseProvider { get; set; }
     GlobalSettings.SqlSettings SqlServer { get; set; }
+    GlobalSettings.StripeSettings Stripe { get; set; }
     string DevelopmentDirectory { get; set; }
     IWebPushSettings WebPush { get; set; }
     GlobalSettings.EventLoggingSettings EventLogging { get; set; }

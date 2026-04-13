@@ -107,6 +107,11 @@ public class ProviderClientsController(
             return Error.NotFound();
         }
 
+        if (providerOrganization.ProviderId != provider.Id)
+        {
+            return Error.NotFound();
+        }
+
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
         if (clientOrganization is not { Status: OrganizationStatusType.Managed })
@@ -166,18 +171,30 @@ public class ProviderClientsController(
         [FromRoute] Guid providerId,
         [FromBody] AddExistingOrganizationRequestBody requestBody)
     {
-        var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
+        var userId = _currentContext.UserId;
+        if (!userId.HasValue)
+        {
+            return Error.Unauthorized();
+        }
+
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
         {
             return result;
         }
 
-        var organization = await organizationRepository.GetByIdAsync(requestBody.OrganizationId);
+        if (!await _currentContext.OrganizationOwner(requestBody.OrganizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var addableOrganizations = await organizationRepository.GetAddableToProviderByUserIdAsync(userId.Value, provider.Type);
+        var organization = addableOrganizations.FirstOrDefault(o => o.Id == requestBody.OrganizationId);
 
         if (organization == null)
         {
-            return Error.BadRequest("The organization being added to the provider does not exist.");
+            return Error.NotFound();
         }
 
         await providerBillingService.AddExistingOrganization(provider, organization, requestBody.Key);

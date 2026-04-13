@@ -10,6 +10,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.Vault.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -18,8 +19,10 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationCollections;
 [SutProviderCustomize]
 public class BulkAddCollectionAccessCommandTests
 {
+    private static readonly DateTime _expectedRevisionDate = DateTime.UtcNow.AddYears(1);
+
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task AddAccessAsync_Success(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
+    public async Task AddAccessAsync_Success(
         Organization org,
         ICollection<Collection> collections,
         ICollection<OrganizationUser> organizationUsers,
@@ -27,6 +30,7 @@ public class BulkAddCollectionAccessCommandTests
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
+        var sutProvider = SetupSutProvider();
         SetCollectionsToSharedType(collections);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -59,7 +63,8 @@ public class BulkAddCollectionAccessCommandTests
             org.Id,
             Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collections.Select(c => c.Id))),
             userAccessSelections,
-            groupAccessSelections);
+            groupAccessSelections,
+            _expectedRevisionDate);
 
         await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventsAsync(
             Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(
@@ -279,7 +284,7 @@ public class BulkAddCollectionAccessCommandTests
 
         Assert.Contains("You cannot add access to collections with the type as DefaultUserCollection.", exception.Message);
 
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateOrUpdateAccessForManyAsync(default, default, default, default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateOrUpdateAccessForManyAsync(default, default, default, default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCollectionEventsAsync(default);
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetManyAsync(default);
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
@@ -312,5 +317,14 @@ public class BulkAddCollectionAccessCommandTests
             HidePasswords = cg.HidePasswords,
             ReadOnly = cg.ReadOnly
         }).ToList();
+    }
+
+    private static SutProvider<BulkAddCollectionAccessCommand> SetupSutProvider()
+    {
+        var sutProvider = new SutProvider<BulkAddCollectionAccessCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedRevisionDate);
+        return sutProvider;
     }
 }
