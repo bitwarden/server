@@ -66,9 +66,8 @@ public class ChangeKdfCommand : IChangeKdfCommand
 
         var logoutOnKdfChange = !_featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
 
-        // KM do we want this to be a new call in the master password service for ChangeKdf?
-        var updateExisingPasswordResult = await _masterPasswordService.SaveUpdateExistingMasterPasswordAsync(user,
-            new UpdateExistingPasswordData
+        var updateExisingPasswordResult = await _masterPasswordService.SaveUpdateExistingMasterPasswordAndKdfAsync(user,
+            new UpdateExistingPasswordAndKdfData
             {
                 MasterPasswordUnlock = unlockData,
                 MasterPasswordAuthentication = authenticationData,

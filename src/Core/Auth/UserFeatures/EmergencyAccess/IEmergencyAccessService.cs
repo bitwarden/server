@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.EmergencyAccess;
 
@@ -128,7 +129,7 @@ public interface IEmergencyAccessService
     /// <param name="unlockData"></param>
     /// <param name="authenticationData"></param>
     /// <returns></returns>
-    Task FinishRecoveryTakeoverAsync(Guid emergencyAccessId, User granteeUser, MasterPasswordUnlockData unlockData, MasterPasswordAuthenticationData authenticationData);
+    Task<IdentityResult> FinishRecoveryTakeoverAsync(Guid emergencyAccessId, User granteeUser, MasterPasswordUnlockData unlockData, MasterPasswordAuthenticationData authenticationData);
     /// <summary>
     /// sends a reminder email that there is a pending request for recovery.
     /// </summary>

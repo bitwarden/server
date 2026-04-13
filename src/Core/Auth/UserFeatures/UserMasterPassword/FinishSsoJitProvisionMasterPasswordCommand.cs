@@ -67,7 +67,7 @@ public class FinishSsoJitProvisionMasterPasswordCommand : IFinishSsoJitProvision
         }
 
         var updateUserData =
-            _masterPasswordService.BuildTransactionSetInitialMasterPassword(
+            _masterPasswordService.BuildUpdateUserDelegateSetInitialMasterPassword(
                 user,
                 masterPasswordDataModel.ToSetInitialPasswordData());
 

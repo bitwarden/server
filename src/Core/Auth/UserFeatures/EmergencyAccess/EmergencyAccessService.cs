@@ -22,6 +22,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.EmergencyAccess;
 
@@ -396,7 +397,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         }
     }
 
-    public async Task FinishRecoveryTakeoverAsync(
+    public async Task<IdentityResult> FinishRecoveryTakeoverAsync(
         Guid emergencyAccessId,
         User granteeUser,
         MasterPasswordUnlockData unlockData,
@@ -416,13 +417,18 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Grantor not found when trying to finish recovery takeover.");
         }
 
-        await _masterPasswordService.MutateSetInitialPasswordOrUpdateExistingPassword(
+        var identityResult = await _masterPasswordService.MutateSetInitialOrUpdateExistingMasterPasswordAsync(
             user: grantor,
             new SetInitialOrUpdateExistingPasswordData
             {
                 MasterPasswordUnlock = unlockData,
                 MasterPasswordAuthentication = authenticationData,
             });
+
+        if (!identityResult.Succeeded)
+        {
+            return identityResult;
+        }
 
         // Side effects that we still need to run when performing emergency access.
 
@@ -442,6 +448,7 @@ public class EmergencyAccessService : IEmergencyAccessService
                 await _removeOrganizationUserCommand.RemoveUserAsync(o.OrganizationId, grantor.Id);
             }
         }
+        return IdentityResult.Success;
     }
 
     public async Task SendNotificationsAsync()

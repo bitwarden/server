@@ -144,7 +144,7 @@ public class AdminRecoverAccountCommand(
         // We can recover an account for users who both have a master password and
         // those who do not. TDE users can be account recovered which will not have
         // an initial master password set.
-        var identityResultFromMutation = await masterPasswordService.MutateSetInitialPasswordOrUpdateExistingPassword(
+        var identityResultFromMutation = await masterPasswordService.MutateSetInitialOrUpdateExistingMasterPassword(
             user,
             new SetInitialOrUpdateExistingPasswordData
             {

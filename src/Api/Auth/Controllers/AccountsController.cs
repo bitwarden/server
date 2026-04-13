@@ -308,7 +308,10 @@ public class AccountsController(
             throw new BadRequestException("AuthenticationData and UnlockData must be provided.");
         }
 
-        var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash, model.AuthenticationData.ToData(), model.UnlockData.ToData());
+        var result = await _changeKdfCommand.ChangeKdfAsync(user,
+            model.MasterPasswordHash,
+            model.AuthenticationData.ToData(),
+            model.UnlockData.ToData());
         if (result.Succeeded)
         {
             return;

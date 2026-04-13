@@ -21,7 +21,7 @@ public interface IMasterPasswordService
     /// <summary>
     /// Inspects the user's current state and dispatches to either
     /// <see cref="MutateSetInitialMasterPasswordAsync"/> or
-    /// <see cref="MutateUserUpdateExistingMasterPasswordAsync"/> accordingly.
+    /// <see cref="MutateUpdateExistingMasterPasswordAsync"/> accordingly.
     /// Mutates the <paramref name="user"/> object in memory only — no database write is performed.
     /// </summary>
     /// <param name="user">
@@ -39,7 +39,7 @@ public interface IMasterPasswordService
     /// containing validation errors if <c>ValidatePassword</c> is set and the password
     /// fails the registered <see cref="Microsoft.AspNetCore.Identity.IPasswordValidator{TUser}"/> pipeline.
     /// </returns>
-    Task<IdentityResult> MutateSetInitialPasswordOrUpdateExistingPassword(User user, SetInitialOrUpdateExistingPasswordData setOrUpdatePasswordData);
+    Task<IdentityResult> MutateSetInitialOrUpdateExistingMasterPasswordAsync(User user, SetInitialOrUpdateExistingPasswordData setOrUpdatePasswordData);
 
     /// <summary>
     /// Applies a new initial master password to the <paramref name="user"/> object in memory only —
@@ -106,7 +106,7 @@ public interface IMasterPasswordService
     /// An <see cref="UpdateUserData"/> delegate suitable for inclusion in a batch passed to
     /// <see cref="IUserRepository.UpdateUserDataAsync"/>.
     /// </returns>
-    UpdateUserData BuildTransactionSetInitialMasterPassword(User user, SetInitialPasswordData setInitialPasswordData);
+    UpdateUserData BuildUpdateUserDelegateSetInitialMasterPassword(User user, SetInitialPasswordData setInitialPasswordData);
 
     /// <summary>
     /// Applies a new master password over the user's existing one, mutating the
@@ -129,7 +129,9 @@ public interface IMasterPasswordService
     /// containing validation errors if <c>ValidatePassword</c> is set and the password
     /// fails the registered <see cref="Microsoft.AspNetCore.Identity.IPasswordValidator{TUser}"/> pipeline.
     /// </returns>
-    Task<IdentityResult> MutateUserUpdateExistingMasterPasswordAsync(User user, UpdateExistingPasswordData updateExistingData);
+    Task<IdentityResult> MutateUpdateExistingMasterPasswordAsync(User user, UpdateExistingPasswordData updateExistingData);
+
+    Task<IdentityResult> SaveUpdateExistingMasterPasswordAndKdfAsync(User user, UpdateExistingPasswordAndKdfData updateExistingExistingData);
 
     /// <summary>
     /// Applies a new master password over the user's existing one and persists the updated user
@@ -137,11 +139,11 @@ public interface IMasterPasswordService
     /// </summary>
     /// <param name="user">
     /// The user object to mutate and persist. Subject to the same preconditions as
-    /// <see cref="MutateUserUpdateExistingMasterPasswordAsync"/>.
+    /// <see cref="MutateUpdateExistingMasterPasswordAsync"/>.
     /// </param>
     /// <param name="updateExistingData">
     /// Cryptographic and authentication data for the updated password. See
-    /// <see cref="MutateUserUpdateExistingMasterPasswordAsync"/> for field details.
+    /// <see cref="MutateUpdateExistingMasterPasswordAsync"/> for field details.
     /// </param>
     /// <returns>
     /// <see cref="IdentityResult.Success"/> if the mutation and save succeeded; a failure result

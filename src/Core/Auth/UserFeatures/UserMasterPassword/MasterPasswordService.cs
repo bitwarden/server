@@ -23,14 +23,14 @@ public class MasterPasswordService(
     private readonly UserManager<User> _userManager = userManager;
     private readonly ILogger<MasterPasswordService> _logger = logger;
 
-    public async Task<IdentityResult> MutateSetInitialPasswordOrUpdateExistingPassword(
+    public async Task<IdentityResult> MutateSetInitialOrUpdateExistingMasterPasswordAsync(
         User user,
         SetInitialOrUpdateExistingPasswordData setOrUpdatePasswordData)
     {
         IdentityResult mutationResult;
         if (user.HasMasterPassword())
         {
-            mutationResult = await MutateUserUpdateExistingMasterPasswordAsync(
+            mutationResult = await MutateUpdateExistingMasterPasswordAsync(
                 user,
                 setOrUpdatePasswordData.ToUpdateExistingData());
         }
@@ -97,7 +97,7 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
-    public UpdateUserData BuildTransactionSetInitialMasterPassword(
+    public UpdateUserData BuildUpdateUserDelegateSetInitialMasterPassword(
         User user,
         SetInitialPasswordData setInitialData)
     {
@@ -114,7 +114,7 @@ public class MasterPasswordService(
         return setMasterPasswordTask;
     }
 
-    public async Task<IdentityResult> MutateUserUpdateExistingMasterPasswordAsync(
+    public async Task<IdentityResult> MutateUpdateExistingMasterPasswordAsync(
         User user,
         UpdateExistingPasswordData updateExistingData)
     {
@@ -145,12 +145,43 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
+    public async Task<IdentityResult> SaveUpdateExistingMasterPasswordAndKdfAsync(
+        User user,
+        UpdateExistingPasswordAndKdfData updateExistingExistingData)
+    {
+        // Start by validating the update payload
+        updateExistingExistingData.ValidateDataForUser(user);
+
+        var result = await UpdateExistingPasswordHashAsync(
+            user,
+            updateExistingExistingData.MasterPasswordAuthentication.MasterPasswordAuthenticationHash,
+            updateExistingExistingData.ValidatePassword,
+            updateExistingExistingData.RefreshStamp);
+
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        user.Key = updateExistingExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
+
+        // Always override the master password hint, even if it's null.
+        user.MasterPasswordHint = updateExistingExistingData.MasterPasswordHint;
+
+        user.LastPasswordChangeDate = now;
+        user.RevisionDate = user.AccountRevisionDate = now;
+
+        return IdentityResult.Success;
+    }
+
     public async Task<IdentityResult> SaveUpdateExistingMasterPasswordAsync(
         User user,
         UpdateExistingPasswordData updateExistingData)
     {
         // No need to validate because we will validate in the sibling call here.
-        var result = await MutateUserUpdateExistingMasterPasswordAsync(user, updateExistingData);
+        var result = await MutateUpdateExistingMasterPasswordAsync(user, updateExistingData);
         if (!result.Succeeded)
         {
             return result;

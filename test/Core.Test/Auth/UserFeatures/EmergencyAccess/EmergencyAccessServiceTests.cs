@@ -1782,7 +1782,7 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IMasterPasswordService>()
             .Received(1)
-            .MutateSetInitialPasswordOrUpdateExistingPassword(
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(
                 grantorUser,
                 Arg.Is<SetInitialOrUpdateExistingPasswordData>(d =>
                     d.MasterPasswordUnlock == unlockData &&
@@ -1826,7 +1826,7 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IMasterPasswordService>()
             .Received(1)
-            .MutateSetInitialPasswordOrUpdateExistingPassword(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>());
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>());
         await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<User>(u => u.VerifyDevices == false));
@@ -1865,7 +1865,7 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.GetDependency<IMasterPasswordService>()
             .Received(1)
-            .MutateSetInitialPasswordOrUpdateExistingPassword(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>());
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(grantorUser, Arg.Any<SetInitialOrUpdateExistingPasswordData>());
         await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<User>(u => u.VerifyDevices == false));
