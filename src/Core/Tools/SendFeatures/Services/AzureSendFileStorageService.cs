@@ -156,7 +156,8 @@ public class AzureSendFileStorageService(
             }
             catch (JsonException ex)
             {
-                _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
+                _logger.LogWarning(Constants.BypassFiltersEventId, ex,
+                    "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
             }
         }
 
@@ -175,13 +176,13 @@ public class AzureSendFileStorageService(
             }
             catch (AggregateException ex)
             {
-                _logger.LogError(ex,
+                _logger.LogError(Constants.BypassFiltersEventId, ex,
                     "One or more blob deletions failed in a batch of {Count} blobs. The following URIs may be orphaned: {}",
                     batch.Length, string.Join<Uri>(", ", batch));
             }
             catch (RequestFailedException ex)
             {
-                _logger.LogError(ex,
+                _logger.LogError(Constants.BypassFiltersEventId, ex,
                     "Batch blob deletion request failed for {Count} blobs.The following URIs may be orphaned: {}",
                     batch.Length, string.Join<Uri>(", ", batch));
             }
