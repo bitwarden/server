@@ -38,7 +38,7 @@ public class OrganizationIntegrationController(
     /// <param name="organizationId"></param>
     /// <param name="model"></param>
     /// <returns></returns>
-    /// <exception cref="NotFoundException">Not enough permissions to access the organization.</exception>
+    /// <exception cref="ForbidResult">Not enough permissions to access the organization.</exception>
     /// <exception cref="ConflictResult">When an integration of the same type already exists for the organization.</exception>
     [HttpPost("")]
     public async Task<ActionResult<OrganizationIntegrationResponseModel>> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
@@ -50,7 +50,7 @@ public class OrganizationIntegrationController(
 
         if (!await HasPermission(organizationId))
         {
-            throw new NotFoundException();
+            return Forbid();
         }
 
         var integration = model.ToOrganizationIntegration(organizationId);
@@ -67,28 +67,29 @@ public class OrganizationIntegrationController(
     }
 
     [HttpPut("{integrationId:guid}")]
-    public async Task<OrganizationIntegrationResponseModel> UpdateAsync(Guid organizationId, Guid integrationId, [FromBody] OrganizationIntegrationRequestModel model)
+    public async Task<ActionResult<OrganizationIntegrationResponseModel>> UpdateAsync(Guid organizationId, Guid integrationId, [FromBody] OrganizationIntegrationRequestModel model)
     {
         if (!await HasPermission(organizationId))
         {
-            throw new NotFoundException();
+            return Forbid();
         }
 
         var integration = model.ToOrganizationIntegration(organizationId);
         var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
 
-        return new OrganizationIntegrationResponseModel(updated);
+        return Ok(new OrganizationIntegrationResponseModel(updated));
     }
 
     [HttpDelete("{integrationId:guid}")]
-    public async Task DeleteAsync(Guid organizationId, Guid integrationId)
+    public async Task<IActionResult> DeleteAsync(Guid organizationId, Guid integrationId)
     {
         if (!await HasPermission(organizationId))
         {
-            throw new NotFoundException();
+            return Forbid();
         }
 
         await deleteCommand.DeleteAsync(organizationId, integrationId);
+        return NoContent();
     }
 
     [HttpPost("{integrationId:guid}/delete")]

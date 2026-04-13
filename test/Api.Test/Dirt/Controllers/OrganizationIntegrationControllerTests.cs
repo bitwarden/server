@@ -129,7 +129,7 @@ public class OrganizationIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(
+    public async Task CreateAsync_UserIsNotOrganizationAdmin_ReturnsForbid(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId)
     {
@@ -138,8 +138,9 @@ public class OrganizationIntegrationControllerTests
             .OrganizationOwner(organizationId)
             .Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () =>
-            await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel));
+        var response = await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel);
+
+        Assert.IsType<ForbidResult>(response.Result);
     }
 
     [Theory, BitAutoData]
@@ -178,7 +179,7 @@ public class OrganizationIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(
+    public async Task DeleteAsync_UserIsNotOrganizationAdmin_ReturnsForbid(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId,
         Guid integrationId)
@@ -188,8 +189,9 @@ public class OrganizationIntegrationControllerTests
             .OrganizationOwner(organizationId)
             .Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () =>
-            await sutProvider.Sut.DeleteAsync(organizationId, integrationId));
+        var response = await sutProvider.Sut.DeleteAsync(organizationId, integrationId);
+
+        Assert.IsType<ForbidResult>(response);
     }
 
     [Theory, BitAutoData]
@@ -217,12 +219,16 @@ public class OrganizationIntegrationControllerTests
             .UpdateAsync(organizationId, integrationId, Arg.Is<OrganizationIntegration>(i =>
                 i.OrganizationId == organizationId &&
                 i.Type == IntegrationType.Webhook));
-        Assert.IsType<OrganizationIntegrationResponseModel>(response);
-        Assert.Equal(IntegrationType.Webhook, response.Type);
+        Assert.IsType<OkObjectResult>(response.Result);
+        var okResult = response.Result as OkObjectResult;
+        Assert.NotNull(okResult);
+        var resultValue = okResult!.Value as OrganizationIntegrationResponseModel;
+        Assert.NotNull(resultValue);
+        Assert.Equal(IntegrationType.Webhook, resultValue!.Type);
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_UserIsNotOrganizationAdmin_ThrowsNotFound(
+    public async Task UpdateAsync_UserIsNotOrganizationAdmin_ReturnsForbid(
         SutProvider<OrganizationIntegrationController> sutProvider,
         Guid organizationId,
         Guid integrationId)
@@ -232,7 +238,8 @@ public class OrganizationIntegrationControllerTests
             .OrganizationOwner(organizationId)
             .Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () =>
-            await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _webhookRequestModel));
+        var response = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _webhookRequestModel);
+
+        Assert.IsType<ForbidResult>(response.Result);
     }
 }
