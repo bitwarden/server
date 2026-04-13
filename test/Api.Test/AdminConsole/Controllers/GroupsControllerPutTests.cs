@@ -295,6 +295,11 @@ public class GroupsControllerPutTests
             .Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
@@ -320,7 +325,7 @@ public class GroupsControllerPutTests
 
         // All collections are new -> Create operations
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
             .Returns(AuthorizationResult.Success());
 
@@ -350,6 +355,11 @@ public class GroupsControllerPutTests
             .Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
             .Returns(AuthorizationResult.Success());
@@ -374,7 +384,7 @@ public class GroupsControllerPutTests
             .Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Create)))
             .Returns(AuthorizationResult.Failed());
 
@@ -396,7 +406,7 @@ public class GroupsControllerPutTests
             .Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
             .Returns(AuthorizationResult.Failed());
 
@@ -420,6 +430,11 @@ public class GroupsControllerPutTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.CollectionUserCollectionGroupAuthorizationHandlers)
             .Returns(true);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
@@ -453,12 +468,12 @@ public class GroupsControllerPutTests
             .Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Update)))
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<ICollection<Collection>>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs => reqs.Contains(CollectionGroupOperations.Delete)))
             .Returns(AuthorizationResult.Failed());
 
