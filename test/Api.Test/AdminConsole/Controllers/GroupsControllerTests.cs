@@ -25,7 +25,6 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class GroupsControllerTests
 {
-    // --- Get ---
 
     [Theory]
     [BitAutoData]
@@ -42,7 +41,7 @@ public class GroupsControllerTests
     public async Task Get_OrgIdMismatch_ThrowsNotFound(Guid orgId, Group group,
         SutProvider<GroupsController> sutProvider)
     {
-        // group.OrganizationId will be auto-generated and won't match orgId
+        group.OrganizationId = Guid.NewGuid();
         sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(group);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(orgId, group.Id));
@@ -59,8 +58,6 @@ public class GroupsControllerTests
         Assert.Equal(group.Id, result.Id);
         Assert.Equal(group.OrganizationId, result.OrganizationId);
     }
-
-    // --- GetDetails ---
 
     [Theory]
     [BitAutoData]
@@ -98,8 +95,6 @@ public class GroupsControllerTests
         Assert.Equal(group.OrganizationId, result.OrganizationId);
     }
 
-    // --- GetUsers ---
-
     [Theory]
     [BitAutoData]
     public async Task GetUsers_GroupNotFound_ThrowsNotFound(Guid orgId, Guid id,
@@ -133,8 +128,6 @@ public class GroupsControllerTests
         Assert.Equal(userIds, result);
     }
 
-    // --- Delete ---
-
     [Theory]
     [BitAutoData]
     public async Task Delete_GroupNotFound_ThrowsNotFound(Guid orgId, Guid id,
@@ -165,8 +158,6 @@ public class GroupsControllerTests
 
         await sutProvider.GetDependency<IDeleteGroupCommand>().Received(1).DeleteAsync(group);
     }
-
-    // --- DeleteUser ---
 
     [Theory]
     [BitAutoData]
@@ -200,8 +191,6 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<IGroupService>().Received(1).DeleteUserAsync(group, orgUserId);
     }
 
-    // --- BulkDelete ---
-
     [Theory]
     [BitAutoData]
     public async Task BulkDelete_OrgIdMismatch_ThrowsNotFound(Guid orgId,
@@ -233,8 +222,6 @@ public class GroupsControllerTests
 
         await sutProvider.GetDependency<IDeleteGroupCommand>().Received(1).DeleteManyAsync(groups);
     }
-
-    // --- Post (existing tests) ---
 
     [Theory]
     [BitAutoData]
