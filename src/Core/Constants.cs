@@ -166,6 +166,7 @@ public static class FeatureFlagKeys
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
+    public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
