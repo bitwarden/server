@@ -5,7 +5,6 @@ using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
-using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -34,7 +33,8 @@ public class OrganizationIntegrationControllerTests
             .OrganizationOwner(organizationId)
             .Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId));
+        var result = await sutProvider.Sut.GetAsync(organizationId);
+        Assert.IsType<ForbidResult>(result.Result);
     }
 
     [Theory, BitAutoData]
@@ -56,8 +56,11 @@ public class OrganizationIntegrationControllerTests
         await sutProvider.GetDependency<IGetOrganizationIntegrationsQuery>().Received(1)
             .GetManyByOrganizationAsync(organizationId);
 
-        Assert.Equal(integrations.Count, result.Count);
-        Assert.All(result, r => Assert.IsType<OrganizationIntegrationResponseModel>(r));
+        Assert.IsType<OkObjectResult>(result.Result);
+        var okResult = result.Result as OkObjectResult;
+        var returnedIntegrations = okResult.Value as List<OrganizationIntegrationResponseModel>;
+        Assert.Equal(integrations.Count, returnedIntegrations.Count);
+        Assert.All(returnedIntegrations, r => Assert.IsType<OrganizationIntegrationResponseModel>(r));
     }
 
     [Theory, BitAutoData]
@@ -71,11 +74,13 @@ public class OrganizationIntegrationControllerTests
             .Returns(true);
         sutProvider.GetDependency<IGetOrganizationIntegrationsQuery>()
             .GetManyByOrganizationAsync(organizationId)
-            .Returns([]);
+            .Returns(new List<OrganizationIntegration>());
 
         var result = await sutProvider.Sut.GetAsync(organizationId);
 
-        Assert.Empty(result);
+        var okResult = result.Result as OkObjectResult;
+        var returnedIntegrations = okResult.Value as List<OrganizationIntegrationResponseModel>;
+        Assert.Empty(returnedIntegrations);
     }
 
     [Theory, BitAutoData]

@@ -2,7 +2,6 @@
 using Bit.Api.Dirt.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
-using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,17 +17,17 @@ public class OrganizationIntegrationController(
     IGetOrganizationIntegrationsQuery getQuery) : Controller
 {
     [HttpGet("")]
-    public async Task<List<OrganizationIntegrationResponseModel>> GetAsync(Guid organizationId)
+    public async Task<ActionResult<List<OrganizationIntegrationResponseModel>>> GetAsync(Guid organizationId)
     {
         if (!await HasPermission(organizationId))
         {
-            throw new NotFoundException();
+            return Forbid();
         }
 
         var integrations = await getQuery.GetManyByOrganizationAsync(organizationId);
-        return integrations
+        return Ok(integrations
             .Select(integration => new OrganizationIntegrationResponseModel(integration))
-            .ToList();
+            .ToList());
     }
 
     /// <summary>
@@ -94,9 +93,9 @@ public class OrganizationIntegrationController(
 
     [HttpPost("{integrationId:guid}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostDeleteAsync(Guid organizationId, Guid integrationId)
+    public async Task<IActionResult> PostDeleteAsync(Guid organizationId, Guid integrationId)
     {
-        await DeleteAsync(organizationId, integrationId);
+        return await DeleteAsync(organizationId, integrationId);
     }
 
     private async Task<bool> HasPermission(Guid organizationId)
