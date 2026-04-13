@@ -2,27 +2,26 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddRevocationReasonToOrganizationUser : Migration
 {
     /// <inheritdoc />
-    public partial class AddRevocationReasonToOrganizationUser : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<byte>(
-                name: "RevocationReason",
-                table: "OrganizationUser",
-                type: "INTEGER",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<byte>(
+            name: "RevocationReason",
+            table: "OrganizationUser",
+            type: "INTEGER",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "RevocationReason",
-                table: "OrganizationUser");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "RevocationReason",
+            table: "OrganizationUser");
     }
 }

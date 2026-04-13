@@ -1,7 +1,5 @@
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.OrganizationUserRepository;

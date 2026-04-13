@@ -1,4 +1,4 @@
-namespace Bit.Core.Enums;
+﻿namespace Bit.Core.Enums;
 
 /// <summary>
 /// The reason a user was revoked from an organization.
