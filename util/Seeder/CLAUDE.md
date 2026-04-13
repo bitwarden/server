@@ -159,6 +159,7 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 
 - When adding a new preset, check if an existing scenario should reference it as a variation
 - When adding a new command or flag, check if it enables a new scenario or changes an existing one
+- When CLI flags, commands, or preset names change, scan all `*.md` files under `Seeds/` and `SeederUtility/` for stale references
 - Scenario files follow the template in `Seeds/docs/scenarios/README.md`
 - Never duplicate CLI flag documentation — link to `SeederUtility/README.md`
 - Never duplicate preset catalog details — link to `Seeds/docs/presets.md`

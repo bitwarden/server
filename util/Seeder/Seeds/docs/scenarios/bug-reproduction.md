@@ -8,8 +8,6 @@
 dotnet run -- organization -n BugRepro -d repro.example -u 200 -c 500 --collections 800 -g 8 --mangle
 ```
 
-> Only run the Seeder against local development databases. Use fictional domains and round numbers — do not replicate exact customer details.
-
 Tweak the numbers to match the customer's profile. The `organization` command gives you full control over user count (`-u`), cipher count (`-c`), group count (`-g`), org structure (`-o`), region, and plan type.
 
 ## What you get
