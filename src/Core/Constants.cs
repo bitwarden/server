@@ -300,6 +300,7 @@ public static class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
+    public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
