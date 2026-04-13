@@ -59,6 +59,7 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<ISetInitialMasterPasswordCommandV1, SetInitialMasterPasswordCommandV1>();
         services.AddScoped<ITdeSetPasswordCommand, TdeSetPasswordCommand>();
         services.AddScoped<IMasterPasswordService, MasterPasswordService>();
+        services.AddScoped<ISelfServicePasswordChangeCommand, SelfServicePasswordChangeCommand>();
     }
 
     private static void AddTdeOffboardingPasswordCommands(this IServiceCollection services)

@@ -15,7 +15,6 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -39,7 +38,7 @@ public class AccountsController(
     IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository,
     IUserService userService,
-    IMasterPasswordService masterPasswordService,
+    ISelfServicePasswordChangeCommand selfServicePasswordChangeCommand,
     IPolicyService policyService,
     IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
     ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
@@ -56,7 +55,7 @@ public class AccountsController(
     private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository = providerUserRepository;
     private readonly IUserService _userService = userService;
-    private readonly IMasterPasswordService _masterPasswordService = masterPasswordService;
+    private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand = selfServicePasswordChangeCommand;
     private readonly IPolicyService _policyService = policyService;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
@@ -193,21 +192,12 @@ public class AccountsController(
         IdentityResult result;
         if (model.RequestHasNewDataTypes())
         {
-            // Make a self service password change command
-
-            if (await _userService.CheckPasswordAsync(user, model.AuthenticationData!.MasterPasswordAuthenticationHash))
-            {
-                result = await _masterPasswordService.SaveUpdateExistingMasterPasswordAsync(user, new UpdateExistingPasswordData
-                {
-                    MasterPasswordUnlock = model.UnlockData!.ToData(),
-                    MasterPasswordAuthentication = model.AuthenticationData!.ToData(),
-                    MasterPasswordHint = model.MasterPasswordHint
-                });
-            }
-            else
-            {
-                throw new BadRequestException("Passwords do not match.");
-            }
+            result = await _selfServicePasswordChangeCommand.ChangePasswordAsync(
+                user,
+                model.MasterPasswordHash,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData(),
+                model.MasterPasswordHint);
         }
         // To be removed in PM-33141
         else
