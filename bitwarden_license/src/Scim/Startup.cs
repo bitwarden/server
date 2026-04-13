@@ -69,7 +69,7 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
-        services.AddDefaultServices(globalSettings);
+        services.AddDefaultServices(globalSettings, Configuration);
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
 
@@ -112,7 +112,7 @@ public class Startup
         }
 
         // Default Middleware
-        app.UseDefaultMiddleware(env, globalSettings);
+        app.UseDefaultMiddleware(env, globalSettings, Configuration);
 
         // Add routing
         app.UseRouting();

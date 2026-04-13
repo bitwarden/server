@@ -79,7 +79,7 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
-        services.AddDefaultServices(globalSettings);
+        services.AddDefaultServices(globalSettings, Configuration);
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
 
@@ -123,6 +123,8 @@ public class Startup
         {
             app.UseExceptionHandler("/Error");
         }
+
+        app.UseDefaultMiddleware(environment, globalSettings, Configuration);
 
         app.UseCoreLocalization();
 

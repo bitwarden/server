@@ -87,7 +87,7 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
-        services.AddDefaultServices(globalSettings);
+        services.AddDefaultServices(globalSettings, Configuration);
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
@@ -143,6 +143,9 @@ public class Startup
             app.UsePathBase("/admin");
             app.UseForwardedHeaders(globalSettings);
         }
+
+        // Default Middleware
+        app.UseDefaultMiddleware(env, globalSettings, Configuration);
 
         if (env.IsDevelopment())
         {
