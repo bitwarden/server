@@ -11,3 +11,4 @@ BEGIN
     WHERE
         [OrganizationId] = @OrganizationId
 END
+GO

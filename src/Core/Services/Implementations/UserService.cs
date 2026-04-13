@@ -1199,5 +1199,4 @@ public class UserService : UserManager<User>, IUserService
             await _mailService.SendWelcomeEmailAsync(user);
         }
     }
-
 }

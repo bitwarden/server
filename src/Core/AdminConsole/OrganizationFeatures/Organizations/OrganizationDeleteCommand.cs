@@ -88,5 +88,4 @@ public class OrganizationDeleteCommand : IOrganizationDeleteCommand
             throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
         }
     }
-
 }

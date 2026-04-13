@@ -166,3 +166,4 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO
