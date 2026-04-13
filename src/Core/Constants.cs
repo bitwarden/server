@@ -166,6 +166,7 @@ public static class FeatureFlagKeys
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
+    public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -299,6 +300,7 @@ public static class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
+    public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";
