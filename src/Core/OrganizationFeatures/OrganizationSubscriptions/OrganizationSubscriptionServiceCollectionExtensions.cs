@@ -11,7 +11,6 @@ public static class OrganizationSubscriptionServiceCollectionExtensions
     {
         services
             .AddScoped<IUpgradeOrganizationPlanCommand, UpgradeOrganizationPlanCommand>()
-            .AddScoped<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>()
             .AddScoped<IGetOrganizationSubscriptionsToUpdateQuery, GetOrganizationSubscriptionsToUpdateQuery>()
             .AddScoped<IBulkUpdateOrganizationSubscriptionsCommand, BulkUpdateOrganizationSubscriptionsCommand>();
     }
