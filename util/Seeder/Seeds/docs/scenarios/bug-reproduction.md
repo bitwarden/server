@@ -5,7 +5,7 @@
 ## Quick start
 
 ```bash
-dotnet run -- organization -n BugRepro -d repro.example -u 200 -c 800 -g 8 --mangle
+dotnet run -- organization -n BugRepro -d repro.example -u 200 -collections 800 -g 8 --mangle
 ```
 
 > Only run the Seeder against local development databases. Use fictional domains and round numbers — do not replicate exact customer details.
