@@ -41,7 +41,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         await ThrowsBillingExceptionAsync(() =>
@@ -78,7 +78,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
@@ -124,7 +124,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
@@ -167,7 +167,7 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
@@ -213,7 +213,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
 
@@ -243,7 +243,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
@@ -278,7 +278,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
             {
@@ -318,7 +318,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
@@ -347,7 +347,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
@@ -379,7 +379,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
             {
@@ -445,7 +445,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule>
             {
@@ -511,7 +511,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
         stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
@@ -542,7 +542,7 @@ public class SubscriberServiceTests
         };
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal).Returns(false);
@@ -1028,7 +1028,7 @@ public class SubscriberServiceTests
         var subscription = new Subscription();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         var gotSubscription = await sutProvider.Sut.GetSubscription(organization);
@@ -1091,7 +1091,7 @@ public class SubscriberServiceTests
         var subscription = new Subscription();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         var gotSubscription = await sutProvider.Sut.GetSubscriptionOrThrow(organization);
