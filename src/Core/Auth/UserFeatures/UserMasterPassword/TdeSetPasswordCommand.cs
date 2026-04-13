@@ -52,7 +52,7 @@ public class TdeSetPasswordCommand : ITdeSetPasswordCommand
             throw new BadRequestException("User not found within organization.");
         }
 
-        var setMasterPasswordTask = _masterPasswordService.BuildTransactionForSetInitialMasterPassword(user,
+        var setMasterPasswordTask = _masterPasswordService.BuildTransactionSetInitialMasterPassword(user,
             new SetInitialPasswordData
             {
                 MasterPasswordUnlock = masterPasswordDataModel.MasterPasswordUnlock,

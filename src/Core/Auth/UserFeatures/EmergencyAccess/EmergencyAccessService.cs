@@ -416,9 +416,9 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Grantor not found when trying to finish recovery takeover.");
         }
 
-        await _masterPasswordService.OnlyMutateEitherUpdateExistingPasswordOrSetInitialPassword(
+        await _masterPasswordService.MutateSetInitialPasswordOrUpdateExistingPassword(
             user: grantor,
-            new SetInitialOrChangeExistingPasswordData
+            new SetInitialOrUpdateExistingPasswordData
             {
                 MasterPasswordUnlock = unlockData,
                 MasterPasswordAuthentication = authenticationData,

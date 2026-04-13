@@ -30,7 +30,7 @@ public class UpdateTempPasswordCommand(
             throw new BadRequestException("User does not have a temporary password to update.");
         }
 
-        var result = await masterPasswordService.OnlyMutateUserUpdateExistingMasterPasswordAsync(user, new UpdateExistingPasswordData
+        var result = await masterPasswordService.MutateUserUpdateExistingMasterPasswordAsync(user, new UpdateExistingPasswordData
         {
             MasterPasswordUnlock = unlockData,
             MasterPasswordAuthentication = authenticationData,

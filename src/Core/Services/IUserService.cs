@@ -52,6 +52,7 @@ public interface IUserService
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
     Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
         int? version = null);
+    // TODO: Evaluate moving to the new master password service PM-<>
     Task<bool> CheckPasswordAsync(User user, string password);
     /// <summary>
     /// Checks if the user has access to premium features, either through a personal subscription or through an organization.

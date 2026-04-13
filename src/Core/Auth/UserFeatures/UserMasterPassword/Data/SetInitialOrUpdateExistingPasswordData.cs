@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 
-public class SetInitialOrChangeExistingPasswordData
+public class SetInitialOrUpdateExistingPasswordData
 {
     public required MasterPasswordAuthenticationData MasterPasswordAuthentication { get; set; }
     public required MasterPasswordUnlockData MasterPasswordUnlock { get; set; }

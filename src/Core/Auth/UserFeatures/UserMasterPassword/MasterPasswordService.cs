@@ -23,20 +23,20 @@ public class MasterPasswordService(
     private readonly UserManager<User> _userManager = userManager;
     private readonly ILogger<MasterPasswordService> _logger = logger;
 
-    public async Task<IdentityResult> OnlyMutateEitherUpdateExistingPasswordOrSetInitialPassword(
+    public async Task<IdentityResult> MutateSetInitialPasswordOrUpdateExistingPassword(
         User user,
-        SetInitialOrChangeExistingPasswordData setOrUpdatePasswordData)
+        SetInitialOrUpdateExistingPasswordData setOrUpdatePasswordData)
     {
         IdentityResult mutationResult;
         if (user.HasMasterPassword())
         {
-            mutationResult = await OnlyMutateUserUpdateExistingMasterPasswordAsync(
+            mutationResult = await MutateUserUpdateExistingMasterPasswordAsync(
                 user,
                 setOrUpdatePasswordData.ToUpdateExistingData());
         }
         else
         {
-            mutationResult = await OnlyMutateUserSetInitialMasterPasswordAsync(
+            mutationResult = await MutateSetInitialMasterPasswordAsync(
                 user,
                 setOrUpdatePasswordData.ToSetInitialData());
         }
@@ -44,7 +44,7 @@ public class MasterPasswordService(
         return mutationResult;
     }
 
-    public async Task<IdentityResult> OnlyMutateUserSetInitialMasterPasswordAsync(
+    public async Task<IdentityResult> MutateSetInitialMasterPasswordAsync(
         User user,
         SetInitialPasswordData setInitialData)
     {
@@ -81,12 +81,12 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> SetInitialMasterPasswordAndSaveUserAsync(
+    public async Task<IdentityResult> SaveSetInitialMasterPasswordAsync(
         User user,
         SetInitialPasswordData setInitialData)
     {
         // No need to validate because we will validate in the sibling call here
-        var result = await OnlyMutateUserSetInitialMasterPasswordAsync(user, setInitialData);
+        var result = await MutateSetInitialMasterPasswordAsync(user, setInitialData);
         if (!result.Succeeded)
         {
             return result;
@@ -97,7 +97,7 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
-    public UpdateUserData BuildTransactionForSetInitialMasterPassword(
+    public UpdateUserData BuildTransactionSetInitialMasterPassword(
         User user,
         SetInitialPasswordData setInitialData)
     {
@@ -114,7 +114,7 @@ public class MasterPasswordService(
         return setMasterPasswordTask;
     }
 
-    public async Task<IdentityResult> OnlyMutateUserUpdateExistingMasterPasswordAsync(
+    public async Task<IdentityResult> MutateUserUpdateExistingMasterPasswordAsync(
         User user,
         UpdateExistingPasswordData updateExistingData)
     {
@@ -145,12 +145,12 @@ public class MasterPasswordService(
         return IdentityResult.Success;
     }
 
-    public async Task<IdentityResult> UpdateExistingMasterPasswordAndSaveAsync(
+    public async Task<IdentityResult> SaveUpdateExistingMasterPasswordAsync(
         User user,
         UpdateExistingPasswordData updateExistingData)
     {
         // No need to validate because we will validate in the sibling call here.
-        var result = await OnlyMutateUserUpdateExistingMasterPasswordAsync(user, updateExistingData);
+        var result = await MutateUserUpdateExistingMasterPasswordAsync(user, updateExistingData);
         if (!result.Succeeded)
         {
             return result;

@@ -137,7 +137,7 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
 
         // We only want to be setting an initial master password here, if they already have one,
         // we are in an error state.
-        var identityResult = await _masterPasswordService.OnlyMutateUserSetInitialMasterPasswordAsync(user, new SetInitialPasswordData
+        var identityResult = await _masterPasswordService.MutateSetInitialMasterPasswordAsync(user, new SetInitialPasswordData
         {
             MasterPasswordUnlock = unlockData,
             MasterPasswordAuthentication = authenticationData,

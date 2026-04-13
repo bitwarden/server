@@ -177,8 +177,6 @@ public class AccountsController(
     /// For a user updating an existing password.
     ///
     /// If calling this when a user does not have a master password, it will fail.
-    /// I don't think is a new boundary that has been introduced.
-    /// Need to double check this / get feedback from Jared.
     /// </summary>
     /// <param name="model"></param>
     /// <exception cref="UnauthorizedAccessException"></exception>
@@ -195,10 +193,11 @@ public class AccountsController(
         IdentityResult result;
         if (model.RequestHasNewDataTypes())
         {
-            // Jared, I'm unsure if check password should be turned into a query as a part of this work.
+            // Make a self service password change command
+
             if (await _userService.CheckPasswordAsync(user, model.AuthenticationData!.MasterPasswordAuthenticationHash))
             {
-                result = await _masterPasswordService.UpdateExistingMasterPasswordAndSaveAsync(user, new UpdateExistingPasswordData
+                result = await _masterPasswordService.SaveUpdateExistingMasterPasswordAsync(user, new UpdateExistingPasswordData
                 {
                     MasterPasswordUnlock = model.UnlockData!.ToData(),
                     MasterPasswordAuthentication = model.AuthenticationData!.ToData(),

@@ -48,13 +48,13 @@ public class AdminRecoverAccountCommandTests
         // Assert
         Assert.True(result.Succeeded);
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .OnlyMutateUserUpdateExistingMasterPasswordAsync(
+            .MutateUserUpdateExistingMasterPasswordAsync(
                 Arg.Any<User>(),
                 Arg.Is<UpdateExistingPasswordData>(d =>
                     d.MasterPasswordUnlock == unlockData &&
                     d.MasterPasswordAuthentication == authenticationData));
         await sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
-            .OnlyMutateUserSetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialPasswordData>());
+            .MutateSetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialPasswordData>());
         await AssertCommonSuccessSideEffectsAsync(sutProvider, user, organization, organizationUser);
     }
 
@@ -81,13 +81,13 @@ public class AdminRecoverAccountCommandTests
         // Assert
         Assert.True(result.Succeeded);
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .OnlyMutateUserSetInitialMasterPasswordAsync(
+            .MutateSetInitialMasterPasswordAsync(
                 Arg.Any<User>(),
                 Arg.Is<SetInitialPasswordData>(d =>
                     d.MasterPasswordUnlock == unlockData &&
                     d.MasterPasswordAuthentication == authenticationData));
         await sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
-            .OnlyMutateUserUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<UpdateExistingPasswordData>());
+            .MutateUserUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<UpdateExistingPasswordData>());
         await AssertCommonSuccessSideEffectsAsync(sutProvider, user, organization, organizationUser);
     }
 
@@ -314,10 +314,10 @@ public class AdminRecoverAccountCommandTests
             .GetUserByIdAsync(user.Id)
             .Returns(user);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .OnlyMutateUserUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<UpdateExistingPasswordData>())
+            .MutateUserUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<UpdateExistingPasswordData>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
         sutProvider.GetDependency<IMasterPasswordService>()
-            .OnlyMutateUserSetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialPasswordData>())
+            .MutateSetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialPasswordData>())
             .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
     }
 

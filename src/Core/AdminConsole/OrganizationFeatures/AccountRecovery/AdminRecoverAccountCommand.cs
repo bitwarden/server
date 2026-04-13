@@ -129,7 +129,7 @@ public class AdminRecoverAccountCommand(
         // those who do not. TDE users can be recovered and will not have a password
         if (user.HasMasterPassword())
         {
-            mutationResult = await masterPasswordService.OnlyMutateUserUpdateExistingMasterPasswordAsync(
+            mutationResult = await masterPasswordService.MutateUserUpdateExistingMasterPasswordAsync(
                 user,
                 new UpdateExistingPasswordData
                 {
@@ -139,7 +139,7 @@ public class AdminRecoverAccountCommand(
         }
         else
         {
-            mutationResult = await masterPasswordService.OnlyMutateUserSetInitialMasterPasswordAsync(
+            mutationResult = await masterPasswordService.MutateSetInitialMasterPasswordAsync(
                 user,
                 new SetInitialPasswordData
                 {

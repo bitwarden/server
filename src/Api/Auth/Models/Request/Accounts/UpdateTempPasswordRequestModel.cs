@@ -10,6 +10,8 @@ public class UpdateTempPasswordRequestModel
     public string? NewMasterPasswordHash { get; set; }
     [Obsolete("To be removed in PM-33141")]
     public string? Key { get; set; }
+    [StringLength(50)]
+    public string? MasterPasswordHint { get; set; }
 
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
@@ -40,7 +42,4 @@ public class UpdateTempPasswordRequestModel
                 [nameof(UnlockData), nameof(AuthenticationData), nameof(NewMasterPasswordHash), nameof(Key)]);
         }
     }
-
-    [StringLength(50)]
-    public string? MasterPasswordHint { get; set; }
 }
