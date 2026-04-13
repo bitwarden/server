@@ -67,8 +67,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.HeaderPropagation;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HeaderPropagation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -281,7 +281,7 @@ public static class ServiceCollectionExtensions
             });
 
             services.ConfigureHttpClientDefaults(builder =>
-                builder.AddHeaderPropagationMessageHandler());
+                builder.AddHeaderPropagation());
         }
 
         services.AddSingleton<IStripeAdapter, StripeAdapter>();

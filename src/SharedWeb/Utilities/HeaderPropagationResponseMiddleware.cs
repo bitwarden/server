@@ -1,5 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Bit.Core.Utilities;
+using Microsoft.AspNetCore.Http;
 
 namespace Bit.SharedWeb.Utilities;
 

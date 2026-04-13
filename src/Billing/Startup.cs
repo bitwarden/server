@@ -9,6 +9,7 @@ using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
