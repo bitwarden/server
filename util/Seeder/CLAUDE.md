@@ -24,6 +24,7 @@ dotnet test test/SeederApi.IntegrationTest/ --filter "FullyQualifiedName~TestMet
 ```
 Need to create test data?
 ├─ ONE entity with encryption? → Factory
+├─ ONE cipher from a SeedVaultItem? → CipherSeed.FromSeedItem() + {Type}CipherSeeder.Create()
 ├─ MANY entities as cohesive operation? → Recipe or Pipeline
 ├─ Flexible preset-based seeding? → Pipeline (RecipeBuilder + Steps)
 ├─ Complete test scenario with ID mangling? → Scene
@@ -44,8 +45,14 @@ Need to create test data?
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
 - **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
 
-**Phase order**: Org → Owner → Generator → Roster → Users → Groups → Collections → Folders → Ciphers → PersonalCiphers
+**Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
+
+**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual presets)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → FolderAssignments → FavoriteAssignments
+
+**Individual user presets** use the Pipeline with `CreateIndividualUserStep` (no org, no groups, no collections). These presets live in `Seeds/fixtures/presets/individual/` and are identified by having a `"user"` key instead of `"organization"`. They support `folderNames`, `folderAssignments`, and `favoriteAssignments` for fixture-driven personal vault organization. See `Seeds/docs/presets.md` for the catalog.
 
 See `Pipeline/` folder for implementation.
 
@@ -54,6 +61,7 @@ See `Pipeline/` folder for implementation.
 Steps execute sequentially (phase order preserved by RecipeExecutor). Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
 
 **Thread-safety requirements:**
+
 - `GeneratorContext` lazy properties (`??=`) must be force-initialized before any `Parallel.For` loop to prevent a data race
 - Generators use `ThreadLocal<Faker>` for thread-safe deterministic data generation
 - `ManglerService` and `SeederContext` are NOT thread-safe -- pre-compute their outputs before entering parallel loops
@@ -61,6 +69,7 @@ Steps execute sequentially (phase order preserved by RecipeExecutor). Within a s
 ## Performance A/B Testing
 
 When measuring step-level performance changes, use paired worktrees:
+
 - Create `server-PM-XXXXX/perf-baseline` and `server-PM-XXXXX/perf-optimized` worktrees
 - Both worktrees get `Stopwatch` timing in `RecipeExecutor.Execute()` (the baseline measurement)
 - Only the optimized worktree gets actual code changes
@@ -93,13 +102,14 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 Recipes follow strict rules:
 
-1. A Recipe SHALL have exactly one public method named `Seed()`
-2. A Recipe MUST produce one cohesive result
-3. A Recipe MAY have overloaded `Seed()` methods with different parameters
-4. A Recipe SHALL use private helper methods for internal steps
-5. A Recipe SHALL use BulkCopy for performance when creating multiple entities
-6. A Recipe SHALL compose Factories for individual entity creation
-7. A Recipe SHALL NOT expose implementation details as public methods
+1. A Recipe SHALL accept `SeederDependencies` as its single constructor parameter
+2. A Recipe SHALL have exactly one public method named `Seed()`
+3. A Recipe MUST produce one cohesive result
+4. A Recipe MAY have overloaded `Seed()` methods with different parameters
+5. A Recipe SHALL use private helper methods for internal steps
+6. A Recipe SHALL use BulkCopy for performance when creating multiple entities
+7. A Recipe SHALL compose Factories for individual entity creation
+8. A Recipe SHALL NOT expose implementation details as public methods
 
 ## Zero-Knowledge Architecture
 
@@ -113,11 +123,19 @@ The Seeder uses the Rust SDK via FFI because it must behave like a real Bitwarde
 
 ## Data Flow
 
+### Pipeline path (fixture → entity)
+
+```
+SeedVaultItem → CipherSeed.FromSeedItem() → CipherSeed → {Type}CipherSeeder.Create(options) → CipherViewDto → encrypt_fields (Rust FFI) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
+```
+
+### Core encryption (shared by all paths)
+
 ```
 CipherViewDto → JSON + [EncryptProperty] field paths → encrypt_fields (Rust FFI, bitwarden_crypto) → EncryptedCipherDto → EncryptedCipherDtoExtensions → Server Cipher Entity
 ```
 
-Shared logic: `CipherEncryption.cs`, `EncryptedCipherDtoExtensions.cs`
+Shared logic: `Factories/CipherEncryption.cs`, `Models/EncryptedCipherDtoExtensions.cs`
 
 ## Rust Crypto Dependency
 
@@ -132,6 +150,26 @@ Same domain = same seed = reproducible data:
 ```csharp
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
+
+## Scenarios
+
+Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an engineering problem to a Seeder command.
+
+**Maintenance rules:**
+
+- When adding a new preset, check if an existing scenario should reference it as a variation
+- When adding a new command or flag, check if it enables a new scenario or changes an existing one
+- When CLI flags, commands, or preset names change, scan all `*.md` files under `Seeds/` and `SeederUtility/` for stale references
+- Scenario files follow the template in `Seeds/docs/scenarios/README.md`
+- Never duplicate CLI flag documentation — link to `SeederUtility/README.md`
+- Never duplicate preset catalog details — link to `Seeds/docs/presets.md`
+- Scenarios describe _why_ (the problem). READMEs describe _how_ (the tool). Keep the split clean.
+
+**File relationships:**
+
+- `SeederUtility/README.md` → CLI reference (commands, flags, examples) → links to scenarios
+- `Seeds/docs/presets.md` → what exists (the catalog) → scenarios link back to it
+- `Seeds/docs/scenarios/` → why you'd use it (problem → command)
 
 ## Security Reminders
 

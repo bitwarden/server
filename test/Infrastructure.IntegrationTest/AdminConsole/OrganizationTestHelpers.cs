@@ -96,6 +96,7 @@ public static class OrganizationTestHelpers
             UseAutomaticUserConfirmation = true,
             UsePhishingBlocker = true,
             UseDisableSmAdsForUsers = true,
+            UseMyItems = true,
         });
     }
 
@@ -178,5 +179,20 @@ public static class OrganizationTestHelpers
         {
             OrganizationId = organization.Id,
             Name = $"{identifier} {Guid.NewGuid()}"
+        });
+
+    public static Task<OrganizationInviteLink> CreateTestOrganizationInviteLinkAsync(
+        this IOrganizationInviteLinkRepository repository,
+        Organization organization,
+        string identifier = "test")
+        => repository.CreateAsync(new OrganizationInviteLink
+        {
+            Code = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            AllowedDomains = "[\"example.com\"]",
+            EncryptedInviteKey = $"encrypted-key-{identifier}",
+            EncryptedOrgKey = $"encrypted-org-key-{identifier}",
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
         });
 }

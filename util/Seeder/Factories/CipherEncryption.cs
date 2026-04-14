@@ -39,7 +39,8 @@ internal static class CipherEncryption
         object data,
         CipherType cipherType,
         Guid? organizationId,
-        Guid? userId)
+        Guid? userId,
+        DateTime? deletedDate = null)
     {
         var dataJson = JsonSerializer.Serialize(data, _serverJsonOptions);
 
@@ -53,7 +54,8 @@ internal static class CipherEncryption
             Key = encrypted.Key,
             Reprompt = (CipherRepromptType?)encrypted.Reprompt,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = DateTime.UtcNow,
+            DeletedDate = deletedDate
         };
     }
 }

@@ -19,6 +19,7 @@ public class PaymentSucceededHandler(
     IOrganizationRepository organizationRepository,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserService userService,
+    IUserRepository userRepository,
     IOrganizationEnableCommand organizationEnableCommand,
     IPricingClient pricingClient,
     IPushNotificationAdapter pushNotificationAdapter)
@@ -109,12 +110,17 @@ public class PaymentSucceededHandler(
         }
         else if (userId.HasValue)
         {
-            if (subscription.Items.All(i => i.Plan.Id != IStripeEventUtilityService.PremiumPlanId))
+            if (subscription.Items.All(i => i.Price.Id is not IStripeEventUtilityService.PremiumPlanId and not IStripeEventUtilityService.PremiumPlanIdAppStore))
             {
                 return;
             }
 
             await userService.EnablePremiumAsync(userId.Value, subscription.GetCurrentPeriodEnd());
+            var user = await userRepository.GetByIdAsync(userId.Value);
+            if (user != null)
+            {
+                await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
+            }
         }
     }
 }

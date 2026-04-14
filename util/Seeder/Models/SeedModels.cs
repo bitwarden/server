@@ -13,7 +13,17 @@ internal record SeedVaultItem
     public SeedLogin? Login { get; init; }
     public SeedCard? Card { get; init; }
     public SeedIdentity? Identity { get; init; }
+    public SeedSshKey? SshKey { get; init; }
     public List<SeedField>? Fields { get; init; }
+    public bool? Favorite { get; init; }
+    public int? Reprompt { get; init; }
+}
+
+internal record SeedSshKey
+{
+    public string? PrivateKey { get; init; }
+    public string? PublicKey { get; init; }
+    public string? KeyFingerprint { get; init; }
 }
 
 internal record SeedLogin
@@ -89,6 +99,7 @@ internal record SeedRosterUser
     public string Role { get; init; } = "user";
     public string? Branch { get; init; }
     public string? Department { get; init; }
+    public List<string>? Folders { get; init; }
 }
 
 internal record SeedRosterGroup
