@@ -4,7 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
-internal class WebAuthnChallengeCache : IWebAuthnChallengeCache
+internal class WebAuthnChallengeCacheProvider(
+    [FromKeyedServices("persistent")] IDistributedCache distributedCache) : IWebAuthnChallengeCacheProvider
 {
     private const string _cacheKeyPrefix = "WebAuthnLoginAssertion_";
     private static readonly DistributedCacheEntryOptions _cacheOptions = new()
@@ -12,13 +13,7 @@ internal class WebAuthnChallengeCache : IWebAuthnChallengeCache
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(17)
     };
 
-    private readonly IDistributedCache _distributedCache;
-
-    public WebAuthnChallengeCache(
-        [FromKeyedServices("persistent")] IDistributedCache distributedCache)
-    {
-        _distributedCache = distributedCache;
-    }
+    private readonly IDistributedCache _distributedCache = distributedCache;
 
     public async Task StoreChallengeAsync(byte[] challenge)
     {

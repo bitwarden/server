@@ -90,7 +90,7 @@ public class WebAuthnGrantValidatorTests
             });
 
         // ConsumeChallengeAsync returns false (entry does not exist or already consumed)
-        sutProvider.GetDependency<IWebAuthnChallengeCache>()
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
             .ConsumeChallengeAsync(challenge)
             .Returns(false);
 
@@ -123,7 +123,7 @@ public class WebAuthnGrantValidatorTests
             });
 
         // ConsumeChallengeAsync returns true (entry existed and was consumed)
-        sutProvider.GetDependency<IWebAuthnChallengeCache>()
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
             .ConsumeChallengeAsync(challenge)
             .Returns(true);
 
@@ -146,7 +146,7 @@ public class WebAuthnGrantValidatorTests
         }
 
         // Assert - verify challenge was consumed (proves cache check passed)
-        await sutProvider.GetDependency<IWebAuthnChallengeCache>()
+        await sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
             .Received(1)
             .ConsumeChallengeAsync(challenge);
     }

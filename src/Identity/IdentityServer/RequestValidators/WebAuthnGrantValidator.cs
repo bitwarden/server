@@ -28,7 +28,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
     private readonly IDeviceValidator _deviceValidator;
-    private readonly IWebAuthnChallengeCache _webAuthnChallengeCache;
+    private readonly IWebAuthnChallengeCacheProvider _webAuthnChallengeCache;
 
     public WebAuthnGrantValidator(
         UserManager<User> userManager,
@@ -53,7 +53,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IWebAuthnChallengeCache webAuthnChallengeCache)
+        IWebAuthnChallengeCacheProvider webAuthnChallengeCache)
         : base(
             userManager,
             userService,

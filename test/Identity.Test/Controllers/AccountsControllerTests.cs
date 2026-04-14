@@ -43,7 +43,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
     private readonly GlobalSettings _globalSettings;
-    private readonly IWebAuthnChallengeCache _webAuthnChallengeCache;
+    private readonly IWebAuthnChallengeCacheProvider _webAuthnChallengeCache;
 
 
     public AccountsControllerTests()
@@ -58,7 +58,7 @@ public class AccountsControllerTests : IDisposable
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
         _globalSettings = Substitute.For<GlobalSettings>();
-        _webAuthnChallengeCache = Substitute.For<IWebAuthnChallengeCache>();
+        _webAuthnChallengeCache = Substitute.For<IWebAuthnChallengeCacheProvider>();
 
         _sut = new AccountsController(
             _currentContext,

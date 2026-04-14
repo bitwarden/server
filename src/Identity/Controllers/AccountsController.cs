@@ -38,7 +38,7 @@ public class AccountsController : Controller
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
-    private readonly IWebAuthnChallengeCache _webAuthnChallengeCache;
+    private readonly IWebAuthnChallengeCacheProvider _webAuthnChallengeCache;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
@@ -86,7 +86,7 @@ public class AccountsController : Controller
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
         GlobalSettings globalSettings,
-        IWebAuthnChallengeCache webAuthnChallengeCache
+        IWebAuthnChallengeCacheProvider webAuthnChallengeCache
         )
     {
         _currentContext = currentContext;

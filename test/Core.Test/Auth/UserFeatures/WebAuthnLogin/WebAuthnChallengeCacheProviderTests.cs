@@ -9,11 +9,11 @@ using Xunit;
 namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 
 [SutProviderCustomize]
-public class WebAuthnChallengeCacheTests
+public class WebAuthnChallengeCacheProviderTests
 {
     [Theory, BitAutoData]
     internal async Task StoreChallengeAsync_WritesCacheEntry(
-        SutProvider<WebAuthnChallengeCache> sutProvider)
+        SutProvider<WebAuthnChallengeCacheProvider> sutProvider)
     {
         // Arrange
         var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -35,7 +35,7 @@ public class WebAuthnChallengeCacheTests
 
     [Theory, BitAutoData]
     internal async Task ConsumeChallengeAsync_CacheHit_RemovesEntryAndReturnsTrue(
-        SutProvider<WebAuthnChallengeCache> sutProvider)
+        SutProvider<WebAuthnChallengeCacheProvider> sutProvider)
     {
         // Arrange
         var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -57,7 +57,7 @@ public class WebAuthnChallengeCacheTests
 
     [Theory, BitAutoData]
     internal async Task ConsumeChallengeAsync_CacheMiss_ReturnsFalseAndDoesNotRemove(
-        SutProvider<WebAuthnChallengeCache> sutProvider)
+        SutProvider<WebAuthnChallengeCacheProvider> sutProvider)
     {
         // Arrange
         var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };

@@ -5,7 +5,7 @@
 /// specification (§13.4.3). A challenge must be stored when assertion options are created
 /// and consumed when the assertion is validated.
 /// </summary>
-public interface IWebAuthnChallengeCache
+public interface IWebAuthnChallengeCacheProvider
 {
     /// <summary>
     /// Stores a WebAuthn challenge in the cache, marking it as available for a single use.
