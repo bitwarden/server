@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationReport_GetLatestByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
     @FilterByValidated BIT = 0
 AS
@@ -15,3 +15,4 @@ BEGIN
         )
     ORDER BY [RevisionDate] DESC
 END
+GO
