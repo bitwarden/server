@@ -244,6 +244,19 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Must provide either new payloads (UnlockData/AuthenticationData) or legacy payloads (NewMasterPasswordHash/Key).", content);
+    }
+
+    [Obsolete("To be removed in PM-33141")]
+    [Fact]
+    public async Task Legacy_PostKdf_AuthenticationDataOrUnlockDataNull_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostKdfLegacyAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
     }
 
@@ -266,11 +279,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             Salt = _ownerEmail
         };
 
-        var requestModel = new PasswordRequestModel
+        var requestModel = new ChangeKdfRequestModel
         {
             MasterPasswordHash = "wrong-master-password-hash",
-            NewMasterPasswordHash = _newMasterPasswordHash,
-            Key = _masterKeyWrappedUserKey,
             AuthenticationData = authenticationData,
             UnlockData = unlockData
         };
@@ -282,6 +293,28 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Incorrect password", content);
+    }
+
+    [Obsolete("To be removed in PM-33141")]
+    [Fact]
+    public async Task Legacy_PostKdf_InvalidMasterPasswordHash_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var requestModel = new PasswordRequestModel
+        {
+            MasterPasswordHash = "wrong-master-password-hash",
+            NewMasterPasswordHash = _newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
     }
 
     [Fact]
@@ -310,6 +343,19 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Contains("Invalid master password salt.", content);
     }
 
+    [Obsolete("To be removed in PM-33141")]
+    [Fact]
+    public async Task Legacy_PostKdf_ChangedSaltInAuthenticationData_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostKdfLegacyAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
+    }
+
     [Fact]
     public async Task PostKdf_ChangedSaltInUnlockData_BadRequest()
     {
@@ -336,6 +382,19 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Contains("Invalid master password salt.", content);
     }
 
+    [Obsolete("To be removed in PM-33141")]
+    [Fact]
+    public async Task Legacy_PostKdf_ChangedSaltInUnlockData_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostKdfLegacyAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
+    }
+
     [Fact]
     public async Task PostKdf_KdfNotMatching_BadRequest()
     {
@@ -360,6 +419,19 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("KDF settings must be equal for authentication and unlock.", content);
+    }
+
+    [Obsolete("To be removed in PM-33141")]
+    [Fact]
+    public async Task Legacy_PostKdf_KdfNotMatching_BadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await PostKdfLegacyAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
     }
 
     [Theory]
@@ -406,11 +478,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             Salt = _ownerEmail
         };
 
-        var requestModel = new PasswordRequestModel
+        var requestModel = new ChangeKdfRequestModel
         {
             MasterPasswordHash = _masterPasswordHash,
-            NewMasterPasswordHash = newMasterPasswordHash,
-            Key = _masterKeyWrappedUserKey,
             AuthenticationData = authenticationData,
             UnlockData = unlockData
         };
@@ -422,6 +492,30 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Passwords must be at least", content);
+    }
+
+    [Obsolete("To be removed in PM-33141")]
+    [Fact]
+    public async Task Legacy_PostKdf_InvalidNewMasterPassword_BadRequest()
+    {
+        var newMasterPasswordHash = "too-short";
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var requestModel = new PasswordRequestModel
+        {
+            MasterPasswordHash = _masterPasswordHash,
+            NewMasterPasswordHash = newMasterPasswordHash,
+            Key = _masterKeyWrappedUserKey
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");
+        message.Content = JsonContent.Create(requestModel);
+        var response = await _client.SendAsync(message);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("AuthenticationData and UnlockData must be provided.", content);
     }
 
     private async Task<HttpResponseMessage> PostKdfWithKdfRequestAsync(KdfRequestModel kdfRequest)
@@ -447,13 +541,26 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         MasterPasswordAuthenticationDataRequestModel? authenticationDataRequest,
         MasterPasswordUnlockDataRequestModel? unlockDataRequest)
     {
+        var requestModel = new ChangeKdfRequestModel
+        {
+            MasterPasswordHash = _masterPasswordHash,
+            AuthenticationData = authenticationDataRequest,
+            UnlockData = unlockDataRequest
+        };
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");
+        message.Content = JsonContent.Create(requestModel);
+        return await _client.SendAsync(message);
+    }
+
+    [Obsolete("To be removed in PM-33141")]
+    private async Task<HttpResponseMessage> PostKdfLegacyAsync()
+    {
         var requestModel = new PasswordRequestModel
         {
             MasterPasswordHash = _masterPasswordHash,
             NewMasterPasswordHash = _newMasterPasswordHash,
-            Key = _masterKeyWrappedUserKey,
-            AuthenticationData = authenticationDataRequest,
-            UnlockData = unlockDataRequest
+            Key = _masterKeyWrappedUserKey
         };
 
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/kdf");

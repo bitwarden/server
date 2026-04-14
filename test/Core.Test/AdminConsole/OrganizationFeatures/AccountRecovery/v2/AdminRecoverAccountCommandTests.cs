@@ -108,7 +108,7 @@ public class AdminRecoverAccountCommandTests
         Assert.True(result.IsSuccess);
 
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .MutateSetInitialOrUpdateExistingMasterPassword(
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(
                 user, Arg.Any<SetInitialOrUpdateExistingPasswordData>());
 
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
@@ -210,7 +210,7 @@ public class AdminRecoverAccountCommandTests
             .ResetAsync(user);
 
         await sutProvider.GetDependency<IMasterPasswordService>().DidNotReceive()
-            .MutateSetInitialOrUpdateExistingMasterPassword(
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(
                 Arg.Any<User>(), Arg.Any<SetInitialOrUpdateExistingPasswordData>());
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendAdminResetPasswordEmailAsync(
@@ -320,7 +320,7 @@ public class AdminRecoverAccountCommandTests
         Assert.True(result.IsSuccess);
 
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .MutateSetInitialOrUpdateExistingMasterPassword(
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(
                 user, Arg.Any<SetInitialOrUpdateExistingPasswordData>());
 
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
@@ -415,7 +415,7 @@ public class AdminRecoverAccountCommandTests
 
         var failedResult = IdentityResult.Failed(new IdentityError { Description = "Password update failed" });
         sutProvider.GetDependency<IMasterPasswordService>()
-            .MutateSetInitialOrUpdateExistingMasterPassword(
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(
                 user, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
             .Returns(failedResult);
 
@@ -545,7 +545,7 @@ public class AdminRecoverAccountCommandTests
     private static void SetupSuccessfulMasterPasswordServiceUpdate(SutProvider<AdminRecoverAccountCommand> sutProvider, User user)
     {
         sutProvider.GetDependency<IMasterPasswordService>()
-            .MutateSetInitialOrUpdateExistingMasterPassword(
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(
                 user, Arg.Any<SetInitialOrUpdateExistingPasswordData>())
             .Returns(IdentityResult.Success);
     }

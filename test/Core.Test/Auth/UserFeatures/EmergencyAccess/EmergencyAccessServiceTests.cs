@@ -19,6 +19,7 @@ using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
@@ -1777,6 +1778,9 @@ public class EmergencyAccessServiceTests
         sutProvider.GetDependency<IUserRepository>()
             .GetByIdAsync(emergencyAccess.GrantorId)
             .Returns(grantorUser);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, unlockData, authenticationData);
 
@@ -1821,6 +1825,9 @@ public class EmergencyAccessServiceTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(grantorUser.Id)
             .Returns([organizationUser]);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, unlockData, authenticationData);
 
@@ -1860,6 +1867,9 @@ public class EmergencyAccessServiceTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByUserAsync(grantorUser.Id)
             .Returns([organizationUser]);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.FinishRecoveryTakeoverAsync(emergencyAccess.Id, granteeUser, unlockData, authenticationData);
 
@@ -1905,6 +1915,9 @@ public class EmergencyAccessServiceTests
         sutProvider.GetDependency<IUserRepository>()
             .GetByIdAsync(grantor.Id)
             .Returns(grantor);
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .MutateSetInitialOrUpdateExistingMasterPasswordAsync(Arg.Any<User>(), Arg.Any<SetInitialOrUpdateExistingPasswordData>())
+            .Returns(IdentityResult.Success);
 
         await sutProvider.Sut.FinishRecoveryTakeoverAsync(Guid.NewGuid(), requestingUser, unlockData, authenticationData);
 

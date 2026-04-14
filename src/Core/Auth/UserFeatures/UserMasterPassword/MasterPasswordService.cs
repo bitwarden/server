@@ -167,11 +167,19 @@ public class MasterPasswordService(
 
         user.Key = updateExistingExistingData.MasterPasswordUnlock.MasterKeyWrappedUserKey;
 
+        user.Kdf = updateExistingExistingData.MasterPasswordUnlock.Kdf.KdfType;
+        user.KdfIterations = updateExistingExistingData.MasterPasswordUnlock.Kdf.Iterations;
+        user.KdfMemory = updateExistingExistingData.MasterPasswordUnlock.Kdf.Memory;
+        user.KdfParallelism = updateExistingExistingData.MasterPasswordUnlock.Kdf.Parallelism;
+
         // Always override the master password hint, even if it's null.
         user.MasterPasswordHint = updateExistingExistingData.MasterPasswordHint;
 
         user.LastPasswordChangeDate = now;
+        user.LastKdfChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;
+
+        await _userRepository.ReplaceAsync(user);
 
         return IdentityResult.Success;
     }
