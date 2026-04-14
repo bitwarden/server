@@ -1,14 +1,11 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using AutoMapper;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using LinqToDB;
-using Microsoft.Extensions.DependencyInjection;
 
 
 namespace Bit.Infrastructure.EntityFramework.Dirt.Repositories;
@@ -21,13 +18,22 @@ public class OrganizationReportRepository :
         IMapper mapper) : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationReports)
     { }
 
-    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId, bool filterByValidated = false)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId)
+
+            IQueryable<Models.OrganizationReport> query = dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId);
+
+            if (filterByValidated)
+            {
+                query = query.Where(p => p.ReportFile != null
+                    && p.ReportFile.Contains("\"Validated\":true"));
+            }
+
+            var result = await query
                 .OrderByDescending(p => p.RevisionDate)
                 .Take(1)
                 .FirstOrDefaultAsync();
