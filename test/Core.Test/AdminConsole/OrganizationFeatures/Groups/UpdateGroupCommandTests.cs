@@ -11,7 +11,7 @@ using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bit.Test.Common.Helpers;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -20,10 +20,13 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
 [SutProviderCustomize]
 public class UpdateGroupCommandTests
 {
+    private static readonly DateTime _expectedTimestamp = DateTime.UtcNow.AddYears(1);
+
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Group oldGroup,
+    public async Task UpdateGroup_Success(Group group, Group oldGroup,
         Organization organization)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
@@ -32,13 +35,14 @@ public class UpdateGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Updated);
-        AssertHelper.AssertRecent(group.RevisionDate);
+        Assert.Equal(_expectedTimestamp, group.RevisionDate);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group,
+    public async Task UpdateGroup_WithCollections_Success(Group group,
         Group oldGroup, Organization organization, List<CollectionAccessSelection> collections)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
@@ -56,13 +60,14 @@ public class UpdateGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group, collections);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Updated);
-        AssertHelper.AssertRecent(group.RevisionDate);
+        Assert.Equal(_expectedTimestamp, group.RevisionDate);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithEventSystemUser_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group,
+    public async Task UpdateGroup_WithEventSystemUser_Success(Group group,
         Group oldGroup, Organization organization, EventSystemUser eventSystemUser)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
@@ -71,13 +76,14 @@ public class UpdateGroupCommandTests
 
         await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
         await sutProvider.GetDependency<IEventService>().Received(1).LogGroupEventAsync(group, Enums.EventType.Group_Updated, eventSystemUser);
-        AssertHelper.AssertRecent(group.RevisionDate);
+        Assert.Equal(_expectedTimestamp, group.RevisionDate);
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithNullOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider, Group group,
+    public async Task UpdateGroup_WithNullOrganization_Throws(Group group,
         Group oldGroup, EventSystemUser eventSystemUser)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
@@ -89,9 +95,10 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = false), BitAutoData]
-    public async Task UpdateGroup_WithUseGroupsAsFalse_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+    public async Task UpdateGroup_WithUseGroupsAsFalse_Throws(
         Organization organization, Group group, Group oldGroup, EventSystemUser eventSystemUser)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
@@ -105,9 +112,10 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_GroupBelongsToDifferentOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+    public async Task UpdateGroup_GroupBelongsToDifferentOrganization_Throws(
         Group group, Group oldGroup, Organization organization)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
         ArrangeCollections(sutProvider, group);
@@ -119,9 +127,10 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_CollectionsBelongsToDifferentOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+    public async Task UpdateGroup_CollectionsBelongsToDifferentOrganization_Throws(
         Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
 
@@ -135,9 +144,10 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_CollectionsDoNotExist_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+    public async Task UpdateGroup_CollectionsDoNotExist_Throws(
         Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
 
@@ -157,9 +167,10 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithDefaultUserCollectionType_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+    public async Task UpdateGroup_WithDefaultUserCollectionType_Throws(
         Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeUsers(sutProvider, group);
 
@@ -175,9 +186,10 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_MemberBelongsToDifferentOrganization_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+    public async Task UpdateGroup_MemberBelongsToDifferentOrganization_Throws(
         Group group, Group oldGroup, Organization organization, IEnumerable<Guid> userAccess)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeCollections(sutProvider, group);
 
@@ -191,9 +203,10 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_MemberDoesNotExist_Throws(SutProvider<UpdateGroupCommand> sutProvider,
+    public async Task UpdateGroup_MemberDoesNotExist_Throws(
         Group group, Group oldGroup, Organization organization, IEnumerable<Guid> userAccess)
     {
+        var sutProvider = SetupSutProvider();
         ArrangeGroup(sutProvider, group, oldGroup);
         ArrangeCollections(sutProvider, group);
 
@@ -210,6 +223,15 @@ public class UpdateGroupCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
+    }
+
+    private static SutProvider<UpdateGroupCommand> SetupSutProvider()
+    {
+        var sutProvider = new SutProvider<UpdateGroupCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedTimestamp);
+        return sutProvider;
     }
 
     private void ArrangeGroup(SutProvider<UpdateGroupCommand> sutProvider, Group group, Group oldGroup)
