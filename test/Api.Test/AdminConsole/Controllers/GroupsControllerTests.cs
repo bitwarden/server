@@ -307,7 +307,6 @@ public class GroupsControllerTests
              .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
 
         var response = await sutProvider.Sut.Post(organization.Id, groupRequestModel);
 
@@ -328,7 +327,6 @@ public class GroupsControllerTests
             .Returns(true);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().ManageGroups(organization.Id).Returns(true);
 
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
