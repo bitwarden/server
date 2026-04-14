@@ -28,12 +28,12 @@ public class DeviceAuthRequestResponseModel : ResponseModel
             EncryptedUserKey = deviceAuthDetails.EncryptedUserKey
         };
 
-        if (deviceAuthDetails.AuthRequestId != null && deviceAuthDetails.AuthRequestCreatedAt != null)
+        if (deviceAuthDetails.AuthRequestId != null && deviceAuthDetails.AuthRequestCreationDate != null)
         {
             converted.DevicePendingAuthRequest = new PendingAuthRequest
             {
                 Id = (Guid)deviceAuthDetails.AuthRequestId,
-                CreationDate = (DateTime)deviceAuthDetails.AuthRequestCreatedAt
+                CreationDate = (DateTime)deviceAuthDetails.AuthRequestCreationDate
             };
         }
 

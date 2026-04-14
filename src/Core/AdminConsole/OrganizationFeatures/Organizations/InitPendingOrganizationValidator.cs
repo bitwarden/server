@@ -11,7 +11,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 using Error = Bit.Core.AdminConsole.Utilities.v2.Error;
@@ -30,7 +29,6 @@ public interface IInitPendingOrganizationValidator
 public class InitPendingOrganizationValidator : IInitPendingOrganizationValidator
 {
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IFeatureService _featureService;
     private readonly IPolicyService _policyService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
@@ -38,14 +36,12 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
 
     public InitPendingOrganizationValidator(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IFeatureService featureService,
         IPolicyService policyService,
         IPolicyRequirementQuery policyRequirementQuery,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationUserRepository organizationUserRepository)
     {
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _featureService = featureService;
         _policyService = policyService;
         _policyRequirementQuery = policyRequirementQuery;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
@@ -143,13 +139,10 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
 
     private async Task<Error?> ValidatePoliciesAsync(User user, Guid organizationId)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        var autoConfirmReq = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
+        if (autoConfirmReq.CannotCreateNewOrganization())
         {
-            var autoConfirmReq = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
-            if (autoConfirmReq.CannotCreateNewOrganization())
-            {
-                return new SingleOrgPolicyViolationError();
-            }
+            return new SingleOrgPolicyViolationError();
         }
 
         var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
