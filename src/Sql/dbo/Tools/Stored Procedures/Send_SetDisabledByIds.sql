@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[Send_SetDisabledByIds]
+CREATE PROCEDURE [dbo].[Send_SetDisabledByIds]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @Disabled BIT
 AS
