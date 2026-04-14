@@ -2,7 +2,6 @@
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -19,10 +18,10 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
         _logger = logger;
     }
 
-    public async Task<OrganizationReport> GetLatestOrganizationReportAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetLatestOrganizationReportAsync(Guid organizationId, bool filterByValidated = false)
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching latest organization report for organization {organizationId}", organizationId);
-        var result = await _organizationReportRepo.GetLatestByOrganizationIdAsync(organizationId);
+        var result = await _organizationReportRepo.GetLatestByOrganizationIdAsync(organizationId, filterByValidated);
 
         if (result == null)
         {
