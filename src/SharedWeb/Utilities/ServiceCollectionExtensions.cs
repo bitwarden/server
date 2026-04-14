@@ -295,8 +295,7 @@ public static class ServiceCollectionExtensions
         services.AddTokenizers();
 
         services.AddScoped<IApplicationCacheService, FeatureRoutedCacheService>();
-        services.AddExtendedCache(OrganizationAbilityCacheConstants.CacheName, globalSettings);
-        services.AddScoped<IOrganizationAbilityCacheService, ExtendedOrganizationAbilityCacheService>();
+        services.AddOrganizationAbilityCache(globalSettings);
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))

@@ -3,17 +3,24 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
+using static Bit.Core.AdminConsole.AbilitiesCache.ExtendedOrganizationAbilityCacheConstants;
 
 namespace Bit.Core.AdminConsole.AbilitiesCache;
 
+public static class ExtendedOrganizationAbilityCacheConstants
+{
+    public const string CacheName = "OrganizationAbilities";
+}
+
 public class ExtendedOrganizationAbilityCacheService(
-    [FromKeyedServices(OrganizationAbilityCacheConstants.CacheName)] IFusionCache cache,
+    [FromKeyedServices(CacheName)] IFusionCache cache,
     IOrganizationRepository organizationRepository)
     : IOrganizationAbilityCacheService
 {
+
     public async Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId)
     {
-        var cacheKey = OrganizationAbilityCacheConstants.BuildCacheKeyForOrganizationAbility(orgId);
+        var cacheKey = BuildCacheKeyForOrganizationAbility(orgId);
         return await cache.GetOrSetAsync<OrganizationAbility?>(
             cacheKey,
             async _ => await organizationRepository.GetAbilityAsync(orgId));
@@ -21,13 +28,16 @@ public class ExtendedOrganizationAbilityCacheService(
 
     public async Task UpsertOrganizationAbilityAsync(Organization organization)
     {
-        var cacheKey = OrganizationAbilityCacheConstants.BuildCacheKeyForOrganizationAbility(organization.Id);
+        var cacheKey = BuildCacheKeyForOrganizationAbility(organization.Id);
         await cache.SetAsync<OrganizationAbility?>(cacheKey, new OrganizationAbility(organization));
     }
 
     public async Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        var cacheKey = OrganizationAbilityCacheConstants.BuildCacheKeyForOrganizationAbility(organizationId);
+        var cacheKey = BuildCacheKeyForOrganizationAbility(organizationId);
         await cache.RemoveAsync(cacheKey);
     }
+
+    private static string BuildCacheKeyForOrganizationAbility(Guid organizationId)
+        => $"org-ability:{organizationId:N}";
 }
