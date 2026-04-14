@@ -16,6 +16,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -1496,6 +1497,7 @@ public class OrganizationReportControllerTests
     {
         // Arrange
         expectedReport.OrganizationId = orgId;
+        expectedReport.ReportFile = null;
         SetupAuthorization(sutProvider, orgId);
 
         sutProvider.GetDependency<IFeatureService>()
@@ -1625,6 +1627,10 @@ public class OrganizationReportControllerTests
         sutProvider.GetDependency<IGetOrganizationReportQuery>()
             .GetOrganizationReportAsync(report.Id)
             .Returns(report);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.ContentType = "multipart/form-data";
+        sutProvider.Sut.ControllerContext = new ControllerContext { HttpContext = httpContext };
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
