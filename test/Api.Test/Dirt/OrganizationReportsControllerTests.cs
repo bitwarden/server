@@ -16,6 +16,12 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.Test.Dirt;
 
