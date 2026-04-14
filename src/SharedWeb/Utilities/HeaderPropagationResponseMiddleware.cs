@@ -35,12 +35,7 @@ public class HeaderPropagationResponseMiddleware
                 && string.Equals(value, "true", StringComparison.OrdinalIgnoreCase))
             {
                 activity?.SetTag(header.TrimStart('X', '-').ToLowerInvariant(), "true");
-                context.Response.OnStarting(state =>
-                {
-                    var (ctx, h) = ((HttpContext, string))state;
-                    ctx.Response.Headers[$"{h}-Routed"] = "true";
-                    return Task.CompletedTask;
-                }, (context, header));
+                context.Response.Headers[$"{header}-Routed"] = "true";
             }
         }
 
