@@ -1,19 +1,19 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
+using Stripe;
 
 namespace Bit.Core.Billing.Licenses;
 
 public static class SubscriptionLicenseValidator
 {
-    public static void ValidateSubscriptionForLicenseGeneration(SubscriptionInfo subscriptionInfo)
+    public static void ValidateSubscriptionForLicenseGeneration(Subscription? subscription)
     {
-        if (subscriptionInfo?.Subscription == null)
+        if (subscription == null)
         {
             throw new BadRequestException("No active subscription found.");
         }
 
-        var status = subscriptionInfo.Subscription.Status;
+        var status = subscription.Status;
 
         if (status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.Incomplete
             or StripeConstants.SubscriptionStatus.IncompleteExpired)

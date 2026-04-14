@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models.Business;
@@ -57,8 +57,13 @@ public class GetCloudOrganizationLicenseQueryTests
         byte[] licenseSignature)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription());
+        organization.GatewaySubscriptionId = "sub_123";
+        var stripeSubscription = new Subscription();
+        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(stripeSubscription);
         sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 
@@ -79,8 +84,13 @@ public class GetCloudOrganizationLicenseQueryTests
         byte[] licenseSignature, string token)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription());
+        organization.GatewaySubscriptionId = "sub_123";
+        var stripeSubscription = new Subscription();
+        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(stripeSubscription);
         sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
         sutProvider.GetDependency<ILicensingService>()
@@ -101,8 +111,9 @@ public class GetCloudOrganizationLicenseQueryTests
     {
         organization.Status = OrganizationStatusType.Managed;
         organization.ExpirationDate = null;
+        organization.GatewaySubscriptionId = "sub_provider_123";
 
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription
+        var stripeSubscription = new Subscription
         {
             Items = new StripeList<SubscriptionItem>
             {
@@ -115,11 +126,15 @@ public class GetCloudOrganizationLicenseQueryTests
                     }
                 ]
             }
-        });
+        };
+        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
 
         installation.Enabled = true;
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(stripeSubscription);
         sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(provider).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 
@@ -136,13 +151,15 @@ public class GetCloudOrganizationLicenseQueryTests
     [BitAutoData]
     public async Task GetLicenseAsync_CanceledSubscription_Throws(
         SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo)
+        Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "canceled" });
+        organization.GatewaySubscriptionId = "sub_123";
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "canceled" });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.GetLicenseAsync(organization, installationId));
@@ -153,13 +170,15 @@ public class GetCloudOrganizationLicenseQueryTests
     [BitAutoData]
     public async Task GetLicenseAsync_IncompleteSubscription_Throws(
         SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo)
+        Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "incomplete" });
+        organization.GatewaySubscriptionId = "sub_123";
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "incomplete" });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.GetLicenseAsync(organization, installationId));
@@ -170,13 +189,15 @@ public class GetCloudOrganizationLicenseQueryTests
     [BitAutoData]
     public async Task GetLicenseAsync_IncompleteExpiredSubscription_Throws(
         SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo)
+        Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "incomplete_expired" });
+        organization.GatewaySubscriptionId = "sub_123";
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "incomplete_expired" });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.GetLicenseAsync(organization, installationId));
@@ -187,13 +208,12 @@ public class GetCloudOrganizationLicenseQueryTests
     [BitAutoData]
     public async Task GetLicenseAsync_NullSubscription_Throws(
         SutProvider<GetCloudOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo)
+        Organization organization, Guid installationId, Installation installation)
     {
         installation.Enabled = true;
-        subInfo.Subscription = null;
+        organization.GatewaySubscriptionId = null;
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.GetLicenseAsync(organization, installationId));
@@ -208,9 +228,14 @@ public class GetCloudOrganizationLicenseQueryTests
         byte[] licenseSignature)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "active" });
+        organization.GatewaySubscriptionId = "sub_123";
+        var stripeSubscription = new Subscription { Status = "active" };
+        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(stripeSubscription);
         sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 
@@ -228,9 +253,14 @@ public class GetCloudOrganizationLicenseQueryTests
         byte[] licenseSignature)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "trialing" });
+        organization.GatewaySubscriptionId = "sub_123";
+        var stripeSubscription = new Subscription { Status = "trialing" };
+        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(stripeSubscription);
         sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 
@@ -248,9 +278,14 @@ public class GetCloudOrganizationLicenseQueryTests
         byte[] licenseSignature)
     {
         installation.Enabled = true;
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "past_due" });
+        organization.GatewaySubscriptionId = "sub_123";
+        var stripeSubscription = new Subscription { Status = "past_due" };
+        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(stripeSubscription);
 
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(stripeSubscription);
         sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
 

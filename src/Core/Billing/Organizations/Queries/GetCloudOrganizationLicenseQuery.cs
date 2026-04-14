@@ -23,17 +23,20 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
 {
     private readonly IInstallationRepository _installationRepository;
     private readonly IStripePaymentService _paymentService;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly ILicensingService _licensingService;
     private readonly IProviderRepository _providerRepository;
 
     public GetCloudOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
         IStripePaymentService paymentService,
+        IStripeAdapter stripeAdapter,
         ILicensingService licensingService,
         IProviderRepository providerRepository)
     {
         _installationRepository = installationRepository;
         _paymentService = paymentService;
+        _stripeAdapter = stripeAdapter;
         _licensingService = licensingService;
         _providerRepository = providerRepository;
     }
@@ -48,7 +51,10 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
         }
 
         var subscriptionInfo = await GetSubscriptionAsync(organization);
-        SubscriptionLicenseValidator.ValidateSubscriptionForLicenseGeneration(subscriptionInfo);
+        var subscription = string.IsNullOrEmpty(organization.GatewaySubscriptionId)
+            ? null
+            : await _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId);
+        SubscriptionLicenseValidator.ValidateSubscriptionForLicenseGeneration(subscription);
         var license = new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
         license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo);
 

@@ -12,12 +12,14 @@ public interface IGetUserLicenseQuery
 
 public class GetUserLicenseQuery(
     IUserService userService,
-    IStripePaymentService paymentService) : IGetUserLicenseQuery
+    IStripeAdapter stripeAdapter) : IGetUserLicenseQuery
 {
     public async Task<UserLicense> Run(User user)
     {
-        var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
-        SubscriptionLicenseValidator.ValidateSubscriptionForLicenseGeneration(subscriptionInfo);
+        var subscription = string.IsNullOrEmpty(user.GatewaySubscriptionId)
+            ? null
+            : await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+        SubscriptionLicenseValidator.ValidateSubscriptionForLicenseGeneration(subscription);
 
         return await userService.GenerateLicenseAsync(user);
     }

@@ -3,9 +3,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -14,7 +12,6 @@ using Xunit;
 
 namespace Bit.Core.Test.Billing.Licenses.Queries;
 
-[SubscriptionInfoCustomize]
 [SutProviderCustomize]
 public class GetUserLicenseQueryTests
 {
@@ -22,11 +19,12 @@ public class GetUserLicenseQueryTests
     [BitAutoData]
     public async Task RunAsync_CanceledSubscription_Throws(
         SutProvider<GetUserLicenseQuery> sutProvider,
-        User user, SubscriptionInfo subInfo)
+        User user)
     {
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "canceled" });
-
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user).Returns(subInfo);
+        user.GatewaySubscriptionId = "sub_123";
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "canceled" });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.Run(user));
@@ -37,11 +35,12 @@ public class GetUserLicenseQueryTests
     [BitAutoData]
     public async Task RunAsync_IncompleteSubscription_Throws(
         SutProvider<GetUserLicenseQuery> sutProvider,
-        User user, SubscriptionInfo subInfo)
+        User user)
     {
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "incomplete" });
-
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user).Returns(subInfo);
+        user.GatewaySubscriptionId = "sub_123";
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "incomplete" });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.Run(user));
@@ -52,11 +51,12 @@ public class GetUserLicenseQueryTests
     [BitAutoData]
     public async Task RunAsync_IncompleteExpiredSubscription_Throws(
         SutProvider<GetUserLicenseQuery> sutProvider,
-        User user, SubscriptionInfo subInfo)
+        User user)
     {
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "incomplete_expired" });
-
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user).Returns(subInfo);
+        user.GatewaySubscriptionId = "sub_123";
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "incomplete_expired" });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.Run(user));
@@ -67,11 +67,9 @@ public class GetUserLicenseQueryTests
     [BitAutoData]
     public async Task RunAsync_NullSubscription_Throws(
         SutProvider<GetUserLicenseQuery> sutProvider,
-        User user, SubscriptionInfo subInfo)
+        User user)
     {
-        subInfo.Subscription = null;
-
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user).Returns(subInfo);
+        user.GatewaySubscriptionId = null;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.Run(user));
@@ -82,11 +80,12 @@ public class GetUserLicenseQueryTests
     [BitAutoData]
     public async Task RunAsync_ActiveSubscription_Succeeds(
         SutProvider<GetUserLicenseQuery> sutProvider,
-        User user, SubscriptionInfo subInfo, UserLicense userLicense)
+        User user, UserLicense userLicense)
     {
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "active" });
-
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user).Returns(subInfo);
+        user.GatewaySubscriptionId = "sub_123";
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "active" });
         sutProvider.GetDependency<IUserService>().GenerateLicenseAsync(user).Returns(userLicense);
 
         var result = await sutProvider.Sut.Run(user);
@@ -99,11 +98,12 @@ public class GetUserLicenseQueryTests
     [BitAutoData]
     public async Task RunAsync_TrialingSubscription_Succeeds(
         SutProvider<GetUserLicenseQuery> sutProvider,
-        User user, SubscriptionInfo subInfo, UserLicense userLicense)
+        User user, UserLicense userLicense)
     {
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "trialing" });
-
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user).Returns(subInfo);
+        user.GatewaySubscriptionId = "sub_123";
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "trialing" });
         sutProvider.GetDependency<IUserService>().GenerateLicenseAsync(user).Returns(userLicense);
 
         var result = await sutProvider.Sut.Run(user);
@@ -116,11 +116,12 @@ public class GetUserLicenseQueryTests
     [BitAutoData]
     public async Task RunAsync_PastDueSubscription_Succeeds(
         SutProvider<GetUserLicenseQuery> sutProvider,
-        User user, SubscriptionInfo subInfo, UserLicense userLicense)
+        User user, UserLicense userLicense)
     {
-        subInfo.Subscription = new SubscriptionInfo.BillingSubscription(new Subscription { Status = "past_due" });
-
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user).Returns(subInfo);
+        user.GatewaySubscriptionId = "sub_123";
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(user.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Status = "past_due" });
         sutProvider.GetDependency<IUserService>().GenerateLicenseAsync(user).Returns(userLicense);
 
         var result = await sutProvider.Sut.Run(user);
@@ -131,12 +132,11 @@ public class GetUserLicenseQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task RunAsync_NullSubscriptionInfo_Throws(
+    public async Task RunAsync_EmptySubscriptionId_Throws(
         SutProvider<GetUserLicenseQuery> sutProvider,
         User user)
     {
-        sutProvider.GetDependency<IStripePaymentService>().GetSubscriptionAsync(user)
-            .Returns((SubscriptionInfo)null);
+        user.GatewaySubscriptionId = "";
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.Run(user));
