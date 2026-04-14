@@ -96,7 +96,9 @@ jobs:
       - name: "Create branch"
         env:
           BRANCH: ${{ steps.branch_name.outputs.branch_name }}
-        run: git switch -c "$BRANCH"
+        run: |
+          git switch -c "$BRANCH"
+          git push -u origin "$BRANCH"
 
       - name: Move scripts and finalization database schema
         id: move-files
@@ -148,24 +150,25 @@ jobs:
           done
 
           echo "moved_files=$moved_files" >> "$GITHUB_OUTPUT"
-
-      - name: Commit and push changes
+      
+      - name: Check for changes
         id: commit
-        env:
-          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
         run: |
-          git config --local user.email "178206702+bw-ghapp[bot]@users.noreply.github.com"
-          git config --local user.name "bw-ghapp[bot]"
           if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            git commit -m "Move EDD database scripts" -a
-            git push -u origin "${BRANCH_NAME}"
             echo "pr_needed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No changes to commit!";
             echo "pr_needed=false" >> "$GITHUB_OUTPUT"
-            echo "### :mega: No changes to commit! PR was ommited." >> "$GITHUB_STEP_SUMMARY"
+            echo "No changes to commit!"
+            echo "### :mega: No changes to commit! PR was omitted." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Commit and push changes
+        if: ${{ steps.commit.outputs.pr_needed == 'true' }}
+        uses: bitwarden/gh-actions/api-commit@main
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          branch: ${{ steps.branch_name.outputs.branch_name }}
+          message: "Move EDD database scripts"
 
       - name: Create PR for ${{ steps.branch_name.outputs.branch_name }}
         if: ${{ steps.commit.outputs.pr_needed == 'true' }}
