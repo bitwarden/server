@@ -7,7 +7,6 @@ using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
-using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
@@ -26,7 +25,6 @@ public class OrganizationReportsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IGetOrganizationReportQuery _getOrganizationReportQuery;
     private readonly IAddOrganizationReportCommand _addOrganizationReportCommand;
-    private readonly IUpdateOrganizationReportCommand _updateOrganizationReportCommand;
     private readonly IUpdateOrganizationReportSummaryCommand _updateOrganizationReportSummaryCommand;
     private readonly IGetOrganizationReportSummaryDataQuery _getOrganizationReportSummaryDataQuery;
     private readonly IGetOrganizationReportSummaryDataByDateRangeQuery _getOrganizationReportSummaryDataByDateRangeQuery;
@@ -46,7 +44,6 @@ public class OrganizationReportsController : Controller
         ICurrentContext currentContext,
         IGetOrganizationReportQuery getOrganizationReportQuery,
         IAddOrganizationReportCommand addOrganizationReportCommand,
-        IUpdateOrganizationReportCommand updateOrganizationReportCommand,
         IUpdateOrganizationReportSummaryCommand updateOrganizationReportSummaryCommand,
         IGetOrganizationReportSummaryDataQuery getOrganizationReportSummaryDataQuery,
         IGetOrganizationReportSummaryDataByDateRangeQuery getOrganizationReportSummaryDataByDateRangeQuery,
@@ -65,7 +62,6 @@ public class OrganizationReportsController : Controller
         _currentContext = currentContext;
         _getOrganizationReportQuery = getOrganizationReportQuery;
         _addOrganizationReportCommand = addOrganizationReportCommand;
-        _updateOrganizationReportCommand = updateOrganizationReportCommand;
         _updateOrganizationReportSummaryCommand = updateOrganizationReportSummaryCommand;
         _getOrganizationReportSummaryDataQuery = getOrganizationReportSummaryDataQuery;
         _getOrganizationReportSummaryDataByDateRangeQuery = getOrganizationReportSummaryDataByDateRangeQuery;
@@ -205,6 +201,7 @@ public class OrganizationReportsController : Controller
     /// <param name="request">The request model containing updated report data.</param>
     /// <returns>An <see cref="OrganizationReportResponseModel"/> with the updated report.</returns>
     [HttpPatch("{organizationId}/{reportId}")]
+    [RequireFeature(FeatureFlagKeys.AccessIntelligenceVersion2)]
     public async Task<IActionResult> UpdateOrganizationReportAsync(
         Guid organizationId,
         Guid reportId,
@@ -214,26 +211,9 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
-        {
-            var coreRequest = request.ToData(organizationId, reportId);
-            var report = await _updateReportV2Command.UpdateAsync(coreRequest);
-            return Ok(new OrganizationReportResponseModel(report));
-        }
-
-        var v1Request = new UpdateOrganizationReportRequest
-        {
-            ReportId = reportId,
-            OrganizationId = organizationId,
-            ReportData = request.ReportData,
-            ContentEncryptionKey = request.ContentEncryptionKey,
-            SummaryData = request.SummaryData,
-            ApplicationData = request.ApplicationData
-        };
-
-        var updatedReport = await _updateOrganizationReportCommand.UpdateOrganizationReportAsync(v1Request);
-        var response = new OrganizationReportResponseModel(updatedReport);
-        return Ok(response);
+        var coreRequest = request.ToData(organizationId, reportId);
+        var report = await _updateReportV2Command.UpdateAsync(coreRequest);
+        return Ok(new OrganizationReportResponseModel(report));
     }
 
     /// <summary>

@@ -4,11 +4,10 @@ namespace Bit.Api.Dirt.Models.Request;
 
 public class UpdateOrganizationReportV2RequestModel
 {
-    public string? ReportData { get; set; }
-    public string? ContentEncryptionKey { get; set; }
-    public string? SummaryData { get; set; }
-    public string? ApplicationData { get; set; }
-    public OrganizationReportMetrics? ReportMetrics { get; set; }
+    public required string ContentEncryptionKey { get; set; }
+    public required string SummaryData { get; set; }
+    public required string ApplicationData { get; set; }
+    public required OrganizationReportMetrics ReportMetrics { get; set; }
 
     public UpdateOrganizationReportV2Request ToData(Guid organizationId, Guid reportId)
     {
@@ -16,7 +15,6 @@ public class UpdateOrganizationReportV2RequestModel
         {
             OrganizationId = organizationId,
             ReportId = reportId,
-            ReportData = ReportData,
             ContentEncryptionKey = ContentEncryptionKey,
             SummaryData = SummaryData,
             ApplicationData = ApplicationData,
