@@ -235,15 +235,21 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
         run: |
-          GHCR_TAG="${_GHCR_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          # Always push to ACR
           ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
-          TAGS="${GHCR_TAG},${ACR_TAG}"
-          echo "primary_tag=${GHCR_TAG}" >> "$GITHUB_OUTPUT"
+          TAGS="${ACR_TAG}"
+          echo "primary_tag=${ACR_TAG}" >> "$GITHUB_OUTPUT"
+
+          # Additionally push rc and hotfix-rc tags to GHCR
+          if [[ "${IMAGE_TAG}" == "rc" || "${IMAGE_TAG}" == "hotfix-rc" ]]; then
+            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          fi
+
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
             SHORT_SHA=$(git rev-parse --short "${SHA}")
-            TAGS=$TAGS",${_GHCR_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
             TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
+
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
       - name: Set platforms
