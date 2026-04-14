@@ -86,7 +86,7 @@ public class Program
     public OrganizationCommand Organization { get; set; } = null!;
 
     [Subcommand]
-    public SeedCommand Seed { get; set; } = null!;
+    public PresetCommand Preset { get; set; } = null!;
 
     [Subcommand]
     public IndividualCommand Individual { get; set; } = null!;

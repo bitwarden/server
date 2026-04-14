@@ -65,7 +65,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// <summary>
     /// The last date the OrganizationUser entry was updated.
     /// </summary>
-    public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     /// <summary>
     /// A json blob representing the <see cref="Bit.Core.Models.Data.Permissions"/> of the OrganizationUser if they
     /// are a Custom user role (i.e. the <see cref="OrganizationUserType"/> is Custom). MAY be NULL if they are not

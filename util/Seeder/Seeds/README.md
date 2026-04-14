@@ -5,7 +5,7 @@ Hand-crafted JSON fixtures and preset configurations for Bitwarden Seeder test d
 ## Quick Start
 
 1. Pick a preset from the catalog below
-2. Run: `dotnet run -- seed --preset {name} --mangle`
+2. Run: `dotnet run -- preset --name {name} --mangle`
 3. Build to verify: `dotnet build util/Seeder/Seeder.csproj`
 
 ## How Presets Work
@@ -18,11 +18,11 @@ Presets wire everything together. Org presets compose org + roster + ciphers; in
 
 | Folder        | Purpose                                                                     | CLI prefix    | Example                                               |
 | ------------- | --------------------------------------------------------------------------- | ------------- | ----------------------------------------------------- |
-| `features/`   | Test specific Bitwarden features (SSO, TDE, policies)                       | `features.`   | `--preset features.sso-enterprise`                    |
-| `qa/`         | Known users, groups, collections, and permissions you can point a client to | `qa.`         | `--preset qa.enterprise-basic`                        |
-| `scale/`      | Production-calibrated density presets for performance testing               | `scale.`      | `--preset scale.md-balanced-sterling-cooper`          |
-| `individual/` | Individual user accounts (no organization)                                   | `individual.` | `--preset individual.premium`                         |
-| `validation/` | Algorithm verification for seeder development                               | `validation.` | `--preset validation.density-modeling-power-law-test` |
+| `features/`   | Test specific Bitwarden features (SSO, TDE, policies)                       | `features.`   | `--name features.sso-enterprise`                    |
+| `qa/`         | Known users, groups, collections, and permissions you can point a client to | `qa.`         | `--name qa.enterprise-basic`                        |
+| `scale/`      | Production-calibrated density presets for performance testing               | `scale.`      | `--name scale.md-balanced-sterling-cooper`          |
+| `individual/` | Individual user accounts (no organization)                                   | `individual.` | `--name individual.premium`                         |
+| `validation/` | Algorithm verification for seeder development                               | `validation.` | `--name validation.density-modeling-power-law-test` |
 
 For the full preset catalog with per-preset details, see [docs/presets.md](docs/presets.md).
 
