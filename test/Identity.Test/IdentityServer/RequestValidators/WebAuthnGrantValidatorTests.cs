@@ -1,4 +1,4 @@
-﻿using System.Collections.Specialized;
+using System.Collections.Specialized;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -69,7 +69,7 @@ public class WebAuthnGrantValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_ValidToken_ChallengeNotConsumed_RejectsWithInvalidGrant(
+    public async Task ValidateAsync_ValidToken_CallsAssertCommand(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<WebAuthnGrantValidator> sutProvider)
     {
@@ -88,44 +88,6 @@ public class WebAuthnGrantValidatorTests
                 x[1] = tokenable;
                 return true;
             });
-
-        // ConsumeChallengeAsync returns false (entry does not exist or already consumed)
-        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(challenge)
-            .Returns(false);
-
-        // Act
-        await sutProvider.Sut.ValidateAsync(context);
-
-        // Assert
-        Assert.Equal("invalid_grant", context.Result.Error);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_ValidToken_ChallengeConsumed_ProceedsPastCacheCheck(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        SutProvider<WebAuthnGrantValidator> sutProvider)
-    {
-        // Arrange
-        var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-        var options = new AssertionOptions { Challenge = challenge };
-        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(
-            WebAuthnLoginAssertionOptionsScope.Authentication, options);
-
-        var context = CreateContext(tokenRequest);
-
-        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
-            .TryUnprotect(Arg.Any<string>(), out Arg.Any<WebAuthnLoginAssertionOptionsTokenable>())
-            .Returns(x =>
-            {
-                x[1] = tokenable;
-                return true;
-            });
-
-        // ConsumeChallengeAsync returns true (entry existed and was consumed)
-        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
-            .ConsumeChallengeAsync(challenge)
-            .Returns(true);
 
         // Mock credential assertion to succeed
         var user = new User { Id = Guid.NewGuid() };
@@ -135,7 +97,7 @@ public class WebAuthnGrantValidatorTests
             .Returns((user, credential));
 
         // Act - the base validator pipeline may throw due to unmocked dependencies,
-        // but our cache logic runs before that. We catch any downstream errors.
+        // but our code runs before that.
         try
         {
             await sutProvider.Sut.ValidateAsync(context);
@@ -145,9 +107,9 @@ public class WebAuthnGrantValidatorTests
             // Expected: base validator pipeline has unmocked dependencies
         }
 
-        // Assert - verify challenge was consumed (proves cache check passed)
-        await sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+        // Assert - verify the assert command was called
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
             .Received(1)
-            .ConsumeChallengeAsync(challenge);
+            .AssertWebAuthnLoginCredential(options, Arg.Any<AuthenticatorAssertionRawResponse>());
     }
 }
