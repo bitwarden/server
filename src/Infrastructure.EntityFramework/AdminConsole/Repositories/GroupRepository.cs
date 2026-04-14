@@ -48,11 +48,18 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
         }
     }
 
-    public async Task DeleteUserAsync(Guid groupId, Guid organizationUserId)
+    public async Task DeleteUserAsync(Guid groupId, Guid organizationUserId, DateTime revisionDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+
+            var group = await dbContext.Groups.FindAsync(groupId);
+            if (group != null)
+            {
+                group.RevisionDate = revisionDate;
+            }
+
             var query = from gu in dbContext.GroupUsers
                         where gu.GroupId == groupId &&
                             gu.OrganizationUserId == organizationUserId
@@ -252,12 +259,16 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
         }
     }
 
-    public async Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+    public async Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds, DateTime revisionDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var orgId = (await dbContext.Groups.FindAsync(groupId)).OrganizationId;
+            var group = await dbContext.Groups.FindAsync(groupId);
+            var orgId = group.OrganizationId;
+
+            group.RevisionDate = revisionDate;
+
             var insert = from ou in dbContext.OrganizationUsers
                          where organizationUserIds.Contains(ou.Id) &&
                              ou.OrganizationId == orgId &&
@@ -280,12 +291,16 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
         }
     }
 
-    public async Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+    public async Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds, DateTime revisionDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var orgId = (await dbContext.Groups.FindAsync(groupId)).OrganizationId;
+            var group = await dbContext.Groups.FindAsync(groupId);
+            var orgId = group.OrganizationId;
+
+            group.RevisionDate = revisionDate;
+
             var insert = from ou in dbContext.OrganizationUsers
                          where organizationUserIds.Contains(ou.Id) &&
                              ou.OrganizationId == orgId &&

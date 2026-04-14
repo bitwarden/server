@@ -27,16 +27,16 @@ public interface IGroupRepository : IRepository<Group, Guid>
     Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     Task ReplaceAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
-    Task DeleteUserAsync(Guid groupId, Guid organizationUserId);
+    Task DeleteUserAsync(Guid groupId, Guid organizationUserId, DateTime revisionDate);
     /// <summary>
     /// Update a group's members. Replaces all members currently in the group.
     /// Ignores members that do not belong to the same organization as the group.
     /// </summary>
-    Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
+    Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds, DateTime revisionDate);
     /// <summary>
     /// Add members to a group. Gracefully ignores members that are already in the group,
     /// duplicate organizationUserIds, and organizationUsers who are not part of the organization.
     /// </summary>
-    Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
+    Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds, DateTime revisionDate);
     Task DeleteManyAsync(IEnumerable<Guid> groupIds);
 }
