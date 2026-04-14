@@ -169,6 +169,7 @@ public static class FeatureFlagKeys
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string OrgAbilityExtendedCache = "pm-32104-org-ability-extended-cache";
     public const string PolicyDrawers = "pm-34804-policy-drawers";
+    public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -204,7 +205,7 @@ public static class FeatureFlagKeys
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
     public const string PM26793_FetchPremiumPriceFromPricingService = "pm-26793-fetch-premium-price-from-pricing-service";
 
-    public const string PM26462_Milestone_3 = "pm-26462-milestone-3";
+
     public const string PM29594_UpdateIndividualSubscriptionPage = "pm-29594-update-individual-subscription-page";
     public const string PM29108_EnablePersonalDiscounts = "pm-29108-enable-personal-discounts";
     public const string PM29593_PremiumToOrganizationUpgrade = "pm-29593-premium-to-organization-upgrade";
@@ -289,7 +290,7 @@ public static class FeatureFlagKeys
     public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
     public const string PM31948_OrgUserNotificationBanner = "pm-31948-org-user-notification-banner";
     public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
-    public const string PM34500_StrictCipherDecryption = "PM-34500-strict-cipher-decryption";
+    public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
     public const string PM28091_AddCopyAndQuickLaunchActions = "pm-28091-add-copy-and-quick-launch-actions";
 
     /* Innovation Team */
@@ -302,6 +303,7 @@ public static class FeatureFlagKeys
     public const string EventManagementForHuntress = "event-management-for-huntress";
     public const string Milestone11AppPageImprovements = "pm-30538-dirt-milestone-11-app-page-improvements";
     public const string AccessIntelligenceTrendChart = "pm-26961-access-intelligence-trend-chart";
+    public const string AccessIntelligenceNewArchitecture = "pm-31936-access-intelligence-new-architecture";
 
     /* UIF Team */
     public const string RouterFocusManagement = "router-focus-management";

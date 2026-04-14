@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Stripe;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bit.Admin.Controllers;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
 
@@ -92,6 +93,7 @@ public class Startup
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
         services.AddHttpClient();
+        services.AddHttpClient(HomeController.ExternalHttpClientName).AddSsrfProtection();
 
 #if OSS
         services.AddOosServices();

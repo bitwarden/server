@@ -15,6 +15,7 @@ The SeederApi consists of three main components:
 1. **Controllers** - HTTP endpoints for seeding, querying, and managing test data
 2. **Services** - Business logic for scene and query execution
 3. **Models** - Request/response models for API communication
+4. **Jobs** - Scheduled jobs run through JobsHostedService.
 
 ### Key Components
 
@@ -23,6 +24,7 @@ The SeederApi consists of three main components:
 - **InfoController** (`/alive`, `/version`) - Health check and version information
 - **SceneService** - Manages scene execution and cleanup with play ID tracking
 - **QueryService** - Executes read-only query operations
+- **Cleanup Job** - Executes every 15 minutes to delete old play data.
 
 ## How To Use
 
@@ -109,9 +111,17 @@ curl -X DELETE http://localhost:5000/seed/batch \
 
 #### Delete All Seeded Data
 
+Deletes seeded data tagged with a play ID older than the provided date. Date is optional and defaults to 1 day prior to the current time of the request.
+
 ```bash
-curl -X DELETE http://localhost:5000/seed
+curl -X DELETE http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '"2026-03-23T10:45:47.0690009-10:00"'
 ```
+
+#### PlayData is ephemeral
+
+A scheduled job runs every fifteen minutes that deletes data tagged with a play ID older than 1 day. Any data you want to persist for an extended period of time must not be tagged with a play ID.
 
 ### Health Checks
 
