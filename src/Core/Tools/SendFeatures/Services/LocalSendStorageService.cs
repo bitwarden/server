@@ -2,7 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Microsoft.Extensions.Logging;
@@ -68,7 +67,7 @@ public class LocalSendStorageService(
 
     private async Task DeleteFilesForSendsAsync(ICollection<Send> sends)
     {
-        foreach (var send in sends.Where(s => s.Type == SendType.File))
+        foreach (var send in sends)
         {
             try
             {

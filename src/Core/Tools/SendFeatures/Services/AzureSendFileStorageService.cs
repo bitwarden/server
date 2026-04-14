@@ -177,13 +177,13 @@ public class AzureSendFileStorageService(
             catch (AggregateException ex)
             {
                 _logger.LogError(Constants.BypassFiltersEventId, ex,
-                    "One or more blob deletions failed in a batch of {Count} blobs. The following URIs may be orphaned: {}",
+                    "One or more blob deletions failed in a batch of {Count} blobs. The following URIs may be orphaned: {BlobUris}",
                     batch.Length, string.Join<Uri>(", ", batch));
             }
             catch (RequestFailedException ex)
             {
                 _logger.LogError(Constants.BypassFiltersEventId, ex,
-                    "Batch blob deletion request failed for {Count} blobs.The following URIs may be orphaned: {}",
+                    "Batch blob deletion request failed for {Count} blobs. The following URIs may be orphaned: {BlobUris}",
                     batch.Length, string.Join<Uri>(", ", batch));
             }
         }
