@@ -428,3 +428,10 @@ SELECT
     [ExemptFromBillingAutomation]
 FROM
     [dbo].[Organization]
+GO
+
+EXEC sp_refreshview N'[dbo].[OrganizationCipherDetailsCollectionsView]';
+EXEC sp_refreshview N'[dbo].[OrganizationUserOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
