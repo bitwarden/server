@@ -160,6 +160,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var dbContext = GetDatabaseContext(scope);
             var folderEntities = Mapper.Map<List<Folder>>(folders);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
+            // SQLite does not support LinqToDB BulkCopy; use EF Core directly instead
             if (dbContext.Database.IsSqlite())
             {
                 await dbContext.AddRangeAsync(folderEntities);
@@ -189,6 +190,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
+            // SQLite does not support LinqToDB BulkCopy; use EF Core directly instead
             if (dbContext.Database.IsSqlite())
             {
                 await dbContext.AddRangeAsync(cipherEntities);
