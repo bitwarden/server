@@ -241,6 +241,7 @@ public class UserService : UserManager<User>, IUserService
                     var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
                     if (orgCount <= 1)
                     {
+                        await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
                         await _organizationRepository.DeleteAsync(org);
                         deletedOrg = true;
                     }
