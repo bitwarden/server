@@ -8,7 +8,7 @@ BEGIN
     UPDATE OU
     SET OU.[Status] = @Status
     FROM [dbo].[OrganizationUser] OU
-             INNER JOIN @OrganizationUserIds OUI ON OUI.[Id] = OU.[Id]
+    INNER JOIN @OrganizationUserIds OUI ON OUI.[Id] = OU.[Id]
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @OrganizationUserIds
 END

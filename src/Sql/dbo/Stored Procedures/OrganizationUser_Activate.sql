@@ -11,7 +11,7 @@ BEGIN
         [Status] = @Status
     WHERE
         [Id] = @Id
-      AND [Status] = -1 -- Deactivated
+        AND [Status] = -1 -- Deactivated
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
 END
