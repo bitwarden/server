@@ -13,7 +13,6 @@ public class AdminConsoleControllersAuthorizationTests
     /// </summary>
     private static readonly HashSet<Type> _controllersNotYetMigrated =
     [
-        typeof(GroupsController),
         typeof(OrganizationAuthRequestsController),
         typeof(OrganizationConnectionsController),
         typeof(OrganizationDomainController),
