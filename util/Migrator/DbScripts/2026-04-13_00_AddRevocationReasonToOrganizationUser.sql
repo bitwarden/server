@@ -6,8 +6,10 @@ BEGIN
 END
 GO
 
--- Refresh OrganizationUserView metadata to pick up the new column (it uses SELECT *)
+-- Refresh views that select from OrganizationUser
 EXEC sp_refreshview N'[dbo].[OrganizationUserView]';
+EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
 GO
 
 -- Update OrganizationUserUserDetailsView to include RevocationReason
