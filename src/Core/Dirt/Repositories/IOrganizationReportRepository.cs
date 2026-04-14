@@ -8,7 +8,7 @@ namespace Bit.Core.Dirt.Repositories;
 public interface IOrganizationReportRepository : IRepository<OrganizationReport, Guid>
 {
     // Whole OrganizationReport methods
-    Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId);
+    Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId, bool filterByValidated = false);
 
     // SummaryData methods
     Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(Guid organizationId, DateTime startDate, DateTime endDate);

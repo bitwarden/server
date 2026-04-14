@@ -8,8 +8,6 @@ using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
-using Dapper;
-using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Dirt;
 
@@ -25,13 +23,13 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
     {
     }
 
-    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId, bool filterByValidated = false)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
             var result = await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
                 $"[{Schema}].[OrganizationReport_GetLatestByOrganizationId]",
-                new { OrganizationId = organizationId },
+                new { OrganizationId = organizationId, FilterByValidated = filterByValidated },
                 commandType: CommandType.StoredProcedure);
 
             return result;
