@@ -41,7 +41,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
-    private readonly IUpdateTempPasswordCommand _updateTempPasswordCommand;
+    private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
@@ -60,7 +60,7 @@ public class AccountsControllerTests : IDisposable
         _tdeSetPasswordCommand = Substitute.For<ITdeSetPasswordCommand>();
         _selfServicePasswordChangeCommand = Substitute.For<ISelfServicePasswordChangeCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
-        _updateTempPasswordCommand = Substitute.For<IUpdateTempPasswordCommand>();
+        _replaceAdminSetTemporaryPasswordCommand = Substitute.For<IReplaceAdminSetTemporaryPasswordCommand>();
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _twoFactorEmailService = Substitute.For<ITwoFactorEmailService>();
         _changeKdfCommand = Substitute.For<IChangeKdfCommand>();
@@ -77,7 +77,7 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommandV1,
             _tdeSetPasswordCommand,
             _tdeOffboardingPasswordCommand,
-            _updateTempPasswordCommand,
+            _replaceAdminSetTemporaryPasswordCommand,
             _twoFactorIsEnabledQuery,
             _userAccountKeysQuery,
             _twoFactorEmailService,

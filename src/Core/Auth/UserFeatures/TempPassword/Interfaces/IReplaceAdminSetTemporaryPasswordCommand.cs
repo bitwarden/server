@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 
-public interface IUpdateTempPasswordCommand
+public interface IReplaceAdminSetTemporaryPasswordCommand
 {
-    Task<IdentityResult> UpdateTempPasswordAsync(
+    Task<IdentityResult> Replace(
         User user,
         MasterPasswordUnlockData unlockData,
         MasterPasswordAuthenticationData authenticationData,

@@ -15,7 +15,9 @@ public class PasswordRequestModel : IValidatableObject
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
 
+    // Should be made required in PM-33141
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
+    // Should be made required in PM-33141
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
 
     // To be removed in PM-33141

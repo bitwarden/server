@@ -134,6 +134,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
         }
     }
 
+    // To be removed in PM-33141
     public bool RequestHasNewDataTypes()
     {
         // AccountKeys can be null for TDE users, so we don't check that here

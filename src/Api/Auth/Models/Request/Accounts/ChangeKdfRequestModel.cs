@@ -3,6 +3,10 @@ using Bit.Core.KeyManagement.Models.Api.Request;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
+/// <summary>
+/// We recognize this probably doesn't need the obsolete fields but we are leaving it in to be cleaned up anywho
+/// later.
+/// </summary>
 public class ChangeKdfRequestModel : IValidatableObject
 {
     [Required]
@@ -13,7 +17,9 @@ public class ChangeKdfRequestModel : IValidatableObject
     [Obsolete("To be removed in PM-33141")]
     public string? Key { get; set; }
 
+    // Should be made required in PM-33141
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
+    // Should be made required in PM-33141
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
 
     // To be removed in PM-33141

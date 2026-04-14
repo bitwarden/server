@@ -69,7 +69,7 @@ public static class UserServiceCollectionExtensions
 
     private static void AddUpdateTempPasswordCommands(this IServiceCollection services)
     {
-        services.AddScoped<IUpdateTempPasswordCommand, UpdateTempPasswordCommand>();
+        services.AddScoped<IReplaceAdminSetTemporaryPasswordCommand, ReplaceAdminSetTemporaryPasswordCommand>();
     }
 
     private static void AddUserRegistrationCommands(this IServiceCollection services)

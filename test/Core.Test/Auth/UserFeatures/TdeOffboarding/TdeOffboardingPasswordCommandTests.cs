@@ -15,6 +15,9 @@ using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
+/// <summary>
+/// Add tests for new function to ensure parity
+/// </summary>
 [SutProviderCustomize]
 public class TdeOffboardingPasswordTests
 {

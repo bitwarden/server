@@ -12,14 +12,17 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.TempPassword;
 
-public class UpdateTempPasswordCommand(
+/// <summary>
+/// Write tests for this.
+/// </summary>
+public class ReplaceAdminSetTemporaryPasswordCommand(
     IMasterPasswordService masterPasswordService,
     IUserRepository userRepository,
     IMailService mailService,
     IEventService eventService,
-    IPushNotificationService pushService) : IUpdateTempPasswordCommand
+    IPushNotificationService pushService) : IReplaceAdminSetTemporaryPasswordCommand
 {
-    public async Task<IdentityResult> UpdateTempPasswordAsync(
+    public async Task<IdentityResult> Replace(
         User user,
         MasterPasswordUnlockData unlockData,
         MasterPasswordAuthenticationData authenticationData,

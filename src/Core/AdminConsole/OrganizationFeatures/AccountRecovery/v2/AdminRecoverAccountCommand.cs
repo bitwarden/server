@@ -139,6 +139,9 @@ public class AdminRecoverAccountCommand(
         await Task.WhenAll(revokeOrgUserTasks);
     }
 
+    /// <summary>
+    /// TODO: Change to ResetMasterPassword after
+    /// </summary>
     private async Task<CommandResult> HandlePayloadsWithUnlockAndAuthenticationDataAsync(User user, RecoverAccountRequest request)
     {
         // We can recover an account for users who both have a master password and

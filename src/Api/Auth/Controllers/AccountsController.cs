@@ -44,7 +44,7 @@ public class AccountsController(
     ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
     ITdeSetPasswordCommand tdeSetPasswordCommand,
     ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
-    IUpdateTempPasswordCommand updateTempPasswordCommand,
+    IReplaceAdminSetTemporaryPasswordCommand replaceAdminSetTemporaryPasswordCommand,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IUserAccountKeysQuery userAccountKeysQuery,
     ITwoFactorEmailService twoFactorEmailService,
@@ -61,7 +61,7 @@ public class AccountsController(
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand = tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
-    private readonly IUpdateTempPasswordCommand _updateTempPasswordCommand = updateTempPasswordCommand;
+    private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand = replaceAdminSetTemporaryPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery = userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService = twoFactorEmailService;
@@ -659,7 +659,7 @@ public class AccountsController(
         IdentityResult result;
         if (model.RequestHasNewDataTypes())
         {
-            result = await _updateTempPasswordCommand.UpdateTempPasswordAsync(
+            result = await _replaceAdminSetTemporaryPasswordCommand.Replace(
                 user,
                 model.UnlockData!.ToData(),
                 model.AuthenticationData!.ToData(),

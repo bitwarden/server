@@ -18,6 +18,9 @@ using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.UserMasterPassword;
 
+/// <summary>
+
+/// </summary>
 [SutProviderCustomize]
 public class FinishSsoJitProvisionMasterPasswordCommandTests
 {
