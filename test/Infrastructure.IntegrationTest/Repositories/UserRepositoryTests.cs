@@ -45,8 +45,8 @@ public class UserRepositoryTests
 
         var group1 = await groupRepository.CreateTestGroupAsync(organization, "test-group-1");
         var group2 = await groupRepository.CreateTestGroupAsync(organization, "test-group-2");
-        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id]);
-        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id]);
+        await groupRepository.UpdateUsersAsync(group1.Id, [orgUser1.Id], DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(group2.Id, [orgUser3.Id], DateTime.UtcNow);
 
         var collection1 = new Collection
         {
