@@ -2,6 +2,7 @@
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
