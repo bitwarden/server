@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 
