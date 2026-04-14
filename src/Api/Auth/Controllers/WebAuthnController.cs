@@ -34,6 +34,7 @@ public class WebAuthnController : Controller
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
+    private readonly IWebAuthnChallengeCacheProvider _webAuthnChallengeCache;
 
     public WebAuthnController(
         IUserService userService,
@@ -46,7 +47,8 @@ public class WebAuthnController : Controller
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IWebAuthnChallengeCacheProvider webAuthnChallengeCache)
     {
         _userService = userService;
         _policyService = policyService;
@@ -59,6 +61,7 @@ public class WebAuthnController : Controller
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
+        _webAuthnChallengeCache = webAuthnChallengeCache;
     }
 
     [Authorize(Policies.Web)]
@@ -95,6 +98,8 @@ public class WebAuthnController : Controller
     {
         await VerifyUserAsync(model);
         var options = _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptions();
+
+        await _webAuthnChallengeCache.StoreChallengeAsync(options.Challenge);
 
         var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.UpdateKeySet, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);
@@ -159,7 +164,8 @@ public class WebAuthnController : Controller
     public async Task UpdateCredential([FromBody] WebAuthnLoginCredentialUpdateRequestModel model)
     {
         var tokenable = _assertionOptionsDataProtector.Unprotect(model.Token);
-        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.UpdateKeySet))
+        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.UpdateKeySet) ||
+            !await _webAuthnChallengeCache.ConsumeChallengeAsync(tokenable.Options.Challenge))
         {
             throw new BadRequestException("The token associated with your request is invalid or has expired. A valid token is required to continue.");
         }

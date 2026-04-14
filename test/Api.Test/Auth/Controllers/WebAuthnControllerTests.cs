@@ -162,11 +162,16 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task AssertionOptions_UserVerificationSuccess_ReturnsAssertionOptions(SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
+    public async Task AssertionOptions_UserVerificationSuccess_ReturnsAssertionOptions(
+        SecretVerificationRequestModel requestModel, User user, AssertionOptions assertionOptions,
+        SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, requestModel.Secret).Returns(true);
+        sutProvider.GetDependency<IGetWebAuthnLoginCredentialAssertionOptionsCommand>()
+            .GetWebAuthnLoginCredentialAssertionOptions()
+            .Returns(assertionOptions);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
             .Protect(Arg.Any<WebAuthnLoginAssertionOptionsTokenable>()).Returns("token");
 
@@ -176,6 +181,29 @@ public class WebAuthnControllerTests
         // Assert
         Assert.NotNull(result);
         Assert.IsType<WebAuthnLoginAssertionOptionsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AssertionOptions_UserVerificationSuccess_StoresChallenge(
+        SecretVerificationRequestModel requestModel, User user, AssertionOptions assertionOptions,
+        SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, requestModel.Secret).Returns(true);
+        sutProvider.GetDependency<IGetWebAuthnLoginCredentialAssertionOptionsCommand>()
+            .GetWebAuthnLoginCredentialAssertionOptions()
+            .Returns(assertionOptions);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .Protect(Arg.Any<WebAuthnLoginAssertionOptionsTokenable>()).Returns("token");
+
+        // Act
+        await sutProvider.Sut.AssertionOptions(requestModel);
+
+        // Assert
+        await sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .Received(1)
+            .StoreChallengeAsync(assertionOptions.Challenge);
     }
     #endregion
 
@@ -429,6 +457,9 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .ConsumeChallengeAsync(assertionOptions.Challenge)
+            .Returns(true);
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateCredential(requestModel));
@@ -447,6 +478,9 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .ConsumeChallengeAsync(assertionOptions.Challenge)
+            .Returns(true);
 
         sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
             .AssertWebAuthnLoginCredential(assertionOptions, requestModel.DeviceResponse)
@@ -467,7 +501,9 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
             .Unprotect(requestModel.Token)
             .Returns(token);
-
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .ConsumeChallengeAsync(assertionOptions.Challenge)
+            .Returns(true);
         sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
             .AssertWebAuthnLoginCredential(assertionOptions, requestModel.DeviceResponse)
             .Returns((user, credential));
@@ -479,12 +515,42 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
             .Received(1)
             .Unprotect(requestModel.Token);
+        await sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .Received(1)
+            .ConsumeChallengeAsync(assertionOptions.Challenge);
         await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
             .Received(1)
             .AssertWebAuthnLoginCredential(assertionOptions, requestModel.DeviceResponse);
         await sutProvider.GetDependency<IWebAuthnCredentialRepository>()
             .Received(1)
             .UpdateAsync(credential);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_ChallengeNotConsumed_ThrowsBadRequestException(
+        AssertionOptions assertionOptions,
+        WebAuthnLoginCredentialUpdateRequestModel requestModel,
+        SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        var token = new WebAuthnLoginAssertionOptionsTokenable(
+            Core.Auth.Enums.WebAuthnLoginAssertionOptionsScope.UpdateKeySet, assertionOptions);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .Unprotect(requestModel.Token)
+            .Returns(token);
+        sutProvider.GetDependency<IWebAuthnChallengeCacheProvider>()
+            .ConsumeChallengeAsync(assertionOptions.Challenge)
+            .Returns(false);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateCredential(requestModel));
+
+        // Assert
+        Assert.Contains("The token associated with your request is invalid or has expired", exception.Message);
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .DidNotReceive()
+            .AssertWebAuthnLoginCredential(Arg.Any<AssertionOptions>(), Arg.Any<AuthenticatorAssertionRawResponse>());
     }
     #endregion
 }
