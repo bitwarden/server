@@ -43,13 +43,3 @@ BEGIN
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @OrganizationUserIds
 END
 GO
-
--- Drop legacy sprocs replaced by the bulk versions above
-DROP PROCEDURE IF EXISTS [dbo].[OrganizationUser_Deactivate];
-GO
-
-DROP PROCEDURE IF EXISTS [dbo].[OrganizationUser_Activate];
-GO
-
-DROP PROCEDURE IF EXISTS [dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray];
-GO
