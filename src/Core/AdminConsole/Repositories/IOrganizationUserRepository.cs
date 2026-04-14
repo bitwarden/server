@@ -49,6 +49,12 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyConfirmedAcceptedDetailsByUserAsync(Guid userId);
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
         OrganizationUserStatusType? status = null);
+    /// <summary>
+    /// Replace the group memberships for an organization user.
+    /// </summary>
+    /// <param name="orgUserId">The organization user whose group memberships will be replaced.</param>
+    /// <param name="groupIds">The full set of group ids the user should belong to.</param>
+    /// <param name="revisionDate">The timestamp to set as each affected group's new revision date.</param>
     Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate);
     Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers);
     Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections);
