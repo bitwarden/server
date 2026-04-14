@@ -85,7 +85,7 @@ public class ProviderUsersController : Controller
     }
 
     [HttpPost("{id:guid}/accept")]
-    [AllowAnonymous]
+    [NoopAuthorize]
     public async Task Accept(Guid providerId, Guid id, [FromBody] ProviderUserAcceptRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);

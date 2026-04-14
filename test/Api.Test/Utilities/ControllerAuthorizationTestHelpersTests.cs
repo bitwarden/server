@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -43,6 +44,13 @@ public class ControllerAuthorizationTestHelpersTests
     {
         ControllerAuthorizationTestHelpers.AssertAllHttpMethodsHaveAuthorization(
             typeof(ControllerWithAllowAnonymous));
+    }
+
+    [Fact]
+    public void AssertAllHttpMethodsHaveAuthorization_MethodWithNoopAuthorize_DoesNotThrow()
+    {
+        ControllerAuthorizationTestHelpers.AssertAllHttpMethodsHaveAuthorization(
+            typeof(ControllerWithNoopAuthorize));
     }
 
     [Fact]
@@ -116,6 +124,19 @@ public class ControllerAuthorizationTestHelpersTests
         [HttpGet("mixed")]
         [AllowAnonymous]
         public IActionResult GetMixed() => Ok();
+    }
+
+    // Controller with [NoopAuthorize] on a method (authenticated, no additional authz)
+    [Authorize]
+    private class ControllerWithNoopAuthorize : ControllerBase
+    {
+        [HttpGet("noop")]
+        [NoopAuthorize]
+        public IActionResult GetWithNoop() => Ok();
+
+        [HttpPost("protected")]
+        [CustomAuthorize]
+        public IActionResult PostProtected() => Ok();
     }
 
     // Controller with no HTTP methods

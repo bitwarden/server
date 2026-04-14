@@ -110,6 +110,16 @@ public class ProviderUsersControllerTests : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
+    public async Task Accept_Unauthenticated_ReturnsUnauthorized()
+    {
+        var response = await _client.PostAsJsonAsync(
+            $"providers/{_provider.Id}/users/{Guid.NewGuid()}/accept",
+            new { Token = "invalid-token" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Get_CrossProvider_ReturnsNotFound()
     {
         var userRepository = _factory.GetService<IUserRepository>();
