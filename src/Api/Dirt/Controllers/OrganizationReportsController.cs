@@ -15,7 +15,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.Dirt.Controllers;
 
@@ -145,16 +144,12 @@ public class OrganizationReportsController : Controller
 
         await AuthorizeAsync(organizationId);
 
-        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId);
-
-        if (latestReport == null)
-        {
-            throw new NotFoundException();
-        }
+        var filterByValidated = _featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2);
+        var latestReport = await _getOrganizationReportQuery.GetLatestOrganizationReportAsync(organizationId, filterByValidated);
 
         var response = new OrganizationReportResponseModel(latestReport);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2))
+        if (filterByValidated)
         {
             var fileData = latestReport.GetReportFile();
             if (fileData is { Validated: true })
@@ -411,7 +406,7 @@ public class OrganizationReportsController : Controller
         }
 
         var fileData = report.GetReportFile();
-        if (fileData == null || fileData.Id != reportFileId)
+        if (fileData == null || fileData.Id != reportFileId || fileData.Validated)
         {
             throw new NotFoundException();
         }
@@ -463,6 +458,11 @@ public class OrganizationReportsController : Controller
 
         var fileData = report.GetReportFile();
         if (fileData == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccessIntelligenceVersion2) && !fileData.Validated)
         {
             throw new NotFoundException();
         }
