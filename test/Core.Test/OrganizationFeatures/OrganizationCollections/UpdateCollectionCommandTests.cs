@@ -10,6 +10,7 @@ using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -19,12 +20,16 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationCollections;
 [OrganizationCustomize]
 public class UpdateCollectionCommandTests
 {
+    private static readonly DateTime _expectedRevisionDate = DateTime.UtcNow.AddYears(1);
+
     [Theory, BitAutoData]
     public async Task UpdateAsync_WithoutGroupsAndUsers_ReplacesCollection(
         Organization organization, Collection collection,
-        [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> existingUsers,
-        SutProvider<UpdateCollectionCommand> sutProvider)
+        [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> existingUsers)
     {
+        var sutProvider = SetupSutProvider();
+        collection.RevisionDate = DateTime.UtcNow.AddYears(-1);
+
         organization.AllowAdminAccessToAllCollectionItems = false;
         var creationDate = collection.CreationDate;
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -35,7 +40,6 @@ public class UpdateCollectionCommandTests
             .Returns(new Tuple<Collection?, CollectionAccessDetails>(
                 collection,
                 new CollectionAccessDetails { Groups = [], Users = existingUsers }));
-        var utcNow = DateTime.UtcNow;
 
         await sutProvider.Sut.UpdateAsync(collection, null, null);
 
@@ -49,22 +53,23 @@ public class UpdateCollectionCommandTests
             .Received(1)
             .LogCollectionEventAsync(collection, EventType.Collection_Updated);
         Assert.Equal(collection.CreationDate, creationDate);
-        Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        Assert.Equal(_expectedRevisionDate, collection.RevisionDate);
     }
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_WithGroupsAndUsers_ReplacesCollectionWithGroupsAndUsers(
         Organization organization, Collection collection,
         [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> groups,
-        IEnumerable<CollectionAccessSelection> users,
-        SutProvider<UpdateCollectionCommand> sutProvider)
+        IEnumerable<CollectionAccessSelection> users)
     {
+        var sutProvider = SetupSutProvider();
+        collection.RevisionDate = DateTime.UtcNow.AddYears(-1);
+
         var creationDate = collection.CreationDate;
         organization.UseGroups = true;
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
-        var utcNow = DateTime.UtcNow;
 
         await sutProvider.Sut.UpdateAsync(collection, groups, users);
 
@@ -78,22 +83,23 @@ public class UpdateCollectionCommandTests
             .Received(1)
             .LogCollectionEventAsync(collection, EventType.Collection_Updated);
         Assert.Equal(collection.CreationDate, creationDate);
-        Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        Assert.Equal(_expectedRevisionDate, collection.RevisionDate);
     }
 
     [Theory, BitAutoData]
     public async Task UpdateAsync_WithOrganizationUseGroupDisabled_ReplacesCollectionWithoutGroups(
         Organization organization, Collection collection,
         [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> groups,
-        [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users,
-        SutProvider<UpdateCollectionCommand> sutProvider)
+        [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users)
     {
+        var sutProvider = SetupSutProvider();
+        collection.RevisionDate = DateTime.UtcNow.AddYears(-1);
+
         var creationDate = collection.CreationDate;
         organization.UseGroups = false;
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
-        var utcNow = DateTime.UtcNow;
 
         await sutProvider.Sut.UpdateAsync(collection, groups, users);
 
@@ -107,7 +113,7 @@ public class UpdateCollectionCommandTests
             .Received(1)
             .LogCollectionEventAsync(collection, EventType.Collection_Updated);
         Assert.Equal(collection.CreationDate, creationDate);
-        Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+        Assert.Equal(_expectedRevisionDate, collection.RevisionDate);
     }
 
     [Theory, BitAutoData]
@@ -315,5 +321,14 @@ public class UpdateCollectionCommandTests
         await sutProvider.GetDependency<ICollectionRepository>()
             .Received(1)
             .ReplaceAsync(collection, null, null);
+    }
+
+    private static SutProvider<UpdateCollectionCommand> SetupSutProvider()
+    {
+        var sutProvider = new SutProvider<UpdateCollectionCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedRevisionDate);
+        return sutProvider;
     }
 }
