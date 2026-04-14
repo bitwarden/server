@@ -3,7 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
@@ -48,7 +48,7 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
         }
 
         var subscriptionInfo = await GetSubscriptionAsync(organization);
-        ValidateSubscriptionForLicenseGeneration(subscriptionInfo);
+        SubscriptionLicenseValidator.ValidateSubscriptionForLicenseGeneration(subscriptionInfo);
         var license = new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
         license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo);
 
@@ -64,22 +64,5 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
 
         var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
         return await _paymentService.GetSubscriptionAsync(provider);
-    }
-
-    private static void ValidateSubscriptionForLicenseGeneration(SubscriptionInfo subscriptionInfo)
-    {
-        if (subscriptionInfo?.Subscription == null)
-        {
-            throw new BadRequestException("No active subscription found.");
-        }
-
-        var status = subscriptionInfo.Subscription.Status;
-
-        if (status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.Incomplete
-            or StripeConstants.SubscriptionStatus.IncompleteExpired)
-        {
-            throw new BadRequestException(
-                "Unable to generate license due to a payment issue. Please update your billing information or contact support for assistance.");
-        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 
@@ -10,10 +11,14 @@ public interface IGetUserLicenseQuery
 }
 
 public class GetUserLicenseQuery(
-    IUserService userService) : IGetUserLicenseQuery
+    IUserService userService,
+    IStripePaymentService paymentService) : IGetUserLicenseQuery
 {
     public async Task<UserLicense> Run(User user)
     {
+        var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
+        SubscriptionLicenseValidator.ValidateSubscriptionForLicenseGeneration(subscriptionInfo);
+
         return await userService.GenerateLicenseAsync(user);
     }
 }
