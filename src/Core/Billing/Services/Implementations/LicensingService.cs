@@ -363,20 +363,12 @@ public class LicensingService : ILicensingService
             _ => throw new ArgumentException("Unsupported license type.", nameof(license)),
         };
 
-        // Merge claims from all issuers
-        var claimsIdentities = _verificationCertificates.Select((c) => new ClaimsIdentity(ValidateTokenWithIssuer(license.Token, audience, new X509SecurityKey(c)).Identity));
-        var claimsPrincipal = new ClaimsPrincipal(claimsIdentities);
-
-        return claimsPrincipal;
-    }
-
-    private ClaimsPrincipal ValidateTokenWithIssuer(string token, string audience, X509SecurityKey issuerKey)
-    {
+        var token = license.Token;
         var tokenHandler = new JwtSecurityTokenHandler();
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = issuerKey,
+            IssuerSigningKeys = _verificationCertificates.Select(c => new X509SecurityKey(c)),
             ValidateIssuer = true,
             ValidIssuer = "bitwarden",
             ValidateAudience = true,
