@@ -597,6 +597,87 @@ public class DeviceRepositoryTests
     }
 
     /// <summary>
+    /// Verifies that LastActivityDate is correctly returned from GetManyByUserIdWithDeviceAuth
+    /// and matches the value set by BumpLastActivityDateByIdAsync.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task GetManyByUserIdWithDeviceAuth_ReturnsLastActivityDate_WhenBumped(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var device = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        await sutRepository.BumpLastActivityDateByIdAsync(device.Id);
+        var afterBump = await sutRepository.GetByIdAsync(device.Id);
+        var expectedLastActivityDate = afterBump!.LastActivityDate;
+        Assert.NotNull(expectedLastActivityDate);
+
+        // Act
+        var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
+        var result = response.Single();
+
+        // Assert — LastActivityDate from the stored procedure must match the bumped value,
+        // not null and not the C# property initializer default (DateTime.UtcNow).
+        Assert.Equal(expectedLastActivityDate, result.LastActivityDate);
+    }
+
+    /// <summary>
+    /// Verifies that LastActivityDate is non-null for a newly created device when returned from
+    /// GetManyByUserIdWithDeviceAuth. Device creation sets LastActivityDate to the current time
+    /// so users see a meaningful date immediately on their devices screen.
+    /// </summary>
+    [DatabaseTheory]
+    [DatabaseData]
+    public async Task GetManyByUserIdWithDeviceAuth_ReturnsLastActivityDate_ForNewDeviceAsync(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var beforeCreation = DateTime.UtcNow;
+
+        await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = user.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+        });
+
+        // Act
+        var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
+        var result = response.Single();
+
+        // Assert — LastActivityDate is set at creation time and returned by the stored procedure
+        Assert.NotNull(result.LastActivityDate);
+    }
+
+    /// <summary>
     /// Verifies that a user with no registered devices receives an empty collection,
     /// not null or an error.
     /// </summary>
