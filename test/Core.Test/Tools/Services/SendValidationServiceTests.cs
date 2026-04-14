@@ -206,7 +206,7 @@ public class SendValidationServiceTests
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.PasswordProtected });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
-        Assert.Equal("Due to an Enterpise Policy your Sends must be protected by password", exception.Message);
+        Assert.Equal("Due to an Enterprise Policy your Sends must be protected by password", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -228,7 +228,7 @@ public class SendValidationServiceTests
             .Returns(new SendControlsPolicyRequirement { DisableSend = false, DisableHideEmail = false, WhoCanAccess = SendWhoCanAccessType.SpecificPeople });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
-        Assert.Equal("Due to an Enterpise Policy your Sends must be protected by email verification", exception.Message);
+        Assert.Equal("Due to an Enterprise Policy your Sends must be protected by email verification", exception.Message);
     }
 
     [Theory, BitAutoData]

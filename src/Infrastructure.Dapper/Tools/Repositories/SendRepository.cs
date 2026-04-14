@@ -152,10 +152,6 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             $"[{Schema}].[Send_SetDisabledByIds]",
             new { Ids = ids.ToGuidIdArrayTVP(), Disabled = disabled },
             commandType: CommandType.StoredProcedure);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[User_BumpManyAccountRevisionDates]",
-            new { UserIds = userIds.ToGuidIdArrayTVP() },
-            commandType: CommandType.StoredProcedure);
     }
 
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
