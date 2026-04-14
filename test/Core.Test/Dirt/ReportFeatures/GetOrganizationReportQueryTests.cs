@@ -4,6 +4,8 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
 
 namespace Bit.Core.Test.Dirt.ReportFeatures;
 
