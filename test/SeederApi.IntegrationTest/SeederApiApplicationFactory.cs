@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Services;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
+using Microsoft.AspNetCore.TestHost;
 
 namespace Bit.SeederApi.IntegrationTest;
 
@@ -13,6 +14,18 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             serviceCollection.AddSingleton<IPlayIdService, NeverPlayIdServices>();
             serviceCollection.AddHttpContextAccessor();
+        });
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        base.ConfigureWebHost(builder);
+
+        builder.ConfigureTestServices(services =>
+        {
+            // Remove scheduled background jobs to prevent errors in parallel test execution
+            var jobService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Jobs.JobsHostedService));
+            services.Remove(jobService);
         });
     }
 
