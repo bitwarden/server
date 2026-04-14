@@ -46,12 +46,6 @@ public class ChangeKdfCommand : IChangeKdfCommand
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
-        // Validate to prevent user account from becoming un-decryptable from invalid parameters
-        //
-        // Prevent a de-synced salt value from creating an un-decryptable unlock method
-        authenticationData.ValidateSaltUnchangedForUser(user);
-        unlockData.ValidateSaltUnchangedForUser(user);
-
         // Currently KDF settings are not saved separately for authentication and unlock and must therefore be equal
         if (!authenticationData.Kdf.Equals(unlockData.Kdf))
         {
