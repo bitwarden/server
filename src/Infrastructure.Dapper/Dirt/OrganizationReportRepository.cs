@@ -8,6 +8,8 @@ using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
+using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Dirt;
 

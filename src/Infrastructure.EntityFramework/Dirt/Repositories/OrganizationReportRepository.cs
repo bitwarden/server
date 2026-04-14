@@ -1,11 +1,14 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using AutoMapper;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using LinqToDB;
+using Microsoft.Extensions.DependencyInjection;
 
 
 namespace Bit.Infrastructure.EntityFramework.Dirt.Repositories;
