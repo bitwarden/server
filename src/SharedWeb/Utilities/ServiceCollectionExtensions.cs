@@ -36,6 +36,7 @@ using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Platform;
+using Bit.Core.Platform.Data;
 using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Enqueuing;
 using Bit.Core.Platform.Mail.Mailer;
@@ -57,7 +58,9 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
+using Bit.Infrastructure.Dapper.Data;
 using Bit.Infrastructure.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Data;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
@@ -101,10 +104,12 @@ public static class ServiceCollectionExtensions
         if (provider != SupportedDatabaseProviders.SqlServer)
         {
             services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
+            services.AddSingleton<ITransactionManager, EfTransactionManager>();
         }
         else
         {
             services.AddDapperRepositories(globalSettings.SelfHosted);
+            services.AddSingleton<ITransactionManager, DapperTransactionManager>();
         }
 
         if (globalSettings.SelfHosted)
