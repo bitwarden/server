@@ -38,7 +38,6 @@ public class AccountsController : Controller
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
-    private readonly IWebAuthnChallengeCacheProvider _webAuthnChallengeCache;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
@@ -85,8 +84,7 @@ public class AccountsController : Controller
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
-        GlobalSettings globalSettings,
-        IWebAuthnChallengeCacheProvider webAuthnChallengeCache
+        GlobalSettings globalSettings
         )
     {
         _currentContext = currentContext;
@@ -98,7 +96,6 @@ public class AccountsController : Controller
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
-        _webAuthnChallengeCache = webAuthnChallengeCache;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
@@ -244,9 +241,7 @@ public class AccountsController : Controller
     [HttpGet("webauthn/assertion-options")]
     public async Task<WebAuthnLoginAssertionOptionsResponseModel> GetWebAuthnLoginAssertionOptions()
     {
-        var options = _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptions();
-
-        await _webAuthnChallengeCache.StoreChallengeAsync(options.Challenge);
+        var options = await _getWebAuthnLoginCredentialAssertionOptionsCommand.GetWebAuthnLoginCredentialAssertionOptionsAsync();
 
         var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.Authentication, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);

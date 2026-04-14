@@ -28,7 +28,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
     private readonly IDeviceValidator _deviceValidator;
-    private readonly IWebAuthnChallengeCacheProvider _webAuthnChallengeCache;
 
     public WebAuthnGrantValidator(
         UserManager<User> userManager,
@@ -52,8 +51,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IAuthRequestRepository authRequestRepository,
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
-        IClientVersionValidator clientVersionValidator,
-        IWebAuthnChallengeCacheProvider webAuthnChallengeCache)
+        IClientVersionValidator clientVersionValidator)
         : base(
             userManager,
             userService,
@@ -79,7 +77,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
         _deviceValidator = deviceValidator;
-        _webAuthnChallengeCache = webAuthnChallengeCache;
     }
 
     string IExtensionGrantValidator.GrantType => "webauthn";
@@ -101,12 +98,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         if (!verified || deviceResponse == null)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidRequest);
-            return;
-        }
-
-        if (!await _webAuthnChallengeCache.ConsumeChallengeAsync(token.Options.Challenge))
-        {
-            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
             return;
         }
 
